@@ -13,6 +13,9 @@ smoke:
 lint:
 	golangci-lint run ./...
 
+fmt:
+	go fmt ./...
+
 cover:
 	go tool cover -html=./output/coverage
 

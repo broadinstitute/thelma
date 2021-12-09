@@ -271,7 +271,7 @@ func (r *ConfigRepo) runCmd(cmd shell.Command) error {
 	}
 	return r.shellRunner.RunWith(cmd, shell.RunOptions{
 		LogLevel: &level,
-		Stdout: stdoutWriter,
+		Stdout:   stdoutWriter,
 	})
 }
 
