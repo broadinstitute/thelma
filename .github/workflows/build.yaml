@@ -76,6 +76,10 @@ jobs:
       - name: Push image
         run: "docker push ${{ steps.image-name.outputs.name }}"
 
+      - name: Add latest tag
+        if: github.event_name != 'pull_request'
+        run: gcloud artifacts tags add ${{ steps.image-name.outputs.name }} latest
+
       - name: Comment pushed image
         uses: actions/github-script@0.3.0
         if: github.event_name == 'pull_request'
