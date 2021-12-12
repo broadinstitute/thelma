@@ -2,7 +2,7 @@ package argocd
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"sort"
 	"strings"
 )

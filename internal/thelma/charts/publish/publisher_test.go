@@ -2,8 +2,8 @@ package publish
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/repo"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/utils/shell"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/repo"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"os"

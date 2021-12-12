@@ -2,9 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/render"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/render/helmfile"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/render"
+	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
+	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"path"

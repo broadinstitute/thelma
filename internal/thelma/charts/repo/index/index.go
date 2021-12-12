@@ -2,7 +2,7 @@ package index
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/semver"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/semver"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"

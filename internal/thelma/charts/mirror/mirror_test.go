@@ -1,10 +1,10 @@
 package mirror
 
 import (
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/publish"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/repo/index"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/tools/helm"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/utils/shell"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/repo/index"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/helm"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

@@ -1,4 +1,4 @@
-module github.com/broadinstitute/terra-helmfile-images/tools
+module github.com/broadinstitute/thelma
 
 go 1.16
 

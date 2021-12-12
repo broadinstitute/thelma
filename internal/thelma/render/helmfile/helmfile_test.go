@@ -1,7 +1,7 @@
 package helmfile
 
 import (
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/utils/shell"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

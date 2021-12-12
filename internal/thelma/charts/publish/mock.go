@@ -1,7 +1,7 @@
 package publish
 
 import (
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/repo/index"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/repo/index"
 	"github.com/stretchr/testify/mock"
 )
 
