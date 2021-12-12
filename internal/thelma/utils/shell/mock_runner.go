@@ -2,7 +2,7 @@ package shell
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/utils/testutils"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/mock"

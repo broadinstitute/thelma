@@ -2,8 +2,8 @@ package resolver
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/source"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/utils/shell"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"os"
 	"path"
 )

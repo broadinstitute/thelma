@@ -2,7 +2,7 @@ package gitops
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/utils/shell"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"path"
 )
 

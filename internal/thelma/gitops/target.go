@@ -2,8 +2,8 @@ package gitops
 
 import (
 	"fmt"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/gitops/deepmerge"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/gitops/serializers"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops/deepmerge"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops/serializers"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"

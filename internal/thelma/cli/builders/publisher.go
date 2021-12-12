@@ -1,10 +1,10 @@
 package builders
 
 import (
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/app"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/publish"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/repo"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/utils/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/repo"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket"
 	"github.com/rs/zerolog/log"
 )
 

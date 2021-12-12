@@ -1,7 +1,7 @@
 package source
 
 import (
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"

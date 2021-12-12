@@ -1,12 +1,12 @@
 package cli
 
 import (
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/app"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/charts/source"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/cli/builders"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/cli/printing"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/cli/views"
-	"github.com/broadinstitute/terra-helmfile-images/tools/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/views"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
