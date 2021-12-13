@@ -3,10 +3,12 @@ package cli
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/mirror"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/views"
+	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"path"
@@ -33,12 +35,12 @@ var chartsImportFlagNames = struct {
 }
 
 type chartsImportCLI struct {
-	ctx          *ThelmaContext
+	loader       loader.ThelmaLoader
 	cobraCommand *cobra.Command
 	options      *chartsImportOptions
 }
 
-func newChartsImportCLI(ctx *ThelmaContext) *chartsImportCLI {
+func newChartsImportCLI(loader loader.ThelmaLoader) *chartsImportCLI {
 	options := chartsImportOptions{}
 
 	cobraCommand := &cobra.Command{
@@ -58,14 +60,19 @@ func newChartsImportCLI(ctx *ThelmaContext) *chartsImportCLI {
 		if len(args) != 0 {
 			return fmt.Errorf("expected no positional arguments, got %v", args)
 		}
+
+		if err := loader.Load(); err != nil {
+			return err
+		}
+
 		if cmd.Flags().Changed(chartsImportFlagNames.configFile) {
-			expanded, err := expandAndVerifyExists(options.configFile, "configFile")
+			expanded, err := utils.ExpandAndVerifyExists(options.configFile, "configFile")
 			if err != nil {
 				return err
 			}
 			options.configFile = expanded
 		} else {
-			options.configFile = path.Join(ctx.app.Paths.MiscConfDir(), chartsImportDefaultConfigFile)
+			options.configFile = path.Join(loader.App().Paths().MiscConfDir(), chartsImportDefaultConfigFile)
 		}
 
 		if err := printer.VerifyFlags(); err != nil {
@@ -76,7 +83,7 @@ func newChartsImportCLI(ctx *ThelmaContext) *chartsImportCLI {
 	}
 
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
-		imported, err := importCharts(&options, ctx.app)
+		imported, err := importCharts(&options, loader.App())
 		if err != nil {
 			return err
 		}
@@ -91,20 +98,20 @@ func newChartsImportCLI(ctx *ThelmaContext) *chartsImportCLI {
 	}
 
 	return &chartsImportCLI{
-		ctx:          ctx,
+		loader:       loader,
 		cobraCommand: cobraCommand,
 		options:      &options,
 	}
 }
 
-func importCharts(options *chartsImportOptions, app *app.ThelmaApp) ([]views.ChartRelease, error) {
+func importCharts(options *chartsImportOptions, app app.ThelmaApp) ([]views.ChartRelease, error) {
 	pb, err := builders.Publisher(app, options.bucketName, options.dryRun)
 	if err != nil {
 		return nil, err
 	}
 	defer pb.CloseWarn()
 
-	_mirror, err := mirror.NewMirror(pb.Publisher(), app.ShellRunner, options.configFile)
+	_mirror, err := mirror.NewMirror(pb.Publisher(), app.ShellRunner(), options.configFile)
 	if err != nil {
 		return nil, err
 	}

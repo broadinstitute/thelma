@@ -2,11 +2,13 @@ package cli
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/views"
 	"github.com/broadinstitute/thelma/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -32,12 +34,12 @@ var chartsPublishFlagNames = struct {
 }
 
 type chartsPublishCLI struct {
-	ctx          *ThelmaContext
+	loader       loader.ThelmaLoader
 	cobraCommand *cobra.Command
 	options      *chartsPublishOptions
 }
 
-func newChartsPublishCLI(ctx *ThelmaContext) *chartsPublishCLI {
+func newChartsPublishCLI(loader loader.ThelmaLoader) *chartsPublishCLI {
 	options := chartsPublishOptions{}
 
 	cobraCommand := &cobra.Command{
@@ -56,14 +58,18 @@ func newChartsPublishCLI(ctx *ThelmaContext) *chartsPublishCLI {
 	cobraCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
 		options.charts = args
 
+		if err := loader.Load(); err != nil {
+			return err
+		}
+
 		if cmd.Flags().Changed(chartsPublishFlagNames.chartDir) {
-			expanded, err := expandAndVerifyExists(options.chartDir, "chart directory")
+			expanded, err := utils.ExpandAndVerifyExists(options.chartDir, "chart directory")
 			if err != nil {
 				return err
 			}
 			options.chartDir = expanded
 		} else {
-			options.chartDir = ctx.app.Paths.DefaultChartSrcDir()
+			options.chartDir = loader.App().Paths().DefaultChartSrcDir()
 		}
 
 		if err := printer.VerifyFlags(); err != nil {
@@ -74,7 +80,7 @@ func newChartsPublishCLI(ctx *ThelmaContext) *chartsPublishCLI {
 	}
 
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
-		published, err := publishCharts(&options, ctx.app)
+		published, err := publishCharts(&options, loader.App())
 		if err != nil {
 			return err
 		}
@@ -88,13 +94,13 @@ func newChartsPublishCLI(ctx *ThelmaContext) *chartsPublishCLI {
 	}
 
 	return &chartsPublishCLI{
-		ctx:          ctx,
+		loader:       loader,
 		cobraCommand: cobraCommand,
 		options:      &options,
 	}
 }
 
-func publishCharts(options *chartsPublishOptions, app *app.ThelmaApp) ([]views.ChartRelease, error) {
+func publishCharts(options *chartsPublishOptions, app app.ThelmaApp) ([]views.ChartRelease, error) {
 	if len(options.charts) == 0 {
 		log.Warn().Msgf("No charts specified; exiting")
 		return []views.ChartRelease{}, nil
@@ -107,12 +113,12 @@ func publishCharts(options *chartsPublishOptions, app *app.ThelmaApp) ([]views.C
 	defer pb.CloseWarn()
 	publisher := pb.Publisher()
 
-	_versions, err := gitops.NewVersions(app.Config.Home(), app.ShellRunner)
+	_versions, err := gitops.NewVersions(app.Config().Home(), app.ShellRunner())
 	if err != nil {
 		return nil, err
 	}
 
-	chartsDir, err := source.NewChartsDir(options.chartDir, publisher, _versions, app.ShellRunner)
+	chartsDir, err := source.NewChartsDir(options.chartDir, publisher, _versions, app.ShellRunner())
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
 	"github.com/spf13/cobra"
 )
 
@@ -11,9 +12,9 @@ type chartsCLI struct {
 	publishCLI   *chartsPublishCLI
 }
 
-func newChartsCLI(ctx *ThelmaContext) *chartsCLI {
-	publishCLI := newChartsPublishCLI(ctx)
-	importCLI := newChartsImportCLI(ctx)
+func newChartsCLI(loader loader.ThelmaLoader) *chartsCLI {
+	publishCLI := newChartsPublishCLI(loader)
+	importCLI := newChartsImportCLI(loader)
 
 	cmd := &cobra.Command{
 		Use:   "charts [action]",

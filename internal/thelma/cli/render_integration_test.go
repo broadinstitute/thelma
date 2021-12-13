@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -422,7 +423,7 @@ func setup(t *testing.T) (*TestState, error) {
 	var err error
 
 	tmpDir := t.TempDir()
-	mockHome := path.Join(t.TempDir(), configRepoName)
+	mockHome := path.Join(t.TempDir(), config.ConfigRepoName)
 	err = os.MkdirAll(mockHome, 0755)
 	if err != nil {
 		return nil, err

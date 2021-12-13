@@ -6,41 +6,68 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 
-// Options for a ThelmaApp
+// Options for a thelmaApp
 type Options struct {
 	Runner shell.Runner
 }
 
-// ThelmaApp Cross-cutting dependencies for Thelma commands
-type ThelmaApp struct {
-	Config      *config.Config
-	ShellRunner shell.Runner
-	Paths       *paths.Paths
+// ThelmaApp holds references to global/cross-cutting dependencies for Thelma commands
+type ThelmaApp interface {
+	// Config returns configuration object for this ThelmaApp
+	Config() *config.Config
+	// ShellRunner returns ShellRunner for this ThelmaApp
+	ShellRunner() shell.Runner
+	// Paths returns Paths for this ThelmaApp
+	Paths() *paths.Paths
+	// Close deletes local resources associated with this ThelmaApp, and should be called once before the program exits.
+	Close() error
 }
 
 // New construct a new App, given a Config
-func New(cfg *config.Config) (*ThelmaApp, error) {
+func New(cfg *config.Config) (ThelmaApp, error) {
 	return NewWithOptions(cfg, Options{})
 }
 
 // NewWithOptions construct a new App, given a Config & options
-func NewWithOptions(cfg *config.Config, options Options) (*ThelmaApp, error) {
-	app := &ThelmaApp{}
-	app.Config = cfg
+func NewWithOptions(cfg *config.Config, options Options) (ThelmaApp, error) {
+	app := &thelmaApp{}
+	app.config = cfg
 
 	// Initialize paths
 	_paths, err := paths.New(cfg)
 	if err != nil {
 		return nil, err
 	}
-	app.Paths = _paths
+	app.paths = _paths
 
 	// Initialize ShellRunner
 	if options.Runner != nil {
-		app.ShellRunner = options.Runner
+		app.shellRunner = options.Runner
 	} else {
-		app.ShellRunner = shell.NewDefaultRunner()
+		app.shellRunner = shell.NewDefaultRunner()
 	}
 
 	return app, nil
+}
+
+type thelmaApp struct {
+	config      *config.Config
+	shellRunner shell.Runner
+	paths       *paths.Paths
+}
+
+func (t *thelmaApp) Config() *config.Config {
+	return t.config
+}
+
+func (t *thelmaApp) ShellRunner() shell.Runner {
+	return t.shellRunner
+}
+
+func (t *thelmaApp) Paths() *paths.Paths {
+	return t.paths
+}
+
+func (t *thelmaApp) Close() error {
+	return t.paths.Cleanup()
 }

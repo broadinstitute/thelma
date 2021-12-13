@@ -2,9 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"path"
@@ -54,7 +56,7 @@ const defaultRenderChartSourceDir = "charts"
 
 // renderCLI contains state and configuration for executing a render from the command-line
 type renderCLI struct {
-	ctx           *ThelmaContext
+	loader        loader.ThelmaLoader
 	cobraCommand  *cobra.Command
 	helmfileArgs  *helmfile.Args
 	renderOptions *render.Options
@@ -110,7 +112,7 @@ type renderFlagValues struct {
 }
 
 // newRenderCLI constructs a new renderCLI
-func newRenderCLI(ctx *ThelmaContext) *renderCLI {
+func newRenderCLI(loader loader.ThelmaLoader) *renderCLI {
 	flagVals := &renderFlagValues{}
 	helmfileArgs := &helmfile.Args{}
 	renderOptions := &render.Options{}
@@ -143,12 +145,15 @@ func newRenderCLI(ctx *ThelmaContext) *renderCLI {
 		renderOptions: renderOptions,
 		helmfileArgs:  helmfileArgs,
 		flagVals:      flagVals,
-		ctx:           ctx,
+		loader:        loader,
 	}
 
 	cobraCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
 			return fmt.Errorf("expected no positional arguments, got %v", args)
+		}
+		if err := loader.Load(); err != nil {
+			return err
 		}
 		if err := cli.handleFlagAliases(); err != nil {
 			return err
@@ -156,7 +161,7 @@ func newRenderCLI(ctx *ThelmaContext) *renderCLI {
 		if err := cli.checkIncompatibleFlags(); err != nil {
 			return err
 		}
-		if err := cli.fillRenderOptions(); err != nil {
+		if err := cli.fillRenderOptions(loader.App().Config().Home()); err != nil {
 			return err
 		}
 		if err := cli.fillHelmfileArgs(); err != nil {
@@ -167,15 +172,14 @@ func newRenderCLI(ctx *ThelmaContext) *renderCLI {
 	}
 
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
-		return render.DoRender(ctx.app, renderOptions, helmfileArgs)
-
+		return render.DoRender(loader.App(), renderOptions, helmfileArgs)
 	}
 
 	return cli
 }
 
 // fillRenderOptions populates an empty render.Options struct in accordance with user-supplied CLI options
-func (cli *renderCLI) fillRenderOptions() error {
+func (cli *renderCLI) fillRenderOptions(thelmaHome string) error {
 	flags := cli.cobraCommand.Flags()
 	flagVals := cli.flagVals
 	renderOptions := cli.renderOptions
@@ -203,7 +207,7 @@ func (cli *renderCLI) fillRenderOptions() error {
 		}
 		renderOptions.OutputDir = dir
 	} else {
-		renderOptions.OutputDir = path.Join(cli.ctx.app.Config.Home(), defaultRenderOutputDir)
+		renderOptions.OutputDir = path.Join(thelmaHome, defaultRenderOutputDir)
 		log.Debug().Msgf("Using default output dir %s", renderOptions.OutputDir)
 	}
 
@@ -215,13 +219,13 @@ func (cli *renderCLI) fillRenderOptions() error {
 
 	// chart dir
 	if flags.Changed(renderFlagNames.chartDir) {
-		chartSourceDir, err := expandAndVerifyExists(flagVals.chartDir, "chart dir")
+		chartSourceDir, err := utils.ExpandAndVerifyExists(flagVals.chartDir, "chart dir")
 		if err != nil {
 			return err
 		}
 		renderOptions.ChartSourceDir = chartSourceDir
 	} else {
-		renderOptions.ChartSourceDir = path.Join(cli.ctx.app.Config.Home(), defaultRenderChartSourceDir)
+		renderOptions.ChartSourceDir = path.Join(thelmaHome, defaultRenderChartSourceDir)
 		log.Debug().Msgf("Using default chart source dir %s", renderOptions.ChartSourceDir)
 	}
 
@@ -257,7 +261,7 @@ func (cli *renderCLI) fillHelmfileArgs() error {
 	// values file
 	if flags.Changed(renderFlagNames.valuesFile) {
 		for _, file := range flagVals.valuesFile {
-			fullpath, err := expandAndVerifyExists(file, "values file")
+			fullpath, err := utils.ExpandAndVerifyExists(file, "values file")
 			if err != nil {
 				return err
 			}
