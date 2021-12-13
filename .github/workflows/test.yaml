@@ -16,9 +16,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout code
+    - name: Checkout code
       uses: actions/checkout@v2
-    - name: run tests
+    - name: Run tests
       uses: ./.github/actions/make
       with:
         target: "test"
