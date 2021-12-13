@@ -2,7 +2,7 @@
 
 set -eo pipefail
 
-# Download and install runtime dependencies such as Helm, Helmfile, YQ
+# Download and install runtime dependencies such as Helm, Helmfile, etc
 
 HELM_VERSION=3.2.4
 HELMFILE_VERSION=0.114.0
