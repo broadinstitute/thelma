@@ -3,6 +3,8 @@
 set -eo pipefail
 
 # Download and install runtime dependencies such as Helm, Helmfile, etc
+# This script implements basic caching -- if the binaries already exist in
+# the target directory, it won't download them again.
 
 HELM_VERSION=3.2.4
 HELMFILE_VERSION=0.114.0
@@ -26,6 +28,11 @@ TESTEXEC="${TESTEXEC:-true}"
 
 # CLEANUP: set to false to skip cleanup of download directory. Useful for debugging installation issues.
 CLEANUP="${CLEANUP:-true}"
+
+
+# WGET_TIMEOUT_SECONDS: set to false to skip cleanup of download directory. Useful for debugging installation issues.
+WGET_TIMEOUT_SECONDS="${WGET_TIMEOUT_SECONDS:-15}"
+
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 install/path" >&2
@@ -62,29 +69,30 @@ testexec() {
 install_helm() {
   URL="https://get.helm.sh/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz"
   echo "Downloading helm from ${URL}"
-  wget --timeout=15 -q "${URL}" -O - | \
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - | \
     tar -xz --strip-components=1 "${OS}-${ARCH}/helm" && \
     chmod +x helm && \
-    mv helm "${INSTALL_DIR}/helm" && \
-    testexec "${INSTALL_DIR}/helm" version
+    testexec ./helm version && \
+    mv helm "${INSTALL_DIR}/helm"
 }
 
 install_helmfile() {
   URL="https://github.com/roboll/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${OS}_${ARCH}"
   echo "Downloading helmfile from ${URL}"
-  wget --timeout=15 -q "${URL}" -O helmfile && \
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O helmfile && \
     chmod +x helmfile && \
-    mv helmfile "${INSTALL_DIR}/helmfile" && \
-    testexec "${INSTALL_DIR}/helmfile" --version
+    testexec ./helmfile --version && \
+    mv ./helmfile "${INSTALL_DIR}/helmfile"
 }
 
 install_yq() {
   URL="https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_${OS}_${ARCH}.tar.gz"
   echo "Downloading yq from ${URL}"
-  wget "${URL}" -O - |\
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
     tar xz && \
-    mv yq_${OS}_${ARCH} "${INSTALL_DIR}/yq" && \
-    testexec "${INSTALL_DIR}/yq" --version
+    mv yq_${OS}_${ARCH} yq && \
+    testexec ./yq --version && \
+    mv ./yq "${INSTALL_DIR}/yq"
 }
 
 install_helm_docs() {
@@ -92,11 +100,11 @@ install_helm_docs() {
     # linux artifacts are only made available as rpm or deb packages and not as tarballs :'(
     URL="https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${ARCH}.deb"
     echo "Downloading helm-docs from ${URL}"
-    wget "${URL}" -O helm-docs.deb && \
+    wget --timeout="${WGET_TIMEOUT_SECONDS}" -q -O helm-docs.deb && \
       ar x helm-docs.deb && \
       tar -xzvf data.tar.gz && \
-      mv ./usr/local/bin/helm-docs "${INSTALL_DIR}/helm-docs" && \
-      testexec "${INSTALL_DIR}/helm-docs" --version
+      testexec ./usr/local/bin/helm-docs --version && \
+      mv ./usr/local/bin/helm-docs "${INSTALL_DIR}/helm-docs"
     return $?
   fi
 
@@ -105,10 +113,10 @@ install_helm_docs() {
     arch="x86_64"
     URL="https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${os}_${arch}.tar.gz"
     echo "Downloading helm-docs from ${URL}"
-    wget "${URL}" -O - |\
+    wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
       tar -xz && \
-      mv helm-docs "${INSTALL_DIR}/helm-docs" && \
-      testexec "${INSTALL_DIR}/helm-docs" --version
+      testexec ./helm-docs --version && \
+      mv ./helm-docs "${INSTALL_DIR}/helm-docs"
     return $?
   fi
 
