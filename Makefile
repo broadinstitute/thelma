@@ -72,11 +72,11 @@ init: echo-vars
 
 # runtime-deps: Download runtime binary dependencies, such as helm, helmfile, and so on, to output/bin
 runtime-deps: init
-	env OS=${TARGET_OS} ARCH=${TARGET_ARCH} SCRATCH_DIR=./output/downloads TESTEXEC=${RUNTIME_DEPS_TESTEXEC} ./scripts/install-runtime-deps.sh ${RUNTIME_DEPS_BIN_DIR}
+	env OS=${TARGET_OS} ARCH=${TARGET_ARCH} SCRATCH_DIR=${OUTPUT_DIR}/downloads TESTEXEC=${RUNTIME_DEPS_TESTEXEC} ./scripts/install-runtime-deps.sh ${RUNTIME_DEPS_BIN_DIR}
 
 # build: Compile thelma into output/bin
 build: init
-	CGO_ENABLED=0 GO111MODULE=on GOBIN=./output/bin/ GOOS=${TARGET_OS} GOARCH=${TARGET_ARCH} go build -o ${BIN_DIR}/ ./...
+	CGO_ENABLED=0 GO111MODULE=on GOBIN=${BIN_DIR} GOOS=${TARGET_OS} GOARCH=${TARGET_ARCH} go build -o ${BIN_DIR}/ ./...
 
 # dist: Package thelma binary + runtime dependencies into a tarball distribution
 dist: runtime-deps build
