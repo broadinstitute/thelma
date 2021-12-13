@@ -111,7 +111,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           cat <<EOF > tags.json
-          {"latest":"${ steps.tag.outputs.tag }"}
+          {"latest":"${{ steps.tag.outputs.tag }}"}
           EOF
           gsutil cp tags.json gs//${{ env.THELMA_RELEASE_BUCKET }}/tags.json
 
