@@ -1,0 +1,33 @@
+name: 'make'
+description: 'Run a Makefile command'
+inputs:
+  target:
+    description: 'Makefile target to run'
+    default: build
+    required: false
+  output-dir:
+    description: 'Output directory.'
+    default: ./output
+    required: false
+  os:
+    description: 'OS to target, in GOOS format. Eg "linux", "darwin"'
+    default: linux
+    required: false
+  arch:
+    description: 'OS to target, in GOARCH format. Eg "amd64"'
+    default: amd64
+    required: false
+  version:
+    description: 'Semantic version string to use when generating artifacts'
+    default: unknown
+    required: false
+runs:
+  using: 'docker'
+  image: golang:1.16-bullseye # alpine3.14
+  args:
+    - make
+    - ${{ inputs.target }}
+    - OUTPUT_DIR=${{ inputs.output-dir }}
+    - OS=${{ inputs.os }}
+    - ARCH=${{ inputs.arch }}
+    - VERSION=${{ inputs.version }}

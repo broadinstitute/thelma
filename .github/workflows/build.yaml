@@ -31,8 +31,12 @@ env:
   IMAGE_NAME: ${{ github.event.repository.name }}
   # Region-specific Google Docker repository where GOOGLE_PROJECT/REPOSITORY_NAME can be found
   GOOGLE_DOCKER_REPOSITORY: us-central1-docker.pkg.dev
+  # GCS bucket where thelma releases are hosted
+  THELMA_RELEASE_BUCKET: thelma-releases
+  # Version of gcloud to use for workflow steps that require it
+  SETUP_GCLOUD_VERSION: '0.3.0'
 jobs:
-  tag-publish-job:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current code
@@ -40,7 +44,7 @@ jobs:
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
-      - name: Bump the tag to a new version
+      - name: Bump tag to new version
         uses: databiosphere/github-actions/actions/bumper@bumper-0.0.3
         id: tag
         env:
@@ -49,37 +53,80 @@ jobs:
           RELEASE_BRANCHES: main
           WITH_V: true
 
-      - name: Auth to GCP
-        uses: google-github-actions/setup-gcloud@master
+      #
+      # Build binary artifacts for Darwin and Linux
+      #
+      # TODO: would save time if we could cache go module dependencies across build steps
+      - name: Build linux binary distribution
+        uses: ./.github/actions/make
         with:
-          version: '345.0.0'
-          service_account_email: ${{ secrets.GCP_PUBLISH_EMAIL }}
-          service_account_key: ${{ secrets.GCP_PUBLISH_KEY_B64 }}
+          target: "dist"
+          os: linux
+          arch: amd64
+          version: ${{ steps.tag.outputs.tag }}
+      - name: Build darwin binary distribution
+        uses: ./.github/actions/make
+        with:
+          target: "dist"
+          os: darwin
+          arch: amd64
+          version: ${{ steps.tag.outputs.tag }}
+      - name: Generate checksum file
+        uses: ./.github/actions/make
+        with:
+          target: "checksum"
+          version: ${{ steps.tag.outputs.tag }}
 
-      - name: Explicitly auth Docker for Artifact Registry
-        run: gcloud auth configure-docker $GOOGLE_DOCKER_REPOSITORY --quiet
-
+      #
+      # Build Docker image
+      #
+      # TODO: the Dockerfile currently rebuilds thelma from scratch, would save time if we could copy the build
+      # artifacts from earlier steps into the Docker image
       - name: Construct docker image name and tag
         id: image-name
         run: |
           DOCKER_TAG=${{ steps.tag.outputs.tag }}
           echo ::set-output name=name::${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}:${DOCKER_TAG}
       - name: Build image
-        run: "docker build -t ${{ steps.image-name.outputs.name }} ."
-
+        run: "docker build --build-arg THELMA_VERSION=${{ steps.tag.outputs.tag }} -t ${{ steps.image-name.outputs.name }} ."
       - name: Run Trivy vulnerability scanner
         # From https://github.com/broadinstitute/dsp-appsec-trivy-action
         uses: broadinstitute/dsp-appsec-trivy-action@v1
         with:
           image: ${{ steps.image-name.outputs.name }}
 
+      #
+      # Upload binaries to release bucket
+      #
+      - name: Auth to GCP
+        uses: ./.github/actions/setup-gcloud
+        with:
+          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
+      - name: Upload release files to bucket
+        run: |
+          gsutil cp -r output/release/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ steps.tag.outputs.tag }}/
+      - name: Update tags.json
+        # TODO: we can make this more sophisticated at some point, but the goal right now
+        # is to minimally simulate Docker's "latest" tag for thelma releases, to support auto-update.
+        if: github.event_name != 'pull_request'
+        run: |
+          cat <<EOF > tags.json
+          {"latest":"${ steps.tag.outputs.tag }"}
+          EOF
+          gsutil cp tags.json gs//${{ env.THELMA_RELEASE_BUCKET }}/tags.json
+
+      #
+      # Push Docker image
+      #
+      - name: Auth to GCP
+        uses: ./.github/actions/setup-gcloud
+        with:
+          version: '345.0.0'
+          service-account-key: ${{ secrets.GCP_PUBLISH_KEY_B64 }}
+      - name: Explicitly auth Docker for Artifact Registry
+        run: gcloud auth configure-docker $GOOGLE_DOCKER_REPOSITORY --quiet
       - name: Push image
         run: "docker push ${{ steps.image-name.outputs.name }}"
-
-      - name: Add latest tag
-        if: github.event_name != 'pull_request'
-        run: gcloud artifacts tags add "${{ steps.image-name.outputs.name }}" latest
-
       - name: Comment pushed image
         uses: actions/github-script@0.3.0
         if: github.event_name == 'pull_request'
@@ -88,3 +135,6 @@ jobs:
           script: |
             const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
             github.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.name }}' });
+      - name: Add latest tag to Docker image
+        if: github.event_name != 'pull_request'
+        run: gcloud artifacts tags add "${{ steps.image-name.outputs.name }}" latest
