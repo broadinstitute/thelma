@@ -100,7 +100,7 @@ install_helm_docs() {
     # linux artifacts are only made available as rpm or deb packages and not as tarballs :'(
     URL="https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${ARCH}.deb"
     echo "Downloading helm-docs from ${URL}"
-    wget --timeout="${WGET_TIMEOUT_SECONDS}" -q -O helm-docs.deb && \
+    wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O helm-docs.deb && \
       ar x helm-docs.deb && \
       tar -xzvf data.tar.gz && \
       testexec ./usr/local/bin/helm-docs --version && \
