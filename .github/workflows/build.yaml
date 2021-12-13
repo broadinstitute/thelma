@@ -63,13 +63,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Build dist
-        uses: .github/actions/make
-        with:
-          target: "dist"
-          os: ${{ matrix.os }}
-          arch: ${{ matrix.arch }}
-          version: ${{ needs.tag.outputs.version }}
+#      - name: Build dist
+#        uses: .github/actions/make
+#        with:
+#          target: "dist"
+#          os: ${{ matrix.os }}
+#          arch: ${{ matrix.arch }}
+#          version: ${{ needs.tag.outputs.version }}
+
 #
 #      - name: Set image name
 #        id: image-name
