@@ -1,0 +1,14 @@
+name: 'setup-gcloud'
+description: 'Setup gcloud'
+inputs:
+  service-account-key:
+    description: "Base64-encoded SA key JSON"
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Setup
+      uses: google-github-actions/setup-gcloud@0.3.0
+      with:
+        version: '345.0.0'
+        service_account_key: ${{ inputs.service-account-key }}

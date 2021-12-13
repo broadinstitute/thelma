@@ -47,8 +47,8 @@ DIST_DIR=${OUTPUT_DIR}/dist
 # RELEASE_DIR directory where dist archives should be copied for uploading
 RELEASE_DIR=${OUTPUT_DIR}/release
 
-# DIST_ARCHIVE name of generated dist archive
-DIST_ARCHIVE=${RELEASE_DIR}/thelma_${VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz
+# DIST_ARCHIVE_NAME name of generated dist archive
+DIST_ARCHIVE_NAME=thelma_${VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz
 
 # COVERAGE_DIR directory where coverage reports are generated
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
@@ -67,7 +67,8 @@ echo-vars:
 	@echo BIN_DIR: ${BIN_DIR}
 	@echo RUNTIME_DEPS_BIN_DIR: ${RUNTIME_DEPS_BIN_DIR}
 	@echo DIST_DIR: ${DIST_DIR}
-	@echo DIST_ARCHIVE: ${DIST_ARCHIVE}
+	@echo RELEASE_DIR: ${RELEASE_DIR}
+	@echo DIST_ARCHIVE_NAME: ${DIST_ARCHIVE_NAME}
 
 # init: Initialization steps for build & other targets
 init: echo-vars
@@ -90,7 +91,7 @@ dist: runtime-deps build
 	cp -R ${RUNTIME_DEPS_BIN_DIR}/ ${DIST_DIR}/bin
 	cp -R ${BIN_DIR}/ ${DIST_DIR}/bin
 	VERSION=${VERSION} GIT_REF=${GIT_REF} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${DIST_DIR}
-	tar -C ${DIST_DIR} -czf ${DIST_ARCHIVE} .
+	tar -C ${DIST_DIR} -czf ${RELEASE_DIR}/${DIST_ARCHIVE_NAME} .
 
 # checksum: Generate sha256sum file for tarball archives in the release directory
 checksum:
