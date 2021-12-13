@@ -44,8 +44,11 @@ RUNTIME_DEPS_BIN_DIR=${OUTPUT_DIR}/runtime-deps/${TARGET_OS}/${TARGET_ARCH}/bin
 # DIST_DIR directory where tarball distribution is staged
 DIST_DIR=${OUTPUT_DIR}/dist
 
+# RELEASE_DIR directory where dist archives should be copied for uploading
+RELEASE_DIR=${OUTPUT_DIR}/release
+
 # DIST_ARCHIVE name of generated dist archive
-DIST_ARCHIVE=${OUTPUT_DIR}/thelma_${VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz
+DIST_ARCHIVE=${RELEASE_DIR}/thelma_${VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz
 
 # COVERAGE_DIR directory where coverage reports are generated
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
@@ -80,11 +83,18 @@ build: init
 
 # dist: Package thelma binary + runtime dependencies into a tarball distribution
 dist: runtime-deps build
+	mkdir -p ${RELEASE_DIR}
+	rm -rf ${DIST_DIR}
 	mkdir -p ${DIST_DIR}
+
 	cp -R ${RUNTIME_DEPS_BIN_DIR}/ ${DIST_DIR}/bin
 	cp -R ${BIN_DIR}/ ${DIST_DIR}/bin
 	VERSION=${VERSION} GIT_REF=${GIT_REF} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${DIST_DIR}
 	tar -C ${DIST_DIR} -czf ${DIST_ARCHIVE} .
+
+# checksum: Generate sha256sum file for tarball archives in the release directory
+checksum:
+	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_DIR}
 
 # test: Run unit tests
 test: init
