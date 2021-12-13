@@ -1,28 +1,28 @@
 # LOCAL_OS: local os  in GOOS format. Eg. "darwin", "linux"
-LOCAL_OS := $(shell ./scripts/get-os.sh)
+LOCAL_OS=$(shell ./scripts/get-os.sh)
 
 # LOCAL_ARCH: local arch  in GOARCH format. Eg. "amd64", "arm64"
-LOCAL_ARCH := $(shell ./scripts/get-arch.sh)
+LOCAL_ARCH=$(shell ./scripts/get-arch.sh)
 
 # OS: set to target OS for build artifacts, in GOOS format
-OS ?= ${LOCAL_OS}
-ARCH ?= ${LOCAL_ARCH}
+OS=${LOCAL_OS}
+ARCH=${LOCAL_ARCH}
 
 # TARGET_OS/
-TARGET_OS := ${OS}
-TARGET_ARCH := ${ARCH}
+TARGET_OS=${OS}
+TARGET_ARCH=${ARCH}
 
 # VERSION: semantic version (eg. "1.2.3") to use when generating thelma build artifacts
-VERSION ?= unknown
+VERSION=unknown
 
 # GIT_REF: git ref to use when generating thelma build artifacts
-GIT_REF ?= $(shell git rev-parse HEAD)
+GIT_REF=$(shell git rev-parse HEAD)
 
 # CROSSPLATFORM: true if this is a cross-platform build, eg. we're building for Linux on OSX or vice versa
 ifeq ($(LOCAL_OS)-$(LOCAL_ARCH),$(TARGET_OS)-$(TARGET_ARCH))
-	CROSSPLATFORM = false
+	CROSSPLATFORM=false
 else
-	CROSSPLATFORM = true
+	CROSSPLATFORM=true
 endif
 
 # RUNTIME_DEPS_TESTEXEC: value TESTEXEC is set to in runtime-deps target
@@ -69,6 +69,7 @@ echo-vars:
 	@echo DIST_DIR: ${DIST_DIR}
 	@echo RELEASE_DIR: ${RELEASE_DIR}
 	@echo DIST_ARCHIVE_NAME: ${DIST_ARCHIVE_NAME}
+	@echo COVERAGE_DIR: ${COVERAGE_DIR}
 
 # init: Initialization steps for build & other targets
 init: echo-vars
