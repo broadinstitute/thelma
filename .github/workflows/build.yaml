@@ -50,7 +50,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BROADBOT_TOKEN }}
           RELEASE_BRANCHES: main
           WITH_V: true
-  binaries:
+  build:
     runs-on: ubuntu-latest
     needs: tag
     strategy:
@@ -63,7 +63,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Build dist
+      - name: Build binary distribution
         uses: ./.github/actions/make
         with:
           target: "dist"
