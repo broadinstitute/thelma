@@ -78,7 +78,7 @@ jobs:
       - name: Auth to GCP
         uses: ./.github/actions/setup-gcloud
         with:
-          service_account_key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
+          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
 
       - name: Upload all files in release directory
         run: |
