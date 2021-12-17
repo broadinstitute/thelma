@@ -85,10 +85,13 @@ jobs:
       - name: Construct docker image name and tag
         id: image-name
         run: |
-          NAME=${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}
-          DOCKER_TAG=${{ steps.tag.outputs.tag }}
-          echo ::set-output name=name:${NAME}
-          echo ::set-output name=tagged::${NAME}:${DOCKER_TAG}
+          NAME="${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}"
+          DOCKER_TAG="${{ steps.tag.outputs.tag }}"
+          TAGGED="${NAME}:${TAG}"
+          echo "NAME: ${NAME}"
+          echo "TAGGED: ${TAGGED}"
+          echo ::set-output "name=name:${NAME}"
+          echo ::set-output "name=tagged::${TAGGED}"
       - name: Build image
         run: "docker build --build-arg THELMA_VERSION=${{ steps.tag.outputs.tag }} -t ${{ steps.image-name.outputs.tagged }} ."
       - name: Run Trivy vulnerability scanner
