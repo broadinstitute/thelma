@@ -14,8 +14,6 @@ COPY . .
 # Compile & install runtime dependencies into output/release
 RUN make release VERSION=${THELMA_VERSION}
 
-RUN pwd
-
 #
 # Copy dist into runtime image
 #
@@ -29,8 +27,6 @@ RUN apk upgrade
 COPY --from=build /build/output/release /thelma
 
 ENV PATH="/thelma/bin:${PATH}"
-
-RUN find /thelma/
 
 # Make sure thelma executes
 RUN /thelma/bin/thelma --help
