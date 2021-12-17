@@ -109,7 +109,7 @@ jobs:
           service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
       - name: Upload release files to bucket
         run: |
-          gsutil cp -r output/release/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ steps.tag.outputs.tag }}/
+          gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ steps.tag.outputs.tag }}/
       - name: Update tags.json
         # TODO: we can make this more sophisticated at some point, but the goal right now
         # is to minimally simulate Docker's "latest" tag for thelma releases, to support auto-update.
