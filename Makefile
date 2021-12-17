@@ -42,14 +42,14 @@ BIN_DIR=${OUTPUT_DIR}/bin
 # RUNTIME_DEPS_BIN_DIR location where 3rd-party runtime dependency binaries are downloaded
 RUNTIME_DEPS_BIN_DIR=${OUTPUT_DIR}/runtime-deps/${TARGET_OS}/${TARGET_ARCH}/bin
 
-# RELEASE_DIR directory where tarball distribution is staged
-RELEASE_DIR=${OUTPUT_DIR}/release
-
-# RELEASE_DIR directory where release archives should be copied for uploading
+# RELEASE_DIR directory where release archive is staged
 RELEASE_DIR=${OUTPUT_DIR}/release
 
 # RELEASE_ARCHIVE_NAME name of generated release archive
 RELEASE_ARCHIVE_NAME=thelma_${VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz
+
+# RELEASE_ARCHIVE_DIR directory where release archives are generated
+RELEASE_ARCHIVE_DIR=${OUTPUT_DIR}/releases
 
 # COVERAGE_DIR directory where coverage reports are generated
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
@@ -86,18 +86,18 @@ build: init
 
 # release: Assemble thelma binary + runtime dependencies into a tarball distribution
 release: runtime-deps build
-	mkdir -p ${RELEASE_DIR}
 	rm -rf ${RELEASE_DIR}
 	mkdir -p ${RELEASE_DIR}
+	mkdir -p ${RELEASE_ARCHIVE_DIR}
 
 	cp -R ${RUNTIME_DEPS_BIN_DIR}/ ${RELEASE_DIR}/bin
 	cp -R ${BIN_DIR}/ ${RELEASE_DIR}/bin
 	VERSION=${VERSION} GIT_REF=${GIT_REF} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_DIR}
-	tar -C ${RELEASE_DIR} -czf ${OUTPUT_DIR}/${RELEASE_ARCHIVE_NAME} .
+	tar -C ${RELEASE_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
 
-# checksum: Generate sha256sum file for tarball archives in the release directory
+# checksum: Generate sha256sum file for tarball archives in the release archive directory
 checksum:
-	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_DIR}
+	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_ARCHIVE_DIR}
 
 # test: Run unit tests
 test: init
