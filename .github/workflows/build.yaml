@@ -85,15 +85,17 @@ jobs:
       - name: Construct docker image name and tag
         id: image-name
         run: |
+          NAME=${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}
           DOCKER_TAG=${{ steps.tag.outputs.tag }}
-          echo ::set-output name=name::${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}:${DOCKER_TAG}
+          echo ::set-output name=name:${NAME}
+          echo ::set-output tagged=name::${NAME}:${DOCKER_TAG}
       - name: Build image
-        run: "docker build --build-arg THELMA_VERSION=${{ steps.tag.outputs.tag }} -t ${{ steps.image-name.outputs.name }} ."
+        run: "docker build --build-arg THELMA_VERSION=${{ steps.tag.outputs.tag }} -t ${{ steps.image-name.outputs.tagged }} ."
       - name: Run Trivy vulnerability scanner
         # From https://github.com/broadinstitute/dsp-appsec-trivy-action
         uses: broadinstitute/dsp-appsec-trivy-action@v1
         with:
-          image: ${{ steps.image-name.outputs.name }}
+          image: ${{ steps.image-name.outputs.tagged }}
 
       #
       # Upload binaries to release bucket
@@ -126,7 +128,7 @@ jobs:
       - name: Explicitly auth Docker for Artifact Registry
         run: gcloud auth configure-docker $GOOGLE_DOCKER_REPOSITORY --quiet
       - name: Push image
-        run: "docker push ${{ steps.image-name.outputs.name }}"
+        run: "docker push ${{ steps.image-name.outputs.tagged }}"
       - name: Comment pushed image
         uses: actions/github-script@0.3.0
         if: github.event_name == 'pull_request'
@@ -134,7 +136,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
-            github.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.name }}' });
+            github.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.tagged }}' });
       - name: Add latest tag to Docker image
         if: github.event_name != 'pull_request'
-        run: gcloud artifacts tags add "${{ steps.image-name.outputs.name }}" latest
+        run: |
+          gcloud artifacts docker tags add \
+            "${{ steps.image-name.outputs.tagged }}" \
+            "${{ steps.image-name.outputs.name }}:latest"
