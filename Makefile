@@ -86,12 +86,13 @@ build: init
 
 # release: Assemble thelma binary + runtime dependencies into a tarball distribution
 release: runtime-deps build
+	# Always clean release staging dir before assembly, just so we don't end up with pollution
 	rm -rf ${RELEASE_STAGING_DIR}
 	mkdir -p ${RELEASE_STAGING_DIR}
 	mkdir -p ${RELEASE_ARCHIVE_DIR}
 
-	cp -R ${RUNTIME_DEPS_BIN_DIR}/ ${RELEASE_STAGING_DIR}/bin
-	cp -R ${BIN_DIR}/ ${RELEASE_STAGING_DIR}/bin
+	cp -r ${RUNTIME_DEPS_BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
+	cp -r ${BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
 	VERSION=${VERSION} GIT_REF=${GIT_REF} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}
 	tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
 
