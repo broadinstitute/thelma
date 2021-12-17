@@ -42,8 +42,8 @@ BIN_DIR=${OUTPUT_DIR}/bin
 # RUNTIME_DEPS_BIN_DIR location where 3rd-party runtime dependency binaries are downloaded
 RUNTIME_DEPS_BIN_DIR=${OUTPUT_DIR}/runtime-deps/${TARGET_OS}/${TARGET_ARCH}/bin
 
-# RELEASE_DIR directory where release archive is staged
-RELEASE_DIR=${OUTPUT_DIR}/release
+# RELEASE_STAGING_DIR directory where release archive is staged before assembly
+RELEASE_STAGING_DIR=${OUTPUT_DIR}/release
 
 # RELEASE_ARCHIVE_NAME name of generated release archive
 RELEASE_ARCHIVE_NAME=thelma_${VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz
@@ -67,9 +67,9 @@ echo-vars:
 	@echo OUTPUT_DIR: ${OUTPUT_DIR}
 	@echo BIN_DIR: ${BIN_DIR}
 	@echo RUNTIME_DEPS_BIN_DIR: ${RUNTIME_DEPS_BIN_DIR}
-	@echo RELEASE_DIR: ${RELEASE_DIR}
-	@echo RELEASE_DIR: ${RELEASE_DIR}
+	@echo RELEASE_STAGING_DIR: ${RELEASE_STAGING_DIR}
 	@echo RELEASE_ARCHIVE_NAME: ${RELEASE_ARCHIVE_NAME}
+	@echo RELEASE_ARCHIVE_DIR: ${RELEASE_ARCHIVE_DIR}
 	@echo COVERAGE_DIR: ${COVERAGE_DIR}
 
 # init: Initialization steps for build & other targets
@@ -86,14 +86,14 @@ build: init
 
 # release: Assemble thelma binary + runtime dependencies into a tarball distribution
 release: runtime-deps build
-	rm -rf ${RELEASE_DIR}
-	mkdir -p ${RELEASE_DIR}
+	rm -rf ${RELEASE_STAGING_DIR}
+	mkdir -p ${RELEASE_STAGING_DIR}
 	mkdir -p ${RELEASE_ARCHIVE_DIR}
 
-	cp -R ${RUNTIME_DEPS_BIN_DIR}/ ${RELEASE_DIR}/bin
-	cp -R ${BIN_DIR}/ ${RELEASE_DIR}/bin
-	VERSION=${VERSION} GIT_REF=${GIT_REF} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_DIR}
-	tar -C ${RELEASE_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
+	cp -R ${RUNTIME_DEPS_BIN_DIR}/ ${RELEASE_STAGING_DIR}/bin
+	cp -R ${BIN_DIR}/ ${RELEASE_STAGING_DIR}/bin
+	VERSION=${VERSION} GIT_REF=${GIT_REF} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}
+	tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
 
 # checksum: Generate sha256sum file for tarball archives in the release archive directory
 checksum:
