@@ -118,7 +118,7 @@ jobs:
           cat <<EOF > tags.json
           {"latest":"${{ steps.tag.outputs.tag }}"}
           EOF
-          gsutil cp tags.json gs//${{ env.THELMA_RELEASE_BUCKET }}/tags.json
+          gsutil cp tags.json gs://${{ env.THELMA_RELEASE_BUCKET }}/tags.json
 
       #
       # Push Docker image
