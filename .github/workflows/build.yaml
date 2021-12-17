@@ -57,25 +57,25 @@ jobs:
       # Build binary artifacts for Darwin and Linux
       #
       # TODO: would save time if we could cache go module dependencies across build steps
-#      - name: Build linux binary distribution
-#        uses: ./.github/actions/make
-#        with:
-#          target: "dist"
-#          os: linux
-#          arch: amd64
-#          version: ${{ steps.tag.outputs.tag }}
-#      - name: Build darwin binary distribution
-#        uses: ./.github/actions/make
-#        with:
-#          target: "dist"
-#          os: darwin
-#          arch: amd64
-#          version: ${{ steps.tag.outputs.tag }}
-#      - name: Generate checksum file
-#        uses: ./.github/actions/make
-#        with:
-#          target: "checksum"
-#          version: ${{ steps.tag.outputs.tag }}
+      - name: Build linux binary distribution
+        uses: ./.github/actions/make
+        with:
+          target: "release"
+          os: linux
+          arch: amd64
+          version: ${{ steps.tag.outputs.tag }}
+      - name: Build darwin binary distribution
+        uses: ./.github/actions/make
+        with:
+          target: "release"
+          os: darwin
+          arch: amd64
+          version: ${{ steps.tag.outputs.tag }}
+      - name: Generate checksum file
+        uses: ./.github/actions/make
+        with:
+          target: "checksum"
+          version: ${{ steps.tag.outputs.tag }}
 
       #
       # Build Docker image
@@ -103,23 +103,22 @@ jobs:
       #
       # Upload binaries to release bucket
       #
-#      - name: Auth to GCP
-#        uses: ./.github/actions/setup-gcloud
-#        with:
-#          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
-#      - name: Upload release files to bucket
-#        run: |
-#          gsutil cp -r output/release/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ steps.tag.outputs.tag }}/
-#      - name: Update tags.json
-#        # TODO: we can make this more sophisticated at some point, but the goal right now
-#        # is to minimally simulate Docker's "latest" tag for thelma releases, to support auto-update.
-#        # Whatever "latest" is set to in tags.json, is the version thelma will automatically update to.
-#        if: github.event_name != 'pull_request'
-#        run: |
-#          cat <<EOF > tags.json
-#          {"latest":"${{ steps.tag.outputs.tag }}"}
-#          EOF
-#          gsutil cp tags.json gs//${{ env.THELMA_RELEASE_BUCKET }}/tags.json
+      - name: Auth to GCP
+        uses: ./.github/actions/setup-gcloud
+        with:
+          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
+      - name: Upload release files to bucket
+        run: |
+          gsutil cp -r output/release/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ steps.tag.outputs.tag }}/
+      - name: Update tags.json
+        # TODO: we can make this more sophisticated at some point, but the goal right now
+        # is to minimally simulate Docker's "latest" tag for thelma releases, to support auto-update.
+        if: github.event_name != 'pull_request'
+        run: |
+          cat <<EOF > tags.json
+          {"latest":"${{ steps.tag.outputs.tag }}"}
+          EOF
+          gsutil cp tags.json gs//${{ env.THELMA_RELEASE_BUCKET }}/tags.json
 
       #
       # Push Docker image

@@ -10,11 +10,8 @@ FROM golang:${GO_VERSION}-bullseye as build
 WORKDIR /build
 COPY . .
 
-# Unit tests
-RUN make test
-
-# Compile & install runtime dependencies into output/dist
-RUN make dist DIST_DIR=/thelma VERSION=${THELMA_VERSION}
+# Compile & install runtime dependencies into output/release
+RUN make release RELEASE_DIR=/thelma VERSION=${THELMA_VERSION}
 
 #
 # Copy dist into runtime image
