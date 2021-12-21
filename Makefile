@@ -108,7 +108,7 @@ release: runtime-deps build
 
 	cp -r ${RUNTIME_DEPS_BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
 	cp -r ${BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
-	${BIN_DIR}/thelma version --output-format=json > ${RELEASE_STAGING_DIR}/build.json
+	VERSION=${VERSION} GIT_SHA=${GIT_SHA} BUILD_TIMESTAMP=${BUILD_TIMESTAMP} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}/build.json
 	tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
 
 # checksum: Generate sha256sum file for tarball archives in the release archive directory
