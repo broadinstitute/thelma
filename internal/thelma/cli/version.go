@@ -21,16 +21,20 @@ func newVersionCLI(builder builder.ThelmaBuilder) *versionCLI {
 		Long:  versionHelpMessage,
 	}
 
+	printer := printing.NewPrinter()
+	printer.AddFlags(cmd)
+
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
 			return fmt.Errorf("expected 0 arguments, got %d: %s", len(args), args)
 		}
 
+		if err := printer.VerifyFlags(); err != nil {
+			return err
+		}
+
 		return nil
 	}
-
-	printer := printing.NewPrinter()
-	printer.AddFlags(cmd)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		return printer.PrintOutput(version.GetManifest(), cmd.OutOrStdout())

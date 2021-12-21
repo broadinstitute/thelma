@@ -25,8 +25,11 @@ type options struct {
 
 // Printer is a tool for printing formatted output from thelma cli commands.
 type Printer interface {
+	// AddFlags adds --output-format and --output-file flags to a cobra command
 	AddFlags(command *cobra.Command)
+	// VerifyFlags verifies flags have correct values
 	VerifyFlags() error
+	// PrintOutput prints output in the user-supplied format
 	PrintOutput(output interface{}, stdout io.Writer) error
 }
 
