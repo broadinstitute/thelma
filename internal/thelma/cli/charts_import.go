@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/mirror"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
@@ -35,12 +35,12 @@ var chartsImportFlagNames = struct {
 }
 
 type chartsImportCLI struct {
-	loader       loader.ThelmaLoader
+	builder      builder.ThelmaBuilder
 	cobraCommand *cobra.Command
 	options      *chartsImportOptions
 }
 
-func newChartsImportCLI(loader loader.ThelmaLoader) *chartsImportCLI {
+func newChartsImportCLI(builder builder.ThelmaBuilder) *chartsImportCLI {
 	options := chartsImportOptions{}
 
 	cobraCommand := &cobra.Command{
@@ -61,7 +61,7 @@ func newChartsImportCLI(loader loader.ThelmaLoader) *chartsImportCLI {
 			return fmt.Errorf("expected no positional arguments, got %v", args)
 		}
 
-		if err := loader.Load(); err != nil {
+		if _, err := builder.Build(); err != nil {
 			return err
 		}
 
@@ -72,7 +72,7 @@ func newChartsImportCLI(loader loader.ThelmaLoader) *chartsImportCLI {
 			}
 			options.configFile = expanded
 		} else {
-			options.configFile = path.Join(loader.App().Paths().MiscConfDir(), chartsImportDefaultConfigFile)
+			options.configFile = path.Join(builder.App().Paths().EtcDir(), chartsImportDefaultConfigFile)
 		}
 
 		if err := printer.VerifyFlags(); err != nil {
@@ -83,7 +83,7 @@ func newChartsImportCLI(loader loader.ThelmaLoader) *chartsImportCLI {
 	}
 
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
-		imported, err := importCharts(&options, loader.App())
+		imported, err := importCharts(&options, builder.App())
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func newChartsImportCLI(loader loader.ThelmaLoader) *chartsImportCLI {
 	}
 
 	return &chartsImportCLI{
-		loader:       loader,
+		builder:      builder,
 		cobraCommand: cobraCommand,
 		options:      &options,
 	}

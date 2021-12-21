@@ -19,7 +19,7 @@ const envPrefix = "THELMA"
 // defaultLogLevel default level for logging, valid options are whatever zerolog accepts (eg. "debug", "trace")
 const defaultLogLevel = "info"
 
-// Keys makes yaml serialization keys for Data fields available without reflection.
+// Keys makes yaml serialization keys for data fields available without reflection.
 var Keys = struct {
 	Home     string
 	Tmpdir   string
@@ -30,8 +30,8 @@ var Keys = struct {
 	LogLevel: "loglevel",
 }
 
-// Data is a mutable, serializable struct for building an immutable Config
-type Data struct {
+// data is a mutable, serializable struct for building an immutable Config
+type data struct {
 	Home     string `yaml:"home"`
 	Tmpdir   string `yaml:"tmpdir"`
 	LogLevel string `yaml:"loglevel"`
@@ -39,7 +39,7 @@ type Data struct {
 
 // Config represents global config for Thelma
 type Config struct {
-	data Data
+	data data
 }
 
 func Load(overrides map[string]interface{}) (*Config, error) {
@@ -83,12 +83,12 @@ func Load(overrides map[string]interface{}) (*Config, error) {
 	}
 
 	// Convert viper config to a simple immutable config struct and return
-	data := Data{}
-	if err := _viper.Unmarshal(&data); err != nil {
+	_data := data{}
+	if err := _viper.Unmarshal(&_data); err != nil {
 		return nil, fmt.Errorf("error loading configuration: %v", err)
 	}
 
-	return &Config{data: data}, nil
+	return &Config{data: _data}, nil
 }
 
 // Home is the path to a terra-helmfile clone

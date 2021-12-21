@@ -1,4 +1,4 @@
-package loader
+package builder
 
 import (
 	"fmt"
@@ -9,15 +9,13 @@ import (
 	"os"
 )
 
-// ThelmaLoader is a utility for initializing new ThelmaApp instances
-type ThelmaLoader interface {
+// ThelmaBuilder is a utility for initializing new ThelmaApp instances
+type ThelmaBuilder interface {
 	// App Returns the initialized ThelmaApp.
 	// Panics if app has not yet been initialized.
 	App() app.ThelmaApp
-	// Load when first called, initializes a new ThelmaApp and saves it. Subsequent calls do nothing.
-	Load() error
-	// Initialized returns true if Load() has been called successfully, false otherwise
-	Initialized() bool
+	// Build when first called, initializes a new ThelmaApp and saves it. Subsequent calls do nothing.
+	Build() (app.ThelmaApp, error)
 	// Close closes the App if one was initialized, otherwise does nothing
 	Close() error
 	// SetConfigOverride (FOR USE IN UNIT TESTS ONLY) sets a configuration override for the Thelma app.
@@ -28,58 +26,58 @@ type ThelmaLoader interface {
 	SetShellRunner(shell.Runner)
 }
 
-type thelmaLoader struct {
+type thelmaBuilder struct {
 	app             app.ThelmaApp
 	configOverrides map[string]interface{}
 	shellRunner     shell.Runner
 }
 
-func NewLoader() ThelmaLoader {
-	return &thelmaLoader{
+func NewBuilder() ThelmaBuilder {
+	return &thelmaBuilder{
 		app:             nil,
 		configOverrides: make(map[string]interface{}),
 	}
 }
 
-func (t *thelmaLoader) SetConfigOverride(key string, value interface{}) {
-	if t.Initialized() {
+func (t *thelmaBuilder) SetConfigOverride(key string, value interface{}) {
+	if t.initialized() {
 		panic(fmt.Errorf("attempt to set config override after initialization: %s=%v", key, value))
 	}
 
 	t.configOverrides[key] = value
 }
 
-func (t *thelmaLoader) SetShellRunner(shellRunner shell.Runner) {
-	if t.Initialized() {
+func (t *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) {
+	if t.initialized() {
 		panic(fmt.Errorf("attempt to set shell runner after initialization"))
 	}
 
 	t.shellRunner = shellRunner
 }
 
-func (t *thelmaLoader) App() app.ThelmaApp {
-	if !t.Initialized() {
+func (t *thelmaBuilder) App() app.ThelmaApp {
+	if !t.initialized() {
 		panic(fmt.Errorf("attempt to access App config before aclling Load()"))
 	}
 
 	return t.app
 }
 
-func (t *thelmaLoader) Load() error {
-	if t.Initialized() {
-		return nil
+func (t *thelmaBuilder) Build() (app.ThelmaApp, error) {
+	if t.initialized() {
+		return nil, nil
 	}
 
 	// Initialize config
 	cfg, err := config.Load(t.configOverrides)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Initialize app
 	_app, err := app.NewWithOptions(cfg, app.Options{Runner: t.shellRunner})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Set log level
@@ -87,18 +85,19 @@ func (t *thelmaLoader) Load() error {
 
 	t.app = _app
 
-	return nil
+	return nil, nil
 }
 
-func (t *thelmaLoader) Close() error {
-	if !t.Initialized() {
+func (t *thelmaBuilder) Close() error {
+	if !t.initialized() {
 		return nil
 	}
 
 	return t.app.Close()
 }
 
-func (t *thelmaLoader) Initialized() bool {
+// Returns true if app has been initialized
+func (t *thelmaBuilder) initialized() bool {
 	return t.app != nil
 }
 

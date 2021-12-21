@@ -1,12 +1,13 @@
 package cli
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 )
 
@@ -32,10 +33,11 @@ func init() {
 
 // ThelmaCLI represents a complete command-line interface for Thelma, including subcommands
 type ThelmaCLI struct {
-	loader      loader.ThelmaLoader
+	builder     builder.ThelmaBuilder
 	rootCommand *cobra.Command
 	chartsCLI   *chartsCLI
 	renderCLI   *renderCLI
+	versionCLI  *versionCLI
 }
 
 // Execute is the main method/entrypoint for Thelma
@@ -61,23 +63,28 @@ func (cli *ThelmaCLI) setArgs(args []string) {
 // setHome (for use in tests only) makes it possible to set THELMA_HOME to
 // a custom path for testing
 func (cli *ThelmaCLI) setHome(thelmaHome string) {
-	cli.loader.SetConfigOverride(config.Keys.Home, thelmaHome)
+	cli.builder.SetConfigOverride(config.Keys.Home, thelmaHome)
 }
 
 // setLogLevel (for use in tests only) makes it possible to set THELMA_LOGLEVEL to
 // a custom value for testing
 func (cli *ThelmaCLI) setLogLevel(level string) {
-	cli.loader.SetConfigOverride(config.Keys.LogLevel, level)
+	cli.builder.SetConfigOverride(config.Keys.LogLevel, level)
 }
 
 // setShellRunner (for use in tests only) configures this CLI instance to use the given shell runner
 func (cli *ThelmaCLI) setShellRunner(runner shell.Runner) {
-	cli.loader.SetShellRunner(runner)
+	cli.builder.SetShellRunner(runner)
+}
+
+// setStdout (for use in tests only) configures this CLI instance to use the given shell runner
+func (cli *ThelmaCLI) setStdout(stdout io.Writer) {
+	cli.rootCommand.SetOut(stdout)
 }
 
 // newThelmaCLI constructs a new Thelma CLI
 func newThelmaCLI() *ThelmaCLI {
-	_loader := loader.NewLoader()
+	_builder := builder.NewBuilder()
 
 	rootCommand := &cobra.Command{
 		Use:           commandName,
@@ -88,21 +95,23 @@ func newThelmaCLI() *ThelmaCLI {
 	}
 
 	cli := ThelmaCLI{
-		loader:      _loader,
+		builder:     _builder,
 		rootCommand: rootCommand,
-		chartsCLI:   newChartsCLI(_loader),
-		renderCLI:   newRenderCLI(_loader),
+		chartsCLI:   newChartsCLI(_builder),
+		renderCLI:   newRenderCLI(_builder),
+		versionCLI:  newVersionCLI(_builder),
 	}
 
 	// Close ThelmaApp if a subcommand initialized it
 	rootCommand.PersistentPostRunE = func(cmd *cobra.Command, args []string) error {
-		return _loader.Close()
+		return _builder.Close()
 	}
 
 	// Add subcommands
 	rootCommand.AddCommand(
 		cli.chartsCLI.cobraCommand,
 		cli.renderCLI.cobraCommand,
+		cli.versionCLI.cobraCommand,
 	)
 
 	return &cli

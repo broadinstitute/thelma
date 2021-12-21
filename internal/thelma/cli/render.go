@@ -2,7 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
@@ -56,7 +56,7 @@ const defaultRenderChartSourceDir = "charts"
 
 // renderCLI contains state and configuration for executing a render from the command-line
 type renderCLI struct {
-	loader        loader.ThelmaLoader
+	builder       builder.ThelmaBuilder
 	cobraCommand  *cobra.Command
 	helmfileArgs  *helmfile.Args
 	renderOptions *render.Options
@@ -112,7 +112,7 @@ type renderFlagValues struct {
 }
 
 // newRenderCLI constructs a new renderCLI
-func newRenderCLI(loader loader.ThelmaLoader) *renderCLI {
+func newRenderCLI(builder builder.ThelmaBuilder) *renderCLI {
 	flagVals := &renderFlagValues{}
 	helmfileArgs := &helmfile.Args{}
 	renderOptions := &render.Options{}
@@ -145,14 +145,14 @@ func newRenderCLI(loader loader.ThelmaLoader) *renderCLI {
 		renderOptions: renderOptions,
 		helmfileArgs:  helmfileArgs,
 		flagVals:      flagVals,
-		loader:        loader,
+		builder:       builder,
 	}
 
 	cobraCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
 			return fmt.Errorf("expected no positional arguments, got %v", args)
 		}
-		if err := loader.Load(); err != nil {
+		if _, err := builder.Build(); err != nil {
 			return err
 		}
 		if err := cli.handleFlagAliases(); err != nil {
@@ -161,7 +161,7 @@ func newRenderCLI(loader loader.ThelmaLoader) *renderCLI {
 		if err := cli.checkIncompatibleFlags(); err != nil {
 			return err
 		}
-		if err := cli.fillRenderOptions(loader.App().Config().Home()); err != nil {
+		if err := cli.fillRenderOptions(builder.App().Config().Home()); err != nil {
 			return err
 		}
 		if err := cli.fillHelmfileArgs(); err != nil {
@@ -172,7 +172,7 @@ func newRenderCLI(loader loader.ThelmaLoader) *renderCLI {
 	}
 
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
-		return render.DoRender(loader.App(), renderOptions, helmfileArgs)
+		return render.DoRender(builder.App(), renderOptions, helmfileArgs)
 	}
 
 	return cli

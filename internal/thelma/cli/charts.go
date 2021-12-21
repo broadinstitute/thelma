@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/spf13/cobra"
 )
 
@@ -10,11 +10,12 @@ const chartsHelpMessage = `Tools for interacting with Terra Helm charts`
 type chartsCLI struct {
 	cobraCommand *cobra.Command
 	publishCLI   *chartsPublishCLI
+	importCLI    *chartsImportCLI
 }
 
-func newChartsCLI(loader loader.ThelmaLoader) *chartsCLI {
-	publishCLI := newChartsPublishCLI(loader)
-	importCLI := newChartsImportCLI(loader)
+func newChartsCLI(builder builder.ThelmaBuilder) *chartsCLI {
+	publishCLI := newChartsPublishCLI(builder)
+	importCLI := newChartsImportCLI(builder)
 
 	cmd := &cobra.Command{
 		Use:   "charts [action]",
@@ -28,5 +29,6 @@ func newChartsCLI(loader loader.ThelmaLoader) *chartsCLI {
 	return &chartsCLI{
 		cobraCommand: cmd,
 		publishCLI:   publishCLI,
+		importCLI:    importCLI,
 	}
 }

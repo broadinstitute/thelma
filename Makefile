@@ -13,10 +13,16 @@ TARGET_OS=${OS}
 TARGET_ARCH=${ARCH}
 
 # VERSION: semantic version (eg. "1.2.3") to use when versioning thelma build artifacts
-VERSION=unknown
+VERSION=development
 
-# GIT_REF: git ref to use when versioning thelma build artifacts
-GIT_REF=$(shell git rev-parse HEAD)
+# GIT_SHA: git sha to use when versioning thelma build artifacts
+GIT_SHA=$(shell git rev-parse HEAD)
+
+# BUILD_TIMESTAMP: timestamp to use when versioning thelma build artifacts
+BUILD_TIMESTAMP=$(shell date "+%Y-%m-%dT%H:%M:%S%z")
+
+# VERSION_IMPORT_PATH: path where version ldflags should be set
+VERSION_IMPORT_PATH=github.com/broadinstitute/thelma/internal/thelma/app/version
 
 # CROSSPLATFORM: true if this is a cross-platform build, i.e. we're building for Linux on OSX or vice versa
 ifeq ($(LOCAL_OS)-$(LOCAL_ARCH),$(TARGET_OS)-$(TARGET_ARCH))
@@ -56,12 +62,14 @@ COVERAGE_DIR=${OUTPUT_DIR}/coverage
 
 # echo-vars: Echo makefile variables for debugging purposes
 echo-vars:
-	@echo VERSION: ${VERSION}
-	@echo GIT_REF: ${GIT_REF}
 	@echo TARGET_OS: ${TARGET_OS}
 	@echo TARGET_ARCH: ${TARGET_ARCH}
 	@echo LOCAL_OS: ${LOCAL_OS}
 	@echo LOCAL_ARCH: ${LOCAL_ARCH}
+	@echo VERSION: ${VERSION}
+	@echo GIT_SHA: ${GIT_SHA}
+	@echo BUILD_TIMESTAMP: ${BUILD_TIMESTAMP}
+	@echo VERSION_IMPORT_PATH: ${VERSION_IMPORT_PATH}
 	@echo CROSSPLATFORM: ${CROSSPLATFORM}
 	@echo
 	@echo OUTPUT_DIR: ${OUTPUT_DIR}
@@ -82,7 +90,14 @@ runtime-deps: init
 
 # build: Compile thelma into output directory
 build: init
-	CGO_ENABLED=0 GO111MODULE=on GOBIN=${BIN_DIR} GOOS=${TARGET_OS} GOARCH=${TARGET_ARCH} go build -o ${BIN_DIR}/ ./...
+	CGO_ENABLED=0 \
+	GO111MODULE=on \
+	GOBIN=${BIN_DIR} \
+	GOOS=${TARGET_OS} \
+	GOARCH=${TARGET_ARCH} \
+	go build \
+	-ldflags="-X '${VERSION_IMPORT_PATH}.Version=${VERSION}' -X '${VERSION_IMPORT_PATH}.GitSha=${GIT_SHA}' -X '${VERSION_IMPORT_PATH}.BuildTimestamp=${BUILD_TIMESTAMP}'" \
+	-o ${BIN_DIR}/ ./...
 
 # release: Assemble thelma binary + runtime dependencies into a tarball distribution
 release: runtime-deps build
@@ -93,7 +108,7 @@ release: runtime-deps build
 
 	cp -r ${RUNTIME_DEPS_BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
 	cp -r ${BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
-	VERSION=${VERSION} GIT_REF=${GIT_REF} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}
+	${BIN_DIR}/thelma version --output-format=json > ${RELEASE_STAGING_DIR}/build.json
 	tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
 
 # checksum: Generate sha256sum file for tarball archives in the release archive directory
@@ -116,8 +131,8 @@ lint:
 fmt:
 	go fmt ./...
 
-# cover: Open coverage report from test run in browser
-cover:
+# coverage: Open coverage report from test run in browser
+coverage:
 	go tool cover -html=${COVERAGE_DIR}
 
 # clean: Clean up all generated files

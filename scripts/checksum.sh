@@ -7,7 +7,7 @@ if [[ $# -ne 1 ]]; then
   exit 1
 fi
 
-VERSION=${VERSION:-unknown}
+VERSION=${VERSION:-development}
 RELEASE_DIR=$1
 OUTFILE="thelma_${VERSION}_SHA256SUMS"
 

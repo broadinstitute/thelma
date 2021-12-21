@@ -7,8 +7,8 @@ import (
 	"path"
 )
 
-const miscConfDir = "etc"
-const defaultChartSrcDir = "charts"
+const etcDir = "etc"
+const chartsDir = "charts"
 
 // Paths is a utility for interacting with terra-helmfile paths
 type Paths struct {
@@ -29,14 +29,14 @@ func New(cfg *config.Config) (*Paths, error) {
 	return paths, nil
 }
 
-// DefaultChartSrcDir default directory in terra-helmfile where chart sources live
-func (p *Paths) DefaultChartSrcDir() string {
-	return path.Join(p.cfg.Home(), defaultChartSrcDir)
+// ChartsDir default directory in terra-helmfile where chart sources live
+func (p *Paths) ChartsDir() string {
+	return path.Join(p.cfg.Home(), chartsDir)
 }
 
-// MiscConfDir directory in terra-helmfile containing miscellaneous config files
-func (p *Paths) MiscConfDir() string {
-	return path.Join(p.cfg.Home(), miscConfDir)
+// EtcDir directory in terra-helmfile containing miscellaneous config files
+func (p *Paths) EtcDir() string {
+	return path.Join(p.cfg.Home(), etcDir)
 }
 
 // CreateScratchDir creates a new temporary directory

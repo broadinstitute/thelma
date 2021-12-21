@@ -2,7 +2,7 @@ package cli
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/app/loader"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
@@ -34,12 +34,12 @@ var chartsPublishFlagNames = struct {
 }
 
 type chartsPublishCLI struct {
-	loader       loader.ThelmaLoader
+	builder      builder.ThelmaBuilder
 	cobraCommand *cobra.Command
 	options      *chartsPublishOptions
 }
 
-func newChartsPublishCLI(loader loader.ThelmaLoader) *chartsPublishCLI {
+func newChartsPublishCLI(builder builder.ThelmaBuilder) *chartsPublishCLI {
 	options := chartsPublishOptions{}
 
 	cobraCommand := &cobra.Command{
@@ -58,7 +58,7 @@ func newChartsPublishCLI(loader loader.ThelmaLoader) *chartsPublishCLI {
 	cobraCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
 		options.charts = args
 
-		if err := loader.Load(); err != nil {
+		if _, err := builder.Build(); err != nil {
 			return err
 		}
 
@@ -69,7 +69,7 @@ func newChartsPublishCLI(loader loader.ThelmaLoader) *chartsPublishCLI {
 			}
 			options.chartDir = expanded
 		} else {
-			options.chartDir = loader.App().Paths().DefaultChartSrcDir()
+			options.chartDir = builder.App().Paths().ChartsDir()
 		}
 
 		if err := printer.VerifyFlags(); err != nil {
@@ -80,7 +80,7 @@ func newChartsPublishCLI(loader loader.ThelmaLoader) *chartsPublishCLI {
 	}
 
 	cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
-		published, err := publishCharts(&options, loader.App())
+		published, err := publishCharts(&options, builder.App())
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func newChartsPublishCLI(loader loader.ThelmaLoader) *chartsPublishCLI {
 	}
 
 	return &chartsPublishCLI{
-		loader:       loader,
+		builder:      builder,
 		cobraCommand: cobraCommand,
 		options:      &options,
 	}
