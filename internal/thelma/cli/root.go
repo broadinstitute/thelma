@@ -2,9 +2,6 @@ package cli
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
-	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"io"
@@ -24,12 +21,6 @@ Environment variables:
 | $THELMA_LOGLEVEL                   | Logging verbosity. One of error, warn, info (default), debug, or trace            |
 | $THELMA_TMPDIR                     | Path where Thelma should generate temporary files. Defaults to OS tmp dir.        |
 `
-
-func init() {
-	// Initialize logging
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-}
 
 // ThelmaCLI represents a complete command-line interface for Thelma, including subcommands
 type ThelmaCLI struct {
@@ -60,26 +51,15 @@ func (cli *ThelmaCLI) setArgs(args []string) {
 	cli.rootCommand.SetArgs(args)
 }
 
-// setHome (for use in tests only) makes it possible to set THELMA_HOME to
-// a custom path for testing
-func (cli *ThelmaCLI) setHome(thelmaHome string) {
-	cli.builder.SetConfigOverride(config.Keys.Home, thelmaHome)
-}
-
-// setLogLevel (for use in tests only) makes it possible to set THELMA_LOGLEVEL to
-// a custom value for testing
-func (cli *ThelmaCLI) setLogLevel(level string) {
-	cli.builder.SetConfigOverride(config.Keys.LogLevel, level)
-}
-
-// setShellRunner (for use in tests only) configures this CLI instance to use the given shell runner
-func (cli *ThelmaCLI) setShellRunner(runner shell.Runner) {
-	cli.builder.SetShellRunner(runner)
-}
-
-// setStdout (for use in tests only) configures this CLI instance to use the given shell runner
+// setStdout (for use in tests only) configures this CLI instance to write stdout to the given writer
 func (cli *ThelmaCLI) setStdout(stdout io.Writer) {
 	cli.rootCommand.SetOut(stdout)
+}
+
+// configureThelma (for use in tests only) makes it possible to customize thelma behavior in test runs,
+// including overriding THELMA_HOME and other configuration options, and replacing the Thelma shell runner with a mock
+func (cli *ThelmaCLI) configureThelma(cfg func(builder.ThelmaBuilder)) {
+	cfg(cli.builder)
 }
 
 // newThelmaCLI constructs a new Thelma CLI

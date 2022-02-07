@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
@@ -123,19 +124,12 @@ func TestRenderArgParsing(t *testing.T) {
 			expectedError: regexp.MustCompile("--app-version cannot be used for cluster releases"),
 		},
 		{
-			description: "config repo path must exist",
+			description: "config repo path must be set",
 			arguments:   []string{"render"},
 			setupFn: func(tc *testConfig) error {
-				tc.thelmaCLI.setHome("does-not-exist")
-				return nil
-			},
-			expectedError: regexp.MustCompile("terra-helmfile clone does not exist: .*/does-not-exist"),
-		},
-		{
-			description: "config repo path env var must be set",
-			arguments:   []string{"render"},
-			setupFn: func(tc *testConfig) error {
-				tc.thelmaCLI.setHome("")
+				tc.thelmaCLI.configureThelma(func(b builder.ThelmaBuilder) {
+					b.SetHome("")
+				})
 				return nil
 			},
 			expectedError: regexp.MustCompile("please specify path to terra-helmfile clone"),
@@ -329,8 +323,11 @@ func TestRenderArgParsing(t *testing.T) {
 			}
 
 			thelmaHome := t.TempDir()
-			// set config repo path to a tmp dir
-			thelmaCLI.setHome(thelmaHome)
+			// set config repo path to a tmp dir we control
+			thelmaCLI.configureThelma(func(b builder.ThelmaBuilder) {
+				b.WithTestDefaults()
+				b.SetHome(thelmaHome)
+			})
 
 			// add path to expectedAttrs objects so that equals() comparisons succeed
 			expected.renderOptions.OutputDir = path.Join(thelmaHome, "output")

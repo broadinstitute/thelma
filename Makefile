@@ -49,7 +49,7 @@ BIN_DIR=${OUTPUT_DIR}/bin
 RUNTIME_DEPS_BIN_DIR=${OUTPUT_DIR}/runtime-deps/${TARGET_OS}/${TARGET_ARCH}/bin
 
 # RELEASE_STAGING_DIR directory where release archive is staged before assembly
-RELEASE_STAGING_DIR=${OUTPUT_DIR}/release
+RELEASE_STAGING_DIR=${OUTPUT_DIR}/release-assembly
 
 # RELEASE_ARCHIVE_NAME name of generated release archive
 RELEASE_ARCHIVE_NAME=thelma_${VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz
@@ -60,36 +60,43 @@ RELEASE_ARCHIVE_DIR=${OUTPUT_DIR}/releases
 # COVERAGE_DIR directory where coverage reports are generated
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
 
-# echo-vars: Echo makefile variables for debugging purposes
-echo-vars:
-	@echo TARGET_OS: ${TARGET_OS}
-	@echo TARGET_ARCH: ${TARGET_ARCH}
-	@echo LOCAL_OS: ${LOCAL_OS}
-	@echo LOCAL_ARCH: ${LOCAL_ARCH}
-	@echo VERSION: ${VERSION}
-	@echo GIT_SHA: ${GIT_SHA}
-	@echo BUILD_TIMESTAMP: ${BUILD_TIMESTAMP}
-	@echo VERSION_IMPORT_PATH: ${VERSION_IMPORT_PATH}
-	@echo CROSSPLATFORM: ${CROSSPLATFORM}
-	@echo
-	@echo OUTPUT_DIR: ${OUTPUT_DIR}
-	@echo BIN_DIR: ${BIN_DIR}
-	@echo RUNTIME_DEPS_BIN_DIR: ${RUNTIME_DEPS_BIN_DIR}
-	@echo RELEASE_STAGING_DIR: ${RELEASE_STAGING_DIR}
-	@echo RELEASE_ARCHIVE_NAME: ${RELEASE_ARCHIVE_NAME}
-	@echo RELEASE_ARCHIVE_DIR: ${RELEASE_ARCHIVE_DIR}
-	@echo COVERAGE_DIR: ${COVERAGE_DIR}
+# Self-documenting help target copied from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
+# NOTE:
+#  High-level targets that devs are expected to run are documented with two pound signs (##), which makes them appear in help output.
+#  Low-level helper targets are documented with a single pound sign to reduce clutter in the help output.
+.PHONY: help
+help: # Prints list of targets in this Makefile to terminal
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-# init: Initialization steps for build & other targets
-init: echo-vars
+echo-vars: # Echo makefile variables for debugging purposes
+	@echo "-----------------------------------------------------------"
+	@echo "Build Parameters"
+	@echo "-----------------------------------------------------------"
+	@echo "Target OS:      ${TARGET_OS}"
+	@echo "Target Arch:    ${TARGET_ARCH}"
+	@echo "Local OS:       ${LOCAL_OS}"
+	@echo "Local Arch:     ${LOCAL_ARCH}"
+	@echo "Cross-platform? ${CROSSPLATFORM}"
+	@echo
+	@echo "Version:     ${VERSION}"
+	@echo "Git Sha:     ${GIT_SHA}"
+	@echo "Timestamp:   ${BUILD_TIMESTAMP}"
+	@echo "Import Path: ${VERSION_IMPORT_PATH}"
+	@echo
+	@echo "Paths:"
+	@echo "Compiled binaries:    ${BIN_DIR}"
+	@echo "Runtime dependencies: ${RUNTIME_DEPS_BIN_DIR}"
+	@echo "Release staging dir:  ${RELEASE_STAGING_DIR}"
+	@echo "Release archive file: ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME}"
+	@echo
+
+init: echo-vars # Initialization steps for build & other targets
 	mkdir -p ${OUTPUT_DIR}
 
-# runtime-deps: Download runtime binary dependencies, such as helm, helmfile, and so on, to output directory
-runtime-deps: init
+runtime-deps: init # Download runtime binary dependencies, such as helm, helmfile, and so on, to output directory
 	env OS=${TARGET_OS} ARCH=${TARGET_ARCH} SCRATCH_DIR=${OUTPUT_DIR}/downloads TESTEXEC=${RUNTIME_DEPS_TESTEXEC} ./scripts/install-runtime-deps.sh ${RUNTIME_DEPS_BIN_DIR}
 
-# build: Compile thelma into output directory
-build: init
+build: init ## Compile thelma into output directory
 	CGO_ENABLED=0 \
 	GO111MODULE=on \
 	GOBIN=${BIN_DIR} \
@@ -99,42 +106,41 @@ build: init
 	-ldflags="-X '${VERSION_IMPORT_PATH}.Version=${VERSION}' -X '${VERSION_IMPORT_PATH}.GitSha=${GIT_SHA}' -X '${VERSION_IMPORT_PATH}.BuildTimestamp=${BUILD_TIMESTAMP}'" \
 	-o ${BIN_DIR}/ ./...
 
-# release: Assemble thelma binary + runtime dependencies into a tarball distribution
-release: runtime-deps build
-	# Always clean release staging dir before assembly, just so we don't end up with pollution
+release: runtime-deps build ## Assemble thelma binary + runtime dependencies into a tarball distribution. Set OS and ARCH to desired platform.
+	# Clean staging dir
 	rm -rf ${RELEASE_STAGING_DIR}
 	mkdir -p ${RELEASE_STAGING_DIR}
 	mkdir -p ${RELEASE_ARCHIVE_DIR}
 
+    # Copy runtime dependencies into staging dir
 	cp -r ${RUNTIME_DEPS_BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
+
+    # Copy compiled thelma binary into staging dir
 	cp -r ${BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
+
+    # Generate build.json manifest in staging dir
 	VERSION=${VERSION} GIT_SHA=${GIT_SHA} BUILD_TIMESTAMP=${BUILD_TIMESTAMP} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}/build.json
+
+    # Package all files into tar.gz archive
 	tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
 
-# checksum: Generate sha256sum file for tarball archives in the release archive directory
-checksum:
+checksum: # Generate sha256sum file for tarball archives in the release archive directory
 	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_ARCHIVE_DIR}
 
-# test: Run unit tests
-test: init
+test: init ## Run unit tests
 	go test -covermode=atomic -race -coverprofile=${COVERAGE_DIR} ./...
 
-# smoke: Run unit and smoke tests
-smoke: runtime-deps
+smoke: runtime-deps ## Run unit and smoke tests
 	PATH=${PATH}:${RUNTIME_DEPS_BIN_DIR} go test -tags smoke -covermode=atomic -race -coverprofile=${COVERAGE_DIR} ./...
 
-# lint: Run golangci linter
-lint:
+lint: ## Run golangci linter
 	golangci-lint run ./...
 
-# fmt: Fmt go source code
-fmt:
+fmt: ## Format source code
 	go fmt ./...
 
-# coverage: Open coverage report from test run in browser
-coverage:
+coverage: ## Open coverage report from test run in browser. Run "make test" first!
 	go tool cover -html=${COVERAGE_DIR}
 
-# clean: Clean up all generated files
-clean:
+clean: ## Clean up all generated files
 	rm -rf ${OUTPUT_DIR}

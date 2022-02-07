@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/rs/zerolog"
 	"os"
 )
 
@@ -18,41 +18,78 @@ type ThelmaBuilder interface {
 	Build() (app.ThelmaApp, error)
 	// Close closes the App if one was initialized, otherwise does nothing
 	Close() error
+	// WithTestDefaults (FOR USE IN UNIT TESTS ONLY) causes app to be initialized with some settings that are useful
+	// in testing (eg. ignore config file and environment variables when loading config).
+	// Panics if this app has already been initialized.
+	WithTestDefaults() ThelmaBuilder
+	// SetHome (FOR USE IN UNIT TESTS ONLY) sets the Thelma home directory to the given path.
+	// Panics if this app has already been initialized.
+	SetHome(string) ThelmaBuilder
 	// SetConfigOverride (FOR USE IN UNIT TESTS ONLY) sets a configuration override for the Thelma app.
 	// Panics if this app has already been initialized.
-	SetConfigOverride(string, interface{})
+	SetConfigOverride(key string, value interface{}) ThelmaBuilder
+	// SetConfigOption (FOR USE IN UNIT TESTS ONLY) customizes configuration behavior for the Thelma app. (see config.Load for more info)
+	// Panics if this app has already been initialized.
+	SetConfigOption(option config.Option) ThelmaBuilder
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
 	// Panics if this app has already been initialized.
-	SetShellRunner(shell.Runner)
+	SetShellRunner(shell.Runner) ThelmaBuilder
 }
 
 type thelmaBuilder struct {
-	app             app.ThelmaApp
-	configOverrides map[string]interface{}
-	shellRunner     shell.Runner
+	app           app.ThelmaApp
+	configOptions []config.Option
+	shellRunner   shell.Runner
 }
 
 func NewBuilder() ThelmaBuilder {
 	return &thelmaBuilder{
-		app:             nil,
-		configOverrides: make(map[string]interface{}),
+		app:           nil,
+		configOptions: make([]config.Option, 0),
 	}
 }
 
-func (t *thelmaBuilder) SetConfigOverride(key string, value interface{}) {
+func (t *thelmaBuilder) WithTestDefaults() ThelmaBuilder {
+	t.SetConfigOption(func(options config.Options) config.Options {
+		// Ignore config file and environment when loading configuration
+		options.ConfigFile = ""
+		options.EnvPrefix = ""
+		// Set THELMA_HOME to os tmp dir. Tests will usually override this setting with SetHome()
+		options.Overrides[config.HomeKey] = os.TempDir()
+		return options
+	})
+	return t
+}
+
+func (t *thelmaBuilder) SetHome(path string) ThelmaBuilder {
+	t.SetConfigOverride(config.HomeKey, path)
+	return t
+}
+
+func (t *thelmaBuilder) SetConfigOverride(key string, value interface{}) ThelmaBuilder {
+	t.SetConfigOption(func(options config.Options) config.Options {
+		options.Overrides[key] = value
+		return options
+	})
+	return t
+}
+
+func (t *thelmaBuilder) SetConfigOption(option config.Option) ThelmaBuilder {
 	if t.initialized() {
-		panic(fmt.Errorf("attempt to set config override after initialization: %s=%v", key, value))
+		panic(fmt.Errorf("attempt to set config option after initialization"))
 	}
 
-	t.configOverrides[key] = value
+	t.configOptions = append(t.configOptions, option)
+	return t
 }
 
-func (t *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) {
+func (t *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) ThelmaBuilder {
 	if t.initialized() {
 		panic(fmt.Errorf("attempt to set shell runner after initialization"))
 	}
 
 	t.shellRunner = shellRunner
+	return t
 }
 
 func (t *thelmaBuilder) App() app.ThelmaApp {
@@ -69,8 +106,13 @@ func (t *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize config
-	cfg, err := config.Load(t.configOverrides)
+	cfg, err := config.Load(t.configOptions...)
 	if err != nil {
+		return nil, err
+	}
+
+	// Initialize logging
+	if err := logging.InitializeLogging(cfg); err != nil {
 		return nil, err
 	}
 
@@ -79,9 +121,6 @@ func (t *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Set log level
-	setLogLevel(_app.Config().LogLevel())
 
 	t.app = _app
 
@@ -99,15 +138,4 @@ func (t *thelmaBuilder) Close() error {
 // Returns true if app has been initialized
 func (t *thelmaBuilder) initialized() bool {
 	return t.app != nil
-}
-
-// Adjust global logging verbosity based on Thelma config
-func setLogLevel(levelStr string) {
-	level, err := zerolog.ParseLevel(levelStr)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Failed to parse log level %q: %v", levelStr, err)
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-		return
-	}
-	zerolog.SetGlobalLevel(level)
 }

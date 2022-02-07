@@ -13,6 +13,7 @@ var GitSha = "unset"
 // BuildTimestamp timestamp at which this version of Thelma was built
 var BuildTimestamp = "unset"
 
+// Manifest bundles build information into an object that can be rendered as JSON or YAML
 type Manifest struct {
 	Version        string
 	GitSha         string

@@ -1,0 +1,7 @@
+mykey:
+  logging:
+    console:
+      level: trace
+    file:
+      enabled: false
+      keepfiles: 100

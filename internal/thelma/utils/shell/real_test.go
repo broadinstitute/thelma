@@ -12,7 +12,7 @@ import (
 func TestRunSuccess(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewDefaultRunner()
+	runner := NewRunner()
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=foo"}
@@ -35,7 +35,7 @@ func TestRunSuccess(t *testing.T) {
 }
 
 func TestRunFailed(t *testing.T) {
-	runner := NewDefaultRunner()
+	runner := NewRunner()
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Args = []string{"-c", "echo oops >&2 && exit 42"}
@@ -55,7 +55,7 @@ func TestRunFailed(t *testing.T) {
 }
 
 func TestRunError(t *testing.T) {
-	runner := NewDefaultRunner()
+	runner := NewRunner()
 	cmd := Command{}
 	cmd.Prog = "echo"
 	cmd.Args = []string{"a", "b"}
@@ -73,7 +73,7 @@ func TestRunError(t *testing.T) {
 }
 
 func TestRunWith(t *testing.T) {
-	runner := NewDefaultRunner()
+	runner := NewRunner()
 	var err error
 
 	stdout := bytes.NewBuffer([]byte{})

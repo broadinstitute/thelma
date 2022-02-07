@@ -8,22 +8,47 @@ import (
 )
 
 func TestSetConfigOverride(t *testing.T) {
-	builder := NewBuilder()
+	builder := NewBuilder().WithTestDefaults()
 	fakeHome := t.TempDir()
-	builder.SetConfigOverride(config.Keys.Home, fakeHome)
+
+	// add config overrides... later options should have higher precedence
+	builder.SetConfigOption(func(options config.Options) config.Options {
+		options.Overrides["foo.greeting"] = "hello"
+		options.Overrides["foo.day"] = "Thursday"
+		return options
+	})
+	builder.SetHome(fakeHome)
+	builder.SetConfigOption(func(options config.Options) config.Options {
+		options.Overrides["foo.greeting"] = "hi"
+		return options
+	})
 
 	_, err := builder.Build()
 	if !assert.NoError(t, err) {
 		return
 	}
 
+	// make sure home is set to what we expect
 	assert.Equal(t, fakeHome, builder.App().Config().Home())
+
+	// make sure our overrides were set correctly as well
+	type fooConfig struct {
+		Greeting string
+		Day      string
+	}
+	cfg := fooConfig{}
+	err = builder.App().Config().Unmarshal("foo", &cfg)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, "hi", cfg.Greeting)
+	assert.Equal(t, "Thursday", cfg.Day)
 }
 
 func TestSetShellRunner(t *testing.T) {
+	builder := NewBuilder().WithTestDefaults()
+
 	runner := shell.DefaultMockRunner()
-	builder := NewBuilder()
-	builder.SetConfigOverride(config.Keys.Home, t.TempDir())
 	builder.SetShellRunner(runner)
 
 	_, err := builder.Build()
@@ -35,8 +60,8 @@ func TestSetShellRunner(t *testing.T) {
 }
 
 func TestSettersPanicIfInitialized(t *testing.T) {
-	builder := NewBuilder()
-	builder.SetConfigOverride(config.Keys.Home, t.TempDir())
+	builder := NewBuilder().WithTestDefaults()
+
 	_, err := builder.Build()
 	if !assert.NoError(t, err) {
 		return
@@ -46,7 +71,10 @@ func TestSettersPanicIfInitialized(t *testing.T) {
 		builder.SetShellRunner(shell.DefaultMockRunner())
 	})
 	assert.Panics(t, func() {
-		builder.SetConfigOverride("ignored", "does not matter")
+		builder.SetConfigOption(func(options config.Options) config.Options {
+			// does nothing
+			return options
+		})
 	})
 }
 
@@ -57,13 +85,12 @@ func TestAppPanicsIfNotInitialized(t *testing.T) {
 }
 
 func TestCloseClosesApp(t *testing.T) {
-	builder := NewBuilder()
-	builder.SetConfigOverride(config.Keys.Home, t.TempDir())
+	builder := NewBuilder().WithTestDefaults()
 	_, err := builder.Build()
 	if !assert.NoError(t, err) {
 		return
 	}
-	dir, err := builder.App().Paths().CreateScratchDir("fake-scratch-dir")
+	dir, err := builder.App().Scratch().Mkdir("fake-scratch-dir")
 	if !assert.NoError(t, err) {
 		return
 	}

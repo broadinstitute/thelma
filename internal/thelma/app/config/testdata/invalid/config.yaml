@@ -1,0 +1,4 @@
+mykey:
+  logging:
+    console:
+      level: this-is-not-a-valid-log-level

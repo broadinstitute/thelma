@@ -31,7 +31,7 @@ func Publisher(app app.ThelmaApp, bucketName string, dryRun bool) (PublisherBuil
 	}
 
 	_repo := repo.NewRepo(_bucket)
-	scratchDir, err := app.Paths().CreateScratchDir("publisher")
+	scratchDir, err := app.Scratch().Mkdir("publisher")
 	if err != nil {
 		return nil, err
 	}
