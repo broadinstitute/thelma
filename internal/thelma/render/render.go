@@ -47,9 +47,19 @@ type renderJob struct {
 	callback    func() error
 }
 
+// prefix for configuration settings
+const configPrefix = "render"
+
+// renderConfig configuration struct for render
+type renderConfig struct {
+	Helmfile struct {
+		LogLevel string `default:"info" validate:"oneof=debug info warn error"`
+	}
+}
+
 // DoRender constructs a multiRender and invokes all functions in correct order to perform a complete
 // render.
-func DoRender(app *app.ThelmaApp, globalOptions *Options, helmfileArgs *helmfile.Args) error {
+func DoRender(app app.ThelmaApp, globalOptions *Options, helmfileArgs *helmfile.Args) error {
 	r, err := newRender(app, globalOptions)
 	if err != nil {
 		return err
@@ -67,41 +77,41 @@ func DoRender(app *app.ThelmaApp, globalOptions *Options, helmfileArgs *helmfile
 }
 
 // newRender is a constructor for Render objects
-func newRender(app *app.ThelmaApp, options *Options) (*multiRender, error) {
+func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 	r := new(multiRender)
 	r.options = options
 
-	_gitops, err := gitops.Load(app.Config.Home(), app.ShellRunner)
+	_gitops, err := gitops.Load(app.Config().Home(), app.ShellRunner())
 	if err != nil {
 		return nil, err
 	}
 	r.gitops = _gitops
 
-	chartCacheDir, err := app.Paths.CreateScratchDir("chart-cache")
+	chartCacheDir, err := app.Scratch().Mkdir("chart-cache")
 	if err != nil {
 		return nil, err
 	}
 
-	scratchDir, err := app.Paths.CreateScratchDir("helmfile-scratch")
+	scratchDir, err := app.Scratch().Mkdir("helmfile")
 	if err != nil {
 		return nil, err
 	}
 
-	helmfileLogLevel := "info"
-	if app.Config.LogLevel() == "trace" {
-		helmfileLogLevel = "debug"
+	cfg := &renderConfig{}
+	if err = app.Config().Unmarshal(configPrefix, cfg); err != nil {
+		return nil, err
 	}
 
 	r.configRepo = helmfile.NewConfigRepo(helmfile.Options{
-		ThelmaHome:       app.Config.Home(),
+		ThelmaHome:       app.Config().Home(),
 		ChartCacheDir:    chartCacheDir,
 		ChartSourceDir:   options.ChartSourceDir,
 		ResolverMode:     options.ResolverMode,
-		HelmfileLogLevel: helmfileLogLevel,
+		HelmfileLogLevel: cfg.Helmfile.LogLevel,
 		Stdout:           options.Stdout,
 		OutputDir:        options.OutputDir,
 		ScratchDir:       scratchDir,
-		ShellRunner:      app.ShellRunner,
+		ShellRunner:      app.ShellRunner(),
 	})
 
 	return r, nil

@@ -18,32 +18,12 @@ const cmdIdFormat = "%06x"
 const eol = '\n'
 const defaultLogLevel = zerolog.InfoLevel
 
-// Options for a shell runner
-type Options struct {
-	// Logger this Runner should use
-	Logger *zerolog.Logger
-}
-
 // RealRunner is an implementation of the Runner interface that actually executes shell commands
-type RealRunner struct {
-	logger zerolog.Logger
-}
+type RealRunner struct{}
 
-// NewDefaultRunner constructs a new RealRunner
-func NewDefaultRunner() Runner {
-	return NewRunner(Options{})
-}
-
-// NewRunner constructs a new Runner with the given options
-func NewRunner(options Options) Runner {
-	logger := log.Logger
-	if options.Logger != nil {
-		logger = *options.Logger
-	}
-
-	return &RealRunner{
-		logger: logger,
-	}
+// NewRunner constructs a new Runner
+func NewRunner() Runner {
+	return &RealRunner{}
 }
 
 // Run runs a Command, returning an error if the command exits non-zero
@@ -55,7 +35,7 @@ func (r *RealRunner) Run(cmd Command) error {
 // An error is returned if the command exits non-zero.
 func (r *RealRunner) RunWith(cmd Command, opts RunOptions) error {
 	// Handle options into local variables
-	logger := r.logger
+	logger := log.Logger
 	if opts.Logger != nil {
 		logger = *opts.Logger
 	}

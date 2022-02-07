@@ -1,0 +1,19 @@
+mykey:
+  docker:
+    hostaliases:
+      - name: foo
+        addr: 127.0.0.1
+      - name: bar
+        addr: 10.11.12.13
+  airports:
+    iatacodes:
+      BOS:
+        name: Logan
+        location:
+          city: Boston
+          country: US
+      LHR:
+        name: Heathrow
+        location:
+          city: London
+          country: GB

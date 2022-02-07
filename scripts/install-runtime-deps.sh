@@ -42,11 +42,12 @@ fi
 INSTALL_DIR="$1"
 
 cat <<EOF
-OS:          ${OS}
-ARCH:        ${ARCH}
-SCRATCH_DIR: ${SCRATCH_DIR}
-INSTALL_DIR: ${INSTALL_DIR}
-TESTEXEC:    ${TESTEXEC}
+-----------------------------------------------------------
+Installing runtime deps for ${OS} ${ARCH} to ${INSTALL_DIR}
+
+Scratch directory: ${SCRATCH_DIR}
+Test executables after download? ${TESTEXEC}
+-----------------------------------------------------------
 EOF
 
 cleanup() {

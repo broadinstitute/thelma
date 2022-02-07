@@ -2,9 +2,12 @@ package testutils
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 )
+
+var alphaNumeric = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 // Args convenience function to generate tokenized argument list from format string w/ args
 //
@@ -21,4 +24,13 @@ func Cwd() string {
 		panic(err)
 	}
 	return dir
+}
+
+// RandString generates a random alphanumeric string (a-z0-9) of length n
+func RandString(n int) string {
+	result := make([]rune, n)
+	for i := range result {
+		result[i] = alphaNumeric[rand.Intn(len(alphaNumeric))]
+	}
+	return string(result)
 }

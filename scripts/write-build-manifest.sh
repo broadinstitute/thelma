@@ -3,19 +3,27 @@
 set -eo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 path/to/dist" >&2
+  echo "Usage: $0 path/to/file" >&2
   exit 1
 fi
 
-DIST_DIR="$1"
-TIMESTAMP=$( date +%Y-%m-%dT%H:%M:%S%z )
+# It would be nice if we could run `thelma version --output-format=json` to do this,
+# but unfortunately that doesn't work for cross-platform buils
 
-cat <<MANIFEST > "${DIST_DIR}/build.json"
+OUTPUT_FILE="$1"
+
+VERSION=${VERSION:-unset}
+GIT_SHA=${GIT_SHA:-unset}
+BUILD_TIMESTAMP=${BUILD_TIMESTAMP:-unset}
+OS=${OS:-unset}
+ARCH=${ARCH:-unset}
+
+cat <<MANIFEST > "${OUTPUT_FILE}"
 {
   "version": "${VERSION}",
-  "gitRef": "${GIT_REF}",
+  "gitSha": "${GIT_SHA}",
   "os": "${OS}",
   "arch": "${ARCH}",
-  "timestamp": "${TIMESTAMP}"
+  "buildTimestamp": "${BUILD_TIMESTAMP}"
 }
-MANIFEST
+MANIFEST 

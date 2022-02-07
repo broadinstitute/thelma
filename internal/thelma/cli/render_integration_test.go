@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -255,7 +256,9 @@ func TestRenderIntegration(t *testing.T) {
 			description: "should run helmfile with --log-level=debug if run with loglevel=debug",
 			arguments:   args("render -e dev"),
 			setupMocks: func(ts *TestState) error {
-				ts.thelmaCLI.setLogLevel("debug")
+				ts.thelmaCLI.configureThelma(func(b builder.ThelmaBuilder) {
+					b.SetConfigOverride("render.helmfile.loglevel", "debug")
+				})
 				ts.expectCmd("helmfile --log-level=debug --allow-no-matching-release repos")
 				ts.expectHelmfileCmd(devEnv, "--log-level=debug --selector=mode=release template --skip-deps --output-dir=%s/output/dev", ts.mockHome)
 				return nil
@@ -422,7 +425,7 @@ func setup(t *testing.T) (*TestState, error) {
 	var err error
 
 	tmpDir := t.TempDir()
-	mockHome := path.Join(t.TempDir(), configRepoName)
+	mockHome := path.Join(t.TempDir(), "terra-helmfile")
 	err = os.MkdirAll(mockHome, 0755)
 	if err != nil {
 		return nil, err
@@ -452,8 +455,11 @@ func setup(t *testing.T) (*TestState, error) {
 	mockRunner.Test(t)
 
 	thelmaCLI := newThelmaCLI()
-	thelmaCLI.setHome(mockHome)
-	thelmaCLI.setShellRunner(mockRunner)
+	thelmaCLI.configureThelma(func(b builder.ThelmaBuilder) {
+		b.WithTestDefaults()
+		b.SetHome(mockHome)
+		b.SetShellRunner(mockRunner)
+	})
 
 	ts := &TestState{
 		mockHome:        mockHome,

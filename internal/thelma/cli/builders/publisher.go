@@ -24,19 +24,19 @@ type publisherBuilder struct {
 	bucket    bucket.Bucket
 }
 
-func Publisher(app *app.ThelmaApp, bucketName string, dryRun bool) (PublisherBuilder, error) {
+func Publisher(app app.ThelmaApp, bucketName string, dryRun bool) (PublisherBuilder, error) {
 	_bucket, err := bucket.NewBucket(bucketName)
 	if err != nil {
 		return nil, err
 	}
 
 	_repo := repo.NewRepo(_bucket)
-	scratchDir, err := app.Paths.CreateScratchDir("publisher")
+	scratchDir, err := app.Scratch().Mkdir("publisher")
 	if err != nil {
 		return nil, err
 	}
 
-	publisher, err := publish.NewPublisher(_repo, app.ShellRunner, scratchDir, dryRun)
+	publisher, err := publish.NewPublisher(_repo, app.ShellRunner(), scratchDir, dryRun)
 	if err != nil {
 		return nil, err
 	}

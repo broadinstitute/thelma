@@ -197,7 +197,7 @@ func TestMocks_MatchInterface(t *testing.T) {
 }
 
 func initializeFakeVersionsDir(thelmaHome string) error {
-	runner := shell.NewDefaultRunner()
+	runner := shell.NewRunner()
 	cmd := shell.Command{
 		Prog: "cp",
 		Args: []string{"-r", "testdata/versions", path.Join(thelmaHome, "versions")},
