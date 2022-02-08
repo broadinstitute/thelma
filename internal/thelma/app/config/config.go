@@ -79,7 +79,7 @@ func Load(opts ...Option) (Config, error) {
 	// load config from file ~/.thelma/config.yaml
 	if options.ConfigFile != "" {
 		if _, err := os.Stat(options.ConfigFile); os.IsNotExist(err) {
-			log.Warn().Msgf("No config file found at %s, won't try to load it", options.ConfigFile)
+			// no config file found, don't try to load it.
 		} else if err != nil {
 			return nil, fmt.Errorf("error checking if configuration file %s exists: %v", options.ConfigFile, err)
 		} else {
