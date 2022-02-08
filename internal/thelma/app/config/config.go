@@ -11,6 +11,7 @@ import (
 	"github.com/mcuadros/go-defaults"
 	"github.com/rs/zerolog/log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -33,7 +34,7 @@ type Config interface {
 	Unmarshal(prefix string, into interface{}) error
 	// Dump returns all config values as a map for debugging purposes
 	Dump() map[string]interface{}
-	// Home returns a path the local terra-helmfile clone
+	// Home returns the fully-qualified path to the local terra-helmfile clone
 	Home() string
 }
 
@@ -41,6 +42,7 @@ type config struct {
 	options   Options
 	koanf     *koanf.Koanf
 	validator *validator.Validate
+	home      string
 }
 
 // NewTestConfig is for use in unit tests.
@@ -77,7 +79,7 @@ func Load(opts ...Option) (Config, error) {
 	// load config from file ~/.thelma/config.yaml
 	if options.ConfigFile != "" {
 		if _, err := os.Stat(options.ConfigFile); os.IsNotExist(err) {
-			log.Warn().Msgf("No config file found at %s, won't try to load it", options.ConfigFile)
+			// no config file found, don't try to load it.
 		} else if err != nil {
 			return nil, fmt.Errorf("error checking if configuration file %s exists: %v", options.ConfigFile, err)
 		} else {
@@ -105,11 +107,16 @@ func Load(opts ...Option) (Config, error) {
 	if !_koanf.Exists(HomeKey) || _koanf.Get(HomeKey) == "" {
 		return nil, fmt.Errorf("please specify path to terra-helmfile clone, via the THELMA_HOME environment variable or via the `home:` setting in %s", options.ConfigFile)
 	}
+	home, err := filepath.Abs(_koanf.String(HomeKey))
+	if err != nil {
+		return nil, fmt.Errorf("error expanding home path %q to absoluate path: %v", home, err)
+	}
 
 	return &config{
 		options:   options,
 		koanf:     _koanf,
 		validator: validator.New(),
+		home:      home,
 	}, nil
 }
 
@@ -201,7 +208,7 @@ func fieldNameToConfigKey(verr validator.FieldError, configPrefix string) string
 }
 
 func (c *config) Home() string {
-	return c.koanf.String(HomeKey)
+	return c.home
 }
 
 func (c *config) Dump() map[string]interface{} {

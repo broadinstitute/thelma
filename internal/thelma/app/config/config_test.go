@@ -6,6 +6,8 @@ import (
 	"github.com/mcuadros/go-defaults"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -219,7 +221,7 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 }
 
 func TestConfig_Home(t *testing.T) {
-	fakeHome := "some/path/on/filesystem"
+	fakeHome := "relative/path/on/filesystem"
 
 	cfg, err := Load(func(options Options) Options {
 		// don't use default config file or env prefix, to make sure we don't pick up random values from the environment
@@ -235,7 +237,8 @@ func TestConfig_Home(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, fakeHome, cfg.Home())
+	assert.True(t, filepath.IsAbs(cfg.Home()))
+	assert.True(t, strings.HasSuffix(cfg.Home(), fakeHome))
 }
 
 func TestConfig_Dump(t *testing.T) {
