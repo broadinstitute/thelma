@@ -53,7 +53,7 @@ func newTree(commands map[string]ThelmaCommand) *node {
 			for i, k := range entries {
 				cmdNames[i] = fmt.Sprintf("%q", k.key.description())
 			}
-			panic(fmt.Errorf("could not find parent command for command %s, registered command names are:\n%v", entry.key, strings.Join(cmdNames, "\n")))
+			panic(fmt.Errorf("could not find parent command for command %q, registered command names are:\n%v", entry.key.description(), strings.Join(cmdNames, "\n")))
 		}
 
 		// add a node for this entry
@@ -90,11 +90,8 @@ func (n *node) addChild(child *node) {
 	n.children[child.key.shortName()] = child
 }
 
-// find a node, given a command anme like ["charts", "import"]
+// find a node, given a command name like ["charts", "import"]
 func findNode(root *node, fullName []string) *node {
-	if root == nil {
-		return nil
-	}
 	parent := root
 	for _, component := range fullName {
 		current, exists := parent.children[component]
