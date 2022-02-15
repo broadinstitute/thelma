@@ -2,6 +2,7 @@ package version
 
 import (
 	"bytes"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/stretchr/testify/assert"
 	"strings"
@@ -34,6 +35,9 @@ func TestVersion(t *testing.T) {
 			var stdout bytes.Buffer
 			options.SetOut(&stdout)
 			options.SetArgs(strings.Fields(tc.thelmaArgs))
+			options.ConfigureThelma(func(builder builder.ThelmaBuilder) {
+				builder.WithTestDefaults()
+			})
 
 			thelmaCLI := cli.NewWithOptions(options)
 			err := thelmaCLI.Execute()
