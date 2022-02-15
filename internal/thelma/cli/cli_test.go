@@ -26,7 +26,6 @@ type fakeCommand struct {
 
 func (n *fakeCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Use = n.name
-	return
 }
 
 func (n *fakeCommand) PreRun(_ app.ThelmaApp, _ RunContext) error {
