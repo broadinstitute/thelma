@@ -58,6 +58,9 @@ func Test_Execute_PreRunError(t *testing.T) {
 	_cli := New(func(options *Options) {
 		options.AddCommand("fake", cmd)
 		options.SetArgs([]string{"fake"})
+		options.ConfigureThelma(func(thelmaBuilder builder.ThelmaBuilder) {
+			thelmaBuilder.WithTestDefaults()
+		})
 	})
 	err := _cli.Execute()
 	assert.Error(t, err, "pre-run should return error")
