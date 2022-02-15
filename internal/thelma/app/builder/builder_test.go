@@ -23,13 +23,18 @@ func TestSetConfigOverride(t *testing.T) {
 		return options
 	})
 
-	_, err := builder.Build()
+	_app, err := builder.Build()
 	if !assert.NoError(t, err) {
 		return
 	}
+	t.Cleanup(func() {
+		if err := _app.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 
 	// make sure home is set to what we expect
-	assert.Equal(t, fakeHome, builder.App().Config().Home())
+	assert.Equal(t, fakeHome, _app.Config().Home())
 
 	// make sure our overrides were set correctly as well
 	type fooConfig struct {
@@ -37,7 +42,7 @@ func TestSetConfigOverride(t *testing.T) {
 		Day      string
 	}
 	cfg := fooConfig{}
-	err = builder.App().Config().Unmarshal("foo", &cfg)
+	err = _app.Config().Unmarshal("foo", &cfg)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -51,54 +56,15 @@ func TestSetShellRunner(t *testing.T) {
 	runner := shell.DefaultMockRunner()
 	builder.SetShellRunner(runner)
 
-	_, err := builder.Build()
+	_app, err := builder.Build()
 	if !assert.NoError(t, err) {
 		return
 	}
-
-	assert.Same(t, runner, builder.App().ShellRunner())
-}
-
-func TestSettersPanicIfInitialized(t *testing.T) {
-	builder := NewBuilder().WithTestDefaults()
-
-	_, err := builder.Build()
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	assert.Panics(t, func() {
-		builder.SetShellRunner(shell.DefaultMockRunner())
+	t.Cleanup(func() {
+		if err := _app.Close(); err != nil {
+			t.Error(err)
+		}
 	})
-	assert.Panics(t, func() {
-		builder.SetConfigOption(func(options config.Options) config.Options {
-			// does nothing
-			return options
-		})
-	})
-}
 
-func TestAppPanicsIfNotInitialized(t *testing.T) {
-	assert.Panics(t, func() {
-		NewBuilder().App()
-	})
-}
-
-func TestCloseClosesApp(t *testing.T) {
-	builder := NewBuilder().WithTestDefaults()
-	_, err := builder.Build()
-	if !assert.NoError(t, err) {
-		return
-	}
-	dir, err := builder.App().Scratch().Mkdir("fake-scratch-dir")
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	assert.DirExists(t, dir)
-	err = builder.Close()
-	if !assert.NoError(t, err) {
-		return
-	}
-	assert.NoDirExists(t, dir)
+	assert.Same(t, runner, _app.ShellRunner())
 }
