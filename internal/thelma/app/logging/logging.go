@@ -45,6 +45,11 @@ func (cfg *logConfig) logDir() string {
 	return dir
 }
 
+func init() {
+	// set up basic console logger to catch any messages that are logged before Thelma initialization
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+}
+
 // InitializeLogging updates the global Zerolog logger to match Thelma's configuration.
 // It should be called once during Thelma initialization.
 func InitializeLogging(thelmaConfig config.Config) error {

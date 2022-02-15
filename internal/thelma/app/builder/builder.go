@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
@@ -11,13 +10,8 @@ import (
 
 // ThelmaBuilder is a utility for initializing new ThelmaApp instances
 type ThelmaBuilder interface {
-	// App Returns the initialized ThelmaApp.
-	// Panics if app has not yet been initialized.
-	App() app.ThelmaApp
 	// Build when first called, initializes a new ThelmaApp and saves it. Subsequent calls do nothing.
 	Build() (app.ThelmaApp, error)
-	// Close closes the App if one was initialized, otherwise does nothing
-	Close() error
 	// WithTestDefaults (FOR USE IN UNIT TESTS ONLY) causes app to be initialized with some settings that are useful
 	// in testing (eg. ignore config file and environment variables when loading config).
 	// Panics if this app has already been initialized.
@@ -37,14 +31,12 @@ type ThelmaBuilder interface {
 }
 
 type thelmaBuilder struct {
-	app           app.ThelmaApp
 	configOptions []config.Option
 	shellRunner   shell.Runner
 }
 
 func NewBuilder() ThelmaBuilder {
 	return &thelmaBuilder{
-		app:           nil,
 		configOptions: make([]config.Option, 0),
 	}
 }
@@ -75,36 +67,16 @@ func (t *thelmaBuilder) SetConfigOverride(key string, value interface{}) ThelmaB
 }
 
 func (t *thelmaBuilder) SetConfigOption(option config.Option) ThelmaBuilder {
-	if t.initialized() {
-		panic(fmt.Errorf("attempt to set config option after initialization"))
-	}
-
 	t.configOptions = append(t.configOptions, option)
 	return t
 }
 
 func (t *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) ThelmaBuilder {
-	if t.initialized() {
-		panic(fmt.Errorf("attempt to set shell runner after initialization"))
-	}
-
 	t.shellRunner = shellRunner
 	return t
 }
 
-func (t *thelmaBuilder) App() app.ThelmaApp {
-	if !t.initialized() {
-		panic(fmt.Errorf("attempt to access App config before aclling Load()"))
-	}
-
-	return t.app
-}
-
 func (t *thelmaBuilder) Build() (app.ThelmaApp, error) {
-	if t.initialized() {
-		return nil, nil
-	}
-
 	// Initialize config
 	cfg, err := config.Load(t.configOptions...)
 	if err != nil {
@@ -117,25 +89,5 @@ func (t *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize app
-	_app, err := app.NewWithOptions(cfg, app.Options{Runner: t.shellRunner})
-	if err != nil {
-		return nil, err
-	}
-
-	t.app = _app
-
-	return nil, nil
-}
-
-func (t *thelmaBuilder) Close() error {
-	if !t.initialized() {
-		return nil
-	}
-
-	return t.app.Close()
-}
-
-// Returns true if app has been initialized
-func (t *thelmaBuilder) initialized() bool {
-	return t.app != nil
+	return app.NewWithOptions(cfg, app.Options{Runner: t.shellRunner})
 }

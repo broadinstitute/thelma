@@ -1,13 +1,13 @@
-package cli
+package render
 
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
+	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	. "github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
@@ -22,9 +22,9 @@ func TestRenderArgParsing(t *testing.T) {
 		helmfileArgs  *helmfile.Args
 	}
 	type testConfig struct {
-		t         *testing.T
-		thelmaCLI *ThelmaCLI
-		expected  *expectedAttrs
+		t        *testing.T
+		options  *cli.Options
+		expected *expectedAttrs
 	}
 
 	testCases := []struct {
@@ -127,7 +127,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "config repo path must be set",
 			arguments:   []string{"render"},
 			setupFn: func(tc *testConfig) error {
-				tc.thelmaCLI.configureThelma(func(b builder.ThelmaBuilder) {
+				tc.options.ConfigureThelma(func(b builder.ThelmaBuilder) {
 					b.SetHome("")
 				})
 				return nil
@@ -143,7 +143,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "-e should set environment",
 			setupFn: func(tc *testConfig) error {
 				env := "myenv"
-				tc.thelmaCLI.setArgs(Args("render -e %s", env))
+				tc.options.SetArgs(Args("render -e %s", env))
 				tc.expected.renderOptions.Env = &env
 				return nil
 			},
@@ -152,7 +152,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "-c should set cluster",
 			setupFn: func(tc *testConfig) error {
 				cluster := "mycluster"
-				tc.thelmaCLI.setArgs(Args("render -c %s", cluster))
+				tc.options.SetArgs(Args("render -c %s", cluster))
 				tc.expected.renderOptions.Cluster = &cluster
 				return nil
 			},
@@ -161,7 +161,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "-d should set output directory",
 			setupFn: func(tc *testConfig) error {
 				dir := tc.t.TempDir()
-				tc.thelmaCLI.setArgs(Args("render -d %s", dir))
+				tc.options.SetArgs(Args("render -d %s", dir))
 				tc.expected.renderOptions.OutputDir = dir
 				return nil
 			},
@@ -231,7 +231,7 @@ func TestRenderArgParsing(t *testing.T) {
 				tc.expected.renderOptions.Env = &env
 				tc.expected.renderOptions.Release = &release
 				tc.expected.renderOptions.ChartSourceDir = chartDir
-				tc.thelmaCLI.setArgs(Args("render -e dev -r leonardo --chart-dir %s", chartDir))
+				tc.options.SetArgs(Args("render -e dev -r leonardo --chart-dir %s", chartDir))
 				return nil
 			},
 		},
@@ -239,7 +239,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "--mode=development should set mode to development",
 			setupFn: func(tc *testConfig) error {
 				tc.expected.renderOptions.ResolverMode = resolver.Development
-				tc.thelmaCLI.setArgs(Args("render --mode development"))
+				tc.options.SetArgs(Args("render --mode development"))
 				return nil
 			},
 		},
@@ -247,7 +247,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "--mode=deploy should set mode to deploy",
 			setupFn: func(tc *testConfig) error {
 				tc.expected.renderOptions.ResolverMode = resolver.Deploy
-				tc.thelmaCLI.setArgs(Args("render --mode deploy"))
+				tc.options.SetArgs(Args("render --mode deploy"))
 				return nil
 			},
 		},
@@ -266,7 +266,7 @@ func TestRenderArgParsing(t *testing.T) {
 				tc.expected.renderOptions.Release = &release
 				tc.expected.helmfileArgs.ValuesFiles = []string{valuesFile}
 
-				tc.thelmaCLI.setArgs(Args("render -e dev -r leonardo --values-file %s", valuesFile))
+				tc.options.SetArgs(Args("render -e dev -r leonardo --values-file %s", valuesFile))
 
 				return nil
 			},
@@ -292,7 +292,7 @@ func TestRenderArgParsing(t *testing.T) {
 				tc.expected.renderOptions.Release = &release
 				tc.expected.helmfileArgs.ValuesFiles = valuesFiles
 
-				tc.thelmaCLI.setArgs(Args("render -e dev -r leonardo --values-file %s --values-file %s --values-file %s", valuesFiles[0], valuesFiles[1], valuesFiles[2]))
+				tc.options.SetArgs(Args("render -e dev -r leonardo --values-file %s --values-file %s --values-file %s", valuesFiles[0], valuesFiles[1], valuesFiles[2]))
 
 				return nil
 			},
@@ -309,13 +309,11 @@ func TestRenderArgParsing(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
-			thelmaCLI := newThelmaCLI()
+			options := cli.DefaultOptions()
 
 			// Replace render's RunE with a noop function,
-			// since we don't want to actually run any renders during this test.
-			thelmaCLI.renderCLI.cobraCommand.RunE = func(cmd *cobra.Command, args []string) error {
-				return nil
-			}
+			// We're just testing argument parsing, so only test pre-/post- run hooks here
+			options.SkipRun(true)
 
 			expected := &expectedAttrs{
 				renderOptions: &render.Options{},
@@ -324,28 +322,26 @@ func TestRenderArgParsing(t *testing.T) {
 
 			thelmaHome := t.TempDir()
 			// set config repo path to a tmp dir we control
-			thelmaCLI.configureThelma(func(b builder.ThelmaBuilder) {
+			options.ConfigureThelma(func(b builder.ThelmaBuilder) {
 				b.WithTestDefaults()
 				b.SetHome(thelmaHome)
 			})
 
-			// add path to expectedAttrs objects so that equals() comparisons succeed
+			// we expect our CLI code to populate these defaults
 			expected.renderOptions.OutputDir = path.Join(thelmaHome, "output")
 			expected.renderOptions.ChartSourceDir = path.Join(thelmaHome, "charts")
-
-			// set other defaults
 			expected.renderOptions.ParallelWorkers = 1
 
 			// set command-line args
-			thelmaCLI.setArgs(testCase.arguments)
+			options.SetArgs(testCase.arguments)
 
 			tc := &testConfig{
-				t:         t,
-				thelmaCLI: thelmaCLI,
-				expected:  expected,
+				t:        t,
+				options:  options,
+				expected: expected,
 			}
 
-			// call setupFn if defined
+			// call test case setupFn if defined
 			if testCase.setupFn != nil {
 				if err := testCase.setupFn(tc); err != nil {
 					t.Errorf("setup function returned an error: %v", err)
@@ -354,7 +350,9 @@ func TestRenderArgParsing(t *testing.T) {
 			}
 
 			// execute the test parsing code
-			err := thelmaCLI.execute()
+			cmd := NewRenderCommand().(*renderCommand)
+			options.AddCommand("render", cmd)
+			err := cli.NewWithOptions(options).Execute()
 
 			// if error was expected, check it
 			if testCase.expectedError != nil {
@@ -371,8 +369,8 @@ func TestRenderArgParsing(t *testing.T) {
 			}
 
 			// else use default verification
-			assert.Equal(t, expected.renderOptions, thelmaCLI.renderCLI.renderOptions)
-			assert.Equal(t, expected.helmfileArgs, thelmaCLI.renderCLI.helmfileArgs)
+			assert.Equal(t, expected.renderOptions, cmd.renderOptions)
+			assert.Equal(t, expected.helmfileArgs, cmd.helmfileArgs)
 		})
 	}
 }
