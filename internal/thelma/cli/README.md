@@ -1,10 +1,10 @@
 # cli
 
-This package implement's the command-line interface for Thelma. It provides some additional features on top of [Cobra](https://github.com/spf13/cobra).
+This package implements the command-line interface for Thelma. It provides some additional functionality on top of [Cobra](https://github.com/spf13/cobra).
 
 ### Why?
 
-Cobra's awesome, but it has a few shortcomings.
+Cobra's awesome, but it has a few missing features.
 
 #### Dependency Injection
 

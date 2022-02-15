@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -76,6 +77,9 @@ func Test_Execute_PreRunErrorParent(t *testing.T) {
 	_cli := New(func(options *Options) {
 		options.AddCommand("parent", parent)
 		options.AddCommand("parent child", child)
+		options.ConfigureThelma(func(builder builder.ThelmaBuilder) {
+			builder.WithTestDefaults()
+		})
 		options.SetArgs([]string{"parent", "child"})
 	})
 
