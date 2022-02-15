@@ -128,7 +128,6 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Use = "render [options]"
 	cobraCommand.Short = "Renders Terra Kubernetes manifests"
 	cobraCommand.Long = helpMessage
-	cobraCommand.SilenceUsage = true // Only print out usage error when user supplies -h/--help
 
 	cobraCommand.Flags().StringVarP(&cmd.flagVals.env, flagNames.env, "e", "ENV", "Render manifests for a specific Terra environment only")
 	cobraCommand.Flags().StringVarP(&cmd.flagVals.cluster, flagNames.cluster, "c", "CLUSTER", "Render manifests for a specific Terra cluster only")

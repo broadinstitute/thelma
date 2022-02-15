@@ -28,6 +28,7 @@ func (r *rootCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Use = thelmaCommandName
 	cobraCommand.Short = "CLI tools for Terra Helm"
 	cobraCommand.Long = globalUsage
+	cobraCommand.SilenceUsage = true  // Only print out usage error when user supplies -h/--help
 	cobraCommand.SilenceErrors = true // Don't print errors, we do it ourselves using a logging library
 
 	// Add output formatting flags to Cobra command (eg. "--output-format=yaml")
