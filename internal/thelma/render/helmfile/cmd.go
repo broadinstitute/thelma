@@ -2,8 +2,8 @@ package helmfile
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"sort"
 	"strings"
@@ -13,9 +13,9 @@ import (
 const ProgName = "helmfile"
 
 // Environment variables -- prefixed with THF for "terra-helmfile", used to pass in information to helmfile
-const TargetTypeEnvVar = "THF_TARGET_TYPE"
-const TargetBaseEnvVar = "THF_TARGET_BASE"
-const TargetNameEnvVar = "THF_TARGET_NAME"
+const DestinationTypeEnvVar = "THF_TARGET_TYPE"
+const DestinationBaseEnvVar = "THF_TARGET_BASE"
+const DestinationNameEnvVar = "THF_TARGET_NAME"
 const ReleaseNameEnvVar = "THF_RELEASE_NAME"
 const ReleaseTypeEnvVar = "THF_RELEASE_TYPE"
 const NamespaceEnvVar = "THF_NAMESPACE"
@@ -91,27 +91,27 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 	return shellCmd
 }
 
-func (cmd *Cmd) setTargetEnvVars(t gitops.Target) {
-	cmd.addEnvVar(TargetTypeEnvVar, t.Type().String())
-	cmd.addEnvVar(TargetBaseEnvVar, t.Base())
-	cmd.addEnvVar(TargetNameEnvVar, t.Name())
+func (cmd *Cmd) setDestinationEnvVars(d terra.Destination) {
+	cmd.addEnvVar(DestinationTypeEnvVar, d.Type().String())
+	cmd.addEnvVar(DestinationBaseEnvVar, d.Base())
+	cmd.addEnvVar(DestinationNameEnvVar, d.Name())
 }
 
-func (cmd *Cmd) setReleaseEnvVars(r gitops.Release) {
+func (cmd *Cmd) setReleaseEnvVars(r terra.Release) {
 	cmd.addEnvVar(ReleaseNameEnvVar, r.Name())
 	cmd.addEnvVar(ReleaseTypeEnvVar, r.Type().String())
 }
 
-func (cmd *Cmd) setNamespaceEnvVar(r gitops.Release) {
+func (cmd *Cmd) setNamespaceEnvVar(r terra.Release) {
 	cmd.addEnvVar(NamespaceEnvVar, r.Namespace())
 }
 
-func (cmd *Cmd) setClusterEnvVars(r gitops.Release) {
+func (cmd *Cmd) setClusterEnvVars(r terra.Release) {
 	cmd.addEnvVar(ClusterNameEnvVar, r.ClusterName())
 	cmd.addEnvVar(ClusterAddressEnvVar, r.ClusterAddress())
 }
 
-func (cmd *Cmd) setArgocdProjectEnvVar(t gitops.Target) {
+func (cmd *Cmd) setArgocdProjectEnvVar(t terra.Destination) {
 	cmd.addEnvVar(ArgocdProjectEnvVar, argocd.GetProjectName(t))
 }
 

@@ -2,16 +2,16 @@ package argocd
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"sort"
 	"strings"
 )
 
 type Values struct {
-	Destinations []Destination `yaml:"destinations"`
+	Destinations []ArgoDestination `yaml:"destinations"`
 }
 
-type Destination struct {
+type ArgoDestination struct {
 	Server    string `yaml:"server"`
 	Namespace string `yaml:"namespace"`
 }
@@ -23,8 +23,8 @@ type Destination struct {
 //     namespace: namespace1
 //   - server: https://<cluster api address>/
 //     namespace: namespace2
-func GetDestinationValues(target gitops.Target) Values {
-	destinations := destinationsForTarget(target)
+func GetDestinationValues(destination terra.Destination) Values {
+	destinations := getArgoDestinations(destination)
 
 	// Sort destinations so they always render in a consistent order
 	sort.Slice(destinations, func(i, j int) bool {
@@ -34,30 +34,30 @@ func GetDestinationValues(target gitops.Target) Values {
 	return Values{Destinations: destinations}
 }
 
-func GetProjectName(target gitops.Target) string {
-	switch t := target.(type) {
-	case gitops.Environment:
+func GetProjectName(destination terra.Destination) string {
+	switch t := destination.(type) {
+	case terra.Environment:
 		return fmt.Sprintf("terra-%s", t.Name())
-	case gitops.Cluster:
+	case terra.Cluster:
 		return fmt.Sprintf("cluster-%s", t.Name())
 	default:
-		panic(fmt.Errorf("error generating destination values file: unknown target type %s: %v", target.Type().String(), target))
+		panic(fmt.Errorf("error generating destination values file: unknown destination type %s: %v", destination.Type().String(), destination))
 	}
 }
 
-func destinationsForTarget(target gitops.Target) []Destination {
-	switch t := target.(type) {
-	case gitops.Environment:
-		return destinationsForEnvironment(t)
-	case gitops.Cluster:
-		return destinationsForCluster(t)
+func getArgoDestinations(destination terra.Destination) []ArgoDestination {
+	switch t := destination.(type) {
+	case terra.Environment:
+		return argoDestinationsForEnvironment(t)
+	case terra.Cluster:
+		return argoDestinationsForCluster(t)
 	default:
-		panic(fmt.Errorf("error generating destination values file: unknown target type %s: %v", target.Type().String(), target))
+		panic(fmt.Errorf("error generating destination values file: unknown destination type %s: %v", destination.Type().String(), destination))
 	}
 }
 
-func destinationsForCluster(cluster gitops.Cluster) []Destination {
-	return []Destination{
+func argoDestinationsForCluster(cluster terra.Cluster) []ArgoDestination {
+	return []ArgoDestination{
 		{
 			Server:    cluster.Address(),
 			Namespace: "*", // Cluster releases can deploy to any namespace
@@ -65,15 +65,15 @@ func destinationsForCluster(cluster gitops.Cluster) []Destination {
 	}
 }
 
-func destinationsForEnvironment(environment gitops.Environment) []Destination {
+func argoDestinationsForEnvironment(environment terra.Environment) []ArgoDestination {
 	clusterAddresses := make(map[string]bool)
 	for _, release := range environment.Releases() {
 		clusterAddresses[release.ClusterAddress()] = true
 	}
 
-	var destinations []Destination
+	var destinations []ArgoDestination
 	for address := range clusterAddresses {
-		destinations = append(destinations, Destination{
+		destinations = append(destinations, ArgoDestination{
 			Server:    address,
 			Namespace: environment.Namespace(),
 		})
@@ -83,7 +83,7 @@ func destinationsForEnvironment(environment gitops.Environment) []Destination {
 }
 
 // Return -1 if d < other, 0 if d == other, +1 if d > other
-func (d Destination) compare(other Destination) int {
+func (d ArgoDestination) compare(other ArgoDestination) int {
 	byServer := strings.Compare(d.Server, other.Server)
 	if byServer != 0 {
 		return byServer

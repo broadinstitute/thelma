@@ -38,6 +38,12 @@ type Bucket interface {
 
 	// Download downloads an object in the bucket to a local file
 	Download(objectPath string, localPath string) error
+
+	// Read reads object contents
+	Read(objectPath string) ([]byte, error)
+
+	// Write replaces object contents with given content
+	Write(objectPath string, content []byte) error
 }
 
 // Real implementation of Implements Bucket
@@ -224,6 +230,38 @@ func (b *bucket) Upload(localPath string, objectPath string, cacheControl string
 	}
 
 	log.Debug().Msgf("Uploaded %s to gs://%s/%s", localPath, b.Name(), objectPath)
+
+	return nil
+}
+
+// Read reads object contents
+func (b *bucket) Read(objectPath string) ([]byte, error) {
+	obj := b.getObject(objectPath)
+	reader, err := obj.NewReader(b.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error reading gs://%s/%s: %v", b.name, objectPath, err)
+	}
+
+	var buf []byte
+	if _, err := reader.Read(buf); err != nil {
+		return nil, fmt.Errorf("error reading gs://%s/%s: %v", b.name, objectPath, err)
+	}
+	if err := reader.Close(); err != nil {
+		return nil, fmt.Errorf("error closing reader for gs://%s/%s: %v", b.name, objectPath, err)
+	}
+	return buf, nil
+}
+
+// Write replaces object contents with the given data
+func (b *bucket) Write(objectPath string, content []byte) error {
+	obj := b.getObject(objectPath)
+	writer := obj.NewWriter(b.ctx)
+	if _, err := writer.Write(content); err != nil {
+		return fmt.Errorf("error writing gs://%s/%s: %v", b.name, objectPath, err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("error closing writer for gs://%s/%s: %v", b.name, objectPath, err)
+	}
 
 	return nil
 }

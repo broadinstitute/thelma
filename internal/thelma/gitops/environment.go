@@ -1,44 +1,36 @@
 package gitops
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
+)
 
-// envConfigDir is the subdirectory in terra-helmfile to search for environment config files
-const envConfigDir = "environments"
-
-// envNamespacePrefix is the prefix that is added to all environment namespaces.
-// Eg. the namespace for the "alpha" environment is "terra-alpha"
 const envNamespacePrefix = "terra-"
-
-type Environment interface {
-	// Returns the name of the default cluster for this environment. Eg. "terra-qa"
-	DefaultCluster() string
-	// Returns the namespace for this environment. Eg. "terra-dev"
-	Namespace() string
-	Target
-}
 
 // Environment represents a Terra environment
 type environment struct {
-	defaultCluster string                // Name of the default cluster for this environment. eg "terra-dev"
-	releases       map[string]AppRelease // Set of releases configured in this environment
-	target
+	defaultCluster string                      // Name of the default cluster for this environment. eg "terra-dev"
+	releases       map[string]terra.AppRelease // Set of releases configured in this environment
+	lifecycle      terra.Lifecycle             // Lifecycle for this environment
+	destination
 }
 
 // NewEnvironment constructs a new Environment
-func NewEnvironment(name string, base string, defaultCluster string, releases map[string]AppRelease) Environment {
+func NewEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, releases map[string]terra.AppRelease) terra.Environment {
 	return &environment{
 		defaultCluster: defaultCluster,
 		releases:       releases,
-		target: target{
-			name:       name,
-			base:       base,
-			targetType: EnvironmentTargetType,
+		lifecycle:      lifecycle,
+		destination: destination{
+			name:            name,
+			base:            base,
+			destinationType: terra.EnvironmentDestination,
 		},
 	}
 }
 
-func (e *environment) Releases() []Release {
-	var result []Release
+func (e *environment) Releases() []terra.Release {
+	var result []terra.Release
 	for _, r := range e.releases {
 		result = append(result, r)
 	}
@@ -49,13 +41,12 @@ func (e *environment) DefaultCluster() string {
 	return e.defaultCluster
 }
 
-func (e *environment) ReleaseType() ReleaseType {
-	return AppReleaseType
+func (e *environment) Lifecycle() terra.Lifecycle {
+	return e.lifecycle
 }
 
-// ConfigDir environment configuration subdirectory within terra-helmfile ("environments")
-func (e *environment) ConfigDir() string {
-	return envConfigDir
+func (e *environment) ReleaseType() terra.ReleaseType {
+	return terra.AppReleaseType
 }
 
 // Name environment name, eg. "alpha"
@@ -73,7 +64,7 @@ func (e *environment) Namespace() string {
 	return environmentNamespace(e.Name())
 }
 
-// return environment namespace for a given environment
+// environmentNamespace return environment namespace for a given environment name
 func environmentNamespace(envName string) string {
 	return fmt.Sprintf("%s%s", envNamespacePrefix, envName)
 }

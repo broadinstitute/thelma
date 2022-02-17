@@ -1,35 +1,29 @@
 package gitops
 
-type Cluster interface {
-	Address() string
-	Target
-}
-
-// clusterConfigDir is the subdirectory in terra-helmfile to search for cluster config files
-const clusterConfigDir = "clusters"
+import "github.com/broadinstitute/thelma/internal/thelma/terra"
 
 // Cluster represents a Terra cluster
 type cluster struct {
 	address  string // Cluster API address. Eg "https://10.0.0.1/api"
-	releases map[string]ClusterRelease
-	target
+	releases map[string]terra.ClusterRelease
+	destination
 }
 
 // NewCluster constructs a new Cluster
-func NewCluster(name string, base string, address string, releases map[string]ClusterRelease) Cluster {
+func NewCluster(name string, base string, address string, releases map[string]terra.ClusterRelease) terra.Cluster {
 	return &cluster{
 		address:  address,
 		releases: releases,
-		target: target{
-			name:       name,
-			base:       base,
-			targetType: ClusterTargetType,
+		destination: destination{
+			name:            name,
+			base:            base,
+			destinationType: terra.ClusterDestination,
 		},
 	}
 }
 
-func (c *cluster) Releases() []Release {
-	var result []Release
+func (c *cluster) Releases() []terra.Release {
+	var result []terra.Release
 	for _, r := range c.releases {
 		result = append(result, r)
 	}
@@ -40,13 +34,8 @@ func (c *cluster) Address() string {
 	return c.address
 }
 
-func (c *cluster) ReleaseType() ReleaseType {
-	return ClusterReleaseType
-}
-
-// ConfigDir cluster configuration subdirectory within terra-helmfile ("clusters")
-func (c *cluster) ConfigDir() string {
-	return clusterConfigDir
+func (c *cluster) ReleaseType() terra.ReleaseType {
+	return terra.ClusterReleaseType
 }
 
 // Name cluster name, eg. "terra-alpha"

@@ -2,9 +2,9 @@ package helmfile
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -124,18 +124,18 @@ func (r *ConfigRepo) HelmUpdate() error {
 	return r.runCmd(cmd)
 }
 
-func (r *ConfigRepo) RenderForTarget(target gitops.Target, args *Args) error {
+func (r *ConfigRepo) RenderForDestination(destination terra.Destination, args *Args) error {
 	if args.ArgocdMode {
-		if len(target.Releases()) == 0 {
-			log.Debug().Msgf("%s %s has no releases, won't render ArgoCD project", target.Type(), target.Name())
+		if len(destination.Releases()) == 0 {
+			log.Debug().Msgf("%s %s has no releases, won't render ArgoCD project", destination.Type(), destination.Name())
 		} else {
-			return r.renderArgocdProjectManifests(target)
+			return r.renderArgocdProjectManifests(destination)
 		}
 	}
 	return nil
 }
 
-func (r *ConfigRepo) RenderForRelease(release gitops.Release, args *Args) error {
+func (r *ConfigRepo) RenderForRelease(release terra.Release, args *Args) error {
 	if args.ArgocdMode {
 		return r.renderArgocdApplicationManifests(release)
 	} else {
@@ -143,12 +143,12 @@ func (r *ConfigRepo) RenderForRelease(release gitops.Release, args *Args) error 
 	}
 }
 
-// Render Argo project manifests for the given target
-func (r *ConfigRepo) renderArgocdProjectManifests(target gitops.Target) error {
-	outputDir := path.Join(r.outputDir, target.Name(), "terra-argocd-project")
+// Render Argo project manifests for the given destination
+func (r *ConfigRepo) renderArgocdProjectManifests(destination terra.Destination) error {
+	outputDir := path.Join(r.outputDir, destination.Name(), "terra-argocd-project")
 
-	values := argocd.GetDestinationValues(target)
-	valuesFile, err := r.writeTemporaryValuesFile(values, target)
+	values := argocd.GetDestinationValues(destination)
+	valuesFile, err := r.writeTemporaryValuesFile(values, destination)
 	if err != nil {
 		return err
 	}
@@ -161,18 +161,18 @@ func (r *ConfigRepo) renderArgocdProjectManifests(target gitops.Target) error {
 	cmd.setSkipDeps(true) // argocd project chart is local & has no dependencies
 	cmd.addValuesFiles(valuesFile)
 
-	cmd.setTargetEnvVars(target)
-	cmd.setArgocdProjectEnvVar(target)
+	cmd.setDestinationEnvVars(destination)
+	cmd.setArgocdProjectEnvVar(destination)
 
-	log.Info().Msgf("Rendering ArgoCD manifests for %s %s", target.Name(), target.Type())
+	log.Info().Msgf("Rendering ArgoCD manifests for %s %s", destination.Name(), destination.Type())
 
 	return r.runHelmfile(cmd)
 }
 
 // Render Argo manifests for the given release
-func (r *ConfigRepo) renderArgocdApplicationManifests(release gitops.Release) error {
+func (r *ConfigRepo) renderArgocdApplicationManifests(release terra.Release) error {
 	dir := fmt.Sprintf("terra-argocd-app-%s", release.Name())
-	outputDir := path.Join(r.outputDir, release.Target().Name(), dir)
+	outputDir := path.Join(r.outputDir, release.Destination().Name(), dir)
 
 	cmd := newCmd()
 	cmd.setOutputDir(outputDir)
@@ -182,18 +182,18 @@ func (r *ConfigRepo) renderArgocdApplicationManifests(release gitops.Release) er
 	cmd.setSkipDeps(true) // argocd application chart is local & has no dependencies
 
 	cmd.setReleaseEnvVars(release)
-	cmd.setTargetEnvVars(release.Target())
-	cmd.setArgocdProjectEnvVar(release.Target())
+	cmd.setDestinationEnvVars(release.Destination())
+	cmd.setArgocdProjectEnvVar(release.Destination())
 	cmd.setNamespaceEnvVar(release)
 	cmd.setClusterEnvVars(release)
 
-	log.Info().Msgf("Rendering ArgoCD manifests for %s in %s", release.Name(), release.Target().Name())
+	log.Info().Msgf("Rendering ArgoCD manifests for %s in %s", release.Name(), release.Destination().Name())
 
 	return r.runHelmfile(cmd)
 }
 
 // Render application manifests for the given release
-func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Args) error {
+func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Args) error {
 	chartVersion := release.ChartVersion()
 	if args.ChartVersion != nil {
 		log.Debug().Msgf("Overriding default chart version for %s with %s", chartVersion, *args.ChartVersion)
@@ -206,10 +206,10 @@ func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Ar
 		Version: chartVersion,
 	})
 	if err != nil {
-		return fmt.Errorf("error resolving chart for release %s in %s %s: %v", release.Name(), release.Target().Type(), release.Target().Name(), err)
+		return fmt.Errorf("error resolving chart for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
 	}
 
-	outputDir := path.Join(r.outputDir, release.Target().Name(), release.Name())
+	outputDir := path.Join(r.outputDir, release.Destination().Name(), release.Name())
 
 	cmd := newCmd()
 	cmd.setOutputDir(outputDir)
@@ -221,7 +221,7 @@ func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Ar
 	cmd.setSkipDeps(true)
 
 	cmd.setReleaseEnvVars(release)
-	cmd.setTargetEnvVars(release.Target())
+	cmd.setDestinationEnvVars(release.Destination())
 	cmd.setNamespaceEnvVar(release)
 
 	cmd.addValuesFiles(args.ValuesFiles...)
@@ -231,8 +231,8 @@ func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Ar
 		Str("chartVersion", resolvedChart.Version()).
 		Str("chartSource", resolvedChart.SourceDescription())
 
-	if release.Type() == gitops.AppReleaseType {
-		appVersion := release.(gitops.AppRelease).AppVersion()
+	if release.Type() == terra.AppReleaseType {
+		appVersion := release.(terra.AppRelease).AppVersion()
 		if args.AppVersion != nil {
 			log.Debug().Msgf("Overriding default app version %s with %s", appVersion, *args.AppVersion)
 			appVersion = *args.AppVersion
@@ -244,7 +244,7 @@ func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Ar
 		log.Warn().Msgf("Ignoring --app-version %s; --app-version is not supported for cluster releases", *args.AppVersion)
 	}
 
-	logEvent.Msgf("Rendering %s in %s", release.Name(), release.Target().Name())
+	logEvent.Msgf("Rendering %s in %s", release.Name(), release.Destination().Name())
 
 	return r.runHelmfile(cmd)
 }
@@ -337,19 +337,19 @@ func normalizeOutputDir(outputDir string) error {
 }
 
 // Convert structured data to YAML and write to the given file
-func (r *ConfigRepo) writeTemporaryValuesFile(values interface{}, target gitops.Target) (string, error) {
-	filename := path.Join(r.scratchDir, target.Name(), "values.yaml")
+func (r *ConfigRepo) writeTemporaryValuesFile(values interface{}, destination terra.Destination) (string, error) {
+	filename := path.Join(r.scratchDir, destination.Name(), "values.yaml")
 	if err := os.MkdirAll(path.Dir(filename), 0775); err != nil {
-		return "", fmt.Errorf("error writing temporary values file %s for %s %s: %v", filename, target.Type(), target.Name(), err)
+		return "", fmt.Errorf("error writing temporary values file %s for %s %s: %v", filename, destination.Type(), destination.Name(), err)
 
 	}
 	output, err := yaml.Marshal(values)
 	if err != nil {
-		return "", fmt.Errorf("error marshaling values to YAML for %s %s: %v (content: %v)", target.Type(), target.Name(), err, values)
+		return "", fmt.Errorf("error marshaling values to YAML for %s %s: %v (content: %v)", destination.Type(), destination.Name(), err, values)
 	}
 
 	if err := os.WriteFile(filename, output, 0666); err != nil {
-		return "", fmt.Errorf("error writing temporary values file %s for %s %s: %v", filename, target.Type(), target.Name(), err)
+		return "", fmt.Errorf("error writing temporary values file %s for %s %s: %v", filename, destination.Type(), destination.Name(), err)
 	}
 
 	return filename, nil

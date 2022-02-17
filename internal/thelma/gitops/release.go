@@ -1,49 +1,35 @@
 package gitops
 
-import "strings"
-
-type Release interface {
-	Name() string
-	Type() ReleaseType
-	IsAppRelease() bool
-	IsClusterRelease() bool
-	ChartVersion() string
-	ChartName() string
-	Repo() string
-	Namespace() string
-	ClusterName() string
-	ClusterAddress() string
-	Target() Target
-	// Returns 0 if r == other, -1 if r < other, or +1 if r > other.
-	Compare(Release) int
-}
+import (
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
+)
 
 type release struct {
 	name           string
-	releaseType    ReleaseType
+	releaseType    terra.ReleaseType
 	chartVersion   string
 	chartName      string
 	repo           string
 	namespace      string
 	clusterName    string
 	clusterAddress string
-	target         Target
+	destination    terra.Destination
 }
 
 func (r *release) Name() string {
 	return r.name
 }
 
-func (r *release) Type() ReleaseType {
+func (r *release) Type() terra.ReleaseType {
 	return r.releaseType
 }
 
 func (r *release) IsAppRelease() bool {
-	return r.Type() == AppReleaseType
+	return r.Type() == terra.AppReleaseType
 }
 
 func (r *release) IsClusterRelease() bool {
-	return r.Type() == ClusterReleaseType
+	return r.Type() == terra.ClusterReleaseType
 }
 
 func (r *release) ChartName() string {
@@ -70,21 +56,6 @@ func (r *release) ClusterAddress() string {
 	return r.clusterAddress
 }
 
-func (r *release) Target() Target {
-	return r.target
-}
-
-// Returns 0 if r == other, -1 if r < other, or +1 if r > other.
-// Compares by type, then by name, then by target
-func (r *release) Compare(other Release) int {
-	byType := r.Type().Compare(other.Type())
-	if byType != 0 {
-		return byType
-	}
-	byName := strings.Compare(r.Name(), other.Name())
-	if byName != 0 {
-		return byName
-	}
-	byTarget := r.Target().Compare(other.Target())
-	return byTarget
+func (r *release) Destination() terra.Destination {
+	return r.destination
 }

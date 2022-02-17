@@ -2,6 +2,7 @@ package source
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
@@ -27,7 +28,7 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 		{
 			name: "No config file should default to enabled + app release type",
 			setupMocks: func(m mocks) {
-				m.versions.On("GetSnapshot", gitops.AppReleaseType, gitops.Dev).Return(m.snapshot, nil)
+				m.versions.On("GetSnapshot", terra.AppReleaseType, gitops.Dev).Return(m.snapshot, nil)
 				m.snapshot.On("UpdateChartVersionIfDefined", chartName, newVersion).Return(nil)
 			},
 		},
@@ -39,7 +40,7 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			name:          "Should support release name overriding",
 			configContent: `release: {name: foo}`,
 			setupMocks: func(m mocks) {
-				m.versions.On("GetSnapshot", gitops.AppReleaseType, gitops.Dev).Return(m.snapshot, nil)
+				m.versions.On("GetSnapshot", terra.AppReleaseType, gitops.Dev).Return(m.snapshot, nil)
 				m.snapshot.On("UpdateChartVersionIfDefined", "foo", newVersion).Return(nil)
 			},
 		},
@@ -47,7 +48,7 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			name:          "Should support release type overriding",
 			configContent: `release: {type: cluster}`,
 			setupMocks: func(m mocks) {
-				m.versions.On("GetSnapshot", gitops.ClusterReleaseType, gitops.Dev).Return(m.snapshot, nil)
+				m.versions.On("GetSnapshot", terra.ClusterReleaseType, gitops.Dev).Return(m.snapshot, nil)
 				m.snapshot.On("UpdateChartVersionIfDefined", chartName, newVersion).Return(nil)
 			},
 		},
