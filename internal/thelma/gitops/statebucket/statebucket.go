@@ -4,15 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/lock"
 	"github.com/rs/zerolog/log"
 	"time"
 )
 
 const bucketName = "thelma-bee-state-poc"
-const stateObject = "bees.json"
+const stateObject = "state.json"
 const lockObject = ".thelma.lk"
-const maxLockWait = 30 * time.Second
-const maxLockAge = 300 * time.Second
+const lockMaxWait = 30 * time.Second
+const lockExpiresAfter = 300 * time.Second
 
 type DynamicEnvironment struct {
 	Name        string            `json:"name"`
@@ -24,16 +25,16 @@ type StateFile struct {
 	Environments map[string]DynamicEnvironment `json:"environments"`
 }
 
-// StateBucket is an interface for interacting with dynamic environment state, stored in a GCS bucket
+// StateBucket is for track state for dynamic environments. (Stored in a GCS bucket)
 type StateBucket interface {
 	// Environments returns the list of all environments in the state file
 	Environments() ([]DynamicEnvironment, error)
 	// Add adds a new environment to the state file
 	Add(environment DynamicEnvironment) error
 	// PinVersions will update the environment's map of version pins in a merging fashion.
-	// For example, if service A is pinned to v100 and B is pinned to v200, and
-	// PinVersions is called with {"A":"v123"}, the new set of pins will be {"A":"v123", "B":"v200"}.
-	// UnpinVersions() can be used to remove all version pins for the environment.
+	// For example, if the existing pins are {"A":v100", "B":"v200"}, and PinVersions is called
+	// with {"A":"v123"}, the new set of pins will be {"A":"v123", "B":"v200"}. UnpinVersions
+	// can be used to remove all version pins for the environment.
 	PinVersions(environmentName string, versionPins map[string]string) error
 	// UnpinVersions will remove all version pins for an environment.
 	UnpinVersions(environmentName string) error
@@ -118,6 +119,20 @@ func (s *statebucket) Delete(environmentName string) error {
 	})
 }
 
+func (s *statebucket) initialize() error {
+	content, err := json.Marshal(StateFile{})
+	if err != nil {
+		return fmt.Errorf("error marshalling empty state file: %v", err)
+	}
+	err = s.withLock(func() error {
+		return s.bucket.Write(stateObject, content)
+	})
+	if err != nil {
+		return fmt.Errorf("error initializing state file: %v", err)
+	}
+	return nil
+}
+
 func (s *statebucket) loadState() (StateFile, error) {
 	var result StateFile
 	data, err := s.bucket.Read(stateObject)
@@ -163,26 +178,26 @@ func (s *statebucket) transformStateUnsafe(transformFn func(state *StateFile) er
 	return nil
 }
 
-func (s *statebucket) withLock(cb func() error) error {
-	if err := s.bucket.DeleteStaleLock(lockObject, maxLockAge); err != nil {
-		return err
-	}
+func (s *statebucket) withLock(fn func() error) error {
+	locker := s.bucket.NewLocker(lockObject, lockMaxWait, func(options *lock.Options) {
+		options.ExpiresAfter = lockExpiresAfter
+	})
 
-	lockId, err := s.bucket.WaitForLock(lockObject, maxLockWait)
+	lockId, err := locker.Lock()
 	if err != nil {
 		return err
 	}
 
-	cbErr := cb()
+	fnErr := fn()
 
-	err = s.bucket.ReleaseLock(lockObject, lockId)
+	err = locker.Unlock(lockId)
 	if err != nil {
-		log.Warn().Err(err).Msgf("error releasing lock %s: %v", lockObject, err)
+		log.Error().Err(err).Msgf("error releasing lock %s: %v", lockObject, err)
 	}
 
 	// if we got a callback error, return it, else return lock release error
-	if cbErr != nil {
-		return cbErr
+	if fnErr != nil {
+		return fnErr
 	}
 	return err
 }

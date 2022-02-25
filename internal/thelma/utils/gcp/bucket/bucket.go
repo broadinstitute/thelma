@@ -4,15 +4,24 @@ import (
 	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/api/googleapi"
-	"io"
-	"net/http"
-	"os"
+	"strings"
 	"time"
 )
 
-// Bucket offers higher-level operations on GCS buckets
+type BucketOption func(options *BucketOptions)
+
+// BucketOptions optional configuration for a Bucket
+type BucketOptions struct {
+	// Prefix is an optionally prefix to add to all object names in the bucket. Eg.
+	// For bucket called "my-bucket" with a prefix of "my-prefix-",
+	//    bucket.Read("foo") will read the object "gs://my-bucket/my-prefix-foo"
+	Prefix string
+}
+
+// Bucket offers a simple interface for operations on GCS buckets
 type Bucket interface {
 	// Name returns the name of the bucket
 	Name() string
@@ -20,41 +29,54 @@ type Bucket interface {
 	// Close closes gcs client associated with this bucket
 	Close() error
 
-	// WaitForLock waits for a lock, timing out after maxTime. It returns a lock id / object generation number
-	// that must be passed in to ReleaseLock
-	WaitForLock(objectPath string, maxWait time.Duration) (int64, error)
-
-	// DeleteStaleLock deletes a stale lock file if it exists and is older than staleAge
-	DeleteStaleLock(objectPath string, staleAge time.Duration) error
-
-	// ReleaseLock removes a lockfile
-	ReleaseLock(objectPath string, generation int64) error
-
 	// Exists returns true if the object exists, false otherwise
-	Exists(objectPath string) (bool, error)
+	Exists(objectName string) (bool, error)
 
 	// Upload uploads a local file to the bucket
-	Upload(localPath string, objectPath string, cacheControl string) error
+	Upload(localPath string, objectName string, attrs ...object.AttrSetter) error
 
 	// Download downloads an object in the bucket to a local file
-	Download(objectPath string, localPath string) error
+	Download(objectName string, localPath string) error
 
 	// Read reads object contents
-	Read(objectPath string) ([]byte, error)
+	Read(objectName string) ([]byte, error)
 
 	// Write replaces object contents with given content
-	Write(objectPath string, content []byte) error
+	Write(objectName string, content []byte, attrs ...object.AttrSetter) error
+
+	// Delete deletes the object from the bucket
+	Delete(objectName string) error
+
+	// Attrs returns the attributes of an object (eg. creation time, cache control)
+	Attrs(objectName string) (*storage.ObjectAttrs, error)
+
+	// Update updates the attributes  of an object (eg. cache control)
+	Update(objectName string, attrs ...object.AttrSetter) error
+
+	// NewLocker returns a Locker instance for the given object
+	NewLocker(objectName string, maxWait time.Duration, options ...LockerOption) Locker
 }
 
-// Real implementation of Implements Bucket
+// implements Bucket
 type bucket struct {
-	name   string
+	name   string // name of the GCS bucket
+	prefix string // prefix to apply to all paths (used in testing)
 	ctx    context.Context
 	client *storage.Client
 }
 
-// NewBucket creates a new Bucket
-func NewBucket(name string) (*bucket, error) {
+func NewBucket(bucketName string, options ...BucketOption) (Bucket, error) {
+	return newBucket(bucketName, options...)
+}
+
+func newBucket(bucketName string, options ...BucketOption) (*bucket, error) {
+	opts := BucketOptions{
+		Prefix: "",
+	}
+	for _, optFn := range options {
+		optFn(&opts)
+	}
+
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -62,251 +84,131 @@ func NewBucket(name string) (*bucket, error) {
 	}
 
 	return &bucket{
-		name:   name,
+		name:   bucketName,
 		ctx:    context.Background(),
+		prefix: opts.Prefix,
 		client: client,
 	}, nil
 }
 
-// Close closes gcs client associated with this bucket
-func (b *bucket) Close() error {
-	return b.client.Close()
-}
-
-// Name returns the name of this bucket
 func (b *bucket) Name() string {
 	return b.name
 }
 
-// WaitForLock waits for a lock, timing out after maxTime. It returns a lock id / object generation number
-// that must be passed in to ReleaseLock
-func (b *bucket) WaitForLock(objectPath string, maxWait time.Duration) (int64, error) {
-	obj := b.getObject(objectPath)
-	obj = obj.If(storage.Conditions{DoesNotExist: true})
-
-	ctx, cancelFn := context.WithTimeout(b.ctx, maxWait)
-	defer cancelFn()
-
-	backoff := 10 * time.Millisecond
-	attempt := 1
-
-	for {
-		log.Debug().Msgf("Attempt %d to obtain lock gs://%s/%s", attempt, b.name, objectPath)
-
-		writer := obj.NewWriter(ctx)
-		_, writeErr := writer.Write([]byte(""))
-		closeErr := writer.Close()
-
-		if writeErr == nil && closeErr == nil {
-			// Success!
-			generation := writer.Attrs().Generation
-			log.Debug().Msgf("Successfully obtained lock gs://%s/%s on attempt %d (generation: %d)", b.name, objectPath, attempt, generation)
-			return generation, nil
-		}
-
-		// We failed to grab the lock. Either someone else has it or something went wrong. Either way, retry after backoff
-		if writeErr != nil {
-			log.Warn().Msgf("Unexpected error attempting to write to lock file gs://%s/%s: %v", b.name, objectPath, writeErr)
-		}
-		if closeErr != nil {
-			if isPreconditionFailed(closeErr) {
-				log.Debug().Msgf("Another process has a lock on gs://%s/%s, will sleep %s and retry", b.name, objectPath, backoff)
-			} else {
-				log.Warn().Msgf("Unexpected error attempting to close lock file gs://%s/%s: %v", b.name, objectPath, closeErr)
-			}
-		}
-
-		select {
-		case <-time.After(backoff):
-			backoff *= 2
-			attempt++
-			continue
-		case <-ctx.Done():
-			return 0, fmt.Errorf("timed out after %s waiting for lock gs://%s/%s: %v", maxWait, b.name, objectPath, ctx.Err())
-		}
-	}
+func (b *bucket) Close() error {
+	return b.client.Close()
 }
 
-// DeleteStaleLock deletes a stale lock file if it exists and is older than staleAge
-func (b *bucket) DeleteStaleLock(objectPath string, staleAge time.Duration) error {
-	obj := b.getObject(objectPath)
-	attrs, err := obj.Attrs(b.ctx)
-	if err == storage.ErrObjectNotExist {
-		log.Debug().Msgf("No lock file found: gs://%s/%s", b.name, objectPath)
-		return nil
+func (b *bucket) Exists(objectName string) (bool, error) {
+	op := object.NewExists()
+	err := b.do(objectName, op)
+	return op.Exists(), err
+}
+
+func (b *bucket) Upload(localPath string, objectName string, attrs ...object.AttrSetter) error {
+	return b.do(objectName, object.NewUpload(localPath, collateAttrs(attrs)))
+}
+
+func (b *bucket) Download(objectName string, localPath string) error {
+	return b.do(objectName, object.NewDownload(localPath))
+}
+
+func (b *bucket) Read(objectName string) ([]byte, error) {
+	op := object.NewRead()
+	err := b.do(objectName, op)
+	return op.Content(), err
+}
+
+func (b *bucket) Write(objectName string, content []byte, attrs ...object.AttrSetter) error {
+	_attrs := collateAttrs(attrs)
+	return b.do(objectName, object.NewWrite(content, _attrs))
+}
+
+func (b *bucket) Attrs(objectName string) (*storage.ObjectAttrs, error) {
+	op := object.NewAttrs()
+	err := b.do(objectName, op)
+	return op.Attrs(), err
+}
+
+func (b *bucket) Update(objectName string, attrs ...object.AttrSetter) error {
+	_attrs := collateAttrs(attrs)
+	return b.do(objectName, object.NewUpdate(_attrs))
+}
+
+func (b *bucket) Delete(objectName string) error {
+	return b.do(objectName, object.NewDelete())
+}
+
+// do executes an operation, adding useful contextual logging
+func (b *bucket) do(objectName string, op object.Operation) error {
+	fullName := strings.Join([]string{b.prefix, objectName}, "")
+	objectUrl := fmt.Sprintf("gs://%s/%s", b.name, fullName)
+
+	// Build logger with context like
+	// {
+	//   "bucket": { "name": "my-bucket", "prefix": "" },
+	//   "object": { "name": "my-object", "url": "gs://my-bucket/my-object" },
+	//   "operation": { "type": "delete", "id": "fe435a" },
+	// }
+	ctx := log.With().
+		Interface("bucket", struct {
+			Name   string `json:"name"`
+			Prefix string `json:"prefix"`
+		}{
+			Name:   b.name,
+			Prefix: b.prefix,
+		}).
+		Interface("object", struct {
+			Name string `json:"name"`
+			Url  string `json:"url"`
+		}{
+			Name: objectName,
+			Url:  objectUrl,
+		}).
+		Interface("call", struct {
+			Kind string `json:"kind"`
+			Id   string `json:"id"`
+		}{
+			Kind: op.Kind(),
+			Id:   logid.NewId(),
+		})
+
+	logger := ctx.Logger()
+
+	logger.Debug().Msgf("%s %s", op.Kind(), objectUrl)
+	startTime := time.Now()
+
+	obj := object.Object{
+		Ctx:    b.ctx,
+		Handle: b.client.Bucket(b.name).Object(fullName),
 	}
+
+	// run the operation
+	err := op.Handler(obj, logger)
+
+	// calculate operation duration and add to context
+	duration := time.Since(startTime)
+	event := logger.Debug()
+	event.Dur("duration", duration)
+
 	if err != nil {
-		return fmt.Errorf("error loading attributes for lock object gs://%s/%s: %v", b.name, objectPath, err)
+		event.Str("status", "error")
+		event.Err(err)
+		returnErr := fmt.Errorf("%s failed: %v", op.Kind(), err)
+		event.Msgf(returnErr.Error())
+		return returnErr
 	}
 
-	lockAge := time.Since(attrs.Created)
-	if lockAge < staleAge {
-		// lock file exists but is not stale
-		log.Debug().Msgf("Lock file gs://%s/%s is not stale, won't delete it (creation time: %s, age: %s, max age: %s)", b.name, objectPath, attrs.Created, lockAge, staleAge)
-		return nil
-	}
-
-	log.Warn().Msgf("Deleting stale lock file gs://%s/%s (creation time: %s, age: %s, max age: %s)", b.name, objectPath, attrs.Created, lockAge, staleAge)
-
-	// Use a generation precondition to make sure we don't run into a race condition with another process
-	condObj := obj.If(storage.Conditions{GenerationMatch: attrs.Generation})
-
-	if err := condObj.Delete(b.ctx); err != nil {
-		if isPreconditionFailed(err) {
-			log.Warn().Msgf("Another process deleted stale lock gs://%s/%s before we could", b.name, objectPath)
-			return nil
-		}
-
-		return fmt.Errorf("error deleting stale lock file gs://%s/%s: %v", b.name, objectPath, err)
-	}
-
+	event.Str("status", "ok")
+	event.Msgf("%s finished in %s", op.Kind(), duration)
 	return nil
 }
 
-// ReleaseLock removes a lockfile
-func (b *bucket) ReleaseLock(objectPath string, generation int64) error {
-	obj := b.getObject(objectPath)
-
-	obj = obj.If(storage.Conditions{GenerationMatch: generation})
-	if err := obj.Delete(b.ctx); err != nil {
-		if isPreconditionFailed(err) {
-			log.Warn().Msgf("Attempted to delete lock gs://%s/%s, but another process had already claimed it", b.name, objectPath)
-			return nil
-		}
-		return fmt.Errorf("error deleting lock file gs://%s/%s: %v", b.name, objectPath, err)
+// collate setters into an attrs object
+func collateAttrs(setters []object.AttrSetter) object.AttrSet {
+	var attrs object.AttrSet
+	for _, setter := range setters {
+		attrs = setter(attrs)
 	}
-
-	log.Debug().Msgf("Successfully released lock gs://%s/%s (generation %v)", b.name, objectPath, generation)
-	return nil
-}
-
-// Delete deletes an object in the bucket
-func (b *bucket) Delete(objectPath string) error {
-	object := b.getObject(objectPath)
-
-	if err := object.Delete(b.ctx); err != nil {
-		return fmt.Errorf("error deleting gs://%s/%s: %v", b.name, objectPath, err)
-	}
-
-	return nil
-}
-
-// Exists returns true if the object exists, false otherwise
-func (b *bucket) Exists(objectPath string) (bool, error) {
-	object := b.getObject(objectPath)
-	_, err := object.Attrs(b.ctx)
-	if err == nil {
-		return true, nil
-	}
-	if err == storage.ErrObjectNotExist {
-		return false, nil
-	}
-	return false, err
-}
-
-// Upload uploads a local file to the bucket
-func (b *bucket) Upload(localPath string, objectPath string, cacheControl string) error {
-	errPrefix := fmt.Sprintf("error uploading file:///%s to gs://%s/%s", localPath, b.name, objectPath)
-
-	obj := b.getObject(objectPath)
-
-	fileReader, err := os.Open(localPath)
-	if err != nil {
-		return fmt.Errorf("%s: failed to open file: %v", errPrefix, err)
-	}
-
-	objWriter := obj.NewWriter(b.ctx)
-
-	objWriter.CacheControl = cacheControl
-
-	if _, err := io.Copy(objWriter, fileReader); err != nil {
-		return fmt.Errorf("%s: write failed: %v", errPrefix, err)
-	}
-	if err := objWriter.Close(); err != nil {
-		return fmt.Errorf("%s: error closing object writer: %v", errPrefix, err)
-	}
-	if err := fileReader.Close(); err != nil {
-		return fmt.Errorf("%s: error closing local reader: %v", errPrefix, err)
-	}
-
-	log.Debug().Msgf("Uploaded %s to gs://%s/%s", localPath, b.Name(), objectPath)
-
-	return nil
-}
-
-// Read reads object contents
-func (b *bucket) Read(objectPath string) ([]byte, error) {
-	obj := b.getObject(objectPath)
-	reader, err := obj.NewReader(b.ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error reading gs://%s/%s: %v", b.name, objectPath, err)
-	}
-
-	var buf []byte
-	if _, err := reader.Read(buf); err != nil {
-		return nil, fmt.Errorf("error reading gs://%s/%s: %v", b.name, objectPath, err)
-	}
-	if err := reader.Close(); err != nil {
-		return nil, fmt.Errorf("error closing reader for gs://%s/%s: %v", b.name, objectPath, err)
-	}
-	return buf, nil
-}
-
-// Write replaces object contents with the given data
-func (b *bucket) Write(objectPath string, content []byte) error {
-	obj := b.getObject(objectPath)
-	writer := obj.NewWriter(b.ctx)
-	if _, err := writer.Write(content); err != nil {
-		return fmt.Errorf("error writing gs://%s/%s: %v", b.name, objectPath, err)
-	}
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("error closing writer for gs://%s/%s: %v", b.name, objectPath, err)
-	}
-
-	return nil
-}
-
-// Download downloads an object in the bucket to a local file
-func (b *bucket) Download(objectPath string, localPath string) error {
-	errPrefix := fmt.Sprintf("error downloading gs://%s/%s to file:///%s", b.name, objectPath, localPath)
-	obj := b.getObject(objectPath)
-
-	fileWriter, err := os.Create(localPath)
-	if err != nil {
-		return fmt.Errorf("%s: failed to open file: %v", errPrefix, err)
-	}
-
-	objReader, err := obj.NewReader(b.ctx)
-	if err != nil {
-		return fmt.Errorf("%s: failed to create object reader: %v", errPrefix, err)
-	}
-	if _, err := io.Copy(fileWriter, objReader); err != nil {
-		return fmt.Errorf("%s: copy failed: %v", errPrefix, err)
-	}
-	if err := objReader.Close(); err != nil {
-		return fmt.Errorf("%s: error closing object reader: %v", errPrefix, err)
-	}
-	if err := fileWriter.Close(); err != nil {
-		return fmt.Errorf("%s: error closing local writer: %v", errPrefix, err)
-	}
-
-	log.Debug().Msgf("Downloaded gs://%s/%s to %s", b.Name(), objectPath, localPath)
-
-	return nil
-}
-
-func (b *bucket) getObject(objectPath string) *storage.ObjectHandle {
-	return b.client.Bucket(b.name).Object(objectPath)
-}
-
-func isPreconditionFailed(err error) bool {
-	if err == nil {
-		return false
-	}
-	if googleErr, ok := err.(*googleapi.Error); ok {
-		if googleErr.Code == http.StatusPreconditionFailed {
-			return true
-		}
-	}
-	return false
+	return attrs
 }

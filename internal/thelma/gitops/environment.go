@@ -12,15 +12,17 @@ type environment struct {
 	defaultCluster string                      // Name of the default cluster for this environment. eg "terra-dev"
 	releases       map[string]terra.AppRelease // Set of releases configured in this environment
 	lifecycle      terra.Lifecycle             // Lifecycle for this environment
+	template       string                      // Template for this environment, if it has one
 	destination
 }
 
 // NewEnvironment constructs a new Environment
-func NewEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, releases map[string]terra.AppRelease) terra.Environment {
+func NewEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, template string, releases map[string]terra.AppRelease) terra.Environment {
 	return &environment{
 		defaultCluster: defaultCluster,
 		releases:       releases,
 		lifecycle:      lifecycle,
+		template:       template,
 		destination: destination{
 			name:            name,
 			base:            base,
@@ -45,6 +47,14 @@ func (e *environment) Lifecycle() terra.Lifecycle {
 	return e.lifecycle
 }
 
+func (e *environment) Template() string {
+	return e.template
+}
+
+func (e *environment) HasTemplate() bool {
+	return e.Template() == ""
+}
+
 func (e *environment) ReleaseType() terra.ReleaseType {
 	return terra.AppReleaseType
 }
@@ -59,7 +69,7 @@ func (e *environment) Base() string {
 	return e.base
 }
 
-// Environment namespace. Eg "terra-dev", "terra-perf", etc.
+// Namespace returns the environment's namespace. Eg "terra-dev", "terra-perf", etc.
 func (e *environment) Namespace() string {
 	return environmentNamespace(e.Name())
 }

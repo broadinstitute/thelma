@@ -15,6 +15,7 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/knadh/koanf v1.4.0
+	github.com/markphelps/optional v0.9.0
 	github.com/mcuadros/go-defaults v1.2.0
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect

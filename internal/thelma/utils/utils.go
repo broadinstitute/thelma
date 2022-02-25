@@ -23,3 +23,12 @@ func ExpandAndVerifyExists(filePath string, description string) (string, error) 
 
 	return expanded, nil
 }
+
+// AsInterfaces is for converting slices of a given type to a slice of interfaces.
+func AsInterfaces(a ...interface{}) []interface{} {
+	res := make([]interface{}, len(a))
+	for i := range a {
+		res[i] = a[i]
+	}
+	return res
+}

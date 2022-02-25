@@ -92,7 +92,7 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment) (map
 			}
 		}
 
-		env := NewEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, _releases)
+		env := NewEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _releases)
 		result[dynamicEnv.Name] = env
 		for _, r := range env.Releases() {
 			r.(*appRelease).destination = env
@@ -244,6 +244,7 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		envBase,
 		defaultClusterName,
 		lifecycle,
+		"",
 		_releases,
 	)
 

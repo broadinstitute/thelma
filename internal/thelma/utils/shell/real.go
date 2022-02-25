@@ -3,18 +3,16 @@ package shell
 import (
 	"bytes"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"io"
-	"math/rand"
 	"os"
 	"os/exec"
 	"strings"
 )
 
 const maxErrorBufLenBytes = 5 * 1024 // 5 kb
-const maxCmdId = 1<<24 - 1
-const cmdIdFormat = "%06x"
 const eol = '\n'
 const defaultLogLevel = zerolog.InfoLevel
 
@@ -47,8 +45,7 @@ func (r *RealRunner) RunWith(cmd Command, opts RunOptions) error {
 	stdout := opts.Stdout
 
 	// Generate an id to uniquely identify this command in log messages and add to Log context
-	id := r.generateCommandId()
-	logger = logger.With().Str("cmd", id).Logger()
+	logger = logger.With().Str("cmd", logid.NewId()).Logger()
 
 	// Wrap user-supplied stderr writer in a new io.Writer that records stderr output
 	errCapture := newCapturingWriter(maxErrorBufLenBytes, logger, stderr)
@@ -88,11 +85,6 @@ func (r *RealRunner) RunWith(cmd Command, opts RunOptions) error {
 	}
 
 	return nil
-}
-
-// Generates an id to uniquely identify commands in log messages
-func (r *RealRunner) generateCommandId() string {
-	return fmt.Sprintf(cmdIdFormat, rand.Intn(maxCmdId))
 }
 
 // An io.Writer that captures data it receives with Write() into a buffer and optionally forwards to another writer
