@@ -17,7 +17,7 @@ type Runner interface {
 	// Run runs a command, streaming stdout and stderr to the log at debug level.
 	Run(cmd Command) error
 
-	// Capture runs a Command, streaming stdout and stderr to the given writers.
+	// RunWith runs a Command, streaming stdout and stderr to the given writers.
 	// An error is returned if the command exits non-zero.
 	// If you're only interested in stdout, pass in nil for stderr (and vice versa)
 	RunWith(cmd Command, opts RunOptions) error
@@ -50,7 +50,7 @@ func (c Command) PrettyFormat() string {
 	return strings.Join(a, " ")
 }
 
-// Options for a RunWith() invocation
+// RunOptions are option for a RunWith() invocation
 type RunOptions struct {
 	// optional logger to use for logging this command
 	Logger *zerolog.Logger

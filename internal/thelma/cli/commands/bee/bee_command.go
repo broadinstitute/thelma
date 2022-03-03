@@ -14,23 +14,22 @@ func NewBeeCommand() cli.ThelmaCommand {
 	return &beeCommand{}
 }
 
-func (v *beeCommand) ConfigureCobra(cobraCommand *cobra.Command) {
+func (cmd *beeCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Use = "bee"
 	cobraCommand.Short = helpMessage
 	cobraCommand.Long = helpMessage
 }
 
-func (v *beeCommand) PreRun(_ app.ThelmaApp, _ cli.RunContext) error {
+func (cmd *beeCommand) PreRun(app app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do yet
 	return nil
 }
 
-func (v *beeCommand) Run(_ app.ThelmaApp, _ cli.RunContext) error {
-	// nothing to do yet
-	return nil
+func (cmd *beeCommand) Run(_ app.ThelmaApp, _ cli.RunContext) error {
+	panic("Run() is only executed for leaf commands")
 }
 
-func (v *beeCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
+func (cmd *beeCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do yet
 	return nil
 }

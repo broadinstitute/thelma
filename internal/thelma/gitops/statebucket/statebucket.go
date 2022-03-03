@@ -11,14 +11,23 @@ import (
 
 const bucketName = "thelma-bee-state-poc"
 const stateObject = "state.json"
-const lockObject = ".thelma.lk"
+const lockObject = ".update.lk"
 const lockMaxWait = 30 * time.Second
 const lockExpiresAfter = 300 * time.Second
 
+// Fiab DEPRECATED struct for representing a Fiab in state file
+type Fiab struct {
+	IP   string `json:"ip"`
+	Name string `json:"name"`
+}
+
+// DynamicEnvironment is a struct for representing a dynamic environment in the state file
 type DynamicEnvironment struct {
 	Name        string            `json:"name"`
 	Template    string            `json:"template"`
 	VersionPins map[string]string `json:"versionPins"`
+	Hybrid      bool              `json:"hybrid"` // Deprecated / temporary (while we run bees in hybrid mode)
+	Fiab        Fiab              `json:"fiab"`   // Deprecated / temporary (while we run bees in hybrid mode)
 }
 
 type StateFile struct {
@@ -42,15 +51,22 @@ type StateBucket interface {
 	Delete(environmentName string) error
 }
 
+// New returns a new statebucket
 func New() (StateBucket, error) {
 	_bucket, err := bucket.NewBucket(bucketName)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing state bucket %s: %v", bucketName, err)
 	}
+
+	return newWithBucket(_bucket), nil
+}
+
+// package-private constructor, used in testing
+func newWithBucket(_bucket bucket.Bucket) *statebucket {
 	return &statebucket{
 		objectName: stateObject,
 		bucket:     _bucket,
-	}, nil
+	}
 }
 
 type statebucket struct {
@@ -65,6 +81,11 @@ func (s *statebucket) Environments() ([]DynamicEnvironment, error) {
 	}
 
 	var result []DynamicEnvironment
+
+	if state.Environments == nil {
+		return result, nil
+	}
+
 	for _, env := range state.Environments {
 		result = append(result, env)
 	}
@@ -73,6 +94,14 @@ func (s *statebucket) Environments() ([]DynamicEnvironment, error) {
 
 func (s *statebucket) Add(environment DynamicEnvironment) error {
 	return s.transformState(func(state *StateFile) error {
+		if state.Environments == nil {
+			state.Environments = make(map[string]DynamicEnvironment)
+		}
+
+		// make sure marshaled json includes an empty map so version pins is never nil when unmarshaled
+		if environment.VersionPins == nil {
+			environment.VersionPins = make(map[string]string)
+		}
 		_, exists := state.Environments[environment.Name]
 		if exists {
 			return fmt.Errorf("can't add new environment %s, an environment by that name already exists", environment.Name)
@@ -136,8 +165,9 @@ func (s *statebucket) initialize() error {
 func (s *statebucket) loadState() (StateFile, error) {
 	var result StateFile
 	data, err := s.bucket.Read(stateObject)
+
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("error reading state file: %v", err)
 	}
 
 	if err := json.Unmarshal(data, &result); err != nil {

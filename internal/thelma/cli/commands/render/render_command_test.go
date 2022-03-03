@@ -187,7 +187,7 @@ func TestRenderArgParsing(t *testing.T) {
 			arguments:   Args("render --release leonardo"),
 			setupFn: func(tc *testConfig) error {
 				release := "leonardo"
-				tc.expected.renderOptions.Release = &release
+				tc.expected.renderOptions.ReleaseName = &release
 				return nil
 			},
 		},
@@ -197,7 +197,7 @@ func TestRenderArgParsing(t *testing.T) {
 			setupFn: func(tc *testConfig) error {
 				env, release := "dev", "leonardo"
 				tc.expected.renderOptions.Env = &env
-				tc.expected.renderOptions.Release = &release
+				tc.expected.renderOptions.ReleaseName = &release
 				return nil
 			},
 		},
@@ -207,7 +207,7 @@ func TestRenderArgParsing(t *testing.T) {
 			setupFn: func(tc *testConfig) error {
 				env, release, version := "dev", "leonardo", "1.2.3"
 				tc.expected.renderOptions.Env = &env
-				tc.expected.renderOptions.Release = &release
+				tc.expected.renderOptions.ReleaseName = &release
 				tc.expected.helmfileArgs.AppVersion = &version
 				return nil
 			},
@@ -218,7 +218,7 @@ func TestRenderArgParsing(t *testing.T) {
 			setupFn: func(tc *testConfig) error {
 				env, release, version := "dev", "leonardo", "4.5.6"
 				tc.expected.renderOptions.Env = &env
-				tc.expected.renderOptions.Release = &release
+				tc.expected.renderOptions.ReleaseName = &release
 				tc.expected.helmfileArgs.ChartVersion = &version
 				return nil
 			},
@@ -229,7 +229,7 @@ func TestRenderArgParsing(t *testing.T) {
 				chartDir := tc.t.TempDir()
 				env, release := "dev", "leonardo"
 				tc.expected.renderOptions.Env = &env
-				tc.expected.renderOptions.Release = &release
+				tc.expected.renderOptions.ReleaseName = &release
 				tc.expected.renderOptions.ChartSourceDir = chartDir
 				tc.options.SetArgs(Args("render -e dev -r leonardo --chart-dir %s", chartDir))
 				return nil
@@ -263,7 +263,7 @@ func TestRenderArgParsing(t *testing.T) {
 				}
 
 				tc.expected.renderOptions.Env = &env
-				tc.expected.renderOptions.Release = &release
+				tc.expected.renderOptions.ReleaseName = &release
 				tc.expected.helmfileArgs.ValuesFiles = []string{valuesFile}
 
 				tc.options.SetArgs(Args("render -e dev -r leonardo --values-file %s", valuesFile))
@@ -289,7 +289,7 @@ func TestRenderArgParsing(t *testing.T) {
 				}
 
 				tc.expected.renderOptions.Env = &env
-				tc.expected.renderOptions.Release = &release
+				tc.expected.renderOptions.ReleaseName = &release
 				tc.expected.helmfileArgs.ValuesFiles = valuesFiles
 
 				tc.options.SetArgs(Args("render -e dev -r leonardo --values-file %s --values-file %s --values-file %s", valuesFiles[0], valuesFiles[1], valuesFiles[2]))

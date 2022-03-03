@@ -2,48 +2,28 @@ package helmfile
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/argocd"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"sort"
 	"strings"
 )
 
 // ProgName is the name of the `helmfile` binary
 const ProgName = "helmfile"
 
-// Environment variables -- prefixed with THF for "terra-helmfile", used to pass in information to helmfile
-const DestinationTypeEnvVar = "THF_TARGET_TYPE"
-const DestinationBaseEnvVar = "THF_TARGET_BASE"
-const DestinationNameEnvVar = "THF_TARGET_NAME"
-const ReleaseNameEnvVar = "THF_RELEASE_NAME"
-const ReleaseTypeEnvVar = "THF_RELEASE_TYPE"
-const NamespaceEnvVar = "THF_NAMESPACE"
-const ClusterAddressEnvVar = "THF_CLUSTER_ADDRESS"
-const ClusterNameEnvVar = "THF_CLUSTER_NAME"
-const ArgocdProjectEnvVar = "THF_ARGOCD_PROJECT"
-const ChartPathEnvVar = "THF_CHART_PATH"
-const AppVersionEnvVar = "THF_APP_VERSION"
-
 // Cmd encapsulates low-level parameters for a `helmfile` command
 type Cmd struct {
-	dir         string
-	skipDeps    bool
-	logLevel    string
-	envVars     []string
-	stateValues map[string]string
-	selectors   map[string]string
-	valuesFiles []string
-	outputDir   string
-	stdout      bool
+	dir             string
+	skipDeps        bool
+	logLevel        string
+	envVars         []string
+	stateValuesFile string
+	valuesFiles     []string
+	outputDir       string
+	stdout          bool
 }
 
 // newCmd returns a new Cmd object with all fields initialized
 func newCmd() *Cmd {
-	return &Cmd{
-		stateValues: make(map[string]string),
-		selectors:   make(map[string]string),
-	}
+	return &Cmd{}
 }
 
 func (cmd *Cmd) toShellCommand() shell.Command {
@@ -54,14 +34,8 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 		cliArgs = append(cliArgs, fmt.Sprintf("--log-level=%s", cmd.logLevel))
 	}
 
-	if len(cmd.selectors) != 0 {
-		selectorString := joinKeyValuePairs(cmd.selectors)
-		cliArgs = append(cliArgs, fmt.Sprintf("--selector=%s", selectorString))
-	}
-
-	if len(cmd.stateValues) != 0 {
-		stateValuesString := joinKeyValuePairs(cmd.stateValues)
-		cliArgs = append(cliArgs, fmt.Sprintf("--state-values-set=%s", stateValuesString))
+	if cmd.stateValuesFile != "" {
+		cliArgs = append(cliArgs, fmt.Sprintf("--state-values-file=%s", cmd.stateValuesFile))
 	}
 
 	// Append Helmfile command we're running (template)
@@ -81,6 +55,20 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 		cliArgs = append(cliArgs, outputDirFlag)
 	}
 
+	// thelma manifests
+	// our strategy:
+	//   the resolver will conditionally run `helm repo update`.
+	//   that's what knows if we pull from repo or source control.
+	// helm repo add.
+	// helm repo up - only if we are downloading from  resolution fails. max once per process.
+	// okay so will it be slow to read every values file, render to template?
+	//
+	// agora/values.yaml
+	// so... when we helm template...
+	// we will copy the values.yaml from the chart.
+	// into a
+	// agora/values/
+	//
 	shellCmd := shell.Command{
 		Prog: ProgName,
 		Args: cliArgs,
@@ -91,28 +79,12 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 	return shellCmd
 }
 
-func (cmd *Cmd) setDestinationEnvVars(d terra.Destination) {
-	cmd.addEnvVar(DestinationTypeEnvVar, d.Type().String())
-	cmd.addEnvVar(DestinationBaseEnvVar, d.Base())
-	cmd.addEnvVar(DestinationNameEnvVar, d.Name())
+func (cmd *Cmd) setEnvVars(vars []string) {
+	cmd.envVars = vars
 }
 
-func (cmd *Cmd) setReleaseEnvVars(r terra.Release) {
-	cmd.addEnvVar(ReleaseNameEnvVar, r.Name())
-	cmd.addEnvVar(ReleaseTypeEnvVar, r.Type().String())
-}
-
-func (cmd *Cmd) setNamespaceEnvVar(r terra.Release) {
-	cmd.addEnvVar(NamespaceEnvVar, r.Namespace())
-}
-
-func (cmd *Cmd) setClusterEnvVars(r terra.Release) {
-	cmd.addEnvVar(ClusterNameEnvVar, r.ClusterName())
-	cmd.addEnvVar(ClusterAddressEnvVar, r.ClusterAddress())
-}
-
-func (cmd *Cmd) setArgocdProjectEnvVar(t terra.Destination) {
-	cmd.addEnvVar(ArgocdProjectEnvVar, argocd.GetProjectName(t))
+func (cmd *Cmd) setStateValuesFile(file string) {
+	cmd.stateValuesFile = file
 }
 
 func (cmd *Cmd) setDir(dir string) {
@@ -139,29 +111,7 @@ func (cmd *Cmd) addValuesFiles(valuesFiles ...string) {
 	cmd.valuesFiles = append(cmd.valuesFiles, valuesFiles...)
 }
 
-func (cmd *Cmd) setChartPathEnvVar(chartPath string) {
-	cmd.addEnvVar(ChartPathEnvVar, chartPath)
-}
-
-func (cmd *Cmd) setAppVersionEnvVar(appVersion string) {
-	cmd.addEnvVar(AppVersionEnvVar, appVersion)
-}
-
 // addEnvVar adds an env var key/value pair to the given cmd instance
 func (cmd *Cmd) addEnvVar(name string, value string) {
 	cmd.envVars = append(cmd.envVars, fmt.Sprintf("%s=%s", name, value))
-}
-
-// joinKeyValuePairs joins map[string]string to string containing comma-separated key-value pairs.
-// Eg. { "a": "b", "c": "d" } -> "a=b,c=d"
-func joinKeyValuePairs(pairs map[string]string) string {
-	var tokens []string
-	for k, v := range pairs {
-		tokens = append(tokens, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	// Sort tokens so they are always supplied in predictable order
-	sort.Strings(tokens)
-
-	return strings.Join(tokens, ",")
 }

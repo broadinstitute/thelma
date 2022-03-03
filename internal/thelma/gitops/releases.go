@@ -3,22 +3,23 @@ package gitops
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/terra/compare"
+	"github.com/broadinstitute/thelma/internal/thelma/terra/filter"
 	"sort"
 )
 
 // implements the terra.Releases interface
 type releases struct {
-	state *gitops
+	state *state
 }
 
-func newReleases(g *gitops) terra.Releases {
+func newReleases(g *state) terra.Releases {
 	return &releases{
 		state: g,
 	}
 }
 
 func (r *releases) All() ([]terra.Release, error) {
-	return r.Filter(terra.AnyRelease())
+	return r.Filter(filter.Releases().Any())
 }
 
 func (r *releases) Filter(filter terra.ReleaseFilter) ([]terra.Release, error) {

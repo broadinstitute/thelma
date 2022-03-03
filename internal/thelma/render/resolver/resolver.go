@@ -20,9 +20,11 @@ type Options struct {
 	ScratchDir string // scratch directory where temporary files should be created
 }
 
+// Resolver determines where a Helm chart should be sourced from.
 type Resolver interface {
-	// If in "development" mode, download and unpack the published chart from the Helm repository.
-	// If in "deployment" mode, run "helm dependency update" on the local working/source copy of the chart.
+	// Resolve determines where a Helm chart should be sourced from.
+	// If in "deploy" mode, downloads and unpacks the published chart from the Helm repository.
+	// If in "development" mode, runs "helm dependency update" on the local working/source copy of the chart.
 	// Under some conditions, "development" mode falls back to downloading published chart and vice versa.
 	Resolve(chart ChartRelease) (ResolvedChart, error)
 }

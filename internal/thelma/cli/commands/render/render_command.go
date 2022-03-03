@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -157,7 +158,7 @@ func (cmd *renderCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	if err := cmd.checkIncompatibleFlags(flags); err != nil {
 		return err
 	}
-	if err := cmd.fillRenderOptions(app.Config().Home(), ctx.CobraCommand().Flags()); err != nil {
+	if err := cmd.fillRenderOptions(app, ctx.CobraCommand().Flags()); err != nil {
 		return err
 	}
 	if err := cmd.fillHelmfileArgs(flags); err != nil {
@@ -177,24 +178,61 @@ func (cmd *renderCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 }
 
 // fillRenderOptions populates an empty render.Options struct in accordance with user-supplied CLI options
-func (cmd *renderCommand) fillRenderOptions(thelmaHome string, flags *pflag.FlagSet) error {
+func (cmd *renderCommand) fillRenderOptions(app app.ThelmaApp, flags *pflag.FlagSet) error {
 	flagVals := cmd.flagVals
 	renderOptions := cmd.renderOptions
 
+	state, err := app.TerraState()
+	if err != nil {
+		return err
+	}
+
+	_filter := filter.Releases().Any()
+
 	// env
 	if flags.Changed(flagNames.env) {
-		renderOptions.Env = &flagVals.env
+		env, err := state.Environments().Get(flagVals.env)
+		if err != nil {
+			return err
+		}
+		if env == nil {
+			return fmt.Errorf("--%s: no such environment %q", flagNames.env, flagVals.env)
+		}
+		if len(env.Releases()) == 0 {
+			return fmt.Errorf("--%s: environemnt %q has no releases to render", flagNames.env, flagVals.env)
+		}
+		_filter = _filter.And(filter.Releases().HasDestinationName(flagVals.env))
 	}
 
 	// cluster
 	if flags.Changed(flagNames.cluster) {
-		renderOptions.Cluster = &flagVals.cluster
+		cluster, err := state.Clusters().Get(flagVals.cluster)
+		if err != nil {
+			return err
+		}
+		if cluster == nil {
+			return fmt.Errorf("--%s: no such cluster %q", flagNames.cluster, flagVals.cluster)
+		}
+		if len(cluster.Releases()) == 0 {
+			return fmt.Errorf("--%s: cluster %q has no releases to render", flagNames.cluster, flagVals.cluster)
+		}
+		_filter = _filter.And(filter.Releases().HasDestinationName(flagVals.cluster))
 	}
 
 	// release name
 	if flags.Changed(flagNames.release) {
-		renderOptions.Release = &flagVals.release
+		renderOptions.ReleaseScoped = true
+		_filter = _filter.And(filter.Releases().HasName(flagVals.release))
 	}
+
+	releases, err := state.Releases().Filter(_filter)
+	if err != nil {
+		return err
+	}
+	if len(releases) == 0 {
+		return fmt.Errorf("no releases found that match --%s and --%s/--%s arguments", flagNames.release, flagNames.env, flagNames.cluster)
+	}
+	renderOptions.Releases = releases
 
 	// output dir
 	if flags.Changed(flagNames.outputDir) {
@@ -204,7 +242,7 @@ func (cmd *renderCommand) fillRenderOptions(thelmaHome string, flags *pflag.Flag
 		}
 		renderOptions.OutputDir = dir
 	} else {
-		renderOptions.OutputDir = path.Join(thelmaHome, defaultOutputDir)
+		renderOptions.OutputDir = path.Join(app.Config().Home(), defaultOutputDir)
 		log.Debug().Msgf("Using default output dir %s", renderOptions.OutputDir)
 	}
 
@@ -222,7 +260,7 @@ func (cmd *renderCommand) fillRenderOptions(thelmaHome string, flags *pflag.Flag
 		}
 		renderOptions.ChartSourceDir = chartSourceDir
 	} else {
-		renderOptions.ChartSourceDir = path.Join(thelmaHome, defaultChartSourceDir)
+		renderOptions.ChartSourceDir = path.Join(app.Config().Home(), defaultChartSourceDir)
 		log.Debug().Msgf("Using default chart source dir %s", renderOptions.ChartSourceDir)
 	}
 

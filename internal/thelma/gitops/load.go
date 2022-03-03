@@ -26,12 +26,12 @@ const envConfigDir = "environments"
 // clusterConfigDir is the subdirectory in terra-helmfile to search for cluster config files
 const clusterConfigDir = "clusters"
 
-func loadEnvironments(configRepoPath string, versions Versions, clusters map[string]terra.Cluster) (map[string]terra.Environment, error) {
+func loadEnvironments(configRepoPath string, versions Versions, clusters map[string]terra.Cluster, sb statebucket.StateBucket) (map[string]terra.Environment, error) {
 	yamlEnvs, err := loadYamlEnvironments(configRepoPath, versions, clusters)
 	if err != nil {
 		return nil, err
 	}
-	dynamicEnvs, err := loadDynamicEnvironments(yamlEnvs)
+	dynamicEnvs, err := loadDynamicEnvironments(yamlEnvs, sb)
 	if err != nil {
 		return nil, err
 	}
@@ -47,18 +47,13 @@ func loadEnvironments(configRepoPath string, versions Versions, clusters map[str
 	return merged, nil
 }
 
-func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment) (map[string]terra.Environment, error) {
-	bucket, err := statebucket.New()
+func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb statebucket.StateBucket) (map[string]terra.Environment, error) {
+	dynamicEnvironments, err := sb.Environments()
 	if err != nil {
 		return nil, err
 	}
 
-	dynamicEnvironments, err := bucket.Environments()
-	if err != nil {
-		return nil, err
-	}
-
-	var result map[string]terra.Environment
+	result := make(map[string]terra.Environment)
 	for _, dynamicEnv := range dynamicEnvironments {
 		if _, exists := yamlEnvironments[dynamicEnv.Name]; exists {
 			return nil, fmt.Errorf("error laoding dynamic environment %q: an environment by that name is already declared in YAML", dynamicEnv.Name)
@@ -66,6 +61,11 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment) (map
 		template, exists := yamlEnvironments[dynamicEnv.Template]
 		if !exists {
 			return nil, fmt.Errorf("error loading dynamic environment %q: template %q is not declared in YAML", dynamicEnv.Name, dynamicEnv.Template)
+		}
+
+		var _fiab terra.Fiab
+		if dynamicEnv.Hybrid {
+			_fiab = terra.NewFiab(dynamicEnv.Fiab.Name, dynamicEnv.Fiab.IP)
 		}
 
 		_releases := make(map[string]terra.AppRelease)
@@ -92,7 +92,7 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment) (map
 			}
 		}
 
-		env := NewEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _releases)
+		env := NewEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, _releases)
 		result[dynamicEnv.Name] = env
 		for _, r := range env.Releases() {
 			r.(*appRelease).destination = env
@@ -245,6 +245,7 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		defaultClusterName,
 		lifecycle,
 		"",
+		nil,
 		_releases,
 	)
 

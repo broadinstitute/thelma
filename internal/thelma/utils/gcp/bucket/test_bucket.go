@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -21,8 +22,19 @@ const testBucketName = "thelma-gcs-integration-test"
 
 type testBucket struct {
 	*bucket
+	tracker *objectTracker
+}
+
+// any objects written during the test are tracked here so they can be automatically cleaned up
+type objectTracker struct {
 	mutex            sync.Mutex
-	objectsToCleanup []string // any objects written during the test are tracked here so they can be automatically cleaned up
+	objectsToCleanup []string
+}
+
+func (t *objectTracker) add(objectName string) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	t.objectsToCleanup = append(t.objectsToCleanup, objectName)
 }
 
 // NewTestBucket (FOR USE IN TESTS ONLY) creates a Bucket for use in
@@ -53,7 +65,8 @@ func NewTestBucket(t *testing.T) Bucket {
 
 	// wrap it in a test bucket
 	_testBucket := &testBucket{
-		bucket: _bucket,
+		bucket:  _bucket,
+		tracker: &objectTracker{},
 	}
 
 	// add a cleanup function to delete any objects written during the test
@@ -64,20 +77,21 @@ func NewTestBucket(t *testing.T) Bucket {
 	return _testBucket
 }
 
+// Below we override any bucket functions that can write objects to the bucket
+
 func (b *testBucket) Upload(localPath string, objectName string, attrs ...object.AttrSetter) error {
-	b.addToCleanup(objectName)
+	b.tracker.add(objectName)
 	return b.bucket.Upload(localPath, objectName, attrs...)
 }
 
 func (b *testBucket) Write(objectName string, content []byte, attrs ...object.AttrSetter) error {
-	b.addToCleanup(objectName)
+	b.tracker.add(objectName)
 	return b.bucket.Write(objectName, content, attrs...)
 }
 
-func (b *testBucket) addToCleanup(objectName string) {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-	b.objectsToCleanup = append(b.objectsToCleanup, objectName)
+func (b *testBucket) NewLocker(objectName string, maxWait time.Duration, options ...LockerOption) Locker {
+	b.tracker.add(objectName)
+	return b.bucket.NewLocker(objectName, maxWait, options...)
 }
 
 // Close deletes any remaining test objects in the bucket and closes the gcs client.
@@ -87,9 +101,15 @@ func (b *testBucket) Close() error {
 	// note that we track all objects that are written.
 	// We can't use GCS's List support because it's eventually consistent,
 	// so objects written during the test might not yet show up in List calls when this function is run
-	for _, objectName := range b.objectsToCleanup {
+	for _, objectName := range b.tracker.objectsToCleanup {
 		if err := b.Delete(objectName); err != nil {
-			return fmt.Errorf("error cleaning up test object %s: %v", objectName, err)
+			if strings.Contains(err.Error(), "storage: object doesn't exist") {
+				// TODO return underlying error from GCS so we can check its type instead of error message content
+				log.Debug().Msgf("couldn't delete %s, likely already deleted by test: %v", objectName, err)
+				// test likely deleted the object already
+			} else {
+				return fmt.Errorf("error cleaning up test object %s: %v", objectName, err)
+			}
 		}
 	}
 

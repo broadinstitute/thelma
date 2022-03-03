@@ -2,14 +2,23 @@ package app
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
+	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 
 // Options for a thelmaApp
 type Options struct {
 	Runner shell.Runner
+}
+
+func init() {
+	logging.Bootstrap()
+	seed.Rand()
 }
 
 // ThelmaApp holds references to global/cross-cutting dependencies for Thelma commands
@@ -20,8 +29,10 @@ type ThelmaApp interface {
 	ShellRunner() shell.Runner
 	// Paths returns Paths for this ThelmaApp
 	Paths() paths.Paths
-	// Scratch returns a Scratch instance for this ThelmaApp
+	// Scratch returns the Scratch instance for this ThelmaApp
 	Scratch() scratch.Scratch
+	// TerraState returns a new terra.State instance for this ThelmaApp
+	TerraState() (terra.State, error)
 	// Close deletes local resources associated with this ThelmaApp, and should be called once before the program exits.
 	Close() error
 }
@@ -81,6 +92,10 @@ func (t *thelmaApp) Paths() paths.Paths {
 
 func (t *thelmaApp) Scratch() scratch.Scratch {
 	return t.scratch
+}
+
+func (t *thelmaApp) TerraState() (terra.State, error) {
+	return gitops.Load(t.config.Home(), t.shellRunner)
 }
 
 func (t *thelmaApp) Close() error {

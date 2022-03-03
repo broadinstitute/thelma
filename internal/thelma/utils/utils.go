@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 )
@@ -24,11 +25,8 @@ func ExpandAndVerifyExists(filePath string, description string) (string, error) 
 	return expanded, nil
 }
 
-// AsInterfaces is for converting slices of a given type to a slice of interfaces.
-func AsInterfaces(a ...interface{}) []interface{} {
-	res := make([]interface{}, len(a))
-	for i := range a {
-		res[i] = a[i]
-	}
-	return res
+func IsIPV4Address(addr string) bool {
+	ip := net.ParseIP(addr)
+
+	return ip != nil && ip.To4() != nil
 }

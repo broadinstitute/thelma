@@ -8,10 +8,10 @@ import (
 
 // implements the terra.Destinations interface
 type destinations struct {
-	state *gitops
+	state *state
 }
 
-func newDestinations(g *gitops) terra.Destinations {
+func newDestinations(g *state) terra.Destinations {
 	return &destinations{
 		state: g,
 	}
@@ -29,6 +29,22 @@ func (d *destinations) All() ([]terra.Destination, error) {
 	sort.Slice(result, func(i, j int) bool {
 		return compare.Destinations(result[i], result[j]) < 0
 	})
+
+	return result, nil
+}
+
+func (d *destinations) Filter(filter terra.DestinationFilter) ([]terra.Destination, error) {
+	all, err := d.All()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []terra.Destination
+	for _, dest := range all {
+		if filter.Matches(dest) {
+			result = append(result)
+		}
+	}
 
 	return result, nil
 }

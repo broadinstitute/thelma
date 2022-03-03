@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+//
+// Note that Argo has a concept call `destinations` that is similar to terra.Destination
+// in that it means "cluster and namespace where my Argo app deploys manifests"
+//
+
 type Values struct {
 	Destinations []ArgoDestination `yaml:"destinations"`
 }

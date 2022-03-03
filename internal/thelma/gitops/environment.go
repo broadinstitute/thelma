@@ -13,16 +13,18 @@ type environment struct {
 	releases       map[string]terra.AppRelease // Set of releases configured in this environment
 	lifecycle      terra.Lifecycle             // Lifecycle for this environment
 	template       string                      // Template for this environment, if it has one
+	fiab           terra.Fiab                  // DEPRECATED fiab associated with this environment, if there is one
 	destination
 }
 
 // NewEnvironment constructs a new Environment
-func NewEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, template string, releases map[string]terra.AppRelease) terra.Environment {
+func NewEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, template string, fiab terra.Fiab, releases map[string]terra.AppRelease) terra.Environment {
 	return &environment{
 		defaultCluster: defaultCluster,
 		releases:       releases,
 		lifecycle:      lifecycle,
 		template:       template,
+		fiab:           fiab,
 		destination: destination{
 			name:            name,
 			base:            base,
@@ -51,10 +53,6 @@ func (e *environment) Template() string {
 	return e.template
 }
 
-func (e *environment) HasTemplate() bool {
-	return e.Template() == ""
-}
-
 func (e *environment) ReleaseType() terra.ReleaseType {
 	return terra.AppReleaseType
 }
@@ -64,7 +62,7 @@ func (e *environment) Name() string {
 	return e.name
 }
 
-// Base environment base, eg. "live"
+// Base environment configuration base, eg. "live"
 func (e *environment) Base() string {
 	return e.base
 }
@@ -72,6 +70,14 @@ func (e *environment) Base() string {
 // Namespace returns the environment's namespace. Eg "terra-dev", "terra-perf", etc.
 func (e *environment) Namespace() string {
 	return environmentNamespace(e.Name())
+}
+
+func (e *environment) IsHybrid() bool {
+	return e.fiab != nil
+}
+
+func (e *environment) Fiab() terra.Fiab {
+	return e.fiab
 }
 
 // environmentNamespace return environment namespace for a given environment name
