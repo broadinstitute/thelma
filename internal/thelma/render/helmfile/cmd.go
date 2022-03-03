@@ -55,20 +55,6 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 		cliArgs = append(cliArgs, outputDirFlag)
 	}
 
-	// thelma manifests
-	// our strategy:
-	//   the resolver will conditionally run `helm repo update`.
-	//   that's what knows if we pull from repo or source control.
-	// helm repo add.
-	// helm repo up - only if we are downloading from  resolution fails. max once per process.
-	// okay so will it be slow to read every values file, render to template?
-	//
-	// agora/values.yaml
-	// so... when we helm template...
-	// we will copy the values.yaml from the chart.
-	// into a
-	// agora/values/
-	//
 	shellCmd := shell.Command{
 		Prog: ProgName,
 		Args: cliArgs,
