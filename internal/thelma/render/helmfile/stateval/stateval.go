@@ -31,6 +31,10 @@ type ArgoAppValues struct {
 	Destination Destination `yaml:"Destination"`
 	// ArgoApp information about the cluster and project the ArgoApp will deploy to
 	ArgoApp ArgoApp `yaml:"ArgoApp"`
+	// Environment environment where the release is being deployed (for app releases only)
+	Environment Environment `yaml:"Environment,omitempty"`
+	// Cluster cluster where the release is being deployed (for cluster releases only)
+	Cluster Cluster `yaml:"Cluster,omitempty"`
 }
 
 // ArgoProjectValues -- the full set of helmfile state values for rendering argo projects
@@ -60,11 +64,18 @@ func BuildAppValues(r terra.Release, chartPath string) AppValues {
 
 // BuildArgoAppValues generates an ArgoAppValues for the given release
 func BuildArgoAppValues(r terra.Release) ArgoAppValues {
-	return ArgoAppValues{
+	values := ArgoAppValues{
 		Release:     forRelease(r),
 		Destination: forDestination(r.Destination()),
 		ArgoApp:     forArgoApp(r),
 	}
+	if r.Destination().IsEnvironment() {
+		values.Environment = forEnvironment(r.Destination().(terra.Environment))
+	}
+	if r.Destination().IsCluster() {
+		values.Cluster = forCluster(r.Destination().(terra.Cluster))
+	}
+	return values
 }
 
 // BuildArgoProjectValues genreates an ArgoProjectValues for the given destination
