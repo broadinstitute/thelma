@@ -2,7 +2,7 @@
 // State values are consumed in both helmfile.yaml and values.yaml.gotmpl files.
 //
 // Note: We serialize yaml keys with upper case name for greater readability in Go templates.
-// (so that we have .Values.Release.ChartPath and not .Values.release.chartPath)
+// (so that we can use .Values.Release.ChartPath and not .Values.release.chartPath)
 package stateval
 
 import "github.com/broadinstitute/thelma/internal/thelma/terra"

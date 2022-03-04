@@ -18,7 +18,7 @@ import (
 )
 
 // Bucket for testing Thelma code that interacts with GCS; lives in dsp-tools-k8s project
-const testBucketName = "thelma-gcs-integration-test"
+const testBucketName = "thelma-integration-tests"
 
 type testBucket struct {
 	*bucket

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const bucketName = "thelma-bee-state-poc"
+const bucketName = "thelma-state"
 const stateObject = "state.json"
 const lockObject = ".update.lk"
 const lockMaxWait = 30 * time.Second
