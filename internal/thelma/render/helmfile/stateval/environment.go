@@ -5,9 +5,9 @@ import "github.com/broadinstitute/thelma/internal/thelma/terra"
 // Environment -- information about the environment the release is being deployed to.
 type Environment struct {
 	// Name of the environment this release is being deployed to
-	Name string `yaml:"Name,omitempty"`
+	Name string `yaml:"Name"`
 	// DEPRECATED (remove once we are no longer running hybrids bee/fiab envs)
-	IsHybrid bool `yaml:"IsHybrid,omitempty"`
+	IsHybrid bool `yaml:"IsHybrid"`
 	// DEPRECATED (remove once we are no longer running hybrid bee/fiab envs)
 	Fiab struct {
 		Name string `yaml:"Name,omitempty"`
