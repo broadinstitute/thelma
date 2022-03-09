@@ -1,0 +1,31 @@
+releases:
+  agora:
+    appVersion: 55b83ca56ba2
+    chartVersion: 0.24.0
+  buffer:
+    appVersion: 0.185.0
+    chartVersion: 0.53.0
+  cromwell:
+    appVersion: 77-b5699f6
+    chartVersion: 0.27.0
+  datarepo:
+    appVersion: 1.300.0
+    chartVersion: 0.1.390
+  externalcreds:
+    appVersion: 0.66.0
+    chartVersion: 0.64.0
+  leonardo:
+    appVersion: 7d85b84317b6
+    chartVersion: 0.83.0
+  opendj:
+    appVersion: none
+    chartVersion: 0.26.0
+  rawls:
+    appVersion: f2f90a946307
+    chartVersion: 0.33.0
+  sam:
+    appVersion: 8f69c32bd9fe
+    chartVersion: 0.33.0
+  workspacemanager:
+    appVersion: 0.254.191
+    chartVersion: 0.64.0

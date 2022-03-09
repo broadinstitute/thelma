@@ -1,0 +1,47 @@
+{
+  "environments": {
+    "fiab-swirly-rabbit": {
+      "name": "fiab-swirly-rabbit",
+      "template": "swatomation",
+      "hybrid": true,
+      "fiab": {
+        "name": "fiab-automation-swirly-rabbit",
+        "ip": "10.0.0.1"
+      }
+    },
+    "fiab-funky-chipmunk": {
+      "name": "fiab-funky-chipmunk",
+      "template": "swatomation",
+      "versionPins": {
+        "rawls": "my-rawls-pr-0ef4"
+      },
+      "hybrid": true,
+      "fiab": {
+        "name": "fiab-automation-swirly-rabbit",
+        "ip": "10.0.0.2"
+      }
+    },
+    "fiab-nerdy-walrus": {
+      "name": "fiab-nerdy-walrus",
+      "template": "swatomation",
+      "versionPins": {
+        "sam": "1.2.3"
+      },
+      "hybrid": true,
+      "fiab": {
+        "name": "fiab-automation-nerdy-walrus",
+        "ip": "10.0.0.3"
+      }
+    },
+    "sam-ci-001": {
+      "name": "sam-ci-001",
+      "template": "sam-ci",
+      "hybrid": false
+    },
+    "sam-ci-002": {
+      "name": "sam-ci-002",
+      "template": "sam-ci",
+      "hybrid": false
+    }
+  }
+}

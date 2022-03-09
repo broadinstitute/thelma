@@ -1,0 +1,5 @@
+address: https://34.68.254.48
+
+releases:
+  terra-prometheus:
+    enabled: true

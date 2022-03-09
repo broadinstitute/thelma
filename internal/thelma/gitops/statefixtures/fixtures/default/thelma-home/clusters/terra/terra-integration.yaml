@@ -1,0 +1,9 @@
+# Configuration overrides for the terra-integration cluster
+
+address: https://34.70.205.77
+
+releases:
+  diskmanager:
+    enabled: false
+  yale:
+    enabled: false

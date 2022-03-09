@@ -1,0 +1,22 @@
+# Note: default versions for every chart are configured in `versions/cluster/dev.yaml`
+
+# Our cluster releases often create/manage cluster-wide resources
+clusterResourceWhitelist:
+  - group: '*'
+    kind: 'ClusterRole'
+  - group: '*'
+    kind: 'ClusterRoleBinding'
+  - group: '*'
+    kind: 'PodSecurityPolicy'
+  - group: '*'
+    kind: 'StorageClass'
+
+releases:
+  diskmanager:
+    enabled: true
+  install-secrets-manager:
+    enabled: true
+  terra-prometheus:
+    enabled: true
+  yale:
+    enabled: false

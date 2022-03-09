@@ -1,0 +1,8 @@
+# Environment overrides for dev environment
+#
+# Cluster in ArgoCD where manifests should be deployed to
+defaultCluster: terra-dev
+
+releases:
+  externalcreds:
+    enabled: true

@@ -1,0 +1,6 @@
+# Configuration overrides for the terra-perf cluster
+base: terra
+
+address: https://35.224.104.186
+
+releases: {}

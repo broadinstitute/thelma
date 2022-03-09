@@ -1,0 +1,4 @@
+# Environment overrides for wsmtest environment
+releases:
+  workspacemanager:
+    enabled: true

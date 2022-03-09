@@ -1,0 +1,5 @@
+address: https://34.123.94.51
+
+releases:
+  external-dns:
+    enabled: true

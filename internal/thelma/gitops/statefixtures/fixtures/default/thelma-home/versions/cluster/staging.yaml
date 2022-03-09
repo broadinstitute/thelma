@@ -1,0 +1,11 @@
+releases:
+  diskmanager:
+    chartVersion: 0.5.0
+  external-dns:
+    chartVersion: 5.4.11
+  install-secrets-manager:
+    chartVersion: 0.0.6
+  terra-prometheus:
+    chartVersion: 0.14.0
+  yale:
+    chartVersion: 0.6.0

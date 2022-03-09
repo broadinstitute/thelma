@@ -1,0 +1,17 @@
+# Common settings for all `live` Terra environments
+
+releases:
+  agora:
+    enabled: true
+  buffer:
+    enabled: true
+  cromwell:
+    enabled: true
+  leonardo:
+    enabled: true
+  rawls:
+    enabled: true
+  sam:
+    enabled: true
+  workspacemanager:
+    enabled: true

@@ -1,0 +1,5 @@
+# Configuration overrides for the terra-dev cluster
+
+address: https://35.238.186.116
+
+releases: {}

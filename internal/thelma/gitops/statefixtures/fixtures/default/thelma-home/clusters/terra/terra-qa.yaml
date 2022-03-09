@@ -1,0 +1,17 @@
+# Configuration overrides for the terra-qa cluster
+
+address: https://35.224.175.229
+
+releases:
+  # TODO: these will eventually be enabled as part of our preview environment
+  #       implementation
+  diskmanager:
+    enabled: false
+  external-dns:
+    enabled: true
+  install-secrets-manager:
+    enabled: false
+  terra-prometheus:
+    enabled: false
+  yale:
+    enabled: false

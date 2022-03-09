@@ -1,0 +1,8 @@
+# Configuration overrides for the terra-prod cluster
+base: terra
+
+address: https://35.232.149.177
+
+releases:
+  yale:
+    enabled: false

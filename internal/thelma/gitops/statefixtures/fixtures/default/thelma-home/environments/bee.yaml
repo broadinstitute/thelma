@@ -1,0 +1,5 @@
+# default cluster intentionally left null
+defaultCluster: null
+
+# All environments in the bee/ subdirectory are templates
+lifecycle: template

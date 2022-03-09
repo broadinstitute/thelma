@@ -1,0 +1,13 @@
+defaultCluster: terra-qa
+
+releases:
+  agora:
+    enabled: true
+  leonardo:
+    enabled: true
+  opendj:
+    enabled: true
+  rawls:
+    enabled: true
+  sam:
+    enabled: true

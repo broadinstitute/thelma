@@ -1,0 +1,4 @@
+# Environment overrides for tools environment
+releases:
+  buffer:
+    enabled: true
