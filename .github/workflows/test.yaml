@@ -18,10 +18,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+
+    - name: Set up GCP auth
+      run: echo '${{ secrets.THELMA_CI_KEY }}' > service_account.json
+
     - name: Run tests
       uses: ./.github/actions/make
       with:
-        target: "test"
+        target: "smoke"
+
     - name: Upload Coverage Report
       uses: codecov/codecov-action@v1
       with:
