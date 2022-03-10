@@ -27,7 +27,9 @@ jobs:
       with:
         target: "smoke"
       env:
-        GOOGLE_APPLICATION_CREDENTIALS: service_account.json
+        # full path is needed because go tests switch into package directories,
+        # and some smoke tests use GCP credentials
+        GOOGLE_APPLICATION_CREDENTIALS: /github/workspace/service_account.json
 
     - name: Upload Coverage Report
       uses: codecov/codecov-action@v1
