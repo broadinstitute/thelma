@@ -1,4 +1,4 @@
-name: Run Unit Tests
+name: Run Unit & Smoke Tests
 on:
   push:
     branches:
