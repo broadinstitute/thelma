@@ -26,6 +26,8 @@ jobs:
       uses: ./.github/actions/make
       with:
         target: "smoke"
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: service_account.json
 
     - name: Upload Coverage Report
       uses: codecov/codecov-action@v1
