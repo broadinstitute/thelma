@@ -25,7 +25,9 @@ runs:
   using: 'docker'
   image: golang:1.16-bullseye # alpine3.14
   args:
-    find . | grep service_account.json
+    - sh
+    - -c
+    - "pwd ; find . | grep account.json; ls -l account.json"
 #    - make
 #    - ${{ inputs.target }}
 #    - OUTPUT_DIR=${{ inputs.output-dir }}
