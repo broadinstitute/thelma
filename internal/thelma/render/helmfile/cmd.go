@@ -65,10 +65,6 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 	return shellCmd
 }
 
-func (cmd *Cmd) setEnvVars(vars []string) {
-	cmd.envVars = vars
-}
-
 func (cmd *Cmd) setStateValuesFile(file string) {
 	cmd.stateValuesFile = file
 }
@@ -95,9 +91,4 @@ func (cmd *Cmd) setStdout(stdout bool) {
 
 func (cmd *Cmd) addValuesFiles(valuesFiles ...string) {
 	cmd.valuesFiles = append(cmd.valuesFiles, valuesFiles...)
-}
-
-// addEnvVar adds an env var key/value pair to the given cmd instance
-func (cmd *Cmd) addEnvVar(name string, value string) {
-	cmd.envVars = append(cmd.envVars, fmt.Sprintf("%s=%s", name, value))
 }

@@ -2,6 +2,7 @@ package gitops
 
 import "github.com/broadinstitute/thelma/internal/thelma/terra"
 
+// implements the terra.ClusterRelease interface
 type clusterRelease struct {
 	release
 }

@@ -50,7 +50,7 @@ func (cmd *listCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *listCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
-	state, err := app.TerraState()
+	state, err := app.State()
 	if err != nil {
 		return err
 	}

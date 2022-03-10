@@ -8,6 +8,7 @@ package bucket
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -17,7 +18,7 @@ import (
 	"time"
 )
 
-// Bucket for testing Thelma code that interacts with GCS; lives in dsp-tools-k8s project
+// Bucket for testing Thelma code that interacts with GCS; lives in dsp-tools-k8s project.
 const testBucketName = "thelma-integration-tests"
 
 type testBucket struct {
@@ -26,15 +27,21 @@ type testBucket struct {
 }
 
 // any objects written during the test are tracked here so they can be automatically cleaned up
+func newObjectTracker() *objectTracker {
+	return &objectTracker{
+		objectsToCleanup: set.NewStringSet(),
+	}
+}
+
 type objectTracker struct {
 	mutex            sync.Mutex
-	objectsToCleanup []string
+	objectsToCleanup set.StringSet
 }
 
 func (t *objectTracker) add(objectName string) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	t.objectsToCleanup = append(t.objectsToCleanup, objectName)
+	t.objectsToCleanup.Add(objectName)
 }
 
 // NewTestBucket (FOR USE IN TESTS ONLY) creates a Bucket for use in
@@ -66,7 +73,7 @@ func NewTestBucket(t *testing.T) Bucket {
 	// wrap it in a test bucket
 	_testBucket := &testBucket{
 		bucket:  _bucket,
-		tracker: &objectTracker{},
+		tracker: newObjectTracker(),
 	}
 
 	// add a cleanup function to delete any objects written during the test
@@ -101,7 +108,7 @@ func (b *testBucket) Close() error {
 	// note that we track all objects that are written.
 	// We can't use GCS's List support because it's eventually consistent,
 	// so objects written during the test might not yet show up in List calls when this function is run
-	for _, objectName := range b.tracker.objectsToCleanup {
+	for _, objectName := range b.tracker.objectsToCleanup.Elements() {
 		if err := b.Delete(objectName); err != nil {
 			if strings.Contains(err.Error(), "storage: object doesn't exist") {
 				// TODO return underlying error from GCS so we can check its type instead of error message content

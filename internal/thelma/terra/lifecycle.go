@@ -18,9 +18,18 @@ const (
 	Dynamic
 )
 
-// Lifecycles returns a slice of all possible Lifecycles
+// Lifecycles returns a slice of all Lifecycles
 func Lifecycles() []Lifecycle {
 	return []Lifecycle{Static, Template, Dynamic}
+}
+
+// LifecycleNames returns a slice of all Lifecycle names as strings
+func LifecycleNames() []string {
+	var names []string
+	for _, lifecycle := range Lifecycles() {
+		names = append(names, lifecycle.String())
+	}
+	return names
 }
 
 // Compare returns 0 if r == other, -1 if r < other, or +1 if r > other.
@@ -55,6 +64,27 @@ func (l *Lifecycle) UnmarshalYAML(value *yaml.Node) error {
 		supported = append(supported, l.String())
 	}
 	return fmt.Errorf("unknown lifecycle type %v, supported lifecycles are %s", value.Value, strings.Join(supported, ", "))
+}
+
+// FromString will set the receiver's value to the one denoted by the given string
+func (l *Lifecycle) FromString(value string) error {
+	switch value {
+	case "static":
+		*l = Static
+		return nil
+	case "template":
+		*l = Template
+		return nil
+	case "dynamic":
+		*l = Dynamic
+		return nil
+	}
+
+	var supported []string
+	for _, lifecycle := range Lifecycles() {
+		supported = append(supported, lifecycle.String())
+	}
+	return fmt.Errorf("unknown lifecycle type %v, supported lifecycles are %s", value, strings.Join(supported, ", "))
 }
 
 func (l Lifecycle) String() string {

@@ -11,7 +11,7 @@ func Test_BeeHelp(t *testing.T) {
 	_cli := cli.New(func(options *cli.Options) {
 		options.AddCommand("bee", NewBeeCommand())
 		options.ConfigureThelma(func(thelmaBuilder builder.ThelmaBuilder) {
-			thelmaBuilder.WithTestDefaults()
+			thelmaBuilder.WithTestDefaults(t)
 		})
 		options.SetArgs([]string{"bee", "--help"})
 	})

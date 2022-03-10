@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/gitops/serializers"
 	"github.com/broadinstitute/thelma/internal/thelma/gitops/statebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -13,6 +14,12 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+type LoadOptions struct {
+	StateBucket statebucket.StateBucket
+}
+
+type LoadOption func(LoadOptions) LoadOptions
 
 // Default settings file name for both types of destinations
 const defaultsFileName = "defaults.yaml"
@@ -25,6 +32,61 @@ const envConfigDir = "environments"
 
 // clusterConfigDir is the subdirectory in terra-helmfile to search for cluster config files
 const clusterConfigDir = "clusters"
+
+// NewStateLoader returns a new StateLoader w/ given settings
+func NewStateLoader(thelmaHome string, shellRunner shell.Runner, options ...LoadOption) (terra.StateLoader, error) {
+	opts := LoadOptions{}
+	for _, option := range options {
+		opts = option(opts)
+	}
+
+	loader := &stateLoader{
+		thelmaHome:  thelmaHome,
+		shellRunner: shellRunner,
+		statebucket: opts.StateBucket,
+	}
+
+	if loader.statebucket == nil {
+		sb, err := statebucket.New()
+		if err != nil {
+			return nil, err
+		}
+		loader.statebucket = sb
+	}
+
+	return loader, nil
+}
+
+// implements terra.StateLoader interface
+type stateLoader struct {
+	statebucket statebucket.StateBucket
+	thelmaHome  string
+	shellRunner shell.Runner
+}
+
+func (s *stateLoader) Load() (terra.State, error) {
+	_versions, err := NewVersions(s.thelmaHome, s.shellRunner)
+	if err != nil {
+		return nil, err
+	}
+
+	_clusters, err := loadClusters(s.thelmaHome, _versions)
+	if err != nil {
+		return nil, err
+	}
+
+	_environments, err := loadEnvironments(s.thelmaHome, _versions, _clusters, s.statebucket)
+	if err != nil {
+		return nil, err
+	}
+
+	return &state{
+		statebucket:  s.statebucket,
+		versions:     _versions,
+		clusters:     _clusters,
+		environments: _environments,
+	}, nil
+}
 
 func loadEnvironments(configRepoPath string, versions Versions, clusters map[string]terra.Cluster, sb statebucket.StateBucket) (map[string]terra.Environment, error) {
 	yamlEnvs, err := loadYamlEnvironments(configRepoPath, versions, clusters)
@@ -161,11 +223,8 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 	_releases := make(map[string]terra.AppRelease)
 
 	for releaseName, releaseDefn := range envConfig.Releases {
-		log.Debug().Msgf("Processing environment %s release %s: %v", envName, releaseName, releaseDefn)
-
 		// Skip releases that aren't enabled
 		if !releaseDefn.Enabled {
-			log.Debug().Msgf("environment %s: ignoring disabled release %s", envName, releaseName)
 			continue
 		}
 
@@ -298,7 +357,6 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 	for releaseName, releaseDefn := range clusterDefn.Releases {
 		// Skip releaes that aren't enabled
 		if !releaseDefn.Enabled {
-			log.Debug().Msgf("cluster %s: ignoring disabled release %s", clusterName, releaseName)
 			continue
 		}
 
@@ -427,7 +485,6 @@ func mergeDestinationYaml(configDir string, base string, name string) ([]byte, e
 	baseFile := path.Join(configDir, withYamlSuffix(base))              // eg. environments/live.yaml
 	destinationFile := path.Join(configDir, base, withYamlSuffix(name)) // eg. environments/live/dev.yaml
 
-	log.Debug().Msgf("Deep merging: %s, %s, %s", defaultsFile, baseFile, destinationFile)
 	return deepmerge.Merge(defaultsFile, baseFile, destinationFile)
 }
 

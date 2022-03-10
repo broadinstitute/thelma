@@ -8,11 +8,6 @@ type Cluster struct {
 	Name string `yaml:"Name,omitempty"`
 }
 
-type ClusterValues struct {
-	destination Destination
-	cluster     Cluster
-}
-
 func forCluster(cluster terra.Cluster) Cluster {
 	return Cluster{
 		Name: cluster.Name(),

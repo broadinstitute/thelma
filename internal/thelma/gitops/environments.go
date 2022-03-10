@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/gitops/statebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/terra/filter"
 )
 
 func newEnvironments(g *state) terra.Environments {
@@ -18,19 +17,22 @@ type environments struct {
 }
 
 func (e *environments) All() ([]terra.Environment, error) {
-	return e.Filter(filter.Environments().Any())
-}
-
-func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environment, error) {
 	var result []terra.Environment
 
 	for _, env := range e.state.environments {
-		if filter.Matches(env) {
-			result = append(result, env)
-		}
+		result = append(result, env)
 	}
 
 	return result, nil
+}
+
+func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environment, error) {
+	all, err := e.All()
+	if err != nil {
+		return nil, err
+	}
+
+	return filter.Filter(all), nil
 }
 
 func (e *environments) Get(name string) (terra.Environment, error) {

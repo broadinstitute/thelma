@@ -7,7 +7,7 @@ import (
 
 const envNamespacePrefix = "terra-"
 
-// Environment represents a Terra environment
+// implements the terra.Environment interface
 type environment struct {
 	defaultCluster string                      // Name of the default cluster for this environment. eg "terra-dev"
 	releases       map[string]terra.AppRelease // Set of releases configured in this environment

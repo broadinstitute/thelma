@@ -1,3 +1,4 @@
+// Package assert contains helper functions for making Testify assertions about objects in GCS buckets.
 package assert
 
 import (

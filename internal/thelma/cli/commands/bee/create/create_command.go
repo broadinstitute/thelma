@@ -101,7 +101,7 @@ func (cmd *createCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
-	state, err := app.TerraState()
+	state, err := app.State()
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	log.Info().Msgf("Created new environment %s", cmd.options.name)
 
 	// reload state and print environment to console
-	state, err = app.TerraState()
+	state, err = app.State()
 	if err != nil {
 		return err
 	}

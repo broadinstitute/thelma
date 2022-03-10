@@ -1,11 +1,15 @@
 package builder
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"os"
+	"testing"
 )
 
 // ThelmaBuilder is a utility for initializing new ThelmaApp instances
@@ -14,25 +18,27 @@ type ThelmaBuilder interface {
 	Build() (app.ThelmaApp, error)
 	// WithTestDefaults (FOR USE IN UNIT TESTS ONLY) causes app to be initialized with some settings that are useful
 	// in testing (eg. ignore config file and environment variables when loading config).
-	// Panics if this app has already been initialized.
-	WithTestDefaults() ThelmaBuilder
+	WithTestDefaults(t *testing.T) ThelmaBuilder
 	// SetHome (FOR USE IN UNIT TESTS ONLY) sets the Thelma home directory to the given path.
-	// Panics if this app has already been initialized.
 	SetHome(string) ThelmaBuilder
 	// SetConfigOverride (FOR USE IN UNIT TESTS ONLY) sets a configuration override for the Thelma app.
-	// Panics if this app has already been initialized.
 	SetConfigOverride(key string, value interface{}) ThelmaBuilder
 	// SetConfigOption (FOR USE IN UNIT TESTS ONLY) customizes configuration behavior for the Thelma app. (see config.Load for more info)
-	// Panics if this app has already been initialized.
 	SetConfigOption(option config.Option) ThelmaBuilder
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
-	// Panics if this app has already been initialized.
 	SetShellRunner(shell.Runner) ThelmaBuilder
+	// UseStateFixture (FOR USE IN UNIT TESTS ONLY) configures Thelma to use a state fixture instead of a "real" terra.State
+	UseStateFixture(name statefixtures.FixtureName, t *testing.T) ThelmaBuilder
 }
 
 type thelmaBuilder struct {
 	configOptions []config.Option
 	shellRunner   shell.Runner
+	stateFixture  struct {
+		enabled bool
+		name    statefixtures.FixtureName
+		t       *testing.T
+	}
 }
 
 func NewBuilder() ThelmaBuilder {
@@ -41,44 +47,58 @@ func NewBuilder() ThelmaBuilder {
 	}
 }
 
-func (t *thelmaBuilder) WithTestDefaults() ThelmaBuilder {
-	t.SetConfigOption(func(options config.Options) config.Options {
+func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
+	b.SetConfigOption(func(options config.Options) config.Options {
 		// Ignore config file and environment when loading configuration
 		options.ConfigFile = ""
 		options.EnvPrefix = ""
-		// Set THELMA_HOME to os tmp dir. Tests will usually override this setting with SetHome()
-		options.Overrides[config.HomeKey] = os.TempDir()
+		// Set THELMA_HOME to os tmp dir. Tests will sometimes override this setting with SetHome()
+		options.Overrides[config.HomeKey] = t.TempDir()
 		return options
 	})
-	return t
+
+	// Use mock shell runner
+	b.SetShellRunner(shell.DefaultMockRunner())
+
+	// Use state loader filled with fake/pre-populated data
+	b.UseStateFixture(statefixtures.Default, t)
+
+	return b
 }
 
-func (t *thelmaBuilder) SetHome(path string) ThelmaBuilder {
-	t.SetConfigOverride(config.HomeKey, path)
-	return t
+func (b *thelmaBuilder) SetHome(path string) ThelmaBuilder {
+	b.SetConfigOverride(config.HomeKey, path)
+	return b
 }
 
-func (t *thelmaBuilder) SetConfigOverride(key string, value interface{}) ThelmaBuilder {
-	t.SetConfigOption(func(options config.Options) config.Options {
+func (b *thelmaBuilder) SetConfigOverride(key string, value interface{}) ThelmaBuilder {
+	b.SetConfigOption(func(options config.Options) config.Options {
 		options.Overrides[key] = value
 		return options
 	})
-	return t
+	return b
 }
 
-func (t *thelmaBuilder) SetConfigOption(option config.Option) ThelmaBuilder {
-	t.configOptions = append(t.configOptions, option)
-	return t
+func (b *thelmaBuilder) SetConfigOption(option config.Option) ThelmaBuilder {
+	b.configOptions = append(b.configOptions, option)
+	return b
 }
 
-func (t *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) ThelmaBuilder {
-	t.shellRunner = shellRunner
-	return t
+func (b *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) ThelmaBuilder {
+	b.shellRunner = shellRunner
+	return b
 }
 
-func (t *thelmaBuilder) Build() (app.ThelmaApp, error) {
+func (b *thelmaBuilder) UseStateFixture(name statefixtures.FixtureName, t *testing.T) ThelmaBuilder {
+	b.stateFixture.enabled = true
+	b.stateFixture.name = name
+	b.stateFixture.t = t
+	return b
+}
+
+func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	// Initialize config
-	cfg, err := config.Load(t.configOptions...)
+	cfg, err := config.Load(b.configOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +108,24 @@ func (t *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
+	// Initialize shell runner
+	shellRunner := b.shellRunner
+	if shellRunner == nil {
+		shellRunner = shell.NewRunner()
+	}
+
+	stateLoader, err := b.getStateLoader(cfg.Home(), shellRunner)
+	if err != nil {
+		return nil, fmt.Errorf("error constructing state loader: %v", err)
+	}
+
 	// Initialize app
-	return app.NewWithOptions(cfg, app.Options{Runner: t.shellRunner})
+	return app.New(cfg, shellRunner, stateLoader)
+}
+
+func (b *thelmaBuilder) getStateLoader(thelmaHome string, shellRunner shell.Runner) (terra.StateLoader, error) {
+	if !b.stateFixture.enabled {
+		return gitops.NewStateLoader(thelmaHome, shellRunner)
+	}
+	return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, thelmaHome, shellRunner)
 }

@@ -2,6 +2,7 @@ package gitops
 
 import "github.com/broadinstitute/thelma/internal/thelma/terra"
 
+// implements the terra.AppRelease interface
 type appRelease struct {
 	appVersion string
 	release

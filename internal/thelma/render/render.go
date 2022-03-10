@@ -22,10 +22,10 @@ type Options struct {
 	Releases        []terra.Release // Releases list of releases that will be rendered
 	ReleaseScoped   bool            // ReleaseScoped true implies we are rendering a specific release, like leonardo, and not all releases in a cluster or env
 	Stdout          bool            // Stdout if true, render to stdout instead of output directory
-	OutputDir       string          // Output directory where manifests should be rendered
-	ChartSourceDir  string          // Path on filesystem where chart sources live
-	ResolverMode    resolver.Mode   // Resolver mode
-	ParallelWorkers int             // ParallelWorkers Number of parallel workers
+	OutputDir       string          // OutputDir output directory where manifests should be rendered
+	ChartSourceDir  string          // ChartSourceDir path on filesystem where chart sources live
+	ResolverMode    resolver.Mode   // ResolverMode resolver mode
+	ParallelWorkers int             // ParallelWorkers number of parallel workers
 }
 
 // multiRender renders manifests for multiple environments and clusters
@@ -81,7 +81,7 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 	r := new(multiRender)
 	r.options = options
 
-	state, err := app.TerraState()
+	state, err := app.State()
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]renderJob, error) 
 		})
 	}
 
-	if !r.options.ReleaseScoped {
+	if !r.options.ReleaseScoped && helmfileArgs.ArgocdMode {
 		// build set of unique destinations from our collection of releases
 		destinations := make(map[string]terra.Destination)
 		for _, release := range r.options.Releases {

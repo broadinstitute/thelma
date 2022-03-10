@@ -25,6 +25,7 @@ func ExpandAndVerifyExists(filePath string, description string) (string, error) 
 	return expanded, nil
 }
 
+// IsIPV4Address returns true if addr is a valid ipv4 address
 func IsIPV4Address(addr string) bool {
 	ip := net.ParseIP(addr)
 

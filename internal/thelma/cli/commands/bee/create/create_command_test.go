@@ -13,9 +13,9 @@ func Test_CreateHelp(t *testing.T) {
 		options.AddCommand("bee", bee.NewBeeCommand())
 		options.AddCommand("bee create", NewBeeCreateCommand())
 		options.ConfigureThelma(func(thelmaBuilder builder.ThelmaBuilder) {
-			thelmaBuilder.WithTestDefaults()
+			thelmaBuilder.WithTestDefaults(t)
 		})
-		options.SetArgs([]string{"bee create", "--help"})
+		options.SetArgs([]string{"bee", "create", "--help"})
 	})
 	assert.NoError(t, _cli.Execute(), "--help should execute successfully")
 }

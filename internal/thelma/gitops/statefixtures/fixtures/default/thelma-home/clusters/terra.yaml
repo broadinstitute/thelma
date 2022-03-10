@@ -19,4 +19,4 @@ releases:
   terra-prometheus:
     enabled: true
   yale:
-    enabled: false
+    enabled: true

@@ -2,12 +2,11 @@ package deepmerge
 
 import (
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"
 )
 
-// Deep merge all given YAML files and unmarshal the result into the given struct
+// Unmarshal deep merge all given YAML files and unmarshal the result into the given struct
 func Unmarshal(result interface{}, filenames ...string) error {
 	merged, err := Merge(filenames...)
 
@@ -23,7 +22,7 @@ func Unmarshal(result interface{}, filenames ...string) error {
 	return nil
 }
 
-// Deep merge all given YAML files and return the resulting YAML as a byte array
+// Merge deep merge all given YAML files and return the resulting YAML as a byte array
 func Merge(filenames ...string) ([]byte, error) {
 	var toMerge []map[string]interface{}
 
@@ -87,7 +86,6 @@ func deepMerge(map1 map[string]interface{}, map2 map[string]interface{}) map[str
 func unmarshalYamlFileIfExists(file string) (map[string]interface{}, error) {
 	_, err := os.Stat(file)
 	if os.IsNotExist(err) {
-		log.Debug().Msgf("file %s does not exist, ignoring", file)
 		return nil, nil
 	}
 	if err != nil {
@@ -106,7 +104,6 @@ func unmarshalYamlFileIfExists(file string) (map[string]interface{}, error) {
 
 	if parsed == nil {
 		// treat empty file like missing file
-		log.Debug().Msgf("file %s includes no yaml content, ignoring", file)
 		return nil, nil
 	}
 

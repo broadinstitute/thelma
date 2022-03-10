@@ -4,6 +4,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/terra"
 )
 
+// implements the terra.Destination interface
 type destination struct {
 	name            string
 	base            string

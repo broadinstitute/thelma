@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// brequire: wrapper around `bassert` functions that calls t.FailNow() if the assertion fails (works like testify's require package)
+// require: wrapper around `assert` functions that calls t.FailNow() if the assertion fails (works like testify's require package)
 
 func ObjectExists(t *testing.T, bucket bucket.Bucket, objectName string, msgAndArgs ...interface{}) {
 	if !assert.ObjectExists(t, bucket, objectName, msgAndArgs...) {

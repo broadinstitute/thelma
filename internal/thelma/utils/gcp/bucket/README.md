@@ -56,7 +56,7 @@ err = locker.Unlock(lockId)
 
 ### Smoke Testing
 
-Often, it's useful to test code that depends on GCS against a real GCS bucket. This package includes a TestBucket feature that creates virtual Buckets, backed by the shared `thelma-gcs-integration-test` bucket (in the `dsp-tools-k8s` project).
+Often, it's useful to test code that depends on GCS against a real GCS bucket. This package includes a TestBucket feature that creates virtual Buckets, backed by the shared `thelma-integration-test` bucket (in the `dsp-tools-k8s` project).
 
 Every TestBucket uses a **random path prefix**, so that `Read()` and `Write()` calls for the path `my-object.json` will translate to `<random-prefix>/my-object.json`. This prevents different tests (and even multiple concurrent runs of the same test) from stepping on each other.
 
@@ -84,12 +84,13 @@ See `tests/example_smoke_test.go` for a complete, runnable example.
 
 ### Instrumentation
 
-* Every GCS API call is logged at debug level, with relevant contextual fields.
-* Every GCS API call is assigned a random id which is included in all related log messages for the call.
-* Durations for API calls are logged.
+All GCS operations are logged at debug level. Log messages include:
+* the type of operation that is being performad
+* url for the object that is being updated
+* whether the operation succeeded or failed
+* duration of the call in milliseconds
 
 Example message:
-
 ```json
 {
   "level": "debug",
@@ -109,6 +110,8 @@ Example message:
     "cache-control": "public, max-age=1337"
   },
   "time": "2022-02-25T13:31:14-05:00",
-  "message": "1 attributes will be updated"
+  "duration": 98.633113,
+  "status":"ok",
+  "message": "write finished in 98.633113ms"
 }
 ```

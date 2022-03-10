@@ -1,11 +1,9 @@
 package statebucket
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/lock"
-	"github.com/rs/zerolog/log"
+	"sort"
 	"time"
 )
 
@@ -49,6 +47,8 @@ type StateBucket interface {
 	UnpinVersions(environmentName string) error
 	// Delete will delete an environment from the state file
 	Delete(environmentName string) error
+	// initialize will overwite existing state with a new empty state file
+	initialize() error
 }
 
 // New returns a new statebucket
@@ -61,21 +61,26 @@ func New() (StateBucket, error) {
 	return newWithBucket(_bucket), nil
 }
 
+// NewFake (FOR USE IN TESTS ONLY) returns a new fake statebucket, backed by local filesystem instead of a GCS bucket
+func NewFake(dir string) (StateBucket, error) {
+	return &statebucket{
+		writer: newFileWriter(dir),
+	}, nil
+}
+
 // package-private constructor, used in testing
 func newWithBucket(_bucket bucket.Bucket) *statebucket {
 	return &statebucket{
-		objectName: stateObject,
-		bucket:     _bucket,
+		writer: newBucketWriter(_bucket),
 	}
 }
 
 type statebucket struct {
-	objectName string
-	bucket     bucket.Bucket
+	writer writer
 }
 
 func (s *statebucket) Environments() ([]DynamicEnvironment, error) {
-	state, err := s.loadState()
+	state, err := s.writer.read()
 	if err != nil {
 		return nil, err
 	}
@@ -89,11 +94,16 @@ func (s *statebucket) Environments() ([]DynamicEnvironment, error) {
 	for _, env := range state.Environments {
 		result = append(result, env)
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
 	return result, nil
 }
 
 func (s *statebucket) Add(environment DynamicEnvironment) error {
-	return s.transformState(func(state *StateFile) error {
+	return s.writer.update(func(state StateFile) (StateFile, error) {
 		if state.Environments == nil {
 			state.Environments = make(map[string]DynamicEnvironment)
 		}
@@ -104,130 +114,51 @@ func (s *statebucket) Add(environment DynamicEnvironment) error {
 		}
 		_, exists := state.Environments[environment.Name]
 		if exists {
-			return fmt.Errorf("can't add new environment %s, an environment by that name already exists", environment.Name)
+			return StateFile{}, fmt.Errorf("can't add new environment %s, an environment by that name already exists", environment.Name)
 		}
 		state.Environments[environment.Name] = environment
-		return nil
+		return state, nil
 	})
 }
 
 func (s *statebucket) PinVersions(environmentName string, versionPins map[string]string) error {
-	return s.transformState(func(state *StateFile) error {
+	return s.writer.update(func(state StateFile) (StateFile, error) {
 		environment, exists := state.Environments[environmentName]
 		if !exists {
-			return fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
 		}
 		for service, version := range versionPins {
 			environment.VersionPins[service] = version
 		}
 		state.Environments[environmentName] = environment
-		return nil
+		return state, nil
 	})
 }
 
 func (s *statebucket) UnpinVersions(environmentName string) error {
-	return s.transformState(func(state *StateFile) error {
+	return s.writer.update(func(state StateFile) (StateFile, error) {
 		environment, exists := state.Environments[environmentName]
 		if !exists {
-			return fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
 		}
 		environment.VersionPins = map[string]string{}
 		state.Environments[environmentName] = environment
-		return nil
+		return state, nil
 	})
 }
 
 func (s *statebucket) Delete(environmentName string) error {
-	return s.transformState(func(state *StateFile) error {
+	return s.writer.update(func(state StateFile) (StateFile, error) {
 		_, exists := state.Environments[environmentName]
 		if !exists {
-			return fmt.Errorf("can't delete environment %s, it does not exist in the state file", environmentName)
+			return StateFile{}, fmt.Errorf("can't delete environment %s, it does not exist in the state file", environmentName)
 		}
 		delete(state.Environments, environmentName)
-		return nil
+		return state, nil
 	})
 }
 
+// populate a new empty statefile in the bucket
 func (s *statebucket) initialize() error {
-	content, err := json.Marshal(StateFile{})
-	if err != nil {
-		return fmt.Errorf("error marshalling empty state file: %v", err)
-	}
-	err = s.withLock(func() error {
-		return s.bucket.Write(stateObject, content)
-	})
-	if err != nil {
-		return fmt.Errorf("error initializing state file: %v", err)
-	}
-	return nil
-}
-
-func (s *statebucket) loadState() (StateFile, error) {
-	var result StateFile
-	data, err := s.bucket.Read(stateObject)
-
-	if err != nil {
-		return result, fmt.Errorf("error reading state file: %v", err)
-	}
-
-	if err := json.Unmarshal(data, &result); err != nil {
-		return result, fmt.Errorf("error unmarshalling state file: %v\nContent:\n%s", err, string(data))
-	}
-
-	return result, nil
-}
-
-func (s *statebucket) transformState(transformFn func(state *StateFile) error) error {
-	err := s.withLock(func() error {
-		return s.transformStateUnsafe(transformFn)
-	})
-	if err != nil {
-		return fmt.Errorf("error updating state file: %v", err)
-	}
-	return nil
-}
-
-func (s *statebucket) transformStateUnsafe(transformFn func(state *StateFile) error) error {
-	state, err := s.loadState()
-	if err != nil {
-		return err
-	}
-
-	if err := transformFn(&state); err != nil {
-		return err
-	}
-	data, err := json.Marshal(state)
-	if err != nil {
-		return fmt.Errorf("error marshalling state file: %v", err)
-	}
-
-	if err := s.bucket.Write(stateObject, data); err != nil {
-		return fmt.Errorf("error writing state file: %v", err)
-	}
-
-	return nil
-}
-
-func (s *statebucket) withLock(fn func() error) error {
-	locker := s.bucket.NewLocker(lockObject, lockMaxWait, func(options *lock.Options) {
-		options.ExpiresAfter = lockExpiresAfter
-	})
-
-	lockId, err := locker.Lock()
-	if err != nil {
-		return err
-	}
-
-	fnErr := fn()
-
-	err = locker.Unlock(lockId)
-	if err != nil {
-		log.Error().Err(err).Msgf("error releasing lock %s: %v", lockObject, err)
-	}
-
-	// if we got a callback error, return it, else return lock release error
-	if fnErr != nil {
-		return fnErr
-	}
-	return err
+	return s.writer.write(StateFile{})
 }

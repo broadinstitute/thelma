@@ -39,14 +39,7 @@ func (d *destinations) Filter(filter terra.DestinationFilter) ([]terra.Destinati
 		return nil, err
 	}
 
-	var result []terra.Destination
-	for _, dest := range all {
-		if filter.Matches(dest) {
-			result = append(result)
-		}
-	}
-
-	return result, nil
+	return filter.Filter(all), nil
 }
 
 func (d *destinations) Get(name string) (terra.Destination, error) {

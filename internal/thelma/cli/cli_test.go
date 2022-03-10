@@ -59,7 +59,7 @@ func Test_Execute_PreRunError(t *testing.T) {
 		options.AddCommand("fake", cmd)
 		options.SetArgs([]string{"fake"})
 		options.ConfigureThelma(func(thelmaBuilder builder.ThelmaBuilder) {
-			thelmaBuilder.WithTestDefaults()
+			thelmaBuilder.WithTestDefaults(t)
 		})
 	})
 	err := _cli.Execute()
@@ -80,7 +80,7 @@ func Test_Execute_PreRunErrorParent(t *testing.T) {
 		options.AddCommand("parent", parent)
 		options.AddCommand("parent child", child)
 		options.ConfigureThelma(func(builder builder.ThelmaBuilder) {
-			builder.WithTestDefaults()
+			builder.WithTestDefaults(t)
 		})
 		options.SetArgs([]string{"parent", "child"})
 	})
