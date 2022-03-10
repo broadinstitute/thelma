@@ -61,8 +61,7 @@ RELEASE_ARCHIVE_DIR=${OUTPUT_DIR}/releases
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
 
 # add runtime dependencies to PATH
-export PATH := $(PATH):${RUNTIME_DEPS_BIN_DIR}
-
+export PATH := ${RUNTIME_DEPS_BIN_DIR}:$(PATH)
 
 # Self-documenting help target copied from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 # NOTE:
