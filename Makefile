@@ -128,8 +128,7 @@ checksum: # Generate sha256sum file for tarball archives in the release archive 
 	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_ARCHIVE_DIR}
 
 test: init ## Run unit tests
-	# go test -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
-	go test -v ./internal/thelma/app/builder
+	go test -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
 
 smoke: runtime-deps ## Run unit and smoke tests
 	PATH=${PATH}:${RUNTIME_DEPS_BIN_DIR} go test -tags smoke -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
