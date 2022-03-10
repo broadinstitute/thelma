@@ -60,6 +60,10 @@ RELEASE_ARCHIVE_DIR=${OUTPUT_DIR}/releases
 # COVERAGE_DIR directory where coverage reports are generated
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
 
+# add runtime dependencies to PATH
+export PATH := $(PATH):${RUNTIME_DEPS_BIN_DIR}
+
+
 # Self-documenting help target copied from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 # NOTE:
 #  High-level targets that devs are expected to run are documented with two pound signs (##), which makes them appear in help output.
@@ -131,7 +135,7 @@ test: init ## Run unit tests
 	go test -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
 
 smoke: runtime-deps ## Run unit and smoke tests
-    PATH=${RUNTIME_DEPS_BIN_DIR}:$$PATH go test -tags smoke -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
+	go test -tags smoke -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
 
 lint: ## Run golangci linter
 	golangci-lint run ./...
