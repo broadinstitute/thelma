@@ -43,5 +43,5 @@ func QuoteJoin(strs []string) string {
 	for _, s := range strs {
 		quoted = append(quoted, fmt.Sprintf("%q", s))
 	}
-	return strings.Join(strs, ", ")
+	return strings.Join(quoted, ", ")
 }
