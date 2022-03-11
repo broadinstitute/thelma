@@ -31,18 +31,18 @@ func (f *filterBuilder) combine() terra.ReleaseFilter {
 	if len(f.destinationIncludes) > 0 {
 		// union destinationIncludes and add to the destination filter list
 		destFilters = append(destFilters, filter.Destinations().Or(f.destinationIncludes...))
-	}
+	} else {
+		// convert environment filters into a destination filter that permits environments matching the filter
+		if len(f.environmentFilters) > 0 {
+			// intersect all env filters
+			envFilter := filter.Environments().And(f.environmentFilters...)
+			// convert to a destination filter
+			destFilter := filter.Destinations().IsEnvironmentMatching(envFilter)
+			// permit clusters as well -- --destination-types can be used to restrict typ if so desired
+			destFilter = destFilter.Or(filter.Destinations().IsCluster())
 
-	// convert environment filters into a destination filter that permits environments matching the filter
-	if len(f.environmentFilters) > 0 {
-		// intersect all env filters
-		envFilter := filter.Environments().And(f.environmentFilters...)
-		// convert to a destination filter
-		destFilter := filter.Destinations().IsEnvironmentMatching(envFilter)
-		// permit clusters as well -- --destination-types can be used to restrict typ if so desired
-		destFilter = destFilter.Or(filter.Destinations().IsCluster())
-
-		destFilters = append(destFilters, destFilter)
+			destFilters = append(destFilters, destFilter)
+		}
 	}
 
 	var releaseFilters []terra.ReleaseFilter

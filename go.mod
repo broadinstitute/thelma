@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go/storage v1.18.2
+	github.com/alecthomas/chroma v0.10.0
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cncf/xds/go v0.0.0-20211216145620-d92e9ce0af51 // indirect
@@ -15,9 +16,10 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/knadh/koanf v1.4.0
-	github.com/markphelps/optional v0.9.0
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mcuadros/go-defaults v1.2.0
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/muesli/termenv v0.11.0
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.23.0

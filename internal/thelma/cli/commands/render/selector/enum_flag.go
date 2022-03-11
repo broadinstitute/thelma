@@ -139,10 +139,8 @@ func collateSelectorValues(values []string) set.StringSet {
 	return _set
 }
 
-// hack:
-// given a pluralized noun like "environments", "clusters", "releases", etc
-// return "environment(s)", "cluster(s)"
-func maybePlural(plural string) string {
-	singular := strings.TrimSuffix(plural, "s")
+// "environment" -> "environment(s)"
+// "cluster" -> "cluster(s)"
+func maybePlural(singular string) string {
 	return fmt.Sprintf("%s(s)", singular)
 }

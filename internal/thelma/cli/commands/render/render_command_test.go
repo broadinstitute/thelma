@@ -54,47 +54,52 @@ func TestRenderArgParsing(t *testing.T) {
 		{
 			description:   "positional and -r cannot be combined",
 			arguments:     Args("render -r foo foo"),
-			expectedError: regexp.MustCompile(`releases can either be specified with the --releases flag or via positional argument, not both`),
+			expectedError: regexp.MustCompile(`releases can either be specified with the --release flag or via positional argument, not both`),
 		},
 		{
 			description:   "unknown release",
 			arguments:     Args("render -r foo"),
-			expectedError: regexp.MustCompile(`--releases: unknown release\(s\) foo`),
+			expectedError: regexp.MustCompile(`--release: unknown release\(s\) foo`),
 		},
 		{
-			description:   "unknown releases",
+			description:   "unknown multiple releases",
 			arguments:     Args("render -r foo,bar,leonardo -r sam,baz"),
-			expectedError: regexp.MustCompile(`--releases: unknown release\(s\) bar, baz, foo`),
+			expectedError: regexp.MustCompile(`--release: unknown release\(s\) bar, baz, foo`),
 		},
 		{
 			description:   "unknown environment",
 			arguments:     Args("render -e foo ALL"),
-			expectedError: regexp.MustCompile(`--environments: unknown environment\(s\) foo`),
+			expectedError: regexp.MustCompile(`--environment: unknown environment\(s\) foo`),
 		},
 		{
 			description:   "unknown cluster",
 			arguments:     Args("render -c foo ALL"),
-			expectedError: regexp.MustCompile(`--clusters: unknown cluster\(s\) foo`),
+			expectedError: regexp.MustCompile(`--cluster: unknown cluster\(s\) foo`),
 		},
 		{
 			description:   "unknown destination type",
-			arguments:     Args("render --destination-types foo ALL"),
-			expectedError: regexp.MustCompile(`--destination-types: unknown destination-type\(s\) foo`),
+			arguments:     Args("render --destination-type foo ALL"),
+			expectedError: regexp.MustCompile(`--destination-type: unknown destination-type\(s\) foo`),
 		},
 		{
 			description:   "unknown destination base",
-			arguments:     Args("render --destination-bases foo ALL"),
-			expectedError: regexp.MustCompile(`--destination-bases: unknown destination-base\(s\) foo`),
+			arguments:     Args("render --destination-base foo ALL"),
+			expectedError: regexp.MustCompile(`--destination-base: unknown destination-base\(s\) foo`),
 		},
 		{
 			description:   "unknown environment lifecycle",
-			arguments:     Args("render --environment-lifecycles foo ALL"),
-			expectedError: regexp.MustCompile(`--environment-lifecycles: unknown environment-lifecycle\(s\) foo`),
+			arguments:     Args("render --environment-lifecycle foo ALL"),
+			expectedError: regexp.MustCompile(`--environment-lifecycle: unknown environment-lifecycle\(s\) foo`),
 		},
 		{
 			description:   "unknown environment template",
-			arguments:     Args("render --environment-templates foo ALL"),
-			expectedError: regexp.MustCompile(`--environment-templates: unknown environment-template\(s\) foo`),
+			arguments:     Args("render --environment-template foo ALL"),
+			expectedError: regexp.MustCompile(`--environment-template: unknown environment-template\(s\) foo`),
+		},
+		{
+			description:   "-e/-c can't be combined with destination filters",
+			arguments:     Args("render -e dev --environment-template swatomation ALL"),
+			expectedError: regexp.MustCompile(`--environment cannot be combined with --environment-template`),
 		},
 		{
 			description:   "no releases match arguments",
@@ -167,8 +172,8 @@ func TestRenderArgParsing(t *testing.T) {
 			expectedError: regexp.MustCompile("--parallel-workers cannot be used with --stdout"),
 		},
 		{
-			description:   "--clusters and --app-version incompatible",
-			arguments:     Args("render --clusters terra-perf -r yale --app-version=0.0.1"),
+			description:   "--cluster and --app-version incompatible",
+			arguments:     Args("render --cluster terra-perf -r yale --app-version=0.0.1"),
 			expectedError: regexp.MustCompile("--app-version cannot be used for cluster releases"),
 		},
 		{
@@ -221,6 +226,20 @@ func TestRenderArgParsing(t *testing.T) {
 					fixture.Release("rawls", "dev"),
 					fixture.Release("sam", "dev"),
 					fixture.Release("workspacemanager", "dev"),
+				}
+				return nil
+			},
+		},
+		{
+			description: "-e should work for dynamic environments",
+			setupFn: func(tc *testConfig) error {
+				tc.options.SetArgs(Args("render -e fiab-nerdy-walrus ALL"))
+				tc.expected.renderOptions.Releases = []terra.Release{
+					fixture.Release("agora", "fiab-nerdy-walrus"),
+					fixture.Release("leonardo", "fiab-nerdy-walrus"),
+					fixture.Release("sam", "fiab-nerdy-walrus"),
+					fixture.Release("rawls", "fiab-nerdy-walrus"),
+					fixture.Release("opendj", "fiab-nerdy-walrus"),
 				}
 				return nil
 			},

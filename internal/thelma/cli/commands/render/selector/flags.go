@@ -7,10 +7,10 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 )
 
-// -r / --releases flag
+// -r / --release flag
 func newReleasesFlag() *enumFlag {
 	return &enumFlag{
-		flagName:      ReleasesFlagName,
+		flagName:      flagNames.release,
 		shortHand:     "r",
 		defaultValues: []string{},
 		usageMessage:  "Render manifests for specific release(s) (set to ALL to include all releases)",
@@ -45,10 +45,10 @@ func newReleasesFlag() *enumFlag {
 	}
 }
 
-// -c / --clusters flag
+// -c / --cluster flag
 func newClustersFlag() *enumFlag {
 	return &enumFlag{
-		flagName:      "clusters",
+		flagName:      flagNames.cluster,
 		shortHand:     "c",
 		defaultValues: []string{allSelector},
 		usageMessage:  "Render manifests for specific Terra cluster(s)",
@@ -67,10 +67,10 @@ func newClustersFlag() *enumFlag {
 	}
 }
 
-// -e / --environments flag
+// -e / --environment flag
 func newEnvironmentsFlag() *enumFlag {
 	return &enumFlag{
-		flagName:      "environments",
+		flagName:      flagNames.environment,
 		shortHand:     "e",
 		defaultValues: []string{allSelector},
 		usageMessage:  "Render manifests for specific Terra environment(s)",
@@ -89,10 +89,10 @@ func newEnvironmentsFlag() *enumFlag {
 	}
 }
 
-// --destination-types flag
+// --destination-type flag
 func newDestinationTypesFlag() *enumFlag {
 	return &enumFlag{
-		flagName:      "destination-types",
+		flagName:      flagNames.destinationType,
 		defaultValues: []string{allSelector},
 		usageMessage:  `Render manifests for a specific destination type (eg. "environment". "cluster"`,
 
@@ -106,10 +106,10 @@ func newDestinationTypesFlag() *enumFlag {
 	}
 }
 
-// --destination-bases flag
+// --destination-base flag
 func newDestinationBasesFlag() *enumFlag {
 	return &enumFlag{
-		flagName:      "destination-bases",
+		flagName:      flagNames.destinationBase,
 		defaultValues: []string{allSelector},
 		usageMessage:  `Render manifests for a specific environment or cluster base (eg. \"live\", \"bee\")`,
 
@@ -135,9 +135,9 @@ func newDestinationBasesFlag() *enumFlag {
 // --environment-templates flag
 func newEnvironmentTemplatesFlag() *enumFlag {
 	return &enumFlag{
-		flagName:      "environment-templates",
+		flagName:      flagNames.environmentTemplate,
 		defaultValues: []string{allSelector},
-		usageMessage:  `Render manifests for dynamic environments with a specific template (eg. "swatomation"). Only applies to dynamic environments`,
+		usageMessage:  `Render manifests for dynamic environments with a specific template (eg. "swatomation"). Can be specified multiple times.`,
 
 		validValues: func(state terra.State) (set.StringSet, error) {
 			envs, err := state.Environments().Filter(filter.Environments().HasLifecycle(terra.Template))
@@ -156,7 +156,7 @@ func newEnvironmentTemplatesFlag() *enumFlag {
 // --environment-lifecycles flag
 func newEnvironmentLifecyclesFlag() *enumFlag {
 	return &enumFlag{
-		flagName:      "environment-lifecycles",
+		flagName:      flagNames.environmentLifecycle,
 		defaultValues: []string{terra.Static.String(), terra.Template.String()},
 		usageMessage:  `Render manifests for environments with a specific lifecycle (eg. "static", "template", "dynamic")`,
 

@@ -1,6 +1,7 @@
 package selector
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/terra/sort"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
@@ -15,8 +16,26 @@ const allSelector = "ALL"
 // selectorSeparator is used in release selectors to supply multiple comma-separated options
 const selectorSeparator = ","
 
-// ReleasesFlagName constant used for the --releases flag name (public because the render package creates an alias for this flag)
-const ReleasesFlagName = "releases"
+// ReleasesFlagName constant used for the --release flag name (public because the render package creates an alias for this flag)
+const ReleasesFlagName = "release"
+
+var flagNames = struct {
+	release              string
+	environment          string
+	cluster              string
+	environmentLifecycle string
+	environmentTemplate  string
+	destinationType      string
+	destinationBase      string
+}{
+	release:              ReleasesFlagName,
+	environment:          "environment",
+	cluster:              "cluster",
+	environmentLifecycle: "environment-lifecycle",
+	environmentTemplate:  "environment-template",
+	destinationBase:      "destination-base",
+	destinationType:      "destination-type",
+}
 
 type Selector struct {
 	flags         []*enumFlag
@@ -58,6 +77,10 @@ func (s *Selector) AddFlags(cobraCommand *cobra.Command) {
 }
 
 func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args []string) (*Selection, error) {
+	if err := checkIncompatibleFlags(pflags); err != nil {
+		return nil, err
+	}
+
 	for _, flag := range s.flags {
 		if err := flag.processInput(s.filterBuilder, state, pflags.Changed(flag.flagName), args); err != nil {
 			return nil, err
@@ -80,6 +103,24 @@ func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args [
 		SingleChart:     singleChart(releases),
 		AppReleasesOnly: appReleasesOnly(releases),
 	}, nil
+}
+
+func checkIncompatibleFlags(flags *pflag.FlagSet) error {
+	unionFlags := []string{flagNames.environment, flagNames.cluster}
+
+	intersectFlags := []string{flagNames.environmentTemplate, flagNames.environmentLifecycle, flagNames.destinationBase, flagNames.environmentTemplate}
+
+	for _, unf := range unionFlags {
+		if flags.Changed(unf) {
+			for _, inf := range intersectFlags {
+				if flags.Changed(inf) {
+					return fmt.Errorf("--%s cannot be combined with --%s", unf, inf)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func singleChart(releases []terra.Release) bool {

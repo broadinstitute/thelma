@@ -20,33 +20,23 @@ const helpMessage = `Renders Terra Kubernetes manifests
 
 Examples:
 
+# Render manifests for leonardo
+thelma render leonardo
+
 # Render all manifests for all Terra services in all environments
-thelma render
+thelma render ALL
 
 # Render manifests for all Terra services in the dev environment
-thelma render -e dev
+thelma render -e dev ALL
 
 # Render manifests for the cromwell service in the alpha environment
-thelma render -e alpha -a cromwell
-
-# Render manifests for the cromwell service in the alpha environment,
-# overriding apps and chart version
-thelma render -e alpha -a cromwell --chart-version="~> 0.8" --apps-version="53-9b11416"
-
-# Render manifests from a local copy of a chart
-thelma render -e alpha -a cromwell --chart-dir=../terra-helm/charts
+thelma render -e alpha -r cromwell
 
 # Render manifests, overriding chart values with a local file
-thelma render -e alpha -a cromwell --values-file=path/to/my-values.yaml
+thelma render cromwell --values-file=path/to/my-values.yaml
 
-# Render all manifests to a directory called my-manifests
-thelma render --output-dir=/tmp/my-manifests
-
-# Render ArgoCD manifests for all Terra services in all environments
-thelma render --argocd
-
-# Render ArgoCD manifests for the Cromwell service in the alpha environment
-thelma render -e alpha -a cromwell --argocd
+# Render leonardo manifests to a directory other than $THELMA_HOME/output
+thelma render leonardo  --output-dir=/tmp/my-manifests
 `
 
 // defaultOutputDir name of default output directory
@@ -119,7 +109,7 @@ func NewRenderCommand() cli.ThelmaCommand {
 }
 
 func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
-	cobraCommand.Use = "render [options]"
+	cobraCommand.Use = "render [options] [SERVICE]"
 	cobraCommand.Short = "Renders Terra Kubernetes manifests"
 	cobraCommand.Long = helpMessage
 

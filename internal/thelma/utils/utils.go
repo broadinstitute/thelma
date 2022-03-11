@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ExpandAndVerifyExists Expand relative path to absolute, and make sure it exists.
@@ -30,4 +31,17 @@ func IsIPV4Address(addr string) bool {
 	ip := net.ParseIP(addr)
 
 	return ip != nil && ip.To4() != nil
+}
+
+// QuoteJoin quotes all strings in a slice and joins them with `, `
+// eg.
+// QuoteJoin([]string{`a`, `b`, `c`}, `, `)
+// ->
+// `"a", "b", "c"`
+func QuoteJoin(strs []string) string {
+	var quoted []string
+	for _, s := range strs {
+		quoted = append(quoted, fmt.Sprintf("%q", s))
+	}
+	return strings.Join(strs, ", ")
 }

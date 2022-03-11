@@ -4,6 +4,7 @@ package tests
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
+	"github.com/broadinstitute/thelma/internal/thelma/gitops/statefixtures"
 	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/terra/filter"
 	"github.com/stretchr/testify/assert"
@@ -176,4 +177,24 @@ func TestUpdateState(t *testing.T) {
 
 	assert.Equal(t, "sam-ci-003", newEnv.Name())
 	assert.Equal(t, 2, len(newEnv.Releases())) // opendj & sam
+}
+
+func Test_EnvironmentAttributes(t *testing.T) {
+	f := statefixtures.LoadFixture(statefixtures.Default, t)
+
+	devEnv := f.Environment("dev")
+	swatEnv := f.Environment("swatomation")
+	hybridEnv := f.Environment("fiab-funky-chipmunk")
+
+	assert.Equal(t, 8, len(devEnv.Releases()))
+	assert.Equal(t, terra.Static, devEnv.Lifecycle())
+	assert.False(t, devEnv.IsHybrid())
+
+	assert.Equal(t, 5, len(swatEnv.Releases()))
+	assert.Equal(t, terra.Template, swatEnv.Lifecycle())
+	assert.False(t, swatEnv.IsHybrid())
+
+	assert.Equal(t, 5, len(hybridEnv.Releases()))
+	assert.Equal(t, terra.Dynamic, hybridEnv.Lifecycle())
+	assert.True(t, hybridEnv.IsHybrid())
 }
