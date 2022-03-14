@@ -7,3 +7,7 @@ coverage:
     patch:
       default:
         informational: true
+
+ignore:
+  # Ignore mocks packages, which are auto-generated
+  - "internal/**/mocks"

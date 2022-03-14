@@ -1,0 +1,52 @@
+# Default Helmfile values. These are overridden by values files
+# in the clusters/ subdirectory
+
+# The name of a cluster's base.
+# Eg. The base for `terra-dev` is `terra`
+base: null # Default null - should be set in the base file (see terra.yaml for an example)
+
+# Whether to require users to be in Workbench Admins group in order to
+# be able to make changes to this cluster.
+requireSuitable: false
+
+# Override to make it possible for charts to deploy cluster-wide resources, such as PSPS
+# See ArgoCD docs for valid configuration options.
+clusterResourceWhitelist: []
+
+# Per-release settings.
+#
+# Every cluster release should be disabled by default here and
+# then explicitly enabled in the base or environment overrides file.
+#
+# Supported per-release configuration options:
+# - enabled (bool) - Whether the release is enabled in a given environment
+# - repo (string) - Name of the Helm repo the chart should be pulled from (default "terra-helm")
+# - chartVersion (string) - What version of the chart should be deployed
+# - chartName (string) - Override for the name of a helm chart to use for a release
+#                        (defaults to release name)
+# - namespace (string) - Namespace where this chart should be deployed.
+#
+# Notes:
+# - Default versions for every chart are configured in `versions/cluster/dev.yaml`
+# - Many of these releases are deployed to the default namespace for historical reasons.
+#   All NEW releases should be deployed in dedicated namespaces.
+#   Note that our Terra environment namespaces follow the convention `terra-<env>`.
+#   Cluster release namespaces should NOT be prefixed with `terra-`.
+releases:
+  diskmanager:
+    enabled: false
+    namespace: default
+  external-dns:
+    enabled: false
+    namespace: external-dns
+    repo: terra-helm-thirdparty
+  install-secrets-manager:
+    enabled: false
+    namespace: default
+    repo: datarepo-helm
+  terra-prometheus:
+    enabled: false
+    namespace: monitoring
+  yale:
+    enabled: false
+    namespace: yale

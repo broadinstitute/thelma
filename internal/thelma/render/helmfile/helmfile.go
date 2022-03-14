@@ -2,9 +2,10 @@ package helmfile
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/stateval"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -17,6 +18,8 @@ import (
 )
 
 const cmdLogLevel = zerolog.DebugLevel
+const stateValuesFilename = "stateValues.yaml"
+const valuesFilename = "values.yaml"
 
 // Args arguments for a helmfile render
 type Args struct {
@@ -124,18 +127,18 @@ func (r *ConfigRepo) HelmUpdate() error {
 	return r.runCmd(cmd)
 }
 
-func (r *ConfigRepo) RenderForTarget(target gitops.Target, args *Args) error {
+func (r *ConfigRepo) RenderForDestination(destination terra.Destination, args *Args) error {
 	if args.ArgocdMode {
-		if len(target.Releases()) == 0 {
-			log.Debug().Msgf("%s %s has no releases, won't render ArgoCD project", target.Type(), target.Name())
+		if len(destination.Releases()) == 0 {
+			log.Debug().Msgf("%s %s has no releases, won't render ArgoCD project", destination.Type(), destination.Name())
 		} else {
-			return r.renderArgocdProjectManifests(target)
+			return r.renderArgocdProjectManifests(destination)
 		}
 	}
 	return nil
 }
 
-func (r *ConfigRepo) RenderForRelease(release gitops.Release, args *Args) error {
+func (r *ConfigRepo) RenderForRelease(release terra.Release, args *Args) error {
 	if args.ArgocdMode {
 		return r.renderArgocdApplicationManifests(release)
 	} else {
@@ -143,17 +146,26 @@ func (r *ConfigRepo) RenderForRelease(release gitops.Release, args *Args) error 
 	}
 }
 
-// Render Argo project manifests for the given target
-func (r *ConfigRepo) renderArgocdProjectManifests(target gitops.Target) error {
-	outputDir := path.Join(r.outputDir, target.Name(), "terra-argocd-project")
+// Render Argo project manifests for the given destination
+func (r *ConfigRepo) renderArgocdProjectManifests(destination terra.Destination) error {
+	outputDir := path.Join(r.outputDir, destination.Name(), "terra-argocd-project")
 
-	values := argocd.GetDestinationValues(target)
-	valuesFile, err := r.writeTemporaryValuesFile(values, target)
-	if err != nil {
-		return err
+	// Generate state values file
+	stateValues := stateval.BuildArgoProjectValues(destination)
+	stateValuesFile := r.scratchPath(destination.Name(), "argo", "project", stateValuesFilename)
+	if err := writeTemporaryValuesFile(stateValues, stateValuesFile); err != nil {
+		return fmt.Errorf("error generating argo project state values file for %s %s: %v", destination.Type(), destination.Name(), err)
+	}
+
+	// Generate chart values file with destinations
+	values := argocd.GetDestinationValues(destination)
+	valuesFile := r.scratchPath(destination.Name(), "argo", "project", valuesFilename)
+	if err := writeTemporaryValuesFile(values, valuesFile); err != nil {
+		return fmt.Errorf("error generating argo project values file for %s %s: %v", destination.Type(), destination.Name(), err)
 	}
 
 	cmd := newCmd()
+	cmd.setStateValuesFile(stateValuesFile)
 	cmd.setOutputDir(outputDir)
 	cmd.setStdout(r.stdout)
 	cmd.setDir(path.Join(r.thelmaHome, "argocd", "project"))
@@ -161,42 +173,40 @@ func (r *ConfigRepo) renderArgocdProjectManifests(target gitops.Target) error {
 	cmd.setSkipDeps(true) // argocd project chart is local & has no dependencies
 	cmd.addValuesFiles(valuesFile)
 
-	cmd.setTargetEnvVars(target)
-	cmd.setArgocdProjectEnvVar(target)
-
-	log.Info().Msgf("Rendering ArgoCD manifests for %s %s", target.Name(), target.Type())
+	log.Info().Msgf("Rendering ArgoCD manifests for %s %s", destination.Name(), destination.Type())
 
 	return r.runHelmfile(cmd)
 }
 
 // Render Argo manifests for the given release
-func (r *ConfigRepo) renderArgocdApplicationManifests(release gitops.Release) error {
+func (r *ConfigRepo) renderArgocdApplicationManifests(release terra.Release) error {
+	stateValues := stateval.BuildArgoAppValues(release)
+	stateValuesFile := r.scratchPath(release.Destination().Name(), release.Name(), "argocd", "application", stateValuesFilename)
+	if err := writeTemporaryValuesFile(stateValues, stateValuesFile); err != nil {
+		return fmt.Errorf("error rendering argo app state values for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
+	}
+
 	dir := fmt.Sprintf("terra-argocd-app-%s", release.Name())
-	outputDir := path.Join(r.outputDir, release.Target().Name(), dir)
+	outputDir := path.Join(r.outputDir, release.Destination().Name(), dir)
 
 	cmd := newCmd()
+	cmd.setStateValuesFile(stateValuesFile)
 	cmd.setOutputDir(outputDir)
 	cmd.setStdout(r.stdout)
 	cmd.setDir(path.Join(r.thelmaHome, "argocd", "application"))
 	cmd.setLogLevel(r.helmfileLogLevel)
 	cmd.setSkipDeps(true) // argocd application chart is local & has no dependencies
 
-	cmd.setReleaseEnvVars(release)
-	cmd.setTargetEnvVars(release.Target())
-	cmd.setArgocdProjectEnvVar(release.Target())
-	cmd.setNamespaceEnvVar(release)
-	cmd.setClusterEnvVars(release)
-
-	log.Info().Msgf("Rendering ArgoCD manifests for %s in %s", release.Name(), release.Target().Name())
+	log.Info().Msgf("Rendering ArgoCD manifests for %s in %s", release.Name(), release.Destination().Name())
 
 	return r.runHelmfile(cmd)
 }
 
 // Render application manifests for the given release
-func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Args) error {
+func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Args) error {
 	chartVersion := release.ChartVersion()
 	if args.ChartVersion != nil {
-		log.Debug().Msgf("Overriding default chart version for %s with %s", chartVersion, *args.ChartVersion)
+		log.Debug().Msgf("Overriding default chart version %s for %s with %s", chartVersion, release.Name(), *args.ChartVersion)
 		chartVersion = *args.ChartVersion
 	}
 
@@ -206,12 +216,21 @@ func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Ar
 		Version: chartVersion,
 	})
 	if err != nil {
-		return fmt.Errorf("error resolving chart for release %s in %s %s: %v", release.Name(), release.Target().Type(), release.Target().Name(), err)
+		return fmt.Errorf("error resolving chart for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
 	}
 
-	outputDir := path.Join(r.outputDir, release.Target().Name(), release.Name())
+	outputDir := path.Join(r.outputDir, release.Destination().Name(), release.Name())
+
+	stateValues := stateval.BuildAppValues(release, resolvedChart.Path())
+	stateValues = overrideAppVersionIfNeeded(release, args, stateValues)
+
+	stateValuesFile := r.scratchPath(release.Destination().Name(), release.Name(), stateValuesFilename)
+	if err = writeTemporaryValuesFile(stateValues, stateValuesFile); err != nil {
+		return fmt.Errorf("error rendering state values for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
+	}
 
 	cmd := newCmd()
+	cmd.setStateValuesFile(stateValuesFile)
 	cmd.setOutputDir(outputDir)
 	cmd.setStdout(r.stdout)
 	cmd.setDir(r.thelmaHome)
@@ -220,31 +239,15 @@ func (r *ConfigRepo) renderApplicationManifests(release gitops.Release, args *Ar
 	// resolver runs `helm dependency update` on local charts, so we always set --skip-deps to save time
 	cmd.setSkipDeps(true)
 
-	cmd.setReleaseEnvVars(release)
-	cmd.setTargetEnvVars(release.Target())
-	cmd.setNamespaceEnvVar(release)
-
 	cmd.addValuesFiles(args.ValuesFiles...)
-	cmd.setChartPathEnvVar(resolvedChart.Path())
 
 	logEvent := log.Info().
 		Str("chartVersion", resolvedChart.Version()).
 		Str("chartSource", resolvedChart.SourceDescription())
-
-	if release.Type() == gitops.AppReleaseType {
-		appVersion := release.(gitops.AppRelease).AppVersion()
-		if args.AppVersion != nil {
-			log.Debug().Msgf("Overriding default app version %s with %s", appVersion, *args.AppVersion)
-			appVersion = *args.AppVersion
-		}
-		logEvent = logEvent.Str("appVersion", appVersion)
-		cmd.setAppVersionEnvVar(appVersion)
-
-	} else if args.AppVersion != nil {
-		log.Warn().Msgf("Ignoring --app-version %s; --app-version is not supported for cluster releases", *args.AppVersion)
+	if release.IsAppRelease() {
+		logEvent.Str("appVersion", release.(terra.AppRelease).AppVersion())
 	}
-
-	logEvent.Msgf("Rendering %s in %s", release.Name(), release.Target().Name())
+	logEvent.Msgf("Rendering %s in %s", release.Name(), release.Destination().Name())
 
 	return r.runHelmfile(cmd)
 }
@@ -336,21 +339,40 @@ func normalizeOutputDir(outputDir string) error {
 	return nil
 }
 
-// Convert structured data to YAML and write to the given file
-func (r *ConfigRepo) writeTemporaryValuesFile(values interface{}, target gitops.Target) (string, error) {
-	filename := path.Join(r.scratchDir, target.Name(), "values.yaml")
+// Like path.Join, but prefixes with the scratch directory path
+func (r *ConfigRepo) scratchPath(pathComponents ...string) string {
+	return path.Join(r.scratchDir, path.Join(pathComponents...))
+}
+
+// Marshal structured data to YAML and write to the given file
+func writeTemporaryValuesFile(values interface{}, filename string) error {
 	if err := os.MkdirAll(path.Dir(filename), 0775); err != nil {
-		return "", fmt.Errorf("error writing temporary values file %s for %s %s: %v", filename, target.Type(), target.Name(), err)
+		return fmt.Errorf("error creating parent directories for temporary values file %s: %v", filename, err)
 
 	}
 	output, err := yaml.Marshal(values)
 	if err != nil {
-		return "", fmt.Errorf("error marshaling values to YAML for %s %s: %v (content: %v)", target.Type(), target.Name(), err, values)
+		return fmt.Errorf("error marshaling values for %s to YAML: %v (content: %v)", filename, err, values)
 	}
 
 	if err := os.WriteFile(filename, output, 0666); err != nil {
-		return "", fmt.Errorf("error writing temporary values file %s for %s %s: %v", filename, target.Type(), target.Name(), err)
+		return fmt.Errorf("error writing temporary values file %s: %v", filename, err)
 	}
 
-	return filename, nil
+	return nil
+}
+
+// Override app version in state values if it was set on the command line with --app-version
+func overrideAppVersionIfNeeded(release terra.Release, args *Args, stateValues stateval.AppValues) stateval.AppValues {
+	if release.Type() == terra.AppReleaseType {
+		if args.AppVersion != nil {
+			originalVersion := stateValues.Release.AppVersion
+			log.Debug().Msgf("Overriding default app version %s for release %s with %s", originalVersion, release.Name(), *args.AppVersion)
+			stateValues.Release.AppVersion = *args.AppVersion
+		}
+	} else if args.AppVersion != nil {
+		log.Warn().Msgf("Ignoring --app-version %s; --app-version is not supported for cluster releases", *args.AppVersion)
+	}
+
+	return stateValues
 }

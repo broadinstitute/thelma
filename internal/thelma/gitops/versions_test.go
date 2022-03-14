@@ -2,6 +2,7 @@ package gitops
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -38,13 +39,13 @@ func TestSnapshot_ChartVersion(t *testing.T) {
 		t.FailNow()
 	}
 
-	s1 := v.GetSnapshot(AppReleaseType, Dev)
+	s1 := v.GetSnapshot(terra.AppReleaseType, Dev)
 
 	assert.True(t, s1.ReleaseDefined("agora"))
 	assert.Equal(t, "0.10.0", s1.ChartVersion("agora"))
 	assert.Equal(t, "v100", s1.AppVersion("agora"))
 
-	s2 := v.GetSnapshot(ClusterReleaseType, Alpha)
+	s2 := v.GetSnapshot(terra.ClusterReleaseType, Alpha)
 	assert.True(t, s2.ReleaseDefined("prometheus"))
 	assert.Equal(t, "0.1.3", s2.ChartVersion("prometheus"))
 	assert.Equal(t, "", s2.AppVersion("prometheus"))
@@ -61,7 +62,7 @@ func TestSnapshot_UpdateChartVersionIfDefined(t *testing.T) {
 		name          string
 		releaseName   string
 		newVersion    string
-		releaseType   ReleaseType
+		releaseType   terra.ReleaseType
 		set           VersionSet
 		expectedError string
 		setupMocks    func(testMocks)
@@ -70,7 +71,7 @@ func TestSnapshot_UpdateChartVersionIfDefined(t *testing.T) {
 			name:        "should set agora version in versions/app/dev.yaml",
 			releaseName: "agora",
 			newVersion:  "1.2.3",
-			releaseType: AppReleaseType,
+			releaseType: terra.AppReleaseType,
 			set:         Dev,
 			setupMocks: func(tm testMocks) {
 				tm.runner.ExpectCmd(shell.Command{
@@ -82,7 +83,7 @@ func TestSnapshot_UpdateChartVersionIfDefined(t *testing.T) {
 						path.Join(tm.thelmaHome, "versions/app/dev.yaml"),
 					},
 				}).Run(func(args mock.Arguments) {
-					if err := writeFakeVersionsFile(tm.thelmaHome, AppReleaseType, Dev, updateContent1); err != nil {
+					if err := writeFakeVersionsFile(tm.thelmaHome, terra.AppReleaseType, Dev, updateContent1); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -92,7 +93,7 @@ func TestSnapshot_UpdateChartVersionIfDefined(t *testing.T) {
 			name:        "should set prometheus version in versions/cluster/alpha.yaml",
 			releaseName: "prometheus",
 			newVersion:  "4.5.6",
-			releaseType: ClusterReleaseType,
+			releaseType: terra.ClusterReleaseType,
 			set:         Alpha,
 			setupMocks: func(tm testMocks) {
 				tm.runner.ExpectCmd(shell.Command{
@@ -104,7 +105,7 @@ func TestSnapshot_UpdateChartVersionIfDefined(t *testing.T) {
 						path.Join(tm.thelmaHome, "versions/cluster/alpha.yaml"),
 					},
 				}).Run(func(args mock.Arguments) {
-					if err := writeFakeVersionsFile(tm.thelmaHome, ClusterReleaseType, Alpha, updateContent2); err != nil {
+					if err := writeFakeVersionsFile(tm.thelmaHome, terra.ClusterReleaseType, Alpha, updateContent2); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -114,21 +115,21 @@ func TestSnapshot_UpdateChartVersionIfDefined(t *testing.T) {
 			name:        "should NOT update version for undefined release",
 			releaseName: "fakechart",
 			newVersion:  "1.2.3",
-			releaseType: AppReleaseType,
+			releaseType: terra.AppReleaseType,
 			set:         Dev,
 		},
 		{
 			name:        "should NOT update version if new version < existing version",
 			releaseName: "agora",
 			newVersion:  "0.9.0",
-			releaseType: AppReleaseType,
+			releaseType: terra.AppReleaseType,
 			set:         Dev,
 		},
 		{
 			name:        "should NOT update version if new version == existing version",
 			releaseName: "agora",
 			newVersion:  "0.10.0",
-			releaseType: AppReleaseType,
+			releaseType: terra.AppReleaseType,
 			set:         Dev,
 		},
 	}
@@ -166,21 +167,21 @@ func TestSnapshot_UpdateChartVersionIfDefined(t *testing.T) {
 }
 
 func TestReleaseType_String(t *testing.T) {
-	assert.Equal(t, "app", AppReleaseType.String())
-	assert.Equal(t, "cluster", ClusterReleaseType.String())
+	assert.Equal(t, "app", terra.AppReleaseType.String())
+	assert.Equal(t, "cluster", terra.ClusterReleaseType.String())
 }
 
 func TestReleaseType_UnmarshalYAML(t *testing.T) {
 	var err error
-	var r ReleaseType
+	var r terra.ReleaseType
 
 	err = yaml.Unmarshal([]byte("app"), &r)
 	assert.NoError(t, err)
-	assert.Equal(t, AppReleaseType, r)
+	assert.Equal(t, terra.AppReleaseType, r)
 
 	err = yaml.Unmarshal([]byte("cluster"), &r)
 	assert.NoError(t, err)
-	assert.Equal(t, ClusterReleaseType, r)
+	assert.Equal(t, terra.ClusterReleaseType, r)
 
 	err = yaml.Unmarshal([]byte("invalid"), &r)
 	assert.Error(t, err)
@@ -205,7 +206,7 @@ func initializeFakeVersionsDir(thelmaHome string) error {
 	return runner.Run(cmd)
 }
 
-func writeFakeVersionsFile(thelmaHome string, releaseType ReleaseType, set VersionSet, content string) error {
+func writeFakeVersionsFile(thelmaHome string, releaseType terra.ReleaseType, set VersionSet, content string) error {
 	file := path.Join(thelmaHome, "versions", releaseType.String(), fmt.Sprintf("%s%s", set.String(), ".yaml"))
 	return os.WriteFile(file, []byte(content), 0666)
 }

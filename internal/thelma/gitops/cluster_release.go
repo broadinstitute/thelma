@@ -1,14 +1,12 @@
 package gitops
 
-type ClusterRelease interface {
-	Cluster() Cluster
-	Release
-}
+import "github.com/broadinstitute/thelma/internal/thelma/terra"
 
+// implements the terra.ClusterRelease interface
 type clusterRelease struct {
 	release
 }
 
-func (r *clusterRelease) Cluster() Cluster {
-	return r.target.(Cluster)
+func (r *clusterRelease) Cluster() terra.Cluster {
+	return r.destination.(terra.Cluster)
 }

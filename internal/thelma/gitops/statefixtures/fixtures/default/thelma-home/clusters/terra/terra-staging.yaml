@@ -1,0 +1,7 @@
+# Configuration overrides for the terra-staging cluster
+
+address: https://35.202.93.150
+
+releases:
+  yale:
+    enabled: true

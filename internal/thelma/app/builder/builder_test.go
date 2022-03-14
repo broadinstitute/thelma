@@ -8,7 +8,7 @@ import (
 )
 
 func TestSetConfigOverride(t *testing.T) {
-	builder := NewBuilder().WithTestDefaults()
+	builder := NewBuilder().WithTestDefaults(t)
 	fakeHome := t.TempDir()
 
 	// add config overrides... later options should have higher precedence
@@ -51,7 +51,7 @@ func TestSetConfigOverride(t *testing.T) {
 }
 
 func TestSetShellRunner(t *testing.T) {
-	builder := NewBuilder().WithTestDefaults()
+	builder := NewBuilder().WithTestDefaults(t)
 
 	runner := shell.DefaultMockRunner()
 	builder.SetShellRunner(runner)

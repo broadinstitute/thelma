@@ -1,4 +1,4 @@
-name: Run Unit Tests
+name: Run Unit & Smoke Tests
 on:
   push:
     branches:
@@ -18,10 +18,19 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+
+    - name: Set up GCP auth
+      run: echo '${{ secrets.THELMA_CI_KEY }}' > service_account.json
+
     - name: Run tests
       uses: ./.github/actions/make
       with:
-        target: "test"
+        target: "smoke"
+      env:
+        # full path is needed because go tests switch into package directories,
+        # and some smoke tests use GCP credentials
+        GOOGLE_APPLICATION_CREDENTIALS: /github/workspace/service_account.json
+
     - name: Upload Coverage Report
       uses: codecov/codecov-action@v1
       with:

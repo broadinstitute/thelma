@@ -2,6 +2,7 @@ package gitops
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"path"
 )
@@ -11,14 +12,14 @@ const versionsDir = "versions"
 // Versions is for manipulating chart release versions in terra-helmfile (eg. versions/app/dev.yaml, versions/cluster/dev.yaml)
 type Versions interface {
 	// GetSnapshot returns a VersionSnapshot reference for the given release type & version set
-	GetSnapshot(releaseType ReleaseType, versionSet VersionSet) VersionSnapshot
+	GetSnapshot(releaseType terra.ReleaseType, versionSet VersionSet) VersionSnapshot
 }
 
 // Implements public Versions interface
 type versions struct {
 	thelmaHome  string
 	shellRunner shell.Runner
-	snapshots   map[ReleaseType]map[VersionSet]VersionSnapshot
+	snapshots   map[terra.ReleaseType]map[VersionSet]VersionSnapshot
 }
 
 // NewVersions returns a new Versions instance
@@ -35,20 +36,20 @@ func NewVersions(thelmaHome string, shellRunner shell.Runner) (Versions, error) 
 	}, nil
 }
 
-func (v *versions) GetSnapshot(releaseType ReleaseType, versionSet VersionSet) VersionSnapshot {
+func (v *versions) GetSnapshot(releaseType terra.ReleaseType, versionSet VersionSet) VersionSnapshot {
 	return v.snapshots[releaseType][versionSet]
 }
 
 // Returns filePath to snapshot file release type / version set. (eg "versions/app/dev.yaml")
-func snapshotPath(thelmaHome string, releaseType ReleaseType, set VersionSet) string {
+func snapshotPath(thelmaHome string, releaseType terra.ReleaseType, set VersionSet) string {
 	fileName := fmt.Sprintf("%s.yaml", set)
 	return path.Join(thelmaHome, versionsDir, releaseType.String(), fileName)
 }
 
-func loadSnapshots(thelmaHome string, shellRunner shell.Runner) (map[ReleaseType]map[VersionSet]VersionSnapshot, error) {
-	snapshots := make(map[ReleaseType]map[VersionSet]VersionSnapshot)
+func loadSnapshots(thelmaHome string, shellRunner shell.Runner) (map[terra.ReleaseType]map[VersionSet]VersionSnapshot, error) {
+	snapshots := make(map[terra.ReleaseType]map[VersionSet]VersionSnapshot)
 
-	for _, releaseType := range ReleaseTypes() {
+	for _, releaseType := range terra.ReleaseTypes() {
 		_, exists := snapshots[releaseType]
 		if !exists {
 			snapshots[releaseType] = make(map[VersionSet]VersionSnapshot)

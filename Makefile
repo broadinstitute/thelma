@@ -60,6 +60,9 @@ RELEASE_ARCHIVE_DIR=${OUTPUT_DIR}/releases
 # COVERAGE_DIR directory where coverage reports are generated
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
 
+# Add runtime dependencies to PATH
+export PATH := $(shell pwd)/${RUNTIME_DEPS_BIN_DIR}:$(PATH)
+
 # Self-documenting help target copied from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 # NOTE:
 #  High-level targets that devs are expected to run are documented with two pound signs (##), which makes them appear in help output.
@@ -131,7 +134,7 @@ test: init ## Run unit tests
 	go test -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
 
 smoke: runtime-deps ## Run unit and smoke tests
-	PATH=${PATH}:${RUNTIME_DEPS_BIN_DIR} go test -tags smoke -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
+	go test -tags smoke -covermode=atomic -race -coverpkg=./... -coverprofile=${COVERAGE_DIR} ./...
 
 lint: ## Run golangci linter
 	golangci-lint run ./...
@@ -144,3 +147,7 @@ coverage: ## Open coverage report from test run in browser. Run "make test" firs
 
 clean: ## Clean up all generated files
 	rm -rf ${OUTPUT_DIR}
+
+mocks: ## Generate testify mocks with Mockery
+	mockery --dir ./internal/thelma/utils/gcp/bucket --name Locker --output=./internal/thelma/utils/gcp/bucket/testing/mocks --outpkg mocks --filename locker.go
+	mockery --dir ./internal/thelma/utils/gcp/bucket --name Bucket --output=./internal/thelma/utils/gcp/bucket/testing/mocks --outpkg mocks --filename bucket.go

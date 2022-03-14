@@ -3,6 +3,8 @@ package repo
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/object"
 	"path"
 	"time"
 )
@@ -13,13 +15,13 @@ const indexObject = "index.yaml"
 const defaultChartCacheControl = "public, max-age=300"
 const defaultIndexCacheControl = "no-cache"
 
-const defaultLockPath = ".repo.lk"
+const defaultLockObject = ".repo.lk"
 const defaultLockWaitTimeout = 2 * time.Minute
-const defaultLockStaleTimeout = 5 * time.Minute
+const defaultLockExpireTimeout = 5 * time.Minute
 
 // Repo supports interactions with GCS-based Helm repositories
 type Repo interface {
-	// RepoURL() returns the public URL of the repo
+	// RepoURL returns the public URL of the repo
 	RepoURL() string
 	// IsLocked returns true if the repo is locked
 	IsLocked() bool
@@ -37,34 +39,41 @@ type Repo interface {
 	DownloadIndex(destPath string) error
 }
 
+type Option func(*Options)
+
 type Options struct {
 	LockWaitTimeout   time.Duration
-	LockStaleTimeout  time.Duration
-	LockPath          string
+	LockExpireTimeout time.Duration
+	LockObject        string
 	ChartCacheControl string
 	IndexCacheControl string
 }
 
 type repo struct {
-	bucket         bucket.Bucket
-	lockGeneration int64
-	options        *Options
+	bucket  bucket.Bucket
+	locker  bucket.Locker
+	lockId  int64
+	options *Options
 }
 
-func DefaultOptions() *Options {
-	return &Options{
+func NewRepo(bucket bucket.Bucket, options ...Option) Repo {
+	opts := &Options{
 		LockWaitTimeout:   defaultLockWaitTimeout,
-		LockStaleTimeout:  defaultLockStaleTimeout,
-		LockPath:          defaultLockPath,
+		LockExpireTimeout: defaultLockExpireTimeout,
+		LockObject:        defaultLockObject,
 		ChartCacheControl: defaultChartCacheControl,
 		IndexCacheControl: defaultIndexCacheControl,
 	}
-}
+	for _, option := range options {
+		option(opts)
+	}
 
-func NewRepo(bucket bucket.Bucket) Repo {
 	return &repo{
-		bucket:  bucket,
-		options: DefaultOptions(),
+		bucket: bucket,
+		locker: bucket.NewLocker(opts.LockObject, opts.LockWaitTimeout, func(lockOpts *lock.Options) {
+			lockOpts.ExpiresAfter = opts.LockExpireTimeout
+		}),
+		options: opts,
 	}
 }
 
@@ -75,7 +84,7 @@ func (r *repo) RepoURL() string {
 
 // IsLocked returns true if the repo is locked
 func (r *repo) IsLocked() bool {
-	return r.lockGeneration != 0
+	return r.lockId != 0
 }
 
 // Unlock unlocks the repository
@@ -84,11 +93,11 @@ func (r *repo) Unlock() error {
 		return fmt.Errorf("repo is not locked")
 	}
 
-	if err := r.bucket.ReleaseLock(r.options.LockPath, r.lockGeneration); err != nil {
+	if err := r.locker.Unlock(r.lockId); err != nil {
 		return err
 	}
 
-	r.lockGeneration = 0
+	r.lockId = 0
 
 	return nil
 }
@@ -99,16 +108,11 @@ func (r *repo) Lock() error {
 		return fmt.Errorf("repo is already locked")
 	}
 
-	if err := r.bucket.DeleteStaleLock(r.options.LockPath, r.options.LockStaleTimeout); err != nil {
-		return err
-	}
-
-	lockGeneration, err := r.bucket.WaitForLock(r.options.LockPath, r.options.LockWaitTimeout)
+	lockId, err := r.locker.Lock()
 	if err != nil {
 		return err
 	}
-
-	r.lockGeneration = lockGeneration
+	r.lockId = lockId
 
 	return nil
 }
@@ -116,12 +120,16 @@ func (r *repo) Lock() error {
 // UploadChart uploads a chart package file to the correct path in the bucket
 func (r *repo) UploadChart(fromPath string) error {
 	objectPath := path.Join(ChartDir, path.Base(fromPath))
-	return r.bucket.Upload(fromPath, objectPath, r.options.ChartCacheControl)
+	return r.bucket.Upload(fromPath, objectPath, func(attrs object.AttrSet) object.AttrSet {
+		return attrs.CacheControl(r.options.ChartCacheControl)
+	})
 }
 
 // UploadIndex uploads an index file to correct path in the buck
 func (r *repo) UploadIndex(fromPath string) error {
-	return r.bucket.Upload(fromPath, indexObject, r.options.IndexCacheControl)
+	return r.bucket.Upload(fromPath, indexObject, func(attrs object.AttrSet) object.AttrSet {
+		return attrs.CacheControl(r.options.IndexCacheControl)
+	})
 }
 
 // HasIndex returns true if this repo has an index object

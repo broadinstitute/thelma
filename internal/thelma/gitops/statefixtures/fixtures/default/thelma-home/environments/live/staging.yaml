@@ -1,0 +1,9 @@
+# Environment overrides for staging environment
+
+# Cluster in ArgoCD where manifests should be deployed to
+defaultCluster: terra-staging
+
+releases:
+  datarepo:
+    enabled: true
+    cluster: datarepo-staging

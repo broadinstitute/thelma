@@ -1,0 +1,5 @@
+# Configuration overrides for the terra-alpha cluster
+
+address: https://34.70.215.101
+
+releases: {}

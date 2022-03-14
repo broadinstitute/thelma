@@ -1,6 +1,7 @@
 package gitops
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -12,7 +13,7 @@ func NewMockVersions() *MockVersions {
 	return &MockVersions{}
 }
 
-func (v *MockVersions) GetSnapshot(releaseType ReleaseType, versionSet VersionSet) VersionSnapshot {
+func (v *MockVersions) GetSnapshot(releaseType terra.ReleaseType, versionSet VersionSet) VersionSnapshot {
 	result := v.Called(releaseType, versionSet)
 	return result.Get(0).(VersionSnapshot)
 }

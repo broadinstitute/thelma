@@ -3,6 +3,7 @@ package serializers
 type Environment struct {
 	DefaultCluster string                `yaml:"defaultCluster"`
 	Releases       map[string]AppRelease `yaml:"releases"`
+	Lifecycle      string                `yaml:"lifecycle"`
 }
 
 type Cluster struct {

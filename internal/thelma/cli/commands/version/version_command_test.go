@@ -36,7 +36,7 @@ func TestVersion(t *testing.T) {
 			options.SetOut(&stdout)
 			options.SetArgs(strings.Fields(tc.thelmaArgs))
 			options.ConfigureThelma(func(builder builder.ThelmaBuilder) {
-				builder.WithTestDefaults()
+				builder.WithTestDefaults(t)
 			})
 
 			thelmaCLI := cli.NewWithOptions(options)

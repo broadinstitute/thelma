@@ -1,12 +1,13 @@
+// Package render contains code for rendering Kubernetes manifests from Helm charts
 package render
 
 import (
 	"context"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/terra"
 	"github.com/rs/zerolog/log"
 	"strings"
 	"sync"
@@ -18,24 +19,23 @@ const multiRenderTimeout = 5 * time.Minute
 
 // Options encapsulates CLI options for a render
 type Options struct {
-	Env             *string       // Env If supplied, render for a single environment instead of all targets
-	Cluster         *string       // Cluster If supplied, render for a single cluster instead of all targets
-	Release         *string       // Release If supplied, render only the specified release
-	Stdout          bool          // Stdout if true, render to stdout instead of output directory
-	OutputDir       string        // Output directory where manifests should be rendered
-	ChartSourceDir  string        // Path on filesystem where chart sources live
-	ResolverMode    resolver.Mode // Resolver mode
-	ParallelWorkers int           // ParallelWorkers Number of parallel workers
+	Releases        []terra.Release // Releases list of releases that will be rendered
+	ReleaseScoped   bool            // ReleaseScoped true implies we are rendering a specific release, like leonardo, and not all releases in a cluster or env
+	Stdout          bool            // Stdout if true, render to stdout instead of output directory
+	OutputDir       string          // OutputDir output directory where manifests should be rendered
+	ChartSourceDir  string          // ChartSourceDir path on filesystem where chart sources live
+	ResolverMode    resolver.Mode   // ResolverMode resolver mode
+	ParallelWorkers int             // ParallelWorkers number of parallel workers
 }
 
 // multiRender renders manifests for multiple environments and clusters
 type multiRender struct {
-	options    *Options // Options global render options
-	gitops     gitops.Gitops
-	configRepo *helmfile.ConfigRepo // configRepo refernce to use for executing `helmfile template`
+	options    *Options             // Options global render options
+	state      terra.State          // state terra state provider for looking up environments, clusters, and releases
+	configRepo *helmfile.ConfigRepo // configRepo reference to use for executing `helmfile template`
 }
 
-// renderError represents an error encountered while rendering for a particular target
+// renderError represents an error encountered while rendering for a particular destination
 type renderError struct {
 	description string // description for the render job that generated in this error
 	err         error  // error
@@ -81,11 +81,11 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 	r := new(multiRender)
 	r.options = options
 
-	_gitops, err := gitops.Load(app.Config().Home(), app.ShellRunner())
+	state, err := app.State()
 	if err != nil {
 		return nil, err
 	}
-	r.gitops = _gitops
+	r.state = state
 
 	chartCacheDir, err := app.Scratch().Mkdir("chart-cache")
 	if err != nil {
@@ -214,52 +214,36 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 
 // getJobs returns the set of render jobs that should be run
 func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]renderJob, error) {
-	filter := gitops.AnyRelease()
-	targets := r.gitops.Targets()
-	releaseScoped := false
-
-	if r.options.Release != nil {
-		log.Debug().Msgf("Filtering for releases with name: %s", *r.options.Release)
-		filter = filter.And(gitops.HasName(*r.options.Release))
-		releaseScoped = true
-	}
-
-	if r.options.Env != nil {
-		envName := *r.options.Env
-		log.Debug().Msgf("Filtering for releases in env: %s", envName)
-		filter = filter.And(gitops.HasTarget(envName))
-		targets = []gitops.Target{r.gitops.GetTarget(envName)}
-	}
-
-	if r.options.Cluster != nil {
-		clusterName := *r.options.Cluster
-		log.Debug().Msgf("Filtering for releases in cluster: %s", clusterName)
-		filter = filter.And(gitops.HasTarget(clusterName))
-		targets = []gitops.Target{r.gitops.GetTarget(clusterName)}
-	}
-
-	releases := r.gitops.FilterReleases(filter)
-	log.Debug().Msgf("%d releases matched filter: %v", len(releases), releases)
-
 	var jobs []renderJob
 
-	for _, release := range releases {
+	for _, release := range r.options.Releases {
 		_r := release
 		jobs = append(jobs, renderJob{
-			description: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Target().Type(), _r.Target().Name()),
+			description: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
 			callback: func() error {
 				return r.configRepo.RenderForRelease(_r, helmfileArgs)
 			},
 		})
 	}
 
-	if !releaseScoped {
-		for _, _target := range targets {
-			t := _target
+	if !r.options.ReleaseScoped && helmfileArgs.ArgocdMode {
+		// build set of unique destinations from our collection of releases
+		destinations := make(map[string]terra.Destination)
+		for _, release := range r.options.Releases {
+			destination := release.Destination()
+			key := fmt.Sprintf("%s:%s", destination.Type().String(), destination.Name())
+			if _, exists := destinations[key]; !exists {
+				destinations[key] = destination
+			}
+		}
+
+		// for each unique destination, make a job to render global resources for it
+		for _, _destination := range destinations {
+			d := _destination
 			jobs = append(jobs, renderJob{
-				description: fmt.Sprintf("global resources for %s %s", t.Type(), t.Name()),
+				description: fmt.Sprintf("global resources for %s %s", d.Type(), d.Name()),
 				callback: func() error {
-					return r.configRepo.RenderForTarget(t, helmfileArgs)
+					return r.configRepo.RenderForDestination(d, helmfileArgs)
 				},
 			})
 		}

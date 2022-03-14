@@ -45,8 +45,9 @@ func (cfg *logConfig) logDir() string {
 	return dir
 }
 
-func init() {
-	// set up basic console logger to catch any messages that are logged before Thelma initialization
+// Bootstrap configure global zerolog logger with a basic console logger
+// to catch any messages that are logged before full Thelma initialization
+func Bootstrap() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 

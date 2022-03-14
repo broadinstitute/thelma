@@ -1,0 +1,4 @@
+# Environment overrides for buffertest environment
+releases:
+  buffer:
+    enabled: true
