@@ -29,7 +29,7 @@ func (r *RealRunner) Run(cmd Command) error {
 	return r.RunWith(cmd, RunOptions{})
 }
 
-// Capture runs a Command, streaming stdout and stderr to the given writers.
+// RunWith runs a Command, streaming stdout and stderr to the given writers.
 // An error is returned if the command exits non-zero.
 func (r *RealRunner) RunWith(cmd Command, opts RunOptions) error {
 	// Handle options into local variables
