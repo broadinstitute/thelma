@@ -25,13 +25,12 @@ type filterBuilder struct {
 func (f *filterBuilder) combine() terra.ReleaseFilter {
 	var destFilters []terra.DestinationFilter
 
-	// build a list of destination filters that will be intersected / combined with And()
-	destFilters = append(destFilters, f.destinationFilters...)
-
 	if len(f.destinationIncludes) > 0 {
 		// union destinationIncludes and add to the destination filter list
 		destFilters = append(destFilters, filter.Destinations().Or(f.destinationIncludes...))
 	} else {
+		// add intersection destinations
+		destFilters = append(destFilters, f.destinationFilters...)
 		// convert environment filters into a destination filter that permits environments matching the filter
 		if len(f.environmentFilters) > 0 {
 			// intersect all env filters
