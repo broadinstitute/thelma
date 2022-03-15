@@ -145,7 +145,7 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb s
 					chartVersion:   templateRelease.ChartVersion(),
 					chartName:      templateRelease.ChartName(),
 					repo:           templateRelease.Repo(),
-					namespace:      templateRelease.Namespace(),
+					namespace:      environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
 					clusterName:    templateRelease.ClusterName(),
 					clusterAddress: templateRelease.ClusterAddress(),
 					destination:    nil, // replaced after env is constructed
