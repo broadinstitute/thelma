@@ -2,8 +2,8 @@ package gitops
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 )
 
 func newEnvironments(g *state) terra.Environments {

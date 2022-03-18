@@ -2,10 +2,10 @@ package gitops
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/deepmerge"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/serializers"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"

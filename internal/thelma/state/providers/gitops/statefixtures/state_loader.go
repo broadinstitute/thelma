@@ -4,9 +4,9 @@ package statefixtures
 import (
 	"embed"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"io/fs"
 	"os"
