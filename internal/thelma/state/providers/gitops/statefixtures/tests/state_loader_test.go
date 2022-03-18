@@ -1,12 +1,12 @@
 package tests
 
-// this file needs to be a in a separate package to avoid an import cycle
+// this file needs to be in a separate package to avoid an import cycle
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
-	statefixtures2 "github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -180,7 +180,7 @@ func TestUpdateState(t *testing.T) {
 }
 
 func Test_EnvironmentAttributes(t *testing.T) {
-	f := statefixtures2.LoadFixture(statefixtures2.Default, t)
+	f := statefixtures.LoadFixture(statefixtures.Default, t)
 
 	devEnv := f.Environment("dev")
 	swatEnv := f.Environment("swatomation")
