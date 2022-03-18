@@ -1,6 +1,6 @@
 package stateval
 
-import "github.com/broadinstitute/thelma/internal/thelma/terra"
+import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 // Destination -- information about where chart release is being deployed (env, cluster)
 type Destination struct {

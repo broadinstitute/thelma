@@ -5,9 +5,9 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops/statefixtures"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
+	statefixtures2 "github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"testing"
 )
@@ -28,7 +28,7 @@ type ThelmaBuilder interface {
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
 	SetShellRunner(shell.Runner) ThelmaBuilder
 	// UseStateFixture (FOR USE IN UNIT TESTS ONLY) configures Thelma to use a state fixture instead of a "real" terra.State
-	UseStateFixture(name statefixtures.FixtureName, t *testing.T) ThelmaBuilder
+	UseStateFixture(name statefixtures2.FixtureName, t *testing.T) ThelmaBuilder
 }
 
 type thelmaBuilder struct {
@@ -36,7 +36,7 @@ type thelmaBuilder struct {
 	shellRunner   shell.Runner
 	stateFixture  struct {
 		enabled bool
-		name    statefixtures.FixtureName
+		name    statefixtures2.FixtureName
 		t       *testing.T
 	}
 }
@@ -61,7 +61,7 @@ func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
 	b.SetShellRunner(shell.DefaultMockRunner())
 
 	// Use state loader filled with fake/pre-populated data
-	b.UseStateFixture(statefixtures.Default, t)
+	b.UseStateFixture(statefixtures2.Default, t)
 
 	return b
 }
@@ -89,7 +89,7 @@ func (b *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) ThelmaBuilder {
 	return b
 }
 
-func (b *thelmaBuilder) UseStateFixture(name statefixtures.FixtureName, t *testing.T) ThelmaBuilder {
+func (b *thelmaBuilder) UseStateFixture(name statefixtures2.FixtureName, t *testing.T) ThelmaBuilder {
 	b.stateFixture.enabled = true
 	b.stateFixture.name = name
 	b.stateFixture.t = t
@@ -127,5 +127,5 @@ func (b *thelmaBuilder) getStateLoader(thelmaHome string, shellRunner shell.Runn
 	if !b.stateFixture.enabled {
 		return gitops.NewStateLoader(thelmaHome, shellRunner)
 	}
-	return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, thelmaHome, shellRunner)
+	return statefixtures2.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, thelmaHome, shellRunner)
 }

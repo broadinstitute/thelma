@@ -1,3 +1,4 @@
+// Package utils contains miscellaneous utility code
 package utils
 
 import (

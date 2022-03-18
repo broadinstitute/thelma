@@ -5,7 +5,7 @@
 // (so that we can use .Values.Release.ChartPath and not .Values.release.chartPath)
 package stateval
 
-import "github.com/broadinstitute/thelma/internal/thelma/terra"
+import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 // AppValues -- the full set of helmfile state values for rendering application manifests
 // (used by $THELMA_HOME/helmfile.yaml)

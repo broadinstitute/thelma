@@ -2,7 +2,7 @@ package selector
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/spf13/cobra"
 	"sort"

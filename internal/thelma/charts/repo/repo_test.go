@@ -1,10 +1,10 @@
 package repo
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/lock"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/object"
-	mocks "github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/testing/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
+	mocks2 "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/testing/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -21,8 +21,8 @@ const testChartCacheControl = "fake-chart-cache-control-header"
 const testIndexFile = "index.yaml"
 
 type testState struct {
-	bucket *mocks.Bucket
-	locker *mocks.Locker
+	bucket *mocks2.Bucket
+	locker *mocks2.Locker
 	repo   Repo
 }
 
@@ -93,8 +93,8 @@ func TestRepoURL(t *testing.T) {
 }
 
 func setupMocks() *testState {
-	_locker := &mocks.Locker{}
-	_bucket := &mocks.Bucket{}
+	_locker := &mocks2.Locker{}
+	_bucket := &mocks2.Bucket{}
 
 	// argument matcher that verifies the locker option sets the correct expire timeout
 	setsLockExpireTimeout := func(option bucket.LockerOption) bool {

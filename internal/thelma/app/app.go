@@ -1,3 +1,4 @@
+// Package app contains logic for global/cross-cutting Thelma dependencies, such as configuration, logging support, and API client factories
 package app
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 

@@ -1,14 +1,14 @@
 package stateval
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/gitops/statefixtures"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	statefixtures2 "github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func Test_BuildStateValues(t *testing.T) {
-	state := statefixtures.LoadFixture(statefixtures.Default, t)
+	state := statefixtures2.LoadFixture(statefixtures2.Default, t)
 
 	chartPath := t.TempDir()
 

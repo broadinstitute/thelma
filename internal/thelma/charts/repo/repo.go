@@ -2,9 +2,9 @@ package repo
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/lock"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/object"
+	bucket2 "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
 	"path"
 	"time"
 )
@@ -50,13 +50,13 @@ type Options struct {
 }
 
 type repo struct {
-	bucket  bucket.Bucket
-	locker  bucket.Locker
+	bucket  bucket2.Bucket
+	locker  bucket2.Locker
 	lockId  int64
 	options *Options
 }
 
-func NewRepo(bucket bucket.Bucket, options ...Option) Repo {
+func NewRepo(bucket bucket2.Bucket, options ...Option) Repo {
 	opts := &Options{
 		LockWaitTimeout:   defaultLockWaitTimeout,
 		LockExpireTimeout: defaultLockExpireTimeout,

@@ -2,8 +2,8 @@ package selector
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/terra/sort"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"

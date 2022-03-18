@@ -6,7 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/views"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"

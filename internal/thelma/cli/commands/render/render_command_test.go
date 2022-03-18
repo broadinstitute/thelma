@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops/statefixtures"
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/terra/filter"
-	tsort "github.com/broadinstitute/thelma/internal/thelma/terra/sort"
+	statefixtures2 "github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
+	tsort "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
 	. "github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-const stateFixture = statefixtures.Default
+const stateFixture = statefixtures2.Default
 
 // TestRenderArgParsing Given given a set of CLI args, verify that options structures are populated correctly
 func TestRenderArgParsing(t *testing.T) {
@@ -33,7 +33,7 @@ func TestRenderArgParsing(t *testing.T) {
 		expected *expectedAttrs
 	}
 
-	fixture := statefixtures.LoadFixture(stateFixture, t)
+	fixture := statefixtures2.LoadFixture(stateFixture, t)
 
 	testCases := []struct {
 		description   string                     // testcase description
@@ -491,7 +491,7 @@ func TestRenderArgParsing(t *testing.T) {
 }
 
 // return the default set of releases that should be matched when no filter flags are applied
-func defaultReleases(fixture statefixtures.Fixture) []terra.Release {
+func defaultReleases(fixture statefixtures2.Fixture) []terra.Release {
 	f := filter.Releases().DestinationMatches(
 		filter.Destinations().IsCluster().Or(
 			filter.Destinations().IsEnvironmentMatching(filter.Environments().HasLifecycleName("static", "template"))),
