@@ -3,12 +3,12 @@ package lock
 import (
 	"cloud.google.com/go/storage"
 	"fmt"
-	object2 "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
 	"github.com/rs/zerolog"
 )
 
 type Unlock interface {
-	object2.Operation
+	object.Operation
 }
 
 func NewUnlock(generation int64) Unlock {
@@ -25,7 +25,7 @@ func (u *unlock) Kind() string {
 	return "unlock"
 }
 
-func (u *unlock) Handler(object object2.Object, logger zerolog.Logger) error {
+func (u *unlock) Handler(object object.Object, logger zerolog.Logger) error {
 	logger = logger.With().Int64("generation", u.generation).Logger()
 
 	withCondition := object.Handle.If(storage.Conditions{GenerationMatch: u.generation})

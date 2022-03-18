@@ -4,7 +4,7 @@ import (
 	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	object2 "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
 	"github.com/rs/zerolog/log"
 	"strings"
@@ -33,7 +33,7 @@ type Bucket interface {
 	Exists(objectName string) (bool, error)
 
 	// Upload uploads a local file to the bucket
-	Upload(localPath string, objectName string, attrs ...object2.AttrSetter) error
+	Upload(localPath string, objectName string, attrs ...object.AttrSetter) error
 
 	// Download downloads an object in the bucket to a local file
 	Download(objectName string, localPath string) error
@@ -42,7 +42,7 @@ type Bucket interface {
 	Read(objectName string) ([]byte, error)
 
 	// Write replaces object contents with given content
-	Write(objectName string, content []byte, attrs ...object2.AttrSetter) error
+	Write(objectName string, content []byte, attrs ...object.AttrSetter) error
 
 	// Delete deletes the object from the bucket
 	Delete(objectName string) error
@@ -51,7 +51,7 @@ type Bucket interface {
 	Attrs(objectName string) (*storage.ObjectAttrs, error)
 
 	// Update updates the attributes  of an object (eg. cache control)
-	Update(objectName string, attrs ...object2.AttrSetter) error
+	Update(objectName string, attrs ...object.AttrSetter) error
 
 	// NewLocker returns a Locker instance for the given object
 	NewLocker(objectName string, maxWait time.Duration, options ...LockerOption) Locker
@@ -100,47 +100,47 @@ func (b *bucket) Close() error {
 }
 
 func (b *bucket) Exists(objectName string) (bool, error) {
-	op := object2.NewExists()
+	op := object.NewExists()
 	err := b.do(objectName, op)
 	return op.Exists(), err
 }
 
-func (b *bucket) Upload(localPath string, objectName string, attrs ...object2.AttrSetter) error {
-	return b.do(objectName, object2.NewUpload(localPath, collateAttrs(attrs)))
+func (b *bucket) Upload(localPath string, objectName string, attrs ...object.AttrSetter) error {
+	return b.do(objectName, object.NewUpload(localPath, collateAttrs(attrs)))
 }
 
 func (b *bucket) Download(objectName string, localPath string) error {
-	return b.do(objectName, object2.NewDownload(localPath))
+	return b.do(objectName, object.NewDownload(localPath))
 }
 
 func (b *bucket) Read(objectName string) ([]byte, error) {
-	op := object2.NewRead()
+	op := object.NewRead()
 	err := b.do(objectName, op)
 	return op.Content(), err
 }
 
-func (b *bucket) Write(objectName string, content []byte, attrs ...object2.AttrSetter) error {
+func (b *bucket) Write(objectName string, content []byte, attrs ...object.AttrSetter) error {
 	_attrs := collateAttrs(attrs)
-	return b.do(objectName, object2.NewWrite(content, _attrs))
+	return b.do(objectName, object.NewWrite(content, _attrs))
 }
 
 func (b *bucket) Attrs(objectName string) (*storage.ObjectAttrs, error) {
-	op := object2.NewAttrs()
+	op := object.NewAttrs()
 	err := b.do(objectName, op)
 	return op.Attrs(), err
 }
 
-func (b *bucket) Update(objectName string, attrs ...object2.AttrSetter) error {
+func (b *bucket) Update(objectName string, attrs ...object.AttrSetter) error {
 	_attrs := collateAttrs(attrs)
-	return b.do(objectName, object2.NewUpdate(_attrs))
+	return b.do(objectName, object.NewUpdate(_attrs))
 }
 
 func (b *bucket) Delete(objectName string) error {
-	return b.do(objectName, object2.NewDelete())
+	return b.do(objectName, object.NewDelete())
 }
 
 // do executes an operation, adding useful contextual logging
-func (b *bucket) do(objectName string, op object2.Operation) error {
+func (b *bucket) do(objectName string, op object.Operation) error {
 	fullName := strings.Join([]string{b.prefix, objectName}, "")
 	objectUrl := fmt.Sprintf("gs://%s/%s", b.name, fullName)
 
@@ -178,7 +178,7 @@ func (b *bucket) do(objectName string, op object2.Operation) error {
 	logger.Debug().Msgf("%s %s", op.Kind(), objectUrl)
 	startTime := time.Now()
 
-	obj := object2.Object{
+	obj := object.Object{
 		Ctx:    b.ctx,
 		Handle: b.client.Bucket(b.name).Object(fullName),
 	}
@@ -205,8 +205,8 @@ func (b *bucket) do(objectName string, op object2.Operation) error {
 }
 
 // collate setters into an attrs object
-func collateAttrs(setters []object2.AttrSetter) object2.AttrSet {
-	var attrs object2.AttrSet
+func collateAttrs(setters []object.AttrSetter) object.AttrSet {
+	var attrs object.AttrSet
 	for _, setter := range setters {
 		attrs = setter(attrs)
 	}

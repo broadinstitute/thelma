@@ -4,7 +4,7 @@ import (
 	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	object2 "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
@@ -26,7 +26,7 @@ type Options struct {
 
 type Lock interface {
 	Generation() int64
-	object2.Operation
+	object.Operation
 }
 
 func NewLock(options Options) Lock {
@@ -48,7 +48,7 @@ func (l *lock) Generation() int64 {
 	return l.generation
 }
 
-func (l *lock) Handler(object object2.Object, logger zerolog.Logger) error {
+func (l *lock) Handler(object object.Object, logger zerolog.Logger) error {
 	if l.options.ExpiresAfter > 0 {
 		if err := l.deleteExpiredLock(object, logger); err != nil {
 			return err
@@ -57,7 +57,7 @@ func (l *lock) Handler(object object2.Object, logger zerolog.Logger) error {
 	return l.waitForLock(object, logger)
 }
 
-func (l *lock) waitForLock(object object2.Object, logger zerolog.Logger) error {
+func (l *lock) waitForLock(object object.Object, logger zerolog.Logger) error {
 	// only create the object if it does not already exist
 	withCondition := object.Handle.If(storage.Conditions{DoesNotExist: true})
 
@@ -123,7 +123,7 @@ func (l *lock) multiplyBackoff(backoff time.Duration) time.Duration {
 	return time.Duration(int64(product))
 }
 
-func (l *lock) deleteExpiredLock(object object2.Object, logger zerolog.Logger) error {
+func (l *lock) deleteExpiredLock(object object.Object, logger zerolog.Logger) error {
 	logger = logger.With().Dur("expires-after", l.options.ExpiresAfter).Logger()
 
 	logger.Debug().Msgf("Checking for expired lock")

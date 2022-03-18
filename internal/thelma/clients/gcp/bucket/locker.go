@@ -1,12 +1,12 @@
 package bucket
 
 import (
-	lock2 "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
 	"time"
 )
 
 // LockerOption used for configuring Locker options
-type LockerOption func(*lock2.Options)
+type LockerOption func(*lock.Options)
 
 // Locker is distributed locking mechanism implemented over GCS.
 // Every Locker is associated with an object in a GCS bucket.
@@ -25,7 +25,7 @@ type Locker interface {
 // * maxWait: how long clients should wait to acquire the lock before giving up
 // * options: optional parameters, see lock.Options for details
 func (b *bucket) NewLocker(objectName string, maxWait time.Duration, options ...LockerOption) Locker {
-	opts := lock2.Options{
+	opts := lock.Options{
 		MaxWait:                 maxWait,
 		ExpiresAfter:            0,
 		BackoffMultiplier:       2,
@@ -45,7 +45,7 @@ func (b *bucket) NewLocker(objectName string, maxWait time.Duration, options ...
 type locker struct {
 	objectName string
 	bucket     *bucket
-	options    lock2.Options
+	options    lock.Options
 }
 
 func (l *locker) ObjectName() string {
@@ -53,11 +53,11 @@ func (l *locker) ObjectName() string {
 }
 
 func (l *locker) Lock() (int64, error) {
-	op := lock2.NewLock(l.options)
+	op := lock.NewLock(l.options)
 	err := l.bucket.do(l.objectName, op)
 	return op.Generation(), err
 }
 
 func (l *locker) Unlock(lockId int64) error {
-	return l.bucket.do(l.objectName, lock2.NewUnlock(lockId))
+	return l.bucket.do(l.objectName, lock.NewUnlock(lockId))
 }
