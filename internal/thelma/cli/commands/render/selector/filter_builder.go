@@ -1,8 +1,8 @@
 package selector
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/terra/filter"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 )
 
 func newFilterBuilder() *filterBuilder {

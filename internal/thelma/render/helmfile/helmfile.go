@@ -5,7 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/stateval"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

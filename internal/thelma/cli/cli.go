@@ -1,3 +1,4 @@
+// Package cli contains code for Thelma's command-line interface
 package cli
 
 import (

@@ -1,8 +1,8 @@
 package source
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"

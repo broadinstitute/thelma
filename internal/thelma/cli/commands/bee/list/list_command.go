@@ -5,8 +5,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/terra/filter"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/spf13/cobra"
 )
 

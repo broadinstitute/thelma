@@ -1,6 +1,6 @@
 package stateval
 
-import "github.com/broadinstitute/thelma/internal/thelma/terra"
+import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 // Release -- information related to the chart release that is being rendered
 type Release struct {

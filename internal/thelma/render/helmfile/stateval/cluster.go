@@ -1,6 +1,6 @@
 package stateval
 
-import "github.com/broadinstitute/thelma/internal/thelma/terra"
+import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 // Cluster -- information about the cluster the release is being deployed to
 type Cluster struct {

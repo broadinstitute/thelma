@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
-	"github.com/broadinstitute/thelma/internal/thelma/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"path"

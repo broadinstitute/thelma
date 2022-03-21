@@ -2,7 +2,7 @@ package argocd
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"sort"
 	"strings"
 )

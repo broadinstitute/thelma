@@ -1,6 +1,6 @@
 package stateval
 
-import "github.com/broadinstitute/thelma/internal/thelma/terra"
+import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 // Environment -- information about the environment the release is being deployed to.
 type Environment struct {

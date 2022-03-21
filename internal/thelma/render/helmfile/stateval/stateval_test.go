@@ -1,8 +1,8 @@
 package stateval
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/gitops/statefixtures"
-	"github.com/broadinstitute/thelma/internal/thelma/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

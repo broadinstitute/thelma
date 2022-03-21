@@ -1,6 +1,6 @@
 package views
 
-import "github.com/broadinstitute/thelma/internal/thelma/terra"
+import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 type Fiab struct {
 	Name string `json:"name,omitempty" yaml:",omitempty"`

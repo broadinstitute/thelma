@@ -2,9 +2,9 @@ package repo
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/lock"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
 	"path"
 	"time"
 )
