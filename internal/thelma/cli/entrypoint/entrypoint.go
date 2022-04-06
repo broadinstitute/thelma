@@ -2,6 +2,9 @@ package entrypoint
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
+	argocd_login "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/login"
+	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	bee_create "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/create"
 	bee_destroy "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/delete"
@@ -28,13 +31,20 @@ func Execute() {
 }
 
 func withCommands(opts *cli.Options) {
+	opts.AddCommand("argocd", argocd.NewArgoCDCommand())
+	opts.AddCommand("argocd login", argocd_login.NewArgoCDLoginCommand())
+	opts.AddCommand("argocd sync", argocd_sync.NewArgoCDSyncCommand())
+
 	opts.AddCommand("bee", bee.NewBeeCommand())
 	opts.AddCommand("bee create", bee_create.NewBeeCreateCommand())
 	opts.AddCommand("bee list", bee_list.NewBeeListCommand())
 	opts.AddCommand("bee delete", bee_destroy.NewBeeDeleteCommand())
+
 	opts.AddCommand("charts", charts.NewChartsCommand())
 	opts.AddCommand("charts import", charts_import.NewChartsImportCommand())
 	opts.AddCommand("charts publish", charts_publish.NewChartsPublishCommand())
+
 	opts.AddCommand("render", render.NewRenderCommand())
+
 	opts.AddCommand("version", version.NewVersionCommand())
 }

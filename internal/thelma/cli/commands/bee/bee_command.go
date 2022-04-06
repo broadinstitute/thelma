@@ -7,6 +7,7 @@ import (
 )
 
 const helpMessage = `Tools for interacting with BEEs (Branch Engineering Environments)`
+const GeneratorArgoApp = "terra-bee-generator"
 
 type beeCommand struct{}
 

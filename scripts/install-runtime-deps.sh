@@ -10,6 +10,7 @@ HELM_VERSION=3.2.4
 HELMFILE_VERSION=0.114.0
 YQ_VERSION=4.11.2
 HELM_DOCS_VERSION=1.5.0
+ARGOCD_VERSION=2.2.5
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
@@ -125,6 +126,15 @@ install_helm_docs() {
   return 1
 }
 
+install_argocd() {
+  URL="https://github.com/argoproj/argo-cd/releases/download/v${ARGOCD_VERSION}/argocd-${OS}-${ARCH}"
+  echo "Downloading ArgoCD client from ${URL}"
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O ./argocd &&
+    chmod +x ./argocd &&
+    testexec ./argocd version --client &&
+    mv ./argocd "${INSTALL_DIR}/argocd"
+}
+
 mkdir -p "${INSTALL_DIR}"
 mkdir -p "${SCRATCH_DIR}"
 
@@ -162,6 +172,14 @@ fi
 if [[ ! -f "${INSTALL_DIR}/helm-docs" ]]; then
   if ! install_helm_docs; then
     echo "helm-docs install failed!" >&2
+    exit 1
+  fi
+fi
+
+# Install ArgoCD client
+if [[ ! -f "${INSTALL_DIR}/argocd" ]]; then
+  if ! install_argocd; then
+    echo "ArgoCD client install failed!" >&2
     exit 1
   fi
 fi

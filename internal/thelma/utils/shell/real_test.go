@@ -72,18 +72,18 @@ func TestRunError(t *testing.T) {
 	assert.Regexp(t, "Command \"echo a b\" failed to start", _err.Error())
 }
 
-func TestRunWith(t *testing.T) {
+func TestRunWithOptions(t *testing.T) {
 	runner := NewRunner()
 	var err error
 
 	stdout := bytes.NewBuffer([]byte{})
-	err = runner.RunWith(
+	err = runner.Run(
 		Command{
 			Prog: "echo",
 			Args: []string{"hello"},
 		},
-		RunOptions{
-			Stdout: stdout,
+		func(opts *RunOptions) {
+			opts.Stdout = stdout
 		},
 	)
 
@@ -91,13 +91,13 @@ func TestRunWith(t *testing.T) {
 	assert.Equal(t, "hello\n", stdout.String())
 
 	stderr := bytes.NewBuffer([]byte{})
-	err = runner.RunWith(
+	err = runner.Run(
 		Command{
 			Prog: "ls",
 			Args: []string{path.Join(t.TempDir(), "does-not-exist")},
 		},
-		RunOptions{
-			Stderr: stderr,
+		func(opts *RunOptions) {
+			opts.Stderr = stderr
 		},
 	)
 	assert.Error(t, err)

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -106,6 +108,11 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
+	_argocd, err := argocd.New(app.Config(), app.ShellRunner())
+	if err != nil {
+		return err
+	}
+
 	err = createEnv(cmd, state)
 	if err != nil {
 		return err
@@ -127,7 +134,18 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return fmt.Errorf("error creating environment %q: missing from state after creation", cmd.options.name)
 	}
 	ctx.SetOutput(views.ForTerraEnv(env))
-	return nil
+
+	log.Info().Msgf("Syncing %s", bee.GeneratorArgoApp)
+	if err := _argocd.SyncApp(bee.GeneratorArgoApp); err != nil {
+		return err
+	}
+
+	log.Info().Msgf("Syncing all releases in environment %s", env.Name())
+	releases, err := state.Releases().Filter(filter.Releases().BelongsToEnvironment(env))
+	if err != nil {
+		return err
+	}
+	return _argocd.SyncReleases(releases, 15)
 }
 
 func (cmd *createCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

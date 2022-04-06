@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/render/selector"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"

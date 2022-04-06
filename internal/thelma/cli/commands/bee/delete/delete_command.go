@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -55,6 +57,11 @@ func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
+	_argocd, err := argocd.New(app.Config(), app.ShellRunner())
+	if err != nil {
+		return err
+	}
+
 	state, err := app.State()
 	if err != nil {
 		return err
@@ -76,7 +83,8 @@ func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 
 	rc.SetOutput(views.ForTerraEnv(env))
 
-	return nil
+	log.Info().Msgf("Syncing %s", bee.GeneratorArgoApp)
+	return _argocd.SyncApp(bee.GeneratorArgoApp)
 }
 
 func (cmd *deleteCommand) PostRun(app app.ThelmaApp, ctx cli.RunContext) error {

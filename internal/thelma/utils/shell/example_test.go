@@ -29,7 +29,9 @@ func ListTmpFiles(runner Runner) ([]string, error) {
 
 	buf := bytes.NewBuffer([]byte{})
 
-	err := runner.RunWith(cmd, RunOptions{Stdout: buf})
+	err := runner.Run(cmd, func(opts *RunOptions) {
+		opts.Stdout = buf
+	})
 	if err != nil {
 		return nil, err
 	}

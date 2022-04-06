@@ -133,6 +133,15 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 			},
 		},
 		{
+			name:    "mixed case config file values should be downcased",
+			cfgFile: "testdata/mixedcase/config.yaml",
+			expect: func(c *testConfig) {
+				c.Logging.Console.Level = "debug"
+				c.Logging.File.Enabled = false
+				c.Logging.File.KeepFiles = 1234
+			},
+		},
+		{
 			name:        "validation failures should return a useful error",
 			cfgFile:     "testdata/invalid/config.yaml",
 			expectError: `(?s)invalid configuration under key "mykey", please check config file "testdata/invalid/config.yaml" and "THELMA_.*" environment variables:.*"mykey.logging.console.level" value this-is-not-a-valid-log-level does not match constraint "oneof: trace debug info warn error"`,

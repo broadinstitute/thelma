@@ -13,7 +13,7 @@ import (
 // * debug logs are captured
 // * thelma installation files live
 //
-// This package is very low-level and is used in both config and logging initializaiton.
+// This package is very low-level and is used in both config and logging initialization.
 // It should NOT depend on any other Thelma packages.
 //
 
@@ -24,7 +24,6 @@ const envVar = "THELMA_ROOT"
 const dirName = ".thelma"
 
 // Dir returns the path to the thelma installation root.
-// It will be:
 // * If THELMA_ROOT env var is set, it will be $THELMA_ROOT
 // * If a valid home directory exists for current user, it will be $HOME/.thelma
 // * Else, /tmp/.thelma.<pid> (worst-case fallback option in weird environments)

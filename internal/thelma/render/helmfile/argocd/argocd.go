@@ -21,7 +21,7 @@ type ArgoDestination struct {
 	Namespace string `yaml:"namespace"`
 }
 
-// Generate a set of values with a list of ArgoCD project destinations, in the form:
+// GetDestinationValues Generate a set of values with a list of ArgoCD project destinations, in the form:
 //
 // destinations:
 //   - server: https://<cluster api address>/
@@ -37,17 +37,6 @@ func GetDestinationValues(destination terra.Destination) Values {
 	})
 
 	return Values{Destinations: destinations}
-}
-
-func GetProjectName(destination terra.Destination) string {
-	switch t := destination.(type) {
-	case terra.Environment:
-		return fmt.Sprintf("terra-%s", t.Name())
-	case terra.Cluster:
-		return fmt.Sprintf("cluster-%s", t.Name())
-	default:
-		panic(fmt.Errorf("error generating destination values file: unknown destination type %s: %v", destination.Type().String(), destination))
-	}
 }
 
 func getArgoDestinations(destination terra.Destination) []ArgoDestination {

@@ -14,14 +14,27 @@ import (
 // https://joshrendek.com/2014/06/go-lang-mocking-exec-dot-command-using-interfaces/
 //
 type Runner interface {
-	// Run runs a command, streaming stdout and stderr to the log at debug level.
-	Run(cmd Command) error
-
-	// RunWith runs a Command, streaming stdout and stderr to the given writers.
-	// An error is returned if the command exits non-zero.
-	// If you're only interested in stdout, pass in nil for stderr (and vice versa)
-	RunWith(cmd Command, opts RunOptions) error
+	// Run runs a Command, streaming stdout and stderr to the log at debug level.
+	// Behavior can be customized by passing in one or more RunOption functions
+	Run(cmd Command, opts ...RunOption) error
 }
+
+// RunOptions are option for a RunWith() invocation
+type RunOptions struct {
+	// optional logger to use for logging this command
+	Logger *zerolog.Logger
+	// optional level at which command should be logged
+	LogLevel zerolog.Level
+	// optional level at which command output (stdout/stderr) should be logged
+	OutputLogLevel zerolog.Level
+	// optional writer where stdout should be written
+	Stdout io.Writer
+	// optional writer where stderr should be written
+	Stderr io.Writer
+}
+
+// RunOption can be used to configure RunOptions for a Run invocation
+type RunOption func(*RunOptions)
 
 // Command encapsulates a shell command
 type Command struct {
@@ -30,6 +43,13 @@ type Command struct {
 	Env         []string // Env List of environment variables, eg []string{ "FOO=BAR", "BAZ=QUUX" }, to set when executing
 	Dir         string   // Dir Directory where command should be run
 	PristineEnv bool     // PristineEnv When true, set only supplied Env vars without inheriting current process's env vars
+}
+
+func defaultRunOptions() RunOptions {
+	return RunOptions{
+		LogLevel:       zerolog.DebugLevel,
+		OutputLogLevel: zerolog.DebugLevel,
+	}
 }
 
 // PrettyFormat converts a command into a simple string for easy inspection. Eg.
@@ -48,18 +68,6 @@ func (c Command) PrettyFormat() string {
 	a = append(a, c.Prog)
 	a = append(a, c.Args...)
 	return strings.Join(a, " ")
-}
-
-// RunOptions are option for a RunWith() invocation
-type RunOptions struct {
-	// optional logger to use for logging this command
-	Logger *zerolog.Logger
-	// optional level at which command should be logged
-	LogLevel *zerolog.Level
-	// optional writer where stdout should be written
-	Stdout io.Writer
-	// optional writer where stderr should be written
-	Stderr io.Writer
 }
 
 // Error is a generic error that is returned in situations other than the command failing.

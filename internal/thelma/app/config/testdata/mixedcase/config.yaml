@@ -1,0 +1,7 @@
+mykey: # mykey is case sensitive, but values that are unmarshalled into structs are not
+  LOGGING:
+    cOnSolE:
+      level: debug
+    fILE:
+      enAbled: false
+      keepFiles: 1234
