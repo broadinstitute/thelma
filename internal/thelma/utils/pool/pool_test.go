@@ -16,7 +16,7 @@ func Test_EmptyWorkloadSucceeds(t *testing.T) {
 func Test_SingleItemSucceeds(t *testing.T) {
 	job := successfulJob("job-1")
 	require.NoError(t, New(asJobs(job)).Execute())
-	assert.Equal(t, 1, job.callCount)
+	assert.Equal(t, 1, job.getCallCount())
 }
 
 func Test_MultipleItemsSucceed(t *testing.T) {
@@ -30,7 +30,7 @@ func Test_MultipleItemsSucceed(t *testing.T) {
 	require.NoError(t, p.Execute())
 
 	for _, j := range jobs {
-		assert.Equal(t, 1, j.callCount, "job %s should have been called exactly once", j.description)
+		assert.Equal(t, 1, j.getCallCount(), "job %s should have been called exactly once", j.description)
 	}
 }
 
@@ -46,9 +46,9 @@ func Test_SingleItemFailureStopsProcessing(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "1 execution errors:\njob-2: whoopsies (job-2)\n", err.Error())
 
-	assert.Equal(t, 1, j1.callCount, "job 1 should have been called exactly once")
-	assert.Equal(t, 1, j2.callCount, "job 2 should have been called exactly once")
-	assert.Equal(t, 0, j3.callCount, "job 3 should not have been called")
+	assert.Equal(t, 1, j1.getCallCount(), "job 1 should have been called exactly once")
+	assert.Equal(t, 1, j2.getCallCount(), "job 2 should have been called exactly once")
+	assert.Equal(t, 0, j3.getCallCount(), "job 3 should not have been called")
 }
 
 func Test_SingleItemFailureContinuesProcessingIfStopIsFalse(t *testing.T) {
@@ -64,9 +64,9 @@ func Test_SingleItemFailureContinuesProcessingIfStopIsFalse(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "1 execution errors:\njob-2: whoopsies (job-2)\n", err.Error())
 
-	assert.Equal(t, 1, j1.callCount, "job 1 should have been called exactly once")
-	assert.Equal(t, 1, j2.callCount, "job 2 should have been called exactly once")
-	assert.Equal(t, 1, j3.callCount, "job 3 should have been called exactly once")
+	assert.Equal(t, 1, j1.getCallCount(), "job 1 should have been called exactly once")
+	assert.Equal(t, 1, j2.getCallCount(), "job 2 should have been called exactly once")
+	assert.Equal(t, 1, j3.getCallCount(), "job 3 should have been called exactly once")
 }
 
 func Test_SingleItemAndWorkerTimeout(t *testing.T) {
@@ -92,9 +92,9 @@ func Test_MultipleItemTimeout(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "worker pool execution timed out after 50ms", err.Error())
 
-	assert.Equal(t, 1, j1.callCount, "job 1 should have been called exactly once")
-	assert.Equal(t, 1, j2.callCount, "job 2 should have been called exactly once")
-	assert.Equal(t, 0, j3.callCount, "job 3 should never have been called")
+	assert.Equal(t, 1, j1.getCallCount(), "job 1 should have been called exactly once")
+	assert.Equal(t, 1, j2.getCallCount(), "job 2 should have been called exactly once")
+	assert.Equal(t, 0, j3.getCallCount(), "job 3 should never have been called")
 }
 
 func Test_LargeBatchCompletes(t *testing.T) {
@@ -114,7 +114,7 @@ func Test_LargeBatchCompletes(t *testing.T) {
 		if job.err != nil {
 			numFailed++
 		}
-		if job.callCount > 0 {
+		if job.getCallCount() > 0 {
 			numCalled++
 		}
 	}
@@ -145,7 +145,7 @@ func Test_LargeBatchStopsExecutingOnFailure(t *testing.T) {
 		if job.err != nil {
 			numFailed++
 		}
-		if job.callCount > 0 {
+		if job.getCallCount() > 0 {
 			numCalled++
 		}
 	}
@@ -174,7 +174,7 @@ func Test_LargeBatchStopsExecutingOnTimeout(t *testing.T) {
 		if job.err != nil {
 			numFailed++
 		}
-		if job.callCount > 0 {
+		if job.getCallCount() > 0 {
 			numCalled++
 		}
 	}
@@ -207,6 +207,12 @@ func (j *testJob) run() error {
 		time.Sleep(j.sleep)
 	}
 	return j.err
+}
+
+func (j *testJob) getCallCount() int {
+	j.mutex.Lock()
+	defer j.mutex.Unlock()
+	return j.callCount
 }
 
 func successfulJob(desc string) *testJob {
