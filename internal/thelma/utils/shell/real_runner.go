@@ -14,7 +14,6 @@ import (
 
 const maxErrorBufLenBytes = 5 * 1024 // 5 kb
 const eol = '\n'
-const defaultLogLevel = zerolog.InfoLevel
 
 // RealRunner is an implementation of the Runner interface that actually executes shell commands
 type RealRunner struct{}
