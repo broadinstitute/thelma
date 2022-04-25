@@ -16,6 +16,11 @@ const defaultDir = "logs"
 const logFile = "thelma.log"
 const configPrefix = "logging"
 
+// globalWriter is the writer that zerolog's global log.Logger is configured to write to.
+// We track it in a package-level variable so that WithMask can wrap it with a masking writer.
+// Initialized with a basic writer here that is overwritten with a more complex/configurable writer during InitializeLogging
+var globalWriter io.Writer = zerolog.ConsoleWriter{Out: os.Stderr}
+
 // logConfig is a configuration struct for the logging package
 type logConfig struct {
 	Console struct {
@@ -48,7 +53,7 @@ func (cfg *logConfig) logDir() string {
 // Bootstrap configure global zerolog logger with a basic console logger
 // to catch any messages that are logged before full Thelma initialization
 func Bootstrap() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = log.Output(globalWriter).Level(zerolog.DebugLevel)
 }
 
 // InitializeLogging updates the global Zerolog logger to match Thelma's configuration.
@@ -60,14 +65,27 @@ func InitializeLogging(thelmaConfig config.Config) error {
 	}
 
 	// init new logger based on configuration
-	logger, err := newLogger(cfg, os.Stderr)
+	writer, err := newCompositeWriter(cfg, os.Stderr)
+	if err != nil {
+		return fmt.Errorf("logging initialization failed: %v", err)
+	}
+
+	logger, err := newLogger(cfg, writer)
 	if err != nil {
 		return fmt.Errorf("logging initialization failed: %v", err)
 	}
 
 	// replace default Zerolog logger with our custom logger
+	globalWriter = writer
 	log.Logger = *logger
+
 	return nil
+}
+
+// WithMask return a copy of the global logger that will mask the given secrets
+func WithMask(secrets ...string) zerolog.Logger {
+	writer := NewMaskingWriter(globalWriter, secrets)
+	return log.Output(writer)
 }
 
 // Initialize a logConfig based on given thelmaConfig
@@ -86,8 +104,8 @@ func loadConfig(thelmaConfig config.Config) (*logConfig, error) {
 	return cfg, nil
 }
 
-// Construct a new logger based on supplied configuration
-func newLogger(cfg *logConfig, consoleStream io.Writer) (*zerolog.Logger, error) {
+// Construct a new composite console + file writer based on supplied configuration
+func newCompositeWriter(cfg *logConfig, consoleStream io.Writer) (zerolog.LevelWriter, error) {
 	var writers []io.Writer
 
 	// Create console writer
@@ -103,9 +121,12 @@ func newLogger(cfg *logConfig, consoleStream io.Writer) (*zerolog.Logger, error)
 	}
 
 	// Combine writers into a multi writer
-	multi := zerolog.MultiLevelWriter(writers...)
+	return zerolog.MultiLevelWriter(writers...), nil
+}
 
-	ctx := zerolog.New(multi).With()
+// Construct a new logger based on supplied configuration
+func newLogger(cfg *logConfig, compositeWriter zerolog.LevelWriter) (*zerolog.Logger, error) {
+	ctx := zerolog.New(compositeWriter).With()
 
 	// If enabled, include source file / line number in log messages
 	if cfg.Caller.Enabled {

@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path"
@@ -37,6 +38,7 @@ func Test_newLogger(t *testing.T) {
 	testCases := []struct {
 		name           string
 		thelmaSettings map[string]interface{}
+		maskSecrets    []string
 		setupFn        func(*zerolog.Logger)
 		verifyFn       func(t *testing.T, r testResult)
 	}{
@@ -135,6 +137,39 @@ func Test_newLogger(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:        "with mask should mask multiple secrets in messages",
+			maskSecrets: []string{"foo", "bar", "baz"},
+			setupFn: func(logger *zerolog.Logger) {
+				logger.Info().Msg("Here is a long message with secrets: foo, also bar, and baz")
+			},
+			verifyFn: func(t *testing.T, r testResult) {
+				assert.Equal(t, 1, len(r.consoleMessages))
+				assert.Regexp(t, `INF.*Here is a long message with secrets: \*\*\*\*\*\*, also \*\*\*\*\*\*, and \*\*\*\*\*\*`, r.consoleMessages[0])
+
+				assert.Equal(t, 1, len(r.fileMessages))
+				assert.Equal(t, "Here is a long message with secrets: ******, also ******, and ******", r.fileMessages[0].Message)
+			},
+		},
+		{
+			name:        "with mask should mask secrets in contextual fields",
+			maskSecrets: []string{"foo"},
+			setupFn: func(logger *zerolog.Logger) {
+				_logger := logger.With().
+					Str("key1", "foo").
+					Str("key2", "extra foo stuff").
+					Logger()
+				_logger.Info().Msg("Hello foo")
+			},
+			verifyFn: func(t *testing.T, r testResult) {
+				assert.Equal(t, 1, len(r.consoleMessages))
+				assert.Regexp(t, `INF.*Hello \*\*\*\*\*\*.*key1.*=.*\*\*\*\*\*\*.*key2.*=.*"extra \*\*\*\*\*\* stuff"`, r.consoleMessages[0])
+
+				jsonLog, err := os.ReadFile(r.logFile)
+				require.NoError(t, err)
+				assert.Regexp(t, `{"level":"info","key1":"\*\*\*\*\*\*","key2":"extra \*\*\*\*\*\* stuff","time":".*","message":"Hello \*\*\*\*\*\*"}`, string(jsonLog))
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -151,20 +186,21 @@ func Test_newLogger(t *testing.T) {
 			}
 
 			thelmaConfig, err := config.NewTestConfig(settings)
-			if !assert.NoError(t, err) {
-				return
-			}
+			require.NoError(t, err)
 
 			cfg, err := loadConfig(thelmaConfig)
-			if !assert.NoError(t, err) {
-				return
-			}
+			require.NoError(t, err)
 
 			fakeConsoleWriter := &bytes.Buffer{}
-			logger, err := newLogger(cfg, fakeConsoleWriter)
-			if !assert.NoError(t, err) {
-				return
+			compositeWriter, err := newCompositeWriter(cfg, fakeConsoleWriter)
+			require.NoError(t, err)
+
+			if len(tc.maskSecrets) > 0 {
+				compositeWriter = NewMaskingWriter(compositeWriter, tc.maskSecrets)
 			}
+
+			logger, err := newLogger(cfg, compositeWriter)
+			require.NoError(t, err)
 
 			if tc.setupFn != nil {
 				tc.setupFn(logger)
