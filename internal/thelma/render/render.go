@@ -2,20 +2,14 @@
 package render
 
 import (
-	"context"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
-	"strings"
-	"sync"
-	"time"
 )
-
-// multiRenderTimeout how long to wait before timing out a multi render
-const multiRenderTimeout = 5 * time.Minute
 
 // Options encapsulates CLI options for a render
 type Options struct {
@@ -33,18 +27,6 @@ type multiRender struct {
 	options    *Options             // Options global render options
 	state      terra.State          // state terra state provider for looking up environments, clusters, and releases
 	configRepo *helmfile.ConfigRepo // configRepo reference to use for executing `helmfile template`
-}
-
-// renderError represents an error encountered while rendering for a particular destination
-type renderError struct {
-	description string // description for the render job that generated in this error
-	err         error  // error
-}
-
-// renderJob represents a single helmfile invocation with parameters
-type renderJob struct {
-	description string
-	callback    func() error
 }
 
 // prefix for configuration settings
@@ -127,100 +109,25 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 		return fmt.Errorf("no matching releases found")
 	}
 
-	numWorkers := 1
-	if r.options.ParallelWorkers >= 1 {
-		numWorkers = r.options.ParallelWorkers
-	}
-	if len(jobs) < numWorkers {
-		// don't make more workers than we have items to process
-		numWorkers = len(jobs)
-	}
+	_pool := pool.New(jobs, func(options *pool.Options) {
+		if r.options.ParallelWorkers >= 1 {
+			options.NumWorkers = r.options.ParallelWorkers
+		}
+	})
 
-	log.Info().Msgf("Rendering %d release(s) with %d worker(s)", len(jobs), numWorkers)
-
-	queueCh := make(chan renderJob, len(jobs))
-	for _, job := range jobs {
-		queueCh <- job
-	}
-	close(queueCh)
-
-	errCh := make(chan renderError, len(jobs))
-
-	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
-		id := i
-		wg.Add(1)
-
-		logger := log.With().Str("wid", fmt.Sprintf("worker-%d", id)).Logger()
-
-		ctx, cancel := context.WithCancel(context.Background())
-
-		go func() {
-			defer wg.Done()
-
-			for {
-				select {
-				case <-ctx.Done():
-					logger.Debug().Msg("short circuit triggered, returning")
-					return
-
-				case job, ok := <-queueCh:
-					if !ok {
-						logger.Debug().Msg("no jobs left, returning")
-						return
-					}
-
-					logger.Debug().Msgf("rendering %s", job.description)
-					if err := job.callback(); err != nil {
-						logger.Error().Msgf("error rendering %s:\n%v", job.description, err)
-						errCh <- renderError{
-							description: job.description,
-							err:         err,
-						}
-						cancel()
-						return
-					}
-				}
-			}
-		}()
-	}
-
-	// Wait for workers to finish in a separate goroutine so that we can implement
-	// a timeout
-	waitCh := make(chan struct{})
-	go func() {
-		logger := log.With().Str("wid", "wait").Logger()
-		logger.Debug().Msg("Waiting for render workers to finish")
-		wg.Wait()
-		logger.Debug().Msgf("Render workers finished")
-		close(errCh)
-		close(waitCh)
-	}()
-
-	// Block until the wait group is done or we time out.
-	logger := log.With().Str("wid", "main").Logger()
-
-	select {
-	case <-waitCh:
-		logger.Debug().Msgf("multi-render finished")
-	case <-time.After(multiRenderTimeout):
-		err := fmt.Errorf("[main] multi-render timed out after %s", multiRenderTimeout)
-		logger.Error().Err(err)
-		return err
-	}
-
-	return readErrorsFromChannel(errCh)
+	log.Info().Msgf("Rendering %d release(s) with %d worker(s)", len(jobs), _pool.NumWorkers())
+	return _pool.Execute()
 }
 
 // getJobs returns the set of render jobs that should be run
-func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]renderJob, error) {
-	var jobs []renderJob
+func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
+	var jobs []pool.Job
 
 	for _, release := range r.options.Releases {
 		_r := release
-		jobs = append(jobs, renderJob{
-			description: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
-			callback: func() error {
+		jobs = append(jobs, pool.Job{
+			Description: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
+			Run: func() error {
 				return r.configRepo.RenderForRelease(_r, helmfileArgs)
 			},
 		})
@@ -240,9 +147,9 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]renderJob, error) 
 		// for each unique destination, make a job to render global resources for it
 		for _, _destination := range destinations {
 			d := _destination
-			jobs = append(jobs, renderJob{
-				description: fmt.Sprintf("global resources for %s %s", d.Type(), d.Name()),
-				callback: func() error {
+			jobs = append(jobs, pool.Job{
+				Description: fmt.Sprintf("global resources for %s %s", d.Type(), d.Name()),
+				Run: func() error {
 					return r.configRepo.RenderForDestination(d, helmfileArgs)
 				},
 			})
@@ -250,28 +157,4 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]renderJob, error) 
 	}
 
 	return jobs, nil
-}
-
-// readErrorsFromChannel aggregates all errors into a single mega-error
-func readErrorsFromChannel(errCh <-chan renderError) error {
-	var count int
-	var sb strings.Builder
-
-	for {
-		renderErr, ok := <-errCh
-		if !ok {
-			// channel closed, no more results to read
-			break
-		}
-		count++
-		description := renderErr.description
-		err := renderErr.err
-		sb.WriteString(fmt.Sprintf("%s: %v\n", description, err))
-	}
-
-	if count > 0 {
-		return fmt.Errorf("%d render errors:\n%s", count, sb.String())
-	}
-
-	return nil
 }
