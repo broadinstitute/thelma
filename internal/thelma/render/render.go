@@ -9,11 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
-	"time"
 )
-
-// multiRenderTimeout how long to wait before timing out a multi render
-const multiRenderTimeout = 5 * time.Minute
 
 // Options encapsulates CLI options for a render
 type Options struct {
