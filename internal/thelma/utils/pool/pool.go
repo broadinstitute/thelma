@@ -40,7 +40,10 @@ type workItem struct {
 
 // Pool implements the worker pool pattern for concurrent processing
 type Pool interface {
+	// Execute starts execution of the pool, returning an error that aggregates errors from all jobs (if any were encountered)
 	Execute() error
+	// NumWorkers returns the number of workers in the pool
+	NumWorkers() int
 }
 
 func New(jobs []Job, options ...Option) Pool {
@@ -88,11 +91,11 @@ type pool struct {
 }
 
 func (p *pool) Execute() error {
-	log.Debug().Msgf("executing %d job(s) with %d worker(s)", len(p.items), p.numWorkers())
+	log.Debug().Msgf("executing %d job(s) with %d worker(s)", len(p.items), p.NumWorkers())
 
 	p.addJobsToQueue()
 
-	for i := 0; i < p.numWorkers(); i++ {
+	for i := 0; i < p.NumWorkers(); i++ {
 		p.spawnWorker(i)
 	}
 
@@ -102,7 +105,7 @@ func (p *pool) Execute() error {
 	return p.aggregateErrors()
 }
 
-func (p *pool) numWorkers() int {
+func (p *pool) NumWorkers() int {
 	if len(p.items) < p.options.NumWorkers {
 		// don't make more workers than we have items to process
 		return len(p.items)
