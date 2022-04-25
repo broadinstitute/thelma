@@ -32,3 +32,16 @@ func doSomething() {
   	logger.Info().Str("my-useful-field", "blah").Msgf("An interesting value: %d", 123)
 }
 ```
+
+### Masking Secrets
+
+Clients can create a child of the global logger with masking for specific secrets using the `WithMask` function. Secrets in both message text and contextual fields will be masked.
+
+```
+  import "github.com/broadinstitute/thelma/internal/thelma/app/logging"
+
+  logger := logging.WithMask("my-secret")
+
+  // the text "my-secret" will be replaced with "******" in log messages.
+  logger.Info().Str("key", "my-secret").Msg("message here")
+```
