@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
+	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
@@ -39,6 +40,7 @@ type thelmaBuilder struct {
 		name    statefixtures.FixtureName
 		t       *testing.T
 	}
+	rootDir string
 }
 
 func NewBuilder() ThelmaBuilder {
@@ -48,6 +50,9 @@ func NewBuilder() ThelmaBuilder {
 }
 
 func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
+	// Set thelma root to temp directory
+	b.SetRootDir(t.TempDir())
+
 	b.SetConfigOption(func(options config.Options) config.Options {
 		// Ignore config file and environment when loading configuration
 		options.ConfigFile = ""
@@ -68,6 +73,11 @@ func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
 
 func (b *thelmaBuilder) SetHome(path string) ThelmaBuilder {
 	b.SetConfigOverride(config.HomeKey, path)
+	return b
+}
+
+func (b *thelmaBuilder) SetRootDir(dir string) ThelmaBuilder {
+	b.rootDir = dir
 	return b
 }
 
@@ -97,14 +107,24 @@ func (b *thelmaBuilder) UseStateFixture(name statefixtures.FixtureName, t *testi
 }
 
 func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
+	rootDir := b.rootDir
+	if rootDir == "" {
+		rootDir = root.DefaultDir()
+	}
+	thelmaRoot := root.New(rootDir)
+
 	// Initialize config
-	cfg, err := config.Load(b.configOptions...)
+	var configOptions []config.Option
+	configOptions = append(configOptions, config.WithThelmaRoot(thelmaRoot))
+	configOptions = append(configOptions, b.configOptions...)
+
+	cfg, err := config.Load(configOptions...)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize logging
-	if err := logging.InitializeLogging(cfg); err != nil {
+	if err := logging.InitializeLogging(cfg, thelmaRoot); err != nil {
 		return nil, err
 	}
 

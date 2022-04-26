@@ -3,11 +3,18 @@ package utils
 
 import (
 	"fmt"
+	"github.com/mattn/go-isatty"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+// Interactive returns true if Thelma is running in an interactive shell, false otherwise. Useful for detecting
+// if Thelma is running in CI pipelines or on a dev laptop
+func Interactive() bool {
+	return isatty.IsTerminal(os.Stdout.Fd())
+}
 
 // ExpandAndVerifyExists Expand relative path to absolute, and make sure it exists.
 // This is necessary for many arguments because Helmfile assumes paths

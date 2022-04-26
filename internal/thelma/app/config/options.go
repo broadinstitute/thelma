@@ -31,7 +31,14 @@ type Options struct {
 func DefaultOptions() Options {
 	return Options{
 		Overrides:  make(map[string]interface{}),
-		ConfigFile: path.Join(root.Dir(), defaultConfigFile),
+		ConfigFile: path.Join(root.Default().Dir(), defaultConfigFile),
 		EnvPrefix:  defaultEnvPrefix,
+	}
+}
+
+func WithThelmaRoot(thelmaRoot root.Root) Option {
+	return func(options Options) Options {
+		options.ConfigFile = path.Join(thelmaRoot.Dir(), defaultConfigFile)
+		return options
 	}
 }

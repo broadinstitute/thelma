@@ -35,7 +35,12 @@ func (r *rootCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	r.printer.AddFlags(cobraCommand.PersistentFlags())
 }
 
-func (r *rootCommand) PreRun(_ app.ThelmaApp, _ RunContext) error {
+func (r *rootCommand) PreRun(app app.ThelmaApp, rc RunContext) error {
+	// perform automatic Thelma update if needed
+	if err := r.autoUpdate(app, rc); err != nil {
+		return err
+	}
+
 	// check that output format flags were used correctly
 	if err := r.printer.VerifyFlags(); err != nil {
 		return err
@@ -55,5 +60,11 @@ func (r *rootCommand) PostRun(_ app.ThelmaApp, ctx RunContext) error {
 		}
 	}
 
+	return nil
+}
+
+// perform automatic Thelma update if needed
+func (r *rootCommand) autoUpdate(app app.ThelmaApp, rc RunContext) error {
+	// TODO
 	return nil
 }

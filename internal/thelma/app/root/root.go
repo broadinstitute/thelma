@@ -12,8 +12,9 @@ import (
 // * the Thelma config file lives
 // * debug logs are captured
 // * thelma installation files live
+// and more.
 //
-// This package is very low-level and is used in both config and logging initializaiton.
+// This package is very low-level and is used in both config and logging initialization.
 // It should NOT depend on any other Thelma packages.
 //
 
@@ -23,17 +24,42 @@ const envVar = "THELMA_ROOT"
 // Name of the directory inside user's home directory
 const dirName = ".thelma"
 
-// Dir returns the path to the thelma installation root.
-// It will be:
-// * If THELMA_ROOT env var is set, it will be $THELMA_ROOT
+type Root interface {
+	// Dir returns the Thelma installation root directory, usually ~/.thelma
+	Dir() string
+	// LogDir returns the path where Thelma debug logs are stored ($ROOT/logs)
+	LogDir() string
+	// CachesDir returns the Thelma cache directory ($ROOT/caches)
+	CachesDir() string
+	// ReleasesDir returns the Thelma releases directory ($ROOT/releases)
+	ReleasesDir() string
+}
+
+// Default returns a Root instance rooted at the default directory returned by DefaultDir
+func Default() Root {
+	return root{
+		dir: DefaultDir(),
+	}
+}
+
+// New (FOR TESTING ONLY) returns a Root instance rooted at the given directory
+func New(dir string) Root {
+	return root{
+		dir: dir,
+	}
+}
+
+// DefaultDir derives the default Thelma root directory. It will be:
+// * The value of the THELMA_ROOT env var, if set
 // * If a valid home directory exists for current user, it will be $HOME/.thelma
 // * Else, /tmp/.thelma.<pid> (worst-case fallback option in weird environments)
 // Note that this function identifies the root directory path, but does NOT create the root directory; it may or may not exist.
-func Dir() string {
+func DefaultDir() string {
 	dir, exists := os.LookupEnv(envVar)
 	if exists {
 		return dir
 	}
+
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
 		return path.Join(homeDir, dirName)
@@ -44,4 +70,25 @@ func Dir() string {
 	log.Warn().Msgf("Will use temporary root directory: %s", dir)
 
 	return dir
+}
+
+// implements Root interface
+type root struct {
+	dir string
+}
+
+func (r root) Dir() string {
+	return r.dir
+}
+
+func (r root) LogDir() string {
+	return path.Join(r.Dir(), "logs")
+}
+
+func (r root) CachesDir() string {
+	return path.Join(r.Dir(), "caches")
+}
+
+func (r root) ReleasesDir() string {
+	return path.Join(r.Dir(), "releases")
 }

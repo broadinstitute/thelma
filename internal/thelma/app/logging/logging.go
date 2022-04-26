@@ -12,7 +12,6 @@ import (
 	"path"
 )
 
-const defaultDir = "logs"
 const logFile = "thelma.log"
 const configPrefix = "logging"
 
@@ -41,15 +40,6 @@ type logConfig struct {
 	}
 }
 
-func (cfg *logConfig) logDir() string {
-	dir := cfg.File.Dir
-	if dir == "" {
-		// default log dir is ~/.thelma/logs
-		dir = path.Join(root.Dir(), defaultDir)
-	}
-	return dir
-}
-
 // Bootstrap configure global zerolog logger with a basic console logger
 // to catch any messages that are logged before full Thelma initialization
 func Bootstrap() {
@@ -58,8 +48,8 @@ func Bootstrap() {
 
 // InitializeLogging updates the global Zerolog logger to match Thelma's configuration.
 // It should be called once during Thelma initialization.
-func InitializeLogging(thelmaConfig config.Config) error {
-	cfg, err := loadConfig(thelmaConfig)
+func InitializeLogging(thelmaConfig config.Config, thelmaRoot root.Root) error {
+	cfg, err := loadConfig(thelmaConfig, thelmaRoot)
 	if err != nil {
 		return fmt.Errorf("logging initialization failed: %v", err)
 	}
@@ -89,7 +79,7 @@ func WithMask(secrets ...string) zerolog.Logger {
 }
 
 // Initialize a logConfig based on given thelmaConfig
-func loadConfig(thelmaConfig config.Config) (*logConfig, error) {
+func loadConfig(thelmaConfig config.Config, thelmaRoot root.Root) (*logConfig, error) {
 	cfg := &logConfig{}
 
 	if err := thelmaConfig.Unmarshal(configPrefix, cfg); err != nil {
@@ -98,7 +88,7 @@ func loadConfig(thelmaConfig config.Config) (*logConfig, error) {
 
 	// Set dynamic defaults
 	if cfg.File.Dir == "" { // Default log dir to ~/.thelma/logs
-		cfg.File.Dir = path.Join(root.Dir(), defaultDir)
+		cfg.File.Dir = thelmaRoot.LogDir()
 	}
 
 	return cfg, nil
@@ -148,11 +138,11 @@ func newConsoleWriter(cfg *logConfig, consoleStream io.Writer) zerolog.LevelWrit
 }
 
 func newFileWriter(cfg *logConfig) (zerolog.LevelWriter, error) {
-	if err := os.MkdirAll(cfg.logDir(), 0700); err != nil {
-		return nil, fmt.Errorf("error creating log directory %s: %v", cfg.logDir(), err)
+	if err := os.MkdirAll(cfg.File.Dir, 0700); err != nil {
+		return nil, fmt.Errorf("error creating log directory %s: %v", cfg.File.Dir, err)
 	}
 	rollingWriter := &lumberjack.Logger{
-		Filename:   path.Join(cfg.logDir(), logFile),
+		Filename:   path.Join(cfg.File.Dir, logFile),
 		MaxSize:    cfg.File.MaxSizeMb,
 		MaxBackups: cfg.File.KeepFiles,
 	}

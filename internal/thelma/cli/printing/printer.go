@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing/format"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
-	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"io"
@@ -47,7 +46,7 @@ type printer struct {
 
 func (p *printer) AddFlags(flags *pflag.FlagSet) {
 	defaultFormat := format.PrettyYaml
-	if !isatty.IsTerminal(os.Stdout.Fd()) {
+	if !utils.Interactive() {
 		// use plain YAML if this is not an interactive terminal
 		defaultFormat = format.Yaml
 	}
