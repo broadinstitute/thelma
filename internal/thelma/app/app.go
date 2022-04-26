@@ -7,7 +7,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
-	"github.com/broadinstitute/thelma/internal/thelma/app/update"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
@@ -35,8 +34,6 @@ type ThelmaApp interface {
 	Scratch() scratch.Scratch
 	// State returns a new terra.State instance for this ThelmaApp
 	State() (terra.State, error)
-	// Updater returns the Updater instance for this ThelmaApp
-	Updater() update.Updater
 	// Close deletes local resources associated with this ThelmaApp, and should be called once before the program exits.
 	Close() error
 }
@@ -71,7 +68,6 @@ type thelmaApp struct {
 	paths       paths.Paths
 	scratch     scratch.Scratch
 	stateLoader terra.StateLoader
-	updater     update.Updater
 }
 
 func (t *thelmaApp) Config() config.Config {
@@ -92,10 +88,6 @@ func (t *thelmaApp) Scratch() scratch.Scratch {
 
 func (t *thelmaApp) State() (terra.State, error) {
 	return t.stateLoader.Load()
-}
-
-func (t *thelmaApp) Updater() update.Updater {
-	return t.updater
 }
 
 func (t *thelmaApp) Close() error {
