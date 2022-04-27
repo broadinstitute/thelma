@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -50,9 +51,10 @@ func NewBuilder() ThelmaBuilder {
 }
 
 func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
-	// Set thelma root to temp directory
+	// Set thelma root to empty temp directory
 	b.SetRootDir(t.TempDir())
 
+	// Set test-friendly configuration options
 	b.SetConfigOption(func(options config.Options) config.Options {
 		// Ignore config file and environment when loading configuration
 		options.ConfigFile = ""
@@ -128,6 +130,11 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
+	_credentials, err := credentials.New(thelmaRoot.CredentialsDir())
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialize shell runner
 	shellRunner := b.shellRunner
 	if shellRunner == nil {
@@ -140,7 +147,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize app
-	return app.New(cfg, shellRunner, stateLoader)
+	return app.New(cfg, _credentials, shellRunner, stateLoader)
 }
 
 func (b *thelmaBuilder) getStateLoader(thelmaHome string, shellRunner shell.Runner) (terra.StateLoader, error) {

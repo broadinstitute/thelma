@@ -3,6 +3,7 @@ package app
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
@@ -26,6 +27,8 @@ func init() {
 type ThelmaApp interface {
 	// Config returns configuration object for this ThelmaApp
 	Config() config.Config
+	// Credentials returns credential manager object for this ThelmaApp
+	Credentials() credentials.Credentials
 	// ShellRunner returns ShellRunner for this ThelmaApp
 	ShellRunner() shell.Runner
 	// Paths returns Paths for this ThelmaApp
@@ -39,7 +42,7 @@ type ThelmaApp interface {
 }
 
 // New constructs a new ThelmaApp
-func New(cfg config.Config, shellRunner shell.Runner, stateLoader terra.StateLoader) (ThelmaApp, error) {
+func New(cfg config.Config, creds credentials.Credentials, shellRunner shell.Runner, stateLoader terra.StateLoader) (ThelmaApp, error) {
 	app := &thelmaApp{}
 	app.config = cfg
 	app.shellRunner = shellRunner
@@ -57,13 +60,20 @@ func New(cfg config.Config, shellRunner shell.Runner, stateLoader terra.StateLoa
 	if err != nil {
 		return nil, err
 	}
-	app.scratch = _scratch
 
-	return app, nil
+	return &thelmaApp{
+		config:      cfg,
+		credentials: creds,
+		shellRunner: shellRunner,
+		stateLoader: stateLoader,
+		scratch:     _scratch,
+		paths:       _paths,
+	}, nil
 }
 
 type thelmaApp struct {
 	config      config.Config
+	credentials credentials.Credentials
 	shellRunner shell.Runner
 	paths       paths.Paths
 	scratch     scratch.Scratch
@@ -72,6 +82,10 @@ type thelmaApp struct {
 
 func (t *thelmaApp) Config() config.Config {
 	return t.config
+}
+
+func (t *thelmaApp) Credentials() credentials.Credentials {
+	return t.credentials
 }
 
 func (t *thelmaApp) ShellRunner() shell.Runner {

@@ -31,6 +31,8 @@ type Root interface {
 	LogDir() string
 	// CachesDir returns the Thelma cache directory ($ROOT/caches)
 	CachesDir() string
+	// CredentialsDir returns the path to Thelma credentials directory ($ROOT/credentials)
+	CredentialsDir() string
 	// ReleasesDir returns the Thelma releases directory ($ROOT/releases)
 	ReleasesDir() string
 }
@@ -87,6 +89,10 @@ func (r root) LogDir() string {
 
 func (r root) CachesDir() string {
 	return path.Join(r.Dir(), "caches")
+}
+
+func (r root) CredentialsDir() string {
+	return path.Join(r.Dir(), "credentials")
 }
 
 func (r root) ReleasesDir() string {

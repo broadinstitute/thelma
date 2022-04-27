@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mattn/go-isatty"
 	"net"
@@ -52,4 +53,16 @@ func QuoteJoin(strs []string) string {
 		quoted = append(quoted, fmt.Sprintf("%q", s))
 	}
 	return strings.Join(quoted, ", ")
+}
+
+// FileExists returns true if the file exists, false otherwise, and an error if an error occurs
+func FileExists(file string) (bool, error) {
+	_, err := os.Stat(file)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }

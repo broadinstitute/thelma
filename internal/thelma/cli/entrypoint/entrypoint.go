@@ -2,6 +2,8 @@ package entrypoint
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
+	auth_vault "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	bee_create "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/create"
 	bee_destroy "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/delete"
@@ -28,6 +30,9 @@ func Execute() {
 }
 
 func withCommands(opts *cli.Options) {
+	opts.AddCommand("auth", auth.NewAuthCommand())
+	opts.AddCommand("auth vault", auth_vault.NewAuthVaultCommand())
+
 	opts.AddCommand("bee", bee.NewBeeCommand())
 	opts.AddCommand("bee create", bee_create.NewBeeCreateCommand())
 	opts.AddCommand("bee list", bee_list.NewBeeListCommand())
