@@ -1,5 +1,7 @@
 package stores
 
+// NewNoopStore returns a new fake credential store that doesn't actually persist credentials anywhere.
+// It is used as a fallback in weird environments
 func NewNoopStore() Store {
 	return noopStore{}
 }

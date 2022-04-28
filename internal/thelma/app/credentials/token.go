@@ -3,22 +3,21 @@ package credentials
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
+	"github.com/broadinstitute/thelma/internal/thelma/app/env"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"os"
 	"strings"
 )
 
-const envPrefix = "THELMA_"
-
 // TokenOptions configuration options for a Token
 type TokenOptions struct {
-	// EnvVar (optional) environment variable to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "argocd-token" -> "ARGOCD_TOKEN")
+	// EnvVar (optional) environment variable to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "iap-token" -> "IAP_TOKEN")
 	EnvVar string
 	// PromptEnabled (optional) if true, user will be prompted to manually enter a token value if one does not exist in credential store.
 	PromptEnabled bool
-	// PromptMessage (optional) Override default prompt message ("Please enter ARGOCD_TOKEN: ")
+	// PromptMessage (optional) Override default prompt message ("Please enter IAP_TOKEN: ")
 	PromptMessage string
 	// ValidateFn (optional) Optional function for validating a token. If supplied, stored credentials will be validated before being returned to caller
 	ValidateFn func([]byte) error
@@ -96,7 +95,7 @@ func (t token) Get() ([]byte, error) {
 // (1) check for an environment variable THELMA_VAULT_TOKEN and return it if it exists
 // (2) return the value of the VAULT_TOKEN environment variable
 func (t token) readFromEnv() []byte {
-	value := os.Getenv(fmt.Sprintf("%s%s", envPrefix, t.options.EnvVar))
+	value := os.Getenv(env.WithEnvPrefix(t.options.EnvVar))
 	if len(value) != 0 {
 		return []byte(value)
 	}
@@ -172,7 +171,7 @@ func (t token) promptForNewValue() ([]byte, error) {
 	}
 
 	fmt.Print(t.options.PromptMessage)
-	value, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	value, err := term.ReadPassword(int(os.Stdin.Fd()))
 	// print empty newline since ReadPassword doesn't
 	fmt.Println()
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +41,7 @@ func (cmd *vaultCommand) Run(thelmaApp app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
+	log.Info().Msgf("Vault token is valid")
 	rc.SetOutput(client.Token())
 	return nil
 }

@@ -2,6 +2,7 @@ package stores
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/rs/zerolog/log"
 	"os"
 	"path"
 )
@@ -35,7 +36,9 @@ func (s dirStore) Exists(key string) (bool, error) {
 }
 
 func (s dirStore) Write(key string, credential []byte) error {
-	return os.WriteFile(s.credentialsFile(key), credential, 0600)
+	file := s.credentialsFile(key)
+	log.Info().Msgf("Saving credential to %s", file)
+	return os.WriteFile(file, credential, 0600)
 }
 
 func (s dirStore) credentialsFile(key string) string {

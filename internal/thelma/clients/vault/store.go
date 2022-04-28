@@ -63,6 +63,6 @@ func (s vaultStore) Exists(_ string) (bool, error) {
 }
 
 func (s vaultStore) Write(key string, credential []byte) error {
-	log.Info().Msgf("Saving new token to %s", s.tokenFile)
+	log.Info().Msgf("Saving new Vault token to %s", s.tokenFile)
 	return os.WriteFile(s.tokenFile, credential, 0600)
 }

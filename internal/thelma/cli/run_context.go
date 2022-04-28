@@ -18,6 +18,9 @@ type RunContext interface {
 	// SetOutput sets the output for this command (will be converted to YAML, JSON, dump, or raw based on user-supplied arguments, and printed to stdout)
 	SetOutput(data interface{})
 
+	// UnsetOutput unsets the output for this command
+	UnsetOutput()
+
 	// HasOutput returns true if output has been set for this command
 	HasOutput() bool
 
@@ -67,6 +70,11 @@ func (r *runContext) Parent() ThelmaCommand {
 func (r *runContext) SetOutput(data interface{}) {
 	r.output = data
 	r.hasOutput = true
+}
+
+func (r *runContext) UnsetOutput() {
+	r.output = nil
+	r.hasOutput = false
 }
 
 func (r *runContext) HasOutput() bool {

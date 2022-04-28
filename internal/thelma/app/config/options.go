@@ -1,12 +1,10 @@
 package config
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/app/env"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"path"
 )
-
-// defaultEnvPrefix prefix to use for configuration environment variable overrides.
-const defaultEnvPrefix = "THELMA_"
 
 // defaultConfigFile is the name of the default thelma config file.
 const defaultConfigFile = "config.yaml"
@@ -32,7 +30,7 @@ func DefaultOptions() Options {
 	return Options{
 		Overrides:  make(map[string]interface{}),
 		ConfigFile: path.Join(root.Default().Dir(), defaultConfigFile),
-		EnvPrefix:  defaultEnvPrefix,
+		EnvPrefix:  env.EnvPrefix,
 	}
 }
 

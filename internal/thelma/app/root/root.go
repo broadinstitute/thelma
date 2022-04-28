@@ -2,6 +2,7 @@ package root
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/env"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -18,8 +19,8 @@ import (
 // It should NOT depend on any other Thelma packages.
 //
 
-// Users can override Thelma root dir by setting this environment variable.
-const envVar = "THELMA_ROOT"
+// Users can override Thelma root dir by setting this environment variable ("THELMA_ROOT").
+const envVarSuffix = "ROOT"
 
 // Name of the directory inside user's home directory
 const dirName = ".thelma"
@@ -57,7 +58,7 @@ func New(dir string) Root {
 // * Else, /tmp/.thelma.<pid> (worst-case fallback option in weird environments)
 // Note that this function identifies the root directory path, but does NOT create the root directory; it may or may not exist.
 func DefaultDir() string {
-	dir, exists := os.LookupEnv(envVar)
+	dir, exists := os.LookupEnv(env.WithEnvPrefix(envVarSuffix))
 	if exists {
 		return dir
 	}

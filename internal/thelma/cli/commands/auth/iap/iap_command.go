@@ -1,9 +1,11 @@
 package iap
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +30,17 @@ func (cmd *iapCommand) PreRun(app app.ThelmaApp, _ cli.RunContext) error {
 }
 
 func (cmd *iapCommand) Run(thelmaApp app.ThelmaApp, rc cli.RunContext) error {
-	return fmt.Errorf("TODO")
+	vaultClient, err := vault.NewClient(thelmaApp.Config(), thelmaApp.Credentials())
+	if err != nil {
+		return err
+	}
+	idToken, err := iap.GetIDToken(thelmaApp.Config(), thelmaApp.Credentials(), vaultClient)
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("IAP identity token is valid")
+	rc.SetOutput(idToken)
+	return nil
 }
 
 func (cmd *iapCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
