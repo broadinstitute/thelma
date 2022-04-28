@@ -13,11 +13,11 @@ import (
 
 // TokenOptions configuration options for a TokenProvider
 type TokenOptions struct {
-	// EnvVar (optional) environment variable to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "iap-token" -> "IAP_TOKEN")
+	// EnvVar (optional) environment variable to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "vault-token" -> "VAULT_TOKEN")
 	EnvVar string
 	// PromptEnabled (optional) if true, user will be prompted to manually enter a token value if one does not exist in credential store.
 	PromptEnabled bool
-	// PromptMessage (optional) Override default prompt message ("Please enter IAP_TOKEN: ")
+	// PromptMessage (optional) Override default prompt message ("Please enter VAULT_TOKEN: ")
 	PromptMessage string
 	// ValidateFn (optional) Optional function for validating a token. If supplied, stored credentials will be validated before being returned to caller
 	ValidateFn func([]byte) error

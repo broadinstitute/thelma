@@ -3,7 +3,7 @@ package credentials
 import "github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 
 type Credentials interface {
-	// NewToken returns a new TokenProvider for the given key
+	// NewTokenProvider returns a new TokenProvider for the given key
 	NewTokenProvider(key string, opts ...TokenOption) TokenProvider
 }
 
