@@ -263,7 +263,7 @@ func obtainAuthorizationCode(redirectPort int, oauthConfig *oauth2.Config) (stri
 		} else {
 			log.Debug().Msgf("Received redirect with authorization code")
 			if request.URL.Query().Get("state") != state {
-				log.Debug().Msgf("Redirect state incorrect, rejecting", request.URL.String())
+				log.Debug().Msgf("Redirect state incorrect, rejecting (%s)", request.URL.String())
 				writer.WriteHeader(http.StatusConflict)
 				_, _ = fmt.Fprintf(writer, "%d - bad state", http.StatusConflict)
 			} else {
