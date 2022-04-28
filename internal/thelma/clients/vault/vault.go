@@ -5,9 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/rs/zerolog/log"
 	"os"
-	"strings"
 )
 
 const configKey = "vault"
@@ -104,76 +102,30 @@ func newUnauthenticatedClient(cfg vaultConfig) (*vaultapi.Client, error) {
 // login performs a login API request (the equivalent of "vault login -method=github" on the command-line)
 // https://www.vaultproject.io/api-docs/auth/github#login
 func login(client *vaultapi.Client, githubToken string) (string, error) {
-	requestBody := map[string]interface{}{
-		"token": githubToken,
+	_client, err := client.Clone()
+	if err != nil {
+		return "", err
 	}
 
-	var responseBody struct {
-		Auth struct {
-			ClientToken string `json:"client_token"`
-		} `json:"auth"`
-	}
-
-	if err := rawPostRequest(client, "/v1/auth/github/login", requestBody, &responseBody); err != nil {
+	secret, err := _client.Logical().Write("/auth/github/login", map[string]interface{}{"token": githubToken})
+	if err != nil {
 		return "", fmt.Errorf("login request failed: %v", err)
 	}
-
-	if responseBody.Auth.ClientToken == "" {
-		return "", fmt.Errorf("client token missing from response body")
-	}
-
-	return responseBody.Auth.ClientToken, nil
+	return secret.Auth.ClientToken, nil
 }
 
 // tokenLookup performs a token lookup API request (the equivalent of "vault token lookup" on the command-line)
 // https://www.vaultproject.io/api-docs/auth/token#lookup-a-token
 func tokenLookup(client *vaultapi.Client, vaultToken string) error {
-	requestBody := map[string]interface{}{
-		"token": vaultToken,
-	}
-
-	// clone client so we can safely set vault token without mutating
 	_client, err := client.Clone()
 	if err != nil {
 		return err
 	}
+
 	_client.SetToken(vaultToken)
 
 	// we don't actually care about any data in the response, just that the token lookup succeeds
-	var responseBody struct{}
+	_, err = _client.Logical().Write("/auth/token/lookup", nil)
 
-	return rawPostRequest(_client, "/v1/auth/token/lookup", requestBody, &responseBody)
-}
-
-func rawPostRequest(client *vaultapi.Client, path string, requestBody map[string]interface{}, responseBody interface{}) error {
-	log.Debug().Msgf("vault client: POST %s", path)
-
-	var err error
-
-	req := client.NewRequest("POST", path)
-
-	if err = req.SetJSONBody(requestBody); err != nil {
-		return fmt.Errorf("error preparing request: %v", err)
-	}
-
-	resp, err := client.RawRequest(req)
-	if err != nil {
-		return fmt.Errorf("error sending request: %v", err)
-	}
-
-	log.Debug().Msgf("vault client: %s", resp.Status)
-
-	if !strings.HasPrefix(resp.Status, "2") {
-		return fmt.Errorf("non-2xx response to POST request: %d", resp.StatusCode)
-	}
-
-	if err = resp.DecodeJSON(responseBody); err != nil {
-		return fmt.Errorf("error reading response body: %v", err)
-	}
-
-	if err = resp.Body.Close(); err != nil {
-		return fmt.Errorf("error closing response body: %v", err)
-	}
-
-	return nil
+	return err
 }
