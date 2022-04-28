@@ -2,7 +2,6 @@ package vault
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
@@ -21,18 +20,6 @@ func NewVaultTokenStore() stores.Store {
 		return stores.NewNoopStore()
 	}
 	return newVaultTokenStore(dir)
-}
-
-// BackupToken renames ~/.vault-token to ~/vault-token.bak
-func BackupToken() error {
-	dir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("could not identify user home directory: %v", err)
-	}
-	tokenFile := path.Join(dir, vaultTokenFile)
-	backup := fmt.Sprintf("%s.bak", tokenFile)
-	log.Info().Msgf("Renaming %s to %s", tokenFile, backup)
-	return os.Rename(tokenFile, backup)
 }
 
 // package-private constructor for testing

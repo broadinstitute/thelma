@@ -1,2 +1,2 @@
-// Package clients contains clients for APIs that Thelma consumes, including for GCP and K8s
+// Package clients contains convenience constructors API clients that Thelma uses
 package clients

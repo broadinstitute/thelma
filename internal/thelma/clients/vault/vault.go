@@ -18,30 +18,35 @@ type vaultConfig struct {
 
 // NewClient returns a new authenticated vault client
 func NewClient(thelmaConfig config.Config, creds credentials.Credentials) (*vaultapi.Client, error) {
-	vaultCfg, err := loadConfig(thelmaConfig)
+	client, err := newUnauthenticatedClient(thelmaConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := newUnauthenticatedClient(vaultCfg)
+	provider := buildVaultTokenProvider(client, creds)
+	tokenValue, err := provider.Get()
 	if err != nil {
 		return nil, err
 	}
-
-	githubToken := newGitHubToken(client, creds)
-	vaultToken := newVaultToken(client, creds, githubToken)
-	tokenVal, err := vaultToken.Get()
-	if err != nil {
-		return nil, err
-	}
-
-	client.SetToken(string(tokenVal))
+	client.SetToken(string(tokenValue))
 	return client, nil
 }
 
-func newVaultToken(unauthedClient *vaultapi.Client, creds credentials.Credentials, githubToken credentials.Token) credentials.Token {
-	return creds.NewToken(vaultTokenCredentialKey, func(options *credentials.TokenOptions) {
-		// Use special credential store that stores token at ~/.vault-token instead ~/.thelma/credentials
+// TokenProvider returns a new credentials.TokenProvider that provides a Vault token
+func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials) (credentials.TokenProvider, error) {
+	client, err := newUnauthenticatedClient(thelmaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildVaultTokenProvider(client, creds), nil
+}
+
+func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.Credentials) credentials.TokenProvider {
+	githubToken := buildGithubTokenProvider(unauthedClient, creds)
+
+	return creds.NewTokenProvider(vaultTokenCredentialKey, func(options *credentials.TokenOptions) {
+		// Use custom credential store that stores token at ~/.vault-token instead ~/.thelma/credentials
 		options.CredentialStore = NewVaultTokenStore()
 
 		options.IssueFn = func() ([]byte, error) {
@@ -63,8 +68,8 @@ func newVaultToken(unauthedClient *vaultapi.Client, creds credentials.Credential
 	})
 }
 
-func newGitHubToken(unauthedClient *vaultapi.Client, creds credentials.Credentials) credentials.Token {
-	return creds.NewToken(githubTokenCredentialKey, func(options *credentials.TokenOptions) {
+func buildGithubTokenProvider(unauthedClient *vaultapi.Client, creds credentials.Credentials) credentials.TokenProvider {
+	return creds.NewTokenProvider(githubTokenCredentialKey, func(options *credentials.TokenOptions) {
 		options.PromptEnabled = true
 
 		options.PromptMessage = `
@@ -81,6 +86,18 @@ Enter Personal Access Token: `
 	})
 }
 
+// newUnauthenticatedClient returns a new unauthenticated vault client
+func newUnauthenticatedClient(thelmaConfig config.Config) (*vaultapi.Client, error) {
+	vaultCfg, err := loadConfig(thelmaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clientCfg := vaultapi.DefaultConfig() // modify for more granular configuration
+	clientCfg.Address = vaultCfg.Addr
+	return vaultapi.NewClient(clientCfg)
+}
+
 func loadConfig(thelmaConfig config.Config) (vaultConfig, error) {
 	var cfg vaultConfig
 	if err := thelmaConfig.Unmarshal(configKey, &cfg); err != nil {
@@ -90,13 +107,6 @@ func loadConfig(thelmaConfig config.Config) (vaultConfig, error) {
 		cfg.Addr = os.Getenv("VAULT_ADDR")
 	}
 	return cfg, nil
-}
-
-// newUnauthenticatedClient returns a new unauthenticated vault client
-func newUnauthenticatedClient(cfg vaultConfig) (*vaultapi.Client, error) {
-	clientCfg := vaultapi.DefaultConfig() // modify for more granular configuration
-	clientCfg.Address = cfg.Addr
-	return vaultapi.NewClient(clientCfg)
 }
 
 // login performs a login API request (the equivalent of "vault login -method=github" on the command-line)

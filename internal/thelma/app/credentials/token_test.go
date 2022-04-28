@@ -10,6 +10,8 @@ import (
 )
 
 func Test_Token_Get(t *testing.T) {
+	fakeEnvVar := fmt.Sprintf("FAKE_TOKEN_ENV_VAR_%d", os.Getpid())
+
 	testCases := []struct {
 		name        string
 		key         string
@@ -22,6 +24,18 @@ func Test_Token_Get(t *testing.T) {
 			name:      "with defaults: should return error if token does not exist",
 			key:       "my-token",
 			expectErr: "could not issue new MY_TOKEN",
+		},
+		{
+			name: "with defaults: should return value in environment variable if defined",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.EnvVar = fakeEnvVar
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				err := os.Setenv(fakeEnvVar, "token-from-env")
+				require.NoError(t, err)
+			},
+			expectValue: "token-from-env",
 		},
 		{
 			name: "with defaults: should return token value if it exists",
@@ -123,7 +137,7 @@ func Test_Token_Get(t *testing.T) {
 			if tc.option != nil {
 				options = append(options, tc.option)
 			}
-			tok := creds.NewToken(tc.key, options...)
+			tok := creds.NewTokenProvider(tc.key, options...)
 			val, err := tok.Get()
 
 			if tc.expectErr != "" {
@@ -132,7 +146,62 @@ func Test_Token_Get(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, []byte(tc.expectValue), val)
+			assert.Equal(t, tc.expectValue, string(val))
+		})
+	}
+}
+
+func Test_Token_Reissue(t *testing.T) {
+	testCases := []struct {
+		name        string
+		key         string
+		option      TokenOption
+		setup       func(t *testing.T, tmpDir string)
+		expectValue string
+		expectErr   string
+	}{
+		{
+			name: "with issueFn: should always issue new token even if valid token exists in credential store",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.IssueFn = func() ([]byte, error) {
+					return []byte("new-token-value"), nil
+				}
+				options.ValidateFn = func(_ []byte) error {
+					// both old and new tokens are valid
+					return nil
+				}
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("old-token-value"), 0600))
+			},
+			expectValue: "new-token-value",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			storeDir := t.TempDir()
+			if tc.setup != nil {
+				tc.setup(t, storeDir)
+			}
+			creds, err := New(storeDir)
+			require.NoError(t, err)
+
+			var options []TokenOption
+			if tc.option != nil {
+				options = append(options, tc.option)
+			}
+			tok := creds.NewTokenProvider(tc.key, options...)
+			val, err := tok.Reissue()
+
+			if tc.expectErr != "" {
+				require.Error(t, err)
+				assert.Regexp(t, tc.expectErr, err.Error())
+				return
+			}
+
+			assert.Equal(t, tc.expectValue, string(val))
 		})
 	}
 }

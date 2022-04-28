@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// TokenOptions configuration options for a Token
+// TokenOptions configuration options for a TokenProvider
 type TokenOptions struct {
 	// EnvVar (optional) environment variable to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "iap-token" -> "IAP_TOKEN")
 	EnvVar string
@@ -30,8 +30,8 @@ type TokenOptions struct {
 // TokenOption function for configuring a token's Options
 type TokenOption func(*TokenOptions)
 
-// Token represents a token used for authentication, possibly stored on the local filesystem
-type Token interface {
+// TokenProvider manages a token used for authentication, possibly stored on the local filesystem
+type TokenProvider interface {
 	// Get returns the value of the token. Based on the token's options, it will attempt to resolve a value for
 	// the token by:
 	// (1) Looking it up in environment variables
@@ -40,10 +40,13 @@ type Token interface {
 	// (4) Prompting user for value (if enabled)
 	// If none of the token resolution options succeed an error is returned.
 	Get() ([]byte, error)
+	// Reissue forces re-issue of the token, without checking environment variables or for a valid existing
+	// credential in the store
+	Reissue() ([]byte, error)
 }
 
-// NewToken returns a new Token
-func (c credentials) NewToken(key string, options ...TokenOption) Token {
+// NewTokenProvider returns a new TokenProvider
+func (c credentials) NewTokenProvider(key string, options ...TokenOption) TokenProvider {
 	var opts TokenOptions
 	for _, option := range options {
 		option(&opts)
@@ -59,7 +62,7 @@ func (c credentials) NewToken(key string, options ...TokenOption) Token {
 	}
 
 	if opts.CredentialStore == nil {
-		opts.CredentialStore = c.store
+		opts.CredentialStore = c.defaultStore
 	}
 
 	return token{
@@ -87,6 +90,10 @@ func (t token) Get() ([]byte, error) {
 		return value, nil
 	}
 
+	return t.getNewToken()
+}
+
+func (t token) Reissue() ([]byte, error) {
 	return t.getNewToken()
 }
 
@@ -132,7 +139,7 @@ func (t token) readFromStore() ([]byte, error) {
 // getNewToken will attempt to get a new token value by either
 // (1) invoking the issueFn callback
 // (2) prompting the user for input
-// If a new value is successfully obtained (and validated), the user will
+// If a new value is successfully obtained (and validated), token is stored and return to user
 func (t token) getNewToken() ([]byte, error) {
 	var value []byte
 	var err error

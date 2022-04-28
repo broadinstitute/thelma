@@ -3,12 +3,12 @@ package credentials
 import "github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 
 type Credentials interface {
-	// NewToken returns a new Token for the given key
-	NewToken(key string, opts ...TokenOption) Token
+	// NewToken returns a new TokenProvider for the given key
+	NewTokenProvider(key string, opts ...TokenOption) TokenProvider
 }
 
 type credentials struct {
-	store stores.Store
+	defaultStore stores.Store
 }
 
 func New(credentialsDir string) (Credentials, error) {
@@ -17,6 +17,6 @@ func New(credentialsDir string) (Credentials, error) {
 		return nil, err
 	}
 	return credentials{
-		store: s,
+		defaultStore: s,
 	}, nil
 }

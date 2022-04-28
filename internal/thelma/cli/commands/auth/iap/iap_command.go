@@ -3,6 +3,7 @@ package iap
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/rs/zerolog/log"
@@ -34,12 +35,18 @@ func (cmd *iapCommand) Run(thelmaApp app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	idToken, err := iap.GetIDToken(thelmaApp.Config(), thelmaApp.Credentials(), vaultClient)
+
+	tokenProvider, err := iap.TokenProvider(thelmaApp.Config(), thelmaApp.Credentials(), vaultClient)
 	if err != nil {
 		return err
 	}
+
+	if err := auth.ForProvider(tokenProvider, rc); err != nil {
+		return err
+	}
+
 	log.Info().Msgf("IAP identity token is valid")
-	rc.SetOutput(idToken)
+
 	return nil
 }
 

@@ -56,17 +56,15 @@ type persistentToken struct {
 	Expiry       time.Time `json:"expiry"`
 }
 
-// GetIDToken returns a valid IAP identity token, suitable for authenticating to DevOps services protected by IAP in the
-// dsp-tools-k8s project
-func GetIDToken(thelmaConfig config.Config, creds credentials.Credentials, vaultClient *vaultapi.Client) (string, error) {
+func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, vaultClient *vaultapi.Client) (credentials.TokenProvider, error) {
 	cfg, err := loadConfig(thelmaConfig)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	oauthCreds, err := readOAuthClientCredentialsFromVault(vaultClient, cfg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	oauthConfig := &oauth2.Config{
@@ -76,7 +74,7 @@ func GetIDToken(thelmaConfig config.Config, creds credentials.Credentials, vault
 		Endpoint:     google.Endpoint,
 	}
 
-	token := creds.NewToken(credentialsKey, func(options *credentials.TokenOptions) {
+	provider := creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
 		options.IssueFn = func() ([]byte, error) {
 			token, err := issueNewToken(oauthConfig, oauthCreds)
 			if err != nil {
@@ -93,19 +91,13 @@ func GetIDToken(thelmaConfig config.Config, creds credentials.Credentials, vault
 		}
 	})
 
-	content, err := token.Get()
-	if err != nil {
-		return "", err
-	}
-	oauthToken, err := unmarshalPersistentToken(content)
-	if err != nil {
-		return "", err
-	}
-	return oauthToken.Extra("id_token").(string), nil
+	return &tokenProvider{
+		provider,
+	}, nil
 }
 
 func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapConfig) (*oauthCredentials, error) {
-	log.Debug().Msgf("Loading OAuth client credentials from %s", cfg.OAuthCredentialsVaultPath)
+	log.Debug().Msgf("Loading OAuth client credentials from Vault (%s)", cfg.OAuthCredentialsVaultPath)
 	secret, err := vaultClient.Logical().Read(cfg.OAuthCredentialsVaultPath)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving OAuth client credentials from Vault: %v", err)
