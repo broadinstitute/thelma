@@ -1,3 +1,4 @@
+// Package env includes utilities for interacting with environment variables
 package env
 
 import "fmt"
