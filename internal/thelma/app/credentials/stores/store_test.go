@@ -43,5 +43,5 @@ func Test_NoopStore(t *testing.T) {
 
 	credential, err := s.Read("my-key")
 	require.NoError(t, err)
-	assert.Equal(t, "", string(credential))
+	assert.Empty(t, credential)
 }

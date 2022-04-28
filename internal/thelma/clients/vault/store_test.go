@@ -23,7 +23,7 @@ func Test_VaultTokenStore(t *testing.T) {
 	require.FileExists(t, path.Join(homeDir, ".vault-token"))
 	content, err := os.ReadFile(path.Join(homeDir, ".vault-token"))
 	require.NoError(t, err)
-	assert.Equal(t, fakeToken, string(content))
+	assert.Equal(t, string(fakeToken), string(content))
 
 	exists, err = s.Exists("ignored")
 	require.NoError(t, err)
@@ -31,5 +31,5 @@ func Test_VaultTokenStore(t *testing.T) {
 
 	credential, err := s.Read("my-key")
 	require.NoError(t, err)
-	assert.Equal(t, fakeToken, credential)
+	assert.Equal(t, string(fakeToken), string(credential))
 }
