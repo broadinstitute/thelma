@@ -2,12 +2,20 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"github.com/mattn/go-isatty"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+// Interactive returns true if Thelma is running in an interactive shell, false otherwise. Useful for detecting
+// if Thelma is running in CI pipelines or on a dev laptop
+func Interactive() bool {
+	return isatty.IsTerminal(os.Stdout.Fd())
+}
 
 // ExpandAndVerifyExists Expand relative path to absolute, and make sure it exists.
 // This is necessary for many arguments because Helmfile assumes paths
@@ -45,4 +53,16 @@ func QuoteJoin(strs []string) string {
 		quoted = append(quoted, fmt.Sprintf("%q", s))
 	}
 	return strings.Join(quoted, ", ")
+}
+
+// FileExists returns true if the file exists, false otherwise, and an error if an error occurs
+func FileExists(file string) (bool, error) {
+	_, err := os.Stat(file)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }

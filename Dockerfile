@@ -1,7 +1,7 @@
 #
 # Compile Go tools and install to /tools/bin
 #
-ARG GO_IMAGE_VERSION='1.16'
+ARG GO_IMAGE_VERSION='1.17'
 ARG ALPINE_IMAGE_VERSION='3.14'
 
 FROM golang:${GO_IMAGE_VERSION}-bullseye as build

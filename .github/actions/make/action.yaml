@@ -23,7 +23,7 @@ inputs:
     required: false
 runs:
   using: 'docker'
-  image: golang:1.16-bullseye # alpine3.14
+  image: golang:1.17-bullseye
   args:
     - make
     - ${{ inputs.target }}

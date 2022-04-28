@@ -23,23 +23,28 @@ type RunContext interface {
 
 	// Output returns output for this command, or nil if none has been set
 	Output() interface{}
+
+	// CommandName returns the name components for this command. Eg. ["render"] for `thelma render`, ["bee", "list"] for `thelma bee list`
+	CommandName() []string
 }
 
-func newRunContext(args []string) *runContext {
+func newRunContext(key commandKey, args []string) *runContext {
 	return &runContext{
-		args: args,
+		commandKey: key,
+		args:       args,
 	}
 }
 
 // runContext implements the RunContext interface (see api package)
 type runContext struct {
+	commandKey             commandKey
 	args                   []string
 	currentlyExecutingNode *node
 	output                 interface{}
 	hasOutput              bool
 }
 
-// sets the currently
+// sets the currently executing node
 func (r *runContext) setCurrentExecutingNode(node *node) {
 	r.currentlyExecutingNode = node
 }
@@ -70,4 +75,8 @@ func (r *runContext) HasOutput() bool {
 
 func (r *runContext) Output() interface{} {
 	return r.output
+}
+
+func (r *runContext) CommandName() []string {
+	return r.commandKey.nameComponents
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -188,7 +189,7 @@ func Test_newLogger(t *testing.T) {
 			thelmaConfig, err := config.NewTestConfig(settings)
 			require.NoError(t, err)
 
-			cfg, err := loadConfig(thelmaConfig)
+			cfg, err := loadConfig(thelmaConfig, root.New(t.TempDir()))
 			require.NoError(t, err)
 
 			fakeConsoleWriter := &bytes.Buffer{}

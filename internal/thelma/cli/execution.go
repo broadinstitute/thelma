@@ -30,7 +30,7 @@ func newExecution(options *executionOptions, leafNode *node, builder builder.The
 		options:       options,
 		leafNode:      leafNode,
 		app:           _app,
-		runContext:    newRunContext(args),
+		runContext:    newRunContext(leafNode.key, args),
 		errorRecorder: newErrorRecorder(leafNode.key),
 	}, nil
 }
