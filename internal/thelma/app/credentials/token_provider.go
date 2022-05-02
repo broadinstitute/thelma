@@ -21,6 +21,8 @@ type TokenOptions struct {
 	PromptMessage string
 	// ValidateFn (optional) Optional function for validating a token. If supplied, stored credentials will be validated before being returned to caller
 	ValidateFn func([]byte) error
+	// RefreshFn (optional) Optional function for refreshing a token. Called if a stored credential turns out to be invalid. If an error is returned, IssueFn will be called to issue a new credential.
+	RefreshFn func([]byte) ([]byte, error)
 	// IssueFn (optional) Optional function for issuing a new token. If supplied, prompt options are ignored.
 	IssueFn func() ([]byte, error)
 	// CredentialStore (optional) Use a custom credential store instead of the default store (~/.thelma/credentials/$key)
@@ -109,15 +111,17 @@ func (t token) readFromEnv() []byte {
 	return []byte(os.Getenv(t.options.EnvVar))
 }
 
-// readFromStore looks up a token value in the credential store. If no value exists, or the token value
-// exists but the token's ValidateFn indicates the token value is no longer valid, the empty string is returned
+// readFromStore looks up a token value in the credential store.
+// If no value exists, the empty string is returned.
+// If a value for the token exists it is not valid, readFromStore will attempt to refresh the token,
+// returning the empty string if it can't be refreshed.
 func (t token) readFromStore() ([]byte, error) {
 	exists, err := t.options.CredentialStore.Exists(t.key)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, err
+		return nil, nil
 	}
 
 	storedValue, err := t.options.CredentialStore.Read(t.key)
@@ -125,15 +129,51 @@ func (t token) readFromStore() ([]byte, error) {
 		return nil, err
 	}
 
-	if t.options.ValidateFn != nil {
-		err := t.options.ValidateFn(storedValue)
-		if err != nil {
-			log.Debug().Msgf("found value for %s in credential store, but validation function failed: %v", t.options.EnvVar, err)
-			return nil, nil
-		}
+	err = t.validateToken(storedValue)
+	if err != nil {
+		log.Debug().Msgf("found value for %s in credential store, but validation function failed: %v", t.options.EnvVar, err)
+		return t.refreshToken(storedValue)
 	}
 
 	return storedValue, nil
+}
+
+// refreshToken - return nil, nil if the token could not be refreshed or refresh failed
+// returns an error if an exception (eg. error writing to credential store) occurs
+// returns a non-nil value and no error if the token was successfully refreshed
+func (t token) refreshToken(value []byte) ([]byte, error) {
+	if t.options.RefreshFn == nil {
+		return nil, nil
+	}
+
+	log.Debug().Msgf("attempting to refresh token for %s", t.options.EnvVar)
+	newValue, err := t.options.RefreshFn(value)
+	if err != nil {
+		log.Debug().Msgf("failed to refresh token %s: %v", t.options.EnvVar, err)
+		return nil, nil
+	}
+
+	if err = t.validateToken(newValue); err != nil {
+		// if this happens, there's likely a bug in the refresh function, so return an error
+		return nil, fmt.Errorf("refresh for %s returned invalid token: %v", t.options.EnvVar, err)
+	}
+
+	log.Debug().Msgf("writing refreshed token %s to credential store", t.options.EnvVar)
+
+	if err = t.options.CredentialStore.Write(t.key, newValue); err != nil {
+		return nil, fmt.Errorf("error writing refreshed token %s to credential store: %v", t.options.EnvVar, err)
+	}
+
+	return newValue, nil
+}
+
+func (t token) validateToken(value []byte) error {
+	if t.options.ValidateFn == nil {
+		// no validation function provided, assume value is valid
+		return nil
+	}
+
+	return t.options.ValidateFn(value)
 }
 
 // getNewToken will attempt to get a new token value by either
@@ -157,11 +197,9 @@ func (t token) getNewToken() ([]byte, error) {
 		return value, err
 	}
 
-	if t.options.ValidateFn != nil {
-		err := t.options.ValidateFn(value)
-		if err != nil {
-			return nil, fmt.Errorf("new credential for %s is invalid: %v", t.options.EnvVar, err)
-		}
+	err = t.validateToken(value)
+	if err != nil {
+		return nil, fmt.Errorf("new credential for %s is invalid: %v", t.options.EnvVar, err)
 	}
 
 	if err := t.options.CredentialStore.Write(t.key, value); err != nil {

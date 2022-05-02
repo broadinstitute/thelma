@@ -92,7 +92,7 @@ func Test_Scratch(t *testing.T) {
 					thelmaSettings[k] = v
 				}
 			}
-			thelmaConfig, err := config.NewTestConfig(thelmaSettings)
+			thelmaConfig, err := config.NewTestConfig(t, thelmaSettings)
 			if !assert.NoError(t, err) {
 				return
 			}

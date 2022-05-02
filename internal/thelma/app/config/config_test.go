@@ -178,7 +178,7 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 
 			shadowEnv(t, envPrefix, tc.env)
 
-			cfg, err := Load(func(options Options) Options {
+			cfg, err := Load(func(options *Options) {
 				options.ConfigFile = tc.cfgFile
 				options.EnvPrefix = envPrefix
 
@@ -189,7 +189,6 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 					overrides[k] = v
 				}
 				options.Overrides = overrides
-				return options
 			})
 
 			if !assert.NoError(t, err) {
@@ -223,14 +222,13 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 func TestConfig_Home(t *testing.T) {
 	fakeHome := "relative/path/on/filesystem"
 
-	cfg, err := Load(func(options Options) Options {
+	cfg, err := Load(func(options *Options) {
 		// don't use default config file or env prefix, to make sure we don't pick up random values from the environment
 		options.ConfigFile = "do/not/use/default/config/file"
 		options.EnvPrefix = "do/not/use/default/prefix"
 		options.Overrides = map[string]interface{}{
 			"home": fakeHome,
 		}
-		return options
 	})
 
 	if !assert.NoError(t, err) {
@@ -248,12 +246,11 @@ func TestConfig_Dump(t *testing.T) {
 		"home": "does/not/exist",
 	}
 
-	cfg, err := Load(func(options Options) Options {
+	cfg, err := Load(func(options *Options) {
 		// don't use default config file or env prefix, to make sure we don't pick up random values from the environment
 		options.ConfigFile = "do/not/use/default/config/file"
 		options.EnvPrefix = "do-not-use-default-prefix"
 		options.Overrides = expected
-		return options
 	})
 
 	if !assert.NoError(t, err) {

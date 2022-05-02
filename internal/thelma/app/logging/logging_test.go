@@ -186,7 +186,7 @@ func Test_newLogger(t *testing.T) {
 				}
 			}
 
-			thelmaConfig, err := config.NewTestConfig(settings)
+			thelmaConfig, err := config.NewTestConfig(t, settings)
 			require.NoError(t, err)
 
 			cfg, err := loadConfig(thelmaConfig, root.New(t.TempDir()))

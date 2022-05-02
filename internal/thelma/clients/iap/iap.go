@@ -8,15 +8,16 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -31,6 +32,17 @@ import (
 
 const configKey = "iap"
 const credentialsKey = "iap-oauth-token"
+
+// URL to request in order to validate IAP credentials are working
+// Note that Sherlock doesn't actually have a thelma-iap-check endpoint so this will 404, but we don't care.
+// We just care that we don't get the iap response header back in the response
+const tokenValidationURL = "https://sherlock.dsp-devops.broadinstitute.org/thelma-iap-check"
+
+// how long to wait before timing out token validation request
+const tokenValidationRequestTimeout = 15 * time.Second
+
+// Header returned by IAP indicating it intercepted the request and generated the response
+const tokenValidationIapResponseHeader = "x-goog-iap-generated-response"
 
 type iapConfig struct {
 	OAuthCredentialsVaultPath string `default:"secret/dsp/identity-aware-proxy/dsp-tools-k8s/dsp-tools-k8s-iap-oauth_client-credentials.json"`
@@ -56,7 +68,7 @@ type persistentToken struct {
 	Expiry       time.Time `json:"expiry"`
 }
 
-func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, vaultClient *vaultapi.Client) (credentials.TokenProvider, error) {
+func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, vaultClient *vaultapi.Client, runner shell.Runner) (credentials.TokenProvider, error) {
 	cfg, err := loadConfig(thelmaConfig)
 	if err != nil {
 		return nil, err
@@ -76,7 +88,18 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 
 	provider := creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
 		options.IssueFn = func() ([]byte, error) {
-			token, err := issueNewToken(oauthConfig, oauthCreds)
+			token, err := issueNewToken(oauthConfig, oauthCreds, runner)
+			if err != nil {
+				return nil, err
+			}
+			return marshalPersistentToken(token)
+		}
+		options.RefreshFn = func(data []byte) ([]byte, error) {
+			token, err := unmarshalPersistentToken(data)
+			if err != nil {
+				return nil, err
+			}
+			token, err = refreshToken(token, oauthConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -87,7 +110,7 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 			if err != nil {
 				return err
 			}
-			return validateToken(token, oauthConfig)
+			return validateToken(token)
 		}
 	})
 
@@ -125,14 +148,13 @@ func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapCo
 	return &oauthCreds, nil
 }
 
-// issue new token
-func issueNewToken(oauthConfig *oauth2.Config, oauthCreds *oauthCredentials) (*oauth2.Token, error) {
+func issueNewToken(oauthConfig *oauth2.Config, oauthCreds *oauthCredentials, runner shell.Runner) (*oauth2.Token, error) {
 	redirectURI, redirectPort, err := findRedirectURI(oauthCreds)
 	if err != nil {
 		return nil, err
 	}
 	oauthConfig.RedirectURL = redirectURI
-	authorizationCode, err := obtainAuthorizationCode(redirectPort, oauthConfig)
+	authorizationCode, err := obtainAuthorizationCode(redirectPort, oauthConfig, runner)
 	if err != nil {
 		return nil, err
 	}
@@ -146,19 +168,56 @@ func issueNewToken(oauthConfig *oauth2.Config, oauthCreds *oauthCredentials) (*o
 	return token, nil
 }
 
-// validate and possibly refresh token
-func validateToken(token *oauth2.Token, oauthConfig *oauth2.Config) error {
-	if idToken := token.Extra("id_token").(string); idToken == "" {
-		return fmt.Errorf("token successfully read but lacked ID token")
-	}
+func refreshToken(token *oauth2.Token, oauthConfig *oauth2.Config) (*oauth2.Token, error) {
 	tokenSource := oauthConfig.TokenSource(context.Background(), token)
 	token, err := tokenSource.Token()
 	if err != nil {
-		return fmt.Errorf("error validating token: %v", err)
+		return nil, fmt.Errorf("error refreshing token: %v", err)
 	}
-	if idToken := token.Extra("id_token").(string); idToken == "" {
-		return fmt.Errorf("token lacked the ID token (unexpected behavior from oauth2 library or Google backend?)")
+	return token, nil
+}
+
+func validateToken(token *oauth2.Token) error {
+	idToken := token.Extra("id_token").(string)
+	if idToken == "" {
+		return fmt.Errorf("token validation failed: id token is misssing")
 	}
+
+	// Build client
+	client := http.Client{
+		Timeout: tokenValidationRequestTimeout,
+		// Don't follow IAP redirects
+		// https://stackoverflow.com/questions/23297520/how-can-i-make-the-go-http-client-not-follow-redirects-automatically
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	// Build request
+	req, err := http.NewRequest(http.MethodGet, tokenValidationURL, nil)
+	if err != nil {
+		return fmt.Errorf("error constructing validation request: %v", err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", idToken))
+
+	// Make request
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error making validation request: %v", err)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading token validation response body: %v", err)
+	}
+	if err = resp.Body.Close(); err != nil {
+		return fmt.Errorf("error closing token validation response body: %v", err)
+	}
+
+	// Check for IAP header
+	if resp.Header.Get(tokenValidationIapResponseHeader) != "" {
+		return fmt.Errorf("token validation request was intercepted by IAP: %s (body: %q)", resp.Status, string(body))
+	}
+
 	return nil
 }
 
@@ -200,6 +259,7 @@ func loadConfig(thelmaConfig config.Config) (iapConfig, error) {
 
 func findRedirectURI(credentials *oauthCredentials) (string, int, error) {
 	var redirectURI string
+
 	// Source of truth for redirect URI can't be in code/config, it must be in the OAuth Credentials
 	// While we're at it might as well check that the URI port is open
 	for _, uri := range credentials.RedirectUris {
@@ -235,7 +295,7 @@ func findRedirectURI(credentials *oauthCredentials) (string, int, error) {
 	return redirectURI, redirectPort, nil
 }
 
-func obtainAuthorizationCode(redirectPort int, oauthConfig *oauth2.Config) (string, error) {
+func obtainAuthorizationCode(redirectPort int, oauthConfig *oauth2.Config, runner shell.Runner) (string, error) {
 	log.Debug().Msgf("Obtaining OAuth authorization code...")
 	stateBytes := make([]byte, 32)
 	_, err := rand.Read(stateBytes)
@@ -276,21 +336,24 @@ func obtainAuthorizationCode(redirectPort int, oauthConfig *oauth2.Config) (stri
 	log.Debug().Msgf("Redirect server available on port %d", redirectPort)
 	browserUrl := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	log.Debug().Msgf("Using browser URL: %s", browserUrl)
-	var openBrowserCmd *exec.Cmd
+	var openBrowserCmd shell.Command
 	switch runtime.GOOS {
 	case "darwin":
-		openBrowserCmd = exec.Command("open", browserUrl)
+		openBrowserCmd.Prog = "open"
+		openBrowserCmd.Args = []string{browserUrl}
 	case "windows":
-		openBrowserCmd = exec.Command("start", browserUrl)
+		openBrowserCmd.Prog = "start"
+		openBrowserCmd.Args = []string{browserUrl}
 	default:
 		// Has a ton of logic for how to handle Linux and other madness
-		openBrowserCmd = exec.Command("python3", "-m", "webbrowser", browserUrl)
+		openBrowserCmd.Prog = "python3"
+		openBrowserCmd.Args = []string{"-m", "webbrowser", browserUrl}
 	}
 
-	log.Debug().Msgf("Using %s to launch browser on %s", openBrowserCmd.Path, runtime.GOOS)
+	log.Debug().Msgf("Using %s to launch browser on %s", openBrowserCmd.Prog, runtime.GOOS)
 	log.Info().Msgf("Please visit the following URL in your web browser:\n\t%s", browserUrl)
 	// Could blow up so we just let it fail silently; make the user copy-paste
-	if err := openBrowserCmd.Run(); err != nil {
+	if err := runner.Run(openBrowserCmd); err != nil {
 		log.Debug().Msgf("Failed to open browser: %v", err)
 	}
 	for authorizationCode == "" {

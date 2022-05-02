@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"testing"
 )
 
 // delimiter used for configuration keys in koanf
@@ -45,33 +46,18 @@ type config struct {
 	home      string
 }
 
-// NewTestConfig is for use in unit tests.
-// It creates a new config object, applying the given settings.
+// NewTestConfig creates an empty config with optional settings, suitable for use unit tests.
 // By default it sets "home" to the OS temp dir, but this be overridden in the settings map.
 // It DOES NOT include any configuration from the environment or config files (~/.thelma/config.yaml)
-func NewTestConfig(settings map[string]interface{}) (Config, error) {
-	// global defaults here.
-	overrides := map[string]interface{}{
-		HomeKey: os.TempDir(),
-	}
-	// merge user-supplied settings with defaults
-	for k, v := range settings {
-		overrides[k] = v
-	}
-
-	return Load(func(options Options) Options {
-		options.ConfigFile = ""       // Disable config file loading
-		options.EnvPrefix = ""        // Disable env var loading
-		options.Overrides = overrides // Pass in user-supplied settings as overrides
-		return options
-	})
+func NewTestConfig(t *testing.T, settings map[string]interface{}) (Config, error) {
+	return Load(WithTestDefaults(t), WithOverrides(settings))
 }
 
 // Load Thelma configuration from file, environment, etc into a new Config
 func Load(opts ...Option) (Config, error) {
 	options := DefaultOptions()
-	for _, option := range opts {
-		options = option(options)
+	for _, opt := range opts {
+		opt(&options)
 	}
 
 	_koanf := koanf.New(keyDelimiter)
