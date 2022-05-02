@@ -13,6 +13,8 @@ import (
 	"testing"
 )
 
+const secretPrefix = "secret/"
+
 // NewFakeVaultServer returns a new fake vault server that can be used to fake vault secret lookups
 func NewFakeVaultServer(t *testing.T) *FakeVaultServer {
 	_state := &state{
@@ -23,7 +25,7 @@ func NewFakeVaultServer(t *testing.T) *FakeVaultServer {
 
 	mux.Handle("/v1/auth/github/login", toHttpHandler(_state.handleGithubLogin))
 	mux.Handle("/v1/auth/token/lookup", toHttpHandler(_state.handleTokenLookup))
-	mux.Handle("/v1/secret", toHttpHandler(_state.handleSecret))
+	mux.Handle("/v1/secret/", toHttpHandler(_state.handleSecret))
 	mux.Handle("/", toHttpHandler(_state.handleUnmatchedRequest))
 
 	server := httptest.NewTLSServer(mux)
@@ -68,6 +70,8 @@ func (s *FakeVaultServer) ExpectGithubLogin(githubToken string, vaultToken strin
 
 // SetSecret adds a secret to the fake server
 func (s *FakeVaultServer) SetSecret(path string, data map[string]interface{}) {
+	// remove secret/ prefix from key
+	path = strings.TrimPrefix(path, secretPrefix)
 	s.state.secrets[path] = data
 }
 
@@ -109,21 +113,27 @@ func (s *state) handleTokenLookup(_ *http.Request) (*vaultapi.Secret, error) {
 func (s *state) handleSecret(r *http.Request) (*vaultapi.Secret, error) {
 	secretPath := strings.TrimPrefix(r.URL.Path, "/v1/secret/")
 
-	if r.Method == http.MethodPost {
-		var secret vaultapi.Secret
-		if err := parseJsonRequestBody(r, &secret); err != nil {
+	if r.Method == http.MethodPost || r.Method == http.MethodPut {
+		var data map[string]interface{}
+		if err := parseJsonRequestBody(r, &data); err != nil {
 			return nil, err
 		}
-		s.secrets[secretPath] = secret.Data
-		return &secret, nil
+		log.Debug().Msgf("setting secret %s to %v", secretPath, data)
+		s.secrets[secretPath] = data
 
+		var secret vaultapi.Secret
+		secret.Data = data
+		return &secret, nil
 	}
 
 	if r.Method == http.MethodGet {
 		data, exists := s.secrets[secretPath]
 		if !exists {
+			log.Debug().Msgf("secret %s does not exist, returning 404", secretPath)
 			return nil, nil
 		}
+
+		log.Debug().Msgf("returning secret %s: %v", secretPath, data)
 
 		var secret vaultapi.Secret
 		secret.Data = data
