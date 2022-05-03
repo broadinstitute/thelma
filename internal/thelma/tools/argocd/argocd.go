@@ -373,14 +373,6 @@ func (a *argocd) diff(appName string, opts SyncOptions) (bool, error) {
 	return false, err
 }
 
-func (a *argocd) url() string {
-	proto := "https"
-	if !a.cfg.TLS {
-		proto = "http"
-	}
-	return fmt.Sprintf("%s://%s", proto, a.cfg.Host)
-}
-
 // run `argocd account get-user-info` and verify the output contains `loggedIn: true`
 func (a *argocd) ensureLoggedIn() error {
 	var output struct {
