@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -30,7 +29,7 @@ func (cmd *loginCommand) PreRun(_ app.ThelmaApp, _ cli.RunContext) error {
 }
 
 func (cmd *loginCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
-	iapToken, err := iap.GetToken(app.Config(), app.Credentials(), app.ShellRunner())
+	iapToken, err := app.Clients().IAPToken()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve IAP token: %v", err)
 	}

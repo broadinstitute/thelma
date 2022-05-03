@@ -7,6 +7,7 @@ import (
 )
 
 const helpMessage = `Tools for interacting with BEEs (Branch Engineering Environments)`
+const GeneratorArgoApp = "terra-bee-generator"
 
 type beeCommand struct{}
 
@@ -20,7 +21,7 @@ func (cmd *beeCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 }
 
-func (cmd *beeCommand) PreRun(app app.ThelmaApp, _ cli.RunContext) error {
+func (cmd *beeCommand) PreRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do yet
 	return nil
 }

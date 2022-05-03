@@ -1,11 +1,9 @@
 package sync
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/spf13/cobra"
@@ -45,14 +43,8 @@ func (cmd *syncCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (cmd *syncCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
-	// get IAP token
-	iapToken, err := iap.GetToken(app.Config(), app.Credentials(), app.ShellRunner())
-	if err != nil {
-		return fmt.Errorf("failed to retrieve IAP token: %v", err)
-	}
-
 	// build argo client
-	_argocd, err := argocd.New(app.Config(), app.ShellRunner(), iapToken)
+	_argocd, err := app.Clients().ArgoCD()
 	if err != nil {
 		return err
 	}
