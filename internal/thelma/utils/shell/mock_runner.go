@@ -81,7 +81,7 @@ func NewMockRunner(options MockOptions) *MockRunner {
 	return m
 }
 
-// Convenience function to build a shell.Command from a format string and arguments
+// CmdFromFmt Convenience function to build a shell.Command from a format string and arguments
 //
 // Eg. CmdFromFmt("HOME=%s FOO=BAR ls -al %s", "/tmp", "Documents")
 // ->
@@ -97,7 +97,7 @@ func CmdFromFmt(fmt string, args ...interface{}) Command {
 	return CmdFromArgs(tokens...)
 }
 
-// Convenience function to build a shell.Command from a list of arguments
+// CmdFromArgs Convenience function to build a shell.Command from a list of arguments
 //
 // Eg. CmdFromArgs("FOO=BAR", "ls", "-al", ".")
 // ->
@@ -137,12 +137,13 @@ func CmdFromArgs(args ...string) Command {
 }
 
 // Run Instead of executing the command, logs an info message and registers the call with testify mock
-func (m *MockRunner) Run(cmd Command) error {
-	return m.RunWith(cmd, RunOptions{})
-}
+func (m *MockRunner) Run(cmd Command, options ...RunOption) error {
+	// collate options
+	opts := defaultRunOptions()
+	for _, option := range options {
+		option(&opts)
+	}
 
-// Capture Instead of executing the command, log an info message and register the call with testify mock
-func (m *MockRunner) RunWith(cmd Command, opts RunOptions) error {
 	log.Info().Msgf("[MockRunner] Command: %q\n", cmd.PrettyFormat())
 
 	// Remove ignored attributes
@@ -164,7 +165,7 @@ func (m *MockRunner) RunWith(cmd Command, opts RunOptions) error {
 func (m *MockRunner) ExpectCmd(cmd Command) *Call {
 	cmd = m.applyIgnores(cmd)
 
-	mockCall := m.Mock.On("RunWith", cmd, mock.AnythingOfType("RunOptions"))
+	mockCall := m.Mock.On("Run", cmd, mock.AnythingOfType("RunOptions"))
 	callWrapper := &Call{
 		command: cmd,
 		Call:    mockCall,
