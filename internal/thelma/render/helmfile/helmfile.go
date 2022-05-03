@@ -272,9 +272,9 @@ func (r *ConfigRepo) runCmd(cmd shell.Command) error {
 	if r.stdout {
 		stdoutWriter = os.Stdout
 	}
-	return r.shellRunner.RunWith(cmd, shell.RunOptions{
-		LogLevel: &level,
-		Stdout:   stdoutWriter,
+	return r.shellRunner.Run(cmd, func(opts *shell.RunOptions) {
+		opts.LogLevel = level
+		opts.Stdout = stdoutWriter
 	})
 }
 

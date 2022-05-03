@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-// Decorates testify's Call struct with additional methods for simulating stdout / stderr output from a mocked command
+// Call decorates testify's Call struct with additional methods for simulating stdout / stderr output from a mocked command
 type Call struct {
 	mockStdout string
 	mockStderr string
@@ -14,12 +14,12 @@ type Call struct {
 	*mock.Call
 }
 
-// Configures the mock command to exit with a non-zero exit code
+// ExitsNonZero configures the mock command to exit with a non-zero exit code
 func (c *Call) ExitsNonZero() *Call {
 	return c.Exits(1)
 }
 
-// Configures the mock command to exit with the given exit status
+// Exits configures the mock command to exit with the given exit status
 func (c *Call) Exits(exitCode int) *Call {
 	if exitCode != 0 {
 		err := &ExitError{
@@ -32,7 +32,7 @@ func (c *Call) Exits(exitCode int) *Call {
 	return c
 }
 
-// Configures the mock command to fail with a non-ExitError error
+// Fails configures the mock command to fail with a non-ExitError error
 func (c *Call) Fails(err error) *Call {
 	c.Return(&Error{
 		Command: c.command,
@@ -41,13 +41,13 @@ func (c *Call) Fails(err error) *Call {
 	return c
 }
 
-// Configures the mock command to write the given data to stdout
+// WithStdout configures the mock command to write the given data to stdout
 func (c *Call) WithStdout(output string) *Call {
 	c.mockStdout = output
 	return c
 }
 
-// Configures the mock command to write the given data to stderr
+// WithStderr configures the mock command to write the given data to stderr
 func (c *Call) WithStderr(output string) *Call {
 	c.mockStderr = output
 	return c

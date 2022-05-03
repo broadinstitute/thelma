@@ -68,6 +68,7 @@ type persistentToken struct {
 	Expiry       time.Time `json:"expiry"`
 }
 
+// TokenProvider returns a new token provider for IAP tokens
 func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, vaultClient *vaultapi.Client, runner shell.Runner) (credentials.TokenProvider, error) {
 	cfg, err := loadConfig(thelmaConfig)
 	if err != nil {

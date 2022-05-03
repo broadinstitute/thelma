@@ -13,7 +13,7 @@ func newReleasesFlag() *enumFlag {
 		flagName:      flagNames.release,
 		shortHand:     "r",
 		defaultValues: []string{},
-		usageMessage:  "Render manifests for specific release(s) (set to ALL to include all releases)",
+		usageMessage:  "Run for specific release(s) (set to ALL to include all releases)",
 
 		preProcessHook: func(flagValues []string, args []string, changed bool) ([]string, error) {
 			// UX: make it possible for users to specify a release as the first positional arg instead of as a flag
@@ -51,7 +51,7 @@ func newClustersFlag() *enumFlag {
 		flagName:      flagNames.cluster,
 		shortHand:     "c",
 		defaultValues: []string{allSelector},
-		usageMessage:  "Render manifests for specific Terra cluster(s)",
+		usageMessage:  "Run for specific Terra cluster(s)",
 
 		validValues: func(state terra.State) (set.StringSet, error) {
 			clusters, err := state.Clusters().All()
@@ -73,7 +73,7 @@ func newEnvironmentsFlag() *enumFlag {
 		flagName:      flagNames.environment,
 		shortHand:     "e",
 		defaultValues: []string{allSelector},
-		usageMessage:  "Render manifests for specific Terra environment(s)",
+		usageMessage:  "Run for specific Terra environment(s)",
 
 		validValues: func(state terra.State) (set.StringSet, error) {
 			environments, err := state.Environments().All()
@@ -94,7 +94,7 @@ func newDestinationTypesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.destinationType,
 		defaultValues: []string{allSelector},
-		usageMessage:  `Render manifests for a specific destination type (eg. "environment". "cluster"`,
+		usageMessage:  `Run for a specific destination type (eg. "environment". "cluster"`,
 
 		validValues: func(_ terra.State) (set.StringSet, error) {
 			return set.NewStringSet(terra.DestinationTypeNames()...), nil
@@ -111,7 +111,7 @@ func newDestinationBasesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.destinationBase,
 		defaultValues: []string{allSelector},
-		usageMessage:  `Render manifests for a specific environment or cluster base (eg. \"live\", \"bee\")`,
+		usageMessage:  `Run for a specific environment or cluster base (eg. \"live\", \"bee\")`,
 
 		validValues: func(state terra.State) (set.StringSet, error) {
 			destinations, err := state.Destinations().All()
@@ -137,7 +137,7 @@ func newEnvironmentTemplatesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.environmentTemplate,
 		defaultValues: []string{allSelector},
-		usageMessage:  `Render manifests for dynamic environments with a specific template (eg. "swatomation"). Can be specified multiple times.`,
+		usageMessage:  `Run for dynamic environments with a specific template (eg. "swatomation")`,
 
 		validValues: func(state terra.State) (set.StringSet, error) {
 			envs, err := state.Environments().Filter(filter.Environments().HasLifecycle(terra.Template))
@@ -158,7 +158,7 @@ func newEnvironmentLifecyclesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.environmentLifecycle,
 		defaultValues: []string{terra.Static.String(), terra.Template.String()},
-		usageMessage:  `Render manifests for environments with a specific lifecycle (eg. "static", "template", "dynamic")`,
+		usageMessage:  `Run for environments with a specific lifecycle (eg. "static", "template", "dynamic")`,
 
 		validValues: func(_ terra.State) (set.StringSet, error) {
 			return set.NewStringSet(terra.LifecycleNames()...), nil

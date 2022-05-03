@@ -7,7 +7,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/serializers"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path"
@@ -193,8 +192,6 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 	envName := destConfig.name
 	envBase := destConfig.base
 
-	log.Debug().Msgf("Loading environment %s", envName)
-
 	var envConfig serializers.Environment
 	err := yaml.Unmarshal(destConfig.mergedYaml, &envConfig)
 	if err != nil {
@@ -295,8 +292,6 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 
 		_releases[releaseName] = _release
 	}
-
-	log.Debug().Msgf("Found %d releases for environment %s", len(_releases), envName)
 
 	env := NewEnvironment(
 		envName,

@@ -29,7 +29,9 @@ func ListTmpFiles(runner Runner) ([]string, error) {
 
 	buf := bytes.NewBuffer([]byte{})
 
-	err := runner.RunWith(cmd, RunOptions{Stdout: buf})
+	err := runner.Run(cmd, func(opts *RunOptions) {
+		opts.Stdout = buf
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +117,7 @@ func TestExitStatus42IsFine(t *testing.T) {
 	err = ExitStatus42IsFine(runner)
 	assert.NoError(t, err)
 
-	// verify the second run DOES return an error
+	// verify the first run DOES return an error
 	err = ExitStatus42IsFine(runner)
 	assert.Error(t, err)
 	assert.IsType(t, &ExitError{}, err)

@@ -37,7 +37,17 @@ var flagNames = struct {
 	destinationType:      "destination-type",
 }
 
+type Option func(*Options)
+
+type Options struct {
+	// IncludeBulkFlags include bulk destination selection flags such as --destination-type, --environment-template, and so on
+	IncludeBulkFlags bool
+	// RequireDestination require at least one destination be specified with -e / -c flags
+	RequireDestination bool
+}
+
 type Selector struct {
+	options       Options
 	flags         []*enumFlag
 	filterBuilder *filterBuilder
 }
@@ -54,18 +64,34 @@ type Selection struct {
 	AppReleasesOnly bool
 }
 
-func NewSelector() *Selector {
-	return &Selector{
-		filterBuilder: newFilterBuilder(),
-		flags: []*enumFlag{
-			newReleasesFlag(),
-			newEnvironmentsFlag(),
-			newClustersFlag(),
+func NewSelector(options ...Option) *Selector {
+	opts := Options{
+		IncludeBulkFlags:   true,
+		RequireDestination: false,
+	}
+	for _, option := range options {
+		option(&opts)
+	}
+
+	flags := []*enumFlag{
+		newReleasesFlag(),
+		newEnvironmentsFlag(),
+		newClustersFlag(),
+	}
+
+	if opts.IncludeBulkFlags {
+		flags = append(flags,
 			newDestinationTypesFlag(),
 			newDestinationBasesFlag(),
 			newEnvironmentTemplatesFlag(),
 			newEnvironmentLifecyclesFlag(),
-		},
+		)
+	}
+
+	return &Selector{
+		options:       opts,
+		filterBuilder: newFilterBuilder(),
+		flags:         flags,
 	}
 }
 
@@ -77,6 +103,9 @@ func (s *Selector) AddFlags(cobraCommand *cobra.Command) {
 }
 
 func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args []string) (*Selection, error) {
+	if err := s.checkRequiredFlags(pflags); err != nil {
+		return nil, err
+	}
 	if err := checkIncompatibleFlags(pflags); err != nil {
 		return nil, err
 	}
@@ -103,6 +132,15 @@ func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args [
 		SingleChart:     singleChart(releases),
 		AppReleasesOnly: appReleasesOnly(releases),
 	}, nil
+}
+
+func (s *Selector) checkRequiredFlags(flags *pflag.FlagSet) error {
+	if s.options.RequireDestination {
+		if !flags.Changed(flagNames.environment) && !flags.Changed(flagNames.cluster) {
+			return fmt.Errorf("please specify a target environment or cluster with the -e/-c flags")
+		}
+	}
+	return nil
 }
 
 func checkIncompatibleFlags(flags *pflag.FlagSet) error {

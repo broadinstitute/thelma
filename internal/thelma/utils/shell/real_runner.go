@@ -14,7 +14,6 @@ import (
 
 const maxErrorBufLenBytes = 5 * 1024 // 5 kb
 const eol = '\n'
-const defaultLogLevel = zerolog.InfoLevel
 
 // RealRunner is an implementation of the Runner interface that actually executes shell commands
 type RealRunner struct{}
@@ -25,22 +24,19 @@ func NewRunner() Runner {
 }
 
 // Run runs a Command, returning an error if the command exits non-zero
-func (r *RealRunner) Run(cmd Command) error {
-	return r.RunWith(cmd, RunOptions{})
-}
+func (r *RealRunner) Run(cmd Command, options ...RunOption) error {
+	// collate options
+	opts := defaultRunOptions()
+	for _, option := range options {
+		option(&opts)
+	}
 
-// RunWith runs a Command, streaming stdout and stderr to the given writers.
-// An error is returned if the command exits non-zero.
-func (r *RealRunner) RunWith(cmd Command, opts RunOptions) error {
-	// Handle options into local variables
+	// handle options
 	logger := log.Logger
 	if opts.Logger != nil {
 		logger = *opts.Logger
 	}
-	level := defaultLogLevel
-	if opts.LogLevel != nil {
-		level = *opts.LogLevel
-	}
+	level := opts.LogLevel
 	stderr := opts.Stderr
 	stdout := opts.Stdout
 
@@ -51,8 +47,8 @@ func (r *RealRunner) RunWith(cmd Command, opts RunOptions) error {
 	errCapture := newCapturingWriter(maxErrorBufLenBytes, logger, stderr)
 
 	// Wrap user-supplied stdout and stderr in new io.Writers that log messages at debug level
-	stdout = newLoggingWriter(zerolog.DebugLevel, logger.With().Str("stream", "stdout").Logger(), "[out] ", stdout)
-	stderr = newLoggingWriter(zerolog.DebugLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errCapture)
+	stdout = newLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stdout").Logger(), "[out] ", stdout)
+	stderr = newLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errCapture)
 
 	// Convert our command arguments to exec.Cmd struct
 	execCmd := exec.Command(cmd.Prog, cmd.Args...)

@@ -8,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
+	"github.com/broadinstitute/thelma/internal/thelma/clients"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
@@ -25,6 +26,8 @@ func init() {
 
 // ThelmaApp holds references to global/cross-cutting dependencies for Thelma commands
 type ThelmaApp interface {
+	// Clients convenience constructors for clients used in Thelma commands
+	Clients() clients.Clients
 	// Config returns configuration object for this ThelmaApp
 	Config() config.Config
 	// Credentials returns credential manager object for this ThelmaApp
@@ -61,7 +64,11 @@ func New(cfg config.Config, creds credentials.Credentials, shellRunner shell.Run
 		return nil, err
 	}
 
+	// Initialize client factory
+	_clients := clients.New(cfg, creds, shellRunner)
+
 	return &thelmaApp{
+		clients:     _clients,
 		config:      cfg,
 		credentials: creds,
 		shellRunner: shellRunner,
@@ -72,12 +79,17 @@ func New(cfg config.Config, creds credentials.Credentials, shellRunner shell.Run
 }
 
 type thelmaApp struct {
+	clients     clients.Clients
 	config      config.Config
 	credentials credentials.Credentials
 	shellRunner shell.Runner
 	paths       paths.Paths
 	scratch     scratch.Scratch
 	stateLoader terra.StateLoader
+}
+
+func (t *thelmaApp) Clients() clients.Clients {
+	return t.clients
 }
 
 func (t *thelmaApp) Config() config.Config {
