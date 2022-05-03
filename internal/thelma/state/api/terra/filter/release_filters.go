@@ -15,6 +15,8 @@ type ReleaseFilters interface {
 	HasDestinationName(destinationName string) terra.ReleaseFilter
 	// DestinationMatches returns a filter that matches releases with matching destinations
 	DestinationMatches(filter terra.DestinationFilter) terra.ReleaseFilter
+	// BelongsToEnvironment returns a filter that matches releases in the given environment
+	BelongsToEnvironment(env terra.Environment) terra.ReleaseFilter
 	// Or returns a filter that matches environments that match _any_ of the given filters
 	Or(filters ...terra.ReleaseFilter) terra.ReleaseFilter
 	//And returns a filter that matches environments that match _all_ of the given filters
@@ -68,6 +70,10 @@ func (r releaseFilters) DestinationMatches(filter terra.DestinationFilter) terra
 			return filter.Matches(r.Destination())
 		},
 	}
+}
+
+func (r releaseFilters) BelongsToEnvironment(env terra.Environment) terra.ReleaseFilter {
+	return r.DestinationMatches(Destinations().IsEnvironment().And(Destinations().HasName(env.Name())))
 }
 
 //
