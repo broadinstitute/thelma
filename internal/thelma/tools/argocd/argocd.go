@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"net/http"
 	"strings"
 	"time"
 )
@@ -32,15 +33,14 @@ var envVars = struct {
 var flags = struct {
 	grpcWeb      string
 	plainText    string
+	header       string
 	outputFormat string
 }{
 	grpcWeb:      "--grpc-web",
 	plainText:    "--plaintext",
+	header:       "--header",
 	outputFormat: "--output",
 }
-
-// notOnVpnResponseStatus holds http status code we expect from ArgoCD when we GET / and are not on logged in to the VPN
-const notOnVpnResponseStatus = 403
 
 type SyncOptions struct {
 	HardRefresh  bool
@@ -97,8 +97,8 @@ type ArgoCD interface {
 // * presents users with a web UI to log in with their GitHub SSO credentials (same flow as logging in to the ArgoCD webapp)
 // * uses those SSO credentials to generate a new ArgoCD authentication token for the user's identity
 // * stores the generated token in ~/.argocd/config
-func Login(thelmaConfig config.Config, shellRunner shell.Runner) error {
-	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner)
+func Login(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) error {
+	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner, iapToken)
 	if err != nil {
 		return err
 	}
@@ -112,8 +112,8 @@ func Login(thelmaConfig config.Config, shellRunner shell.Runner) error {
 }
 
 // New return a new ArgoCD client
-func New(thelmaConfig config.Config, shellRunner shell.Runner) (ArgoCD, error) {
-	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner)
+func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) (ArgoCD, error) {
+	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner, iapToken)
 	if err != nil {
 		return nil, err
 	}
@@ -123,19 +123,23 @@ func New(thelmaConfig config.Config, shellRunner shell.Runner) (ArgoCD, error) {
 	return a, nil
 }
 
-func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner) (*argocd, error) {
+func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) (*argocd, error) {
 	var cfg argocdConfig
 	if err := thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
 		return nil, err
 	}
 
-	a := &argocd{
-		runner: shellRunner,
-		cfg:    cfg,
+	var secrets []string
+	secrets = append(secrets, iapToken)
+	if cfg.Token != "" {
+		secrets = append(secrets, cfg.Token)
 	}
 
-	if err := a.ensureOnVpn(); err != nil {
-		return nil, err
+	a := &argocd{
+		runner:        shellRunner,
+		cfg:           cfg,
+		iapToken:      iapToken,
+		maskingLogger: logging.WithMask(secrets...),
 	}
 
 	return a, nil
@@ -143,8 +147,10 @@ func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner) 
 
 // implements ArgoCD interface
 type argocd struct {
-	runner shell.Runner
-	cfg    argocdConfig
+	runner        shell.Runner
+	cfg           argocdConfig
+	iapToken      string
+	maskingLogger zerolog.Logger
 }
 
 func (a *argocd) defaultSyncOptions() SyncOptions {
@@ -208,7 +214,7 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	}
 
 	if hasLegacyConfigsApp {
-		log.Info().Msgf("Restarting deployments in %s to pick up potential legacy configs changes", primaryApp)
+		log.Info().Msgf("Restarting deployments in %s to pick up potential firecloud-develop config changes", primaryApp)
 		return a.restartDeployments(primaryApp)
 	}
 
@@ -375,19 +381,6 @@ func (a *argocd) url() string {
 	return fmt.Sprintf("%s://%s", proto, a.cfg.Host)
 }
 
-// make a request to https://ap-argocd.dsp-devops.broadinstitute.org
-// if it returns a 403, we're not on the VPN and the CloudArmor firewall is blocking us
-func (a *argocd) ensureOnVpn() error {
-	resp, err := http.Get(a.url())
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == notOnVpnResponseStatus {
-		return fmt.Errorf("you must log in to the non-split VPN in order to run Thelma commands that interact with ArgoCD")
-	}
-	return nil
-}
-
 // run `argocd account get-user-info` and verify the output contains `loggedIn: true`
 func (a *argocd) ensureLoggedIn() error {
 	var output struct {
@@ -398,7 +391,7 @@ func (a *argocd) ensureLoggedIn() error {
 		return err
 	}
 	if !output.LoggedIn {
-		return fmt.Errorf("ArgoCD client is not authenticated; please run `thelma argocd login` or supply an ArgoCD token via THELMA_ARGOCD_TOKEN")
+		return fmt.Errorf("ArgoCD client is not authenticated; please run `thelma auth argocd` or supply an ArgoCD token via THELMA_ARGOCD_TOKEN")
 	}
 	return nil
 }
@@ -454,6 +447,10 @@ func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
 
 	// build arg list
 	var _args []string
+
+	// add IAP token header
+	_args = append(_args, flags.header, a.proxyAuthorizationHeader())
+
 	if a.cfg.GRPCWeb {
 		_args = append(_args, flags.grpcWeb)
 	}
@@ -463,6 +460,11 @@ func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
 
 	_args = append(_args, args...)
 
+	// make sure we use our masking logger for all commands so iap and argocd tokens aren't leaked
+	options = append(options, func(options *shell.RunOptions) {
+		options.Logger = &a.maskingLogger
+	})
+
 	return a.runner.Run(
 		shell.Command{
 			Prog: prog,
@@ -471,4 +473,8 @@ func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
 		},
 		options...,
 	)
+}
+
+func (a *argocd) proxyAuthorizationHeader() string {
+	return fmt.Sprintf("Proxy-Authorization: Bearer %s", a.iapToken)
 }

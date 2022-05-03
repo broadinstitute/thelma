@@ -38,7 +38,7 @@ func (cmd *vaultCommand) Run(thelmaApp app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	log.Info().Msgf("Vault token is valid")
+	log.Info().Msgf("Successfully authenticated to Vault")
 
 	return nil
 }

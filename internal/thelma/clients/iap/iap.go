@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
@@ -68,6 +69,27 @@ type persistentToken struct {
 	Expiry       time.Time `json:"expiry"`
 }
 
+// GetToken returns a valid dsp-tools-k8s IAP token (as a string), or an error
+func GetToken(thelmaConfig config.Config, creds credentials.Credentials, runner shell.Runner) (string, error) {
+	vaultClient, err := vault.NewClient(thelmaConfig, creds)
+	if err != nil {
+		return "", err
+	}
+
+	provider, err := TokenProvider(thelmaConfig, creds, vaultClient, runner)
+	if err != nil {
+		return "", err
+	}
+
+	token, err := provider.Get()
+	if err != nil {
+		return "", err
+	}
+
+	return string(token), nil
+}
+
+// TokenProvider returns a new token provider for IAP tokens
 func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, vaultClient *vaultapi.Client, runner shell.Runner) (credentials.TokenProvider, error) {
 	cfg, err := loadConfig(thelmaConfig)
 	if err != nil {

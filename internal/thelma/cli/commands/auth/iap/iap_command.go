@@ -45,7 +45,7 @@ func (cmd *iapCommand) Run(thelmaApp app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	log.Info().Msgf("IAP identity token is valid")
+	log.Info().Msgf("Successfully authenticated to DSP Tools IAP")
 
 	return nil
 }
