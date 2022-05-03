@@ -1,8 +1,8 @@
 package stateval
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 )
 
 // ArgoApp -- information about the Argo application that will be used to deploy this release
@@ -23,7 +23,7 @@ type ArgoProject struct {
 
 func forArgoApp(r terra.Release) ArgoApp {
 	return ArgoApp{
-		ProjectName:    argocd.GetProjectName(r.Destination()),
+		ProjectName:    argocd.ProjectName(r.Destination()),
 		ClusterName:    r.ClusterName(),
 		ClusterAddress: r.ClusterAddress(),
 	}
@@ -31,6 +31,6 @@ func forArgoApp(r terra.Release) ArgoApp {
 
 func forArgoProject(d terra.Destination) ArgoProject {
 	return ArgoProject{
-		ProjectName: argocd.GetProjectName(d),
+		ProjectName: argocd.ProjectName(d),
 	}
 }
