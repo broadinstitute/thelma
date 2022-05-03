@@ -2,7 +2,7 @@ package argocd
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
+	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,7 +26,6 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"--plaintext",
 						"login",
 						"--sso",
 						fakeArgocdHost,
@@ -42,7 +41,6 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"--plaintext",
 						"account",
 						"get-user-info",
 						"--output",
@@ -63,7 +61,6 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"--plaintext",
 						"login",
 						"--sso",
 						fakeArgocdHost,
@@ -84,7 +81,6 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"--plaintext",
 						"login",
 						"--sso",
 						fakeArgocdHost,
@@ -100,7 +96,6 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"--plaintext",
 						"account",
 						"get-user-info",
 						"--output",
@@ -118,19 +113,16 @@ func Test_Login(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			runner := shell.DefaultMockRunner()
-			app, err := builder.NewBuilder().
-				WithTestDefaults(t).
-				SetShellRunner(runner).
-				SetConfigOverride("argocd.tls", false).
-				SetConfigOverride("argocd.host", fakeArgocdHost).
-				Build()
+			thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverrides(map[string]interface{}{
+				"argocd.host": fakeArgocdHost,
+			}))
 			require.NoError(t, err)
 
 			if tc.setupCommands != nil {
 				tc.setupCommands(runner)
 			}
 
-			err = Login(app.Config(), app.ShellRunner(), "my-iap-token")
+			err = Login(thelmaConfig, runner, "my-iap-token")
 
 			if tc.expectError == "" {
 				require.NoError(t, err)
