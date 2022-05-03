@@ -36,7 +36,7 @@ func (cmd *iapCommand) Run(thelmaApp app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	tokenProvider, err := iap.TokenProvider(thelmaApp.Config(), thelmaApp.Credentials(), vaultClient)
+	tokenProvider, err := iap.TokenProvider(thelmaApp.Config(), thelmaApp.Credentials(), vaultClient, thelmaApp.ShellRunner())
 	if err != nil {
 		return err
 	}

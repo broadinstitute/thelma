@@ -5,8 +5,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 )
 
-// this tokenProvider decorates the credentials.TokenProvider to extract and return the identity token to the client,
-// instead of the entire OAuth token (which is what is persisted to disk).
+// this tokenProvider decorates the credentials.TokenProvider to extract and return the JUST identity token field to
+// the client, instead of the entire OAuth token (which is what is persisted to disk).
 type tokenProvider struct {
 	credentials.TokenProvider
 }

@@ -12,15 +12,13 @@ func TestSetConfigOverride(t *testing.T) {
 	fakeHome := t.TempDir()
 
 	// add config overrides... later options should have higher precedence
-	builder.SetConfigOption(func(options config.Options) config.Options {
+	builder.SetConfigOption(func(options *config.Options) {
 		options.Overrides["foo.greeting"] = "hello"
 		options.Overrides["foo.day"] = "Thursday"
-		return options
 	})
 	builder.SetHome(fakeHome)
-	builder.SetConfigOption(func(options config.Options) config.Options {
+	builder.SetConfigOption(func(options *config.Options) {
 		options.Overrides["foo.greeting"] = "hi"
-		return options
 	})
 
 	_app, err := builder.Build()

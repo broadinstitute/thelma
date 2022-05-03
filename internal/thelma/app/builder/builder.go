@@ -55,14 +55,7 @@ func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
 	b.SetRootDir(t.TempDir())
 
 	// Set test-friendly configuration options
-	b.SetConfigOption(func(options config.Options) config.Options {
-		// Ignore config file and environment when loading configuration
-		options.ConfigFile = ""
-		options.EnvPrefix = ""
-		// Set THELMA_HOME to os tmp dir. Tests will sometimes override this setting with SetHome()
-		options.Overrides[config.HomeKey] = t.TempDir()
-		return options
-	})
+	b.SetConfigOption(config.WithTestDefaults(t))
 
 	// Use mock shell runner
 	b.SetShellRunner(shell.DefaultMockRunner())
@@ -84,10 +77,7 @@ func (b *thelmaBuilder) SetRootDir(dir string) ThelmaBuilder {
 }
 
 func (b *thelmaBuilder) SetConfigOverride(key string, value interface{}) ThelmaBuilder {
-	b.SetConfigOption(func(options config.Options) config.Options {
-		options.Overrides[key] = value
-		return options
-	})
+	b.SetConfigOption(config.WithOverride(key, value))
 	return b
 }
 

@@ -115,7 +115,7 @@ func TestExitStatus42IsFine(t *testing.T) {
 	err = ExitStatus42IsFine(runner)
 	assert.NoError(t, err)
 
-	// verify the first run DOES return an error
+	// verify the second run DOES return an error
 	err = ExitStatus42IsFine(runner)
 	assert.Error(t, err)
 	assert.IsType(t, &ExitError{}, err)

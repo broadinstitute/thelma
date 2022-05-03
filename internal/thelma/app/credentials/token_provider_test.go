@@ -115,6 +115,63 @@ func Test_Token_Get(t *testing.T) {
 			expectErr: "token is not valid for some reason",
 		},
 		{
+			name: "with refreshFn and validateFn: should refresh token if token exists but is not valid",
+			key:  "my-token",
+			setup: func(t *testing.T, tmpDir string) {
+				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("old-token-value"), 0600))
+			},
+			option: func(options *TokenOptions) {
+				options.RefreshFn = func(_ []byte) ([]byte, error) {
+					return []byte("refreshed-token-value"), nil
+				}
+				options.ValidateFn = func(v []byte) error {
+					if string(v) == "old-token-value" {
+						return fmt.Errorf("this token expired")
+					}
+					return nil
+				}
+			},
+			expectValue: "refreshed-token-value",
+		},
+		{
+			name: "with refreshFn and validateFn: should return error if refresh returns invalid token",
+			key:  "my-token",
+			setup: func(t *testing.T, tmpDir string) {
+				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("old-token-value"), 0600))
+			},
+			option: func(options *TokenOptions) {
+				options.RefreshFn = func(_ []byte) ([]byte, error) {
+					return []byte("refreshed-token-value"), nil
+				}
+				options.ValidateFn = func(v []byte) error {
+					return fmt.Errorf("token is invalid")
+				}
+			},
+			expectErr: "refresh for MY_TOKEN returned invalid token: token is invalid",
+		},
+		{
+			name: "with issueFn, refreshFn and validateFn: should issue new token if refresh fails",
+			key:  "my-token",
+			setup: func(t *testing.T, tmpDir string) {
+				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("old-token-value"), 0600))
+			},
+			option: func(options *TokenOptions) {
+				options.RefreshFn = func(_ []byte) ([]byte, error) {
+					return nil, fmt.Errorf("token too old to be refreshed")
+				}
+				options.IssueFn = func() ([]byte, error) {
+					return []byte("new-token-value"), nil
+				}
+				options.ValidateFn = func(v []byte) error {
+					if string(v) == "old-token-value" {
+						return fmt.Errorf("this token expired")
+					}
+					return nil
+				}
+			},
+			expectValue: "new-token-value",
+		},
+		{
 			name: "with prompt enabled: return error because shell is not interactive",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
