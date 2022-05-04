@@ -12,6 +12,9 @@ case "${output}" in
     aarch64*)
       echo arm64
       ;;
+    arm64*)
+      echo arm64
+      ;;
     *)
       echo "Unrecognized architecture: ${output}" >& 2
       exit 1
