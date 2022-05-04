@@ -1,11 +1,13 @@
 package publish
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/views"
+	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
@@ -90,10 +92,24 @@ func (cmd *publishCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	return nil
 }
 
+// publishCharts publishes the given charts and any transitive dependencies they have.
+//
+// During chart publishing, we use `helm dependency update` with `--skip-refresh` to save time.
+// This requires the Helm repositories and their indexes to already exist, so we borrow
+// Helmfile's `helmfile repos` capability to do this based on the same Helm repository
+// configuration used for rendering manifests.
 func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, error) {
 	if len(options.charts) == 0 {
 		log.Warn().Msgf("No charts specified; exiting")
 		return []views.ChartRelease{}, nil
+	}
+
+	stubHelmfileOptions := helmfile.Options{
+		ThelmaHome:  app.Config().Home(),
+		ShellRunner: app.ShellRunner(),
+	}
+	if err := helmfile.NewConfigRepo(stubHelmfileOptions).HelmUpdate(); err != nil {
+		return nil, fmt.Errorf("error using helmfile for `helmfile repos`: %v", err)
 	}
 
 	pb, err := builders.Publisher(app, options.bucketName, options.dryRun)
