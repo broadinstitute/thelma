@@ -71,6 +71,13 @@ jobs:
           os: darwin
           arch: amd64
           version: ${{ steps.tag.outputs.tag }}
+      - name: Build M1 darwin binary distribution
+        uses: ./.github/actions/make
+        with:
+          target: "release"
+          os: darwin
+          arch: arm64
+          version: ${{ steps.tag.outputs.tag }}
       - name: Generate checksum file
         uses: ./.github/actions/make
         with:
