@@ -45,6 +45,7 @@ var flags = struct {
 type SyncOptions struct {
 	HardRefresh  bool
 	SyncIfNoDiff bool
+	WaitHealthy  bool
 }
 
 type SyncOption func(options *SyncOptions)
@@ -157,6 +158,7 @@ func (a *argocd) defaultSyncOptions() SyncOptions {
 	return SyncOptions{
 		HardRefresh:  true,
 		SyncIfNoDiff: true,
+		WaitHealthy:  true,
 	}
 }
 
@@ -186,8 +188,11 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) error {
 	if err := a.sync(appName); err != nil {
 		return err
 	}
-	if err := a.waitHealthy(appName); err != nil {
-		return err
+
+	if opts.WaitHealthy {
+		if err := a.waitHealthy(appName); err != nil {
+			return err
+		}
 	}
 
 	log.Debug().Msgf("Successfully synced %s", appName)

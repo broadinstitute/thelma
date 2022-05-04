@@ -5,6 +5,8 @@ import "github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 type Credentials interface {
 	// NewTokenProvider returns a new TokenProvider for the given key
 	NewTokenProvider(key string, opts ...TokenOption) TokenProvider
+	// StaticTokenProvider returns a TokenProvider that always returns the given static token
+	StaticTokenProvider(key string, token []byte) TokenProvider
 }
 
 type credentials struct {

@@ -73,6 +73,15 @@ func (c credentials) NewTokenProvider(key string, options ...TokenOption) TokenP
 	}
 }
 
+func (c credentials) StaticTokenProvider(key string, token []byte) TokenProvider {
+	return c.NewTokenProvider(key, func(options *TokenOptions) {
+		options.CredentialStore = stores.NewNoopStore()
+		options.IssueFn = func() ([]byte, error) {
+			return token, nil
+		}
+	})
+}
+
 type token struct {
 	key     string
 	options TokenOptions

@@ -47,6 +47,10 @@ const tokenValidationIapResponseHeader = "x-goog-iap-generated-response"
 type iapConfig struct {
 	OAuthCredentialsVaultPath string `default:"secret/dsp/identity-aware-proxy/dsp-tools-k8s/dsp-tools-k8s-iap-oauth_client-credentials.json"`
 	OAuthCredentialsVaultKey  string `default:"web"`
+	WorkloadIdentity          struct {
+		Enabled        bool   `default:"true"`
+		ServiceAccount string `default:"default"` // default to using compute engine default service account
+	}
 }
 
 type oauthCredentials struct {
@@ -85,6 +89,15 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 		ClientSecret: oauthCreds.ClientSecret,
 		Scopes:       []string{"openid", "email", "profile"},
 		Endpoint:     google.Endpoint,
+	}
+
+	// if workload identity is enabled, try to issue an IAP token that way first, falling back to user credentials
+	if cfg.WorkloadIdentity.Enabled {
+		token, err := getTokenFromWorkloadIdentity(cfg, oauthConfig)
+		if err == nil {
+			return creds.StaticTokenProvider(credentialsKey, token), nil
+		}
+		log.Debug().Msgf("failed to issue new IAP token via workload identity: %v", err)
 	}
 
 	provider := creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
@@ -147,6 +160,23 @@ func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapCo
 	}
 
 	return &oauthCreds, nil
+}
+
+func getTokenFromWorkloadIdentity(cfg iapConfig, oauthConfig *oauth2.Config) ([]byte, error) {
+	metadataUrl := fmt.Sprintf("http://metadata/computeMetadata/v1/instance/service-accounts/%s/identity?audience=%s&format=full", cfg.WorkloadIdentity.ServiceAccount, oauthConfig.ClientID)
+	log.Debug().Msgf("attempting to issue new IAP token via workload identity")
+	resp, err := http.Get(metadataUrl)
+	if err != nil {
+		return nil, err
+	}
+	token, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err = resp.Body.Close(); err != nil {
+		return nil, err
+	}
+	return token, nil
 }
 
 func issueNewToken(oauthConfig *oauth2.Config, oauthCreds *oauthCredentials, runner shell.Runner) (*oauth2.Token, error) {

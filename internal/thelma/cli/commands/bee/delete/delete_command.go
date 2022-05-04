@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -82,8 +83,20 @@ func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 
 	rc.SetOutput(views.ForTerraEnv(env))
 
-	log.Info().Msgf("Syncing %s", bee.GeneratorArgoApp)
-	return _argocd.SyncApp(bee.GeneratorArgoApp)
+	log.Info().Msgf("Syncing %s to delete applications", bee.GeneratorArgoApp)
+	err = _argocd.SyncApp(bee.GeneratorArgoApp, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = false
+	})
+	if err != nil {
+		return err
+	}
+
+	// Unfortunately we need to double-sync the generator to destroy the project after the applications are deleted
+	log.Info().Msgf("Syncing %s to delete projects", bee.GeneratorArgoApp)
+	return _argocd.SyncApp(bee.GeneratorArgoApp, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = false
+		options.HardRefresh = false
+	})
 }
 
 func (cmd *deleteCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
