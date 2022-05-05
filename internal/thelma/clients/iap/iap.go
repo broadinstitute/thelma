@@ -183,6 +183,9 @@ func getTokenFromWorkloadIdentity(cfg iapConfig, oauthConfig *oauth2.Config) ([]
 	log.Debug().Msgf("Attempting to issue new IAP token via workload identity")
 
 	req, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Metadata-Flavor", "Google")
 	client := http.Client{
 		Timeout: computeEngineMetadataRequestTimeout,
