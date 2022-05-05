@@ -24,6 +24,8 @@ type Options struct {
 	// EnvPrefix which prefix to use when loading configuration from environment variables (default "THELMA")
 	// Set to "" to skip loading configuration from environment variables.
 	EnvPrefix string
+	// Profile load a specific configuration profile instead of the one specified by THELMA_CONFIG_PROFILE
+	Profile string
 }
 
 // DefaultOptions returns default options for Config.Load()
@@ -32,6 +34,7 @@ func DefaultOptions() Options {
 		Overrides:  make(map[string]interface{}),
 		ConfigFile: path.Join(root.Default().Dir(), defaultConfigFile),
 		EnvPrefix:  env.EnvPrefix,
+		Profile:    "",
 	}
 }
 
@@ -48,7 +51,8 @@ func WithTestDefaults(t *testing.T) Option {
 	return func(options *Options) {
 		options.ConfigFile = ""                  // Disable config file loading
 		options.EnvPrefix = ""                   // Disable env var loading
-		options.Overrides[HomeKey] = t.TempDir() // Set HomeKey to TempDir
+		options.Overrides[HomeKey] = t.TempDir() // Set HomeKey to a tmp dir
+		options.Profile = defaultProfile         // Make sure we don't accidentally select `ci` profile
 	}
 }
 

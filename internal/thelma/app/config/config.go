@@ -8,6 +8,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/mcuadros/go-defaults"
 	"github.com/rs/zerolog/log"
 	"os"
@@ -61,6 +62,15 @@ func Load(opts ...Option) (Config, error) {
 	}
 
 	_koanf := koanf.New(keyDelimiter)
+
+	// load configuration defaults from profile. (these can be overridden by environment variables, config file, etc.)
+	profile, err := loadProfile(options)
+	if err != nil {
+		return nil, fmt.Errorf("error loading configuration profile: %v", err)
+	}
+	if err = _koanf.Load(rawbytes.Provider(profile), yaml.Parser()); err != nil {
+		return nil, fmt.Errorf("error loading configuration profile: %v", err)
+	}
 
 	// load config from file ~/.thelma/config.yaml
 	if options.ConfigFile != "" {

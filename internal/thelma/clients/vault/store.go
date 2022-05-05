@@ -17,7 +17,7 @@ func NewVaultTokenStore() stores.Store {
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		log.Warn().Msgf("failed to identify user home directory, new Vault tokens will not be saved to ~/%s: %v", vaultTokenFile, err)
-		return stores.NewNoopStore()
+		return stores.NewMapStore()
 	}
 	return newVaultTokenStore(dir)
 }

@@ -1,12 +1,20 @@
 package credentials
 
-import "github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
+import (
+	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
+	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+)
+
+const configKey = "credentials"
 
 type Credentials interface {
 	// NewTokenProvider returns a new TokenProvider for the given key
 	NewTokenProvider(key string, opts ...TokenOption) TokenProvider
-	// StaticTokenProvider returns a TokenProvider that always returns the given static token
-	StaticTokenProvider(key string, token []byte) TokenProvider
+}
+
+type credentialsConfig struct {
+	StoreType string `default:"directory" validate:"oneof=directory inmemory"`
 }
 
 type credentials struct {
@@ -14,13 +22,28 @@ type credentials struct {
 }
 
 // New returns a new Credentials instance using a directory store rooted at credentialsDir
-func New(credentialsDir string) (Credentials, error) {
-	s, err := stores.NewDirectoryStore(credentialsDir)
+func New(thelmaConfig config.Config, thelmaRoot root.Root) (Credentials, error) {
+	var cfg credentialsConfig
+
+	err := thelmaConfig.Unmarshal(configKey, &cfg)
 	if err != nil {
 		return nil, err
 	}
+
+	var store stores.Store
+
+	switch cfg.StoreType {
+	case "directory":
+		store, err = stores.NewDirectoryStore(thelmaRoot.CredentialsDir())
+		if err != nil {
+			return nil, err
+		}
+	default:
+		store = stores.NewMapStore()
+	}
+
 	return credentials{
-		defaultStore: s,
+		defaultStore: store,
 	}, nil
 }
 

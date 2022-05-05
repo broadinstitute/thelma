@@ -1,0 +1,6 @@
+# this is a fake profile used by unit tests in the config package
+
+mykey:
+  logging:
+    console:
+      level: "trace"

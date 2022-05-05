@@ -1,0 +1,15 @@
+# this file contains configuration overrides for Thelma when it is run in CI environments
+
+credentials:
+  # use inmemory store so creds aren't persistent to disk
+  storetype: inmemory
+
+iap:
+  # use workloadidentity to generate iap credentials instead of browser
+  provider: workloadidentity
+
+logging:
+  console:
+    level: debug
+  file:
+    enabled: false

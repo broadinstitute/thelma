@@ -42,7 +42,7 @@ type Options struct {
 	ShellRunner      shell.Runner  // ShellRunner shell Runner to use for executing helmfile commands
 }
 
-// ConfigRepo can be used to `helmfile` render commands on a clone of the `terra-helmfile` repo
+// ConfigRepo can be used to run `helmfile render` commands on a clone of the terra-helmfile repo
 type ConfigRepo struct {
 	thelmaHome       string
 	chartResolver    resolver.Resolver
@@ -73,7 +73,7 @@ func NewConfigRepo(options Options) *ConfigRepo {
 	}
 }
 
-// CleanOutputDirectory cleans the output directory before rendering
+// CleanOutputDirectoryIfEnabled cleans the output directory before rendering
 func (r *ConfigRepo) CleanOutputDirectoryIfEnabled() error {
 	if r.stdout {
 		// No need to clean output directory if we're rendering to stdout

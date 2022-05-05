@@ -120,7 +120,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
-	_credentials, err := credentials.New(thelmaRoot.CredentialsDir())
+	_credentials, err := credentials.New(cfg, thelmaRoot)
 	if err != nil {
 		return nil, err
 	}
