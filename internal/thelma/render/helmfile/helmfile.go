@@ -114,14 +114,16 @@ func (r *ConfigRepo) CleanOutputDirectoryIfEnabled() error {
 func (r *ConfigRepo) HelmUpdate() error {
 	log.Info().Msg("Updating Helm repo indexes")
 
+	var args []string
+	if r.helmfileLogLevel != "" {
+		args = append(args, fmt.Sprintf("--log-level=%s", r.helmfileLogLevel))
+	}
+	args = append(args, "--allow-no-matching-release", "repos")
+
 	cmd := shell.Command{
 		Prog: ProgName,
-		Args: []string{
-			fmt.Sprintf("--log-level=%s", r.helmfileLogLevel),
-			"--allow-no-matching-release",
-			"repos",
-		},
-		Dir: r.thelmaHome,
+		Args: args,
+		Dir:  r.thelmaHome,
 	}
 
 	return r.runCmd(cmd)
@@ -238,6 +240,8 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 
 	// resolver runs `helm dependency update` on local charts, so we always set --skip-deps to save time
 	cmd.setSkipDeps(true)
+	// tests are noisy so exclude them
+	cmd.setSkipTests(true)
 
 	cmd.addValuesFiles(args.ValuesFiles...)
 

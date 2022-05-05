@@ -6,11 +6,11 @@ set -eo pipefail
 # This script implements basic caching -- if the binaries already exist in
 # the target directory, it won't download them again.
 
-HELM_VERSION=3.2.4
-HELMFILE_VERSION=0.114.0
+HELM_VERSION=3.6.0
+HELMFILE_VERSION=0.143.1
 YQ_VERSION=4.11.2
 HELM_DOCS_VERSION=1.5.0
-ARGOCD_VERSION=2.2.5
+ARGOCD_VERSION=2.3.2
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
