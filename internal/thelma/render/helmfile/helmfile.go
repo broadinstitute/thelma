@@ -240,6 +240,8 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 
 	// resolver runs `helm dependency update` on local charts, so we always set --skip-deps to save time
 	cmd.setSkipDeps(true)
+	// tests are noisy so exclude them
+	cmd.setSkipTests(true)
 
 	cmd.addValuesFiles(args.ValuesFiles...)
 

@@ -13,6 +13,7 @@ const ProgName = "helmfile"
 type Cmd struct {
 	dir             string
 	skipDeps        bool
+	skipTests       bool
 	logLevel        string
 	envVars         []string
 	stateValuesFile string
@@ -45,6 +46,9 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 	if cmd.skipDeps {
 		// Skip dependencies unless we're rendering a local chart, to save time
 		cliArgs = append(cliArgs, "--skip-deps")
+	}
+	if cmd.skipTests {
+		cliArgs = append(cliArgs, "--skip-tests")
 	}
 	if len(cmd.valuesFiles) > 0 {
 		cliArgs = append(cliArgs, fmt.Sprintf("--values=%s", strings.Join(cmd.valuesFiles, ",")))
@@ -79,6 +83,10 @@ func (cmd *Cmd) setLogLevel(logLevel string) {
 
 func (cmd *Cmd) setSkipDeps(skipDeps bool) {
 	cmd.skipDeps = skipDeps
+}
+
+func (cmd *Cmd) setSkipTests(skipTests bool) {
+	cmd.skipTests = skipTests
 }
 
 func (cmd *Cmd) setOutputDir(outputDir string) {
