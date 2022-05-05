@@ -3,6 +3,7 @@ package iap
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 )
 
 // this tokenProvider decorates the credentials.TokenProvider to extract and return the JUST identity token field to
@@ -39,6 +40,8 @@ func extractIdentityToken(serializedPersistentToken []byte) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("error extracting id_token field (type assertion failed)")
 	}
+
+	logging.MaskSecret(asString)
 
 	return []byte(asString), nil
 }

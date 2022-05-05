@@ -63,5 +63,11 @@ func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
 	if err != nil {
 		return nil, err
 	}
-	return argocd.New(c.config, c.runner, iapToken)
+
+	vaultClient, err := c.Vault()
+	if err != nil {
+		return nil, err
+	}
+
+	return argocd.New(c.config, c.runner, iapToken, vaultClient)
 }
