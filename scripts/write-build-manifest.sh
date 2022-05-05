@@ -26,4 +26,5 @@ cat <<MANIFEST > "${OUTPUT_FILE}"
   "arch": "${ARCH}",
   "buildTimestamp": "${BUILD_TIMESTAMP}"
 }
-MANIFEST 
+MANIFEST
+
