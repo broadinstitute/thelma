@@ -25,7 +25,7 @@ var envVars = struct {
 	token  string
 	server string
 }{
-	token:  "ARGOCD_TOKEN",
+	token:  "ARGOCD_AUTH_TOKEN",
 	server: "ARGOCD_SERVER",
 }
 
