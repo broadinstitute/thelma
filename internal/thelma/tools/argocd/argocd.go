@@ -137,10 +137,10 @@ func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner, 
 	}
 
 	a := &argocd{
-		runner:        shellRunner,
-		cfg:           cfg,
-		iapToken:      iapToken,
-		maskingLogger: logging.WithMask(secrets...),
+		runner:   shellRunner,
+		cfg:      cfg,
+		iapToken: iapToken,
+		logger:   logging.WithMask(secrets...),
 	}
 
 	return a, nil
@@ -148,10 +148,10 @@ func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner, 
 
 // implements ArgoCD interface
 type argocd struct {
-	runner        shell.Runner
-	cfg           argocdConfig
-	iapToken      string
-	maskingLogger zerolog.Logger
+	runner   shell.Runner
+	cfg      argocdConfig
+	iapToken string
+	logger   zerolog.Logger
 }
 
 func (a *argocd) defaultSyncOptions() SyncOptions {
@@ -459,7 +459,7 @@ func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
 
 	// make sure we use our masking logger for all commands so iap and argocd tokens aren't leaked
 	options = append(options, func(options *shell.RunOptions) {
-		options.Logger = &a.maskingLogger
+		options.Logger = &a.logger
 	})
 
 	return a.runner.Run(

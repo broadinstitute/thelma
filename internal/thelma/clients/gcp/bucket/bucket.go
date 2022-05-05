@@ -175,7 +175,7 @@ func (b *bucket) do(objectName string, op object.Operation) error {
 
 	logger := ctx.Logger()
 
-	logger.Debug().Msgf("%s %s", op.Kind(), objectUrl)
+	logger.Trace().Msgf("%s %s", op.Kind(), objectUrl)
 	startTime := time.Now()
 
 	obj := object.Object{

@@ -33,7 +33,7 @@ import (
 // configKey prefix used for configuration for this package
 const configKey = "iap"
 
-// tokenKey unique name for IAP token, used to identify it in storage
+// tokenKey unique name for IAP tokens issued by this package, used to identify it in Thelma's token storage
 const tokenKey = "iap-oauth-token"
 
 // URL to request in order to validate IAP credentials are working
@@ -46,6 +46,9 @@ const tokenValidationRequestTimeout = 15 * time.Second
 
 // Header returned by IAP indicating it intercepted the request and generated the response
 const tokenValidationIapResponseHeader = "x-goog-iap-generated-response"
+
+// how long to wait before timing out compute engine metadata request
+const computeEngineMetadataRequestTimeout = 15 * time.Second
 
 type iapConfig struct {
 	Provider         string `default:"browser"  validate:"oneof=workloadidentity browser"`
@@ -102,6 +105,9 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 			options.IssueFn = func() ([]byte, error) {
 				return getTokenFromWorkloadIdentity(cfg, oauthConfig)
 			}
+			options.ValidateFn = func(token []byte) error {
+				return validateIdentityToken(string(token))
+			}
 		}), nil
 	}
 
@@ -140,7 +146,7 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 		}, nil
 	}
 
-	return nil, fmt.Errorf("invalid iap provider: %v", cfg.Provider)
+	return nil, fmt.Errorf("unknown iap provider type: %v", cfg.Provider)
 }
 
 func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapConfig) (*oauthCredentials, error) {
@@ -175,9 +181,18 @@ func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapCo
 func getTokenFromWorkloadIdentity(cfg iapConfig, oauthConfig *oauth2.Config) ([]byte, error) {
 	metadataUrl := fmt.Sprintf("http://metadata/computeMetadata/v1/instance/service-accounts/%s/identity?audience=%s&format=full", cfg.WorkloadIdentity.ServiceAccount, oauthConfig.ClientID)
 	log.Debug().Msgf("Attempting to issue new IAP token via workload identity")
-	resp, err := http.Get(metadataUrl)
+
+	req, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
+	req.Header.Set("Metadata-Flavor", "Google")
+	client := http.Client{
+		Timeout: computeEngineMetadataRequestTimeout,
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-200 response code from compute engine metadata: %v", resp.StatusCode)
 	}
 	token, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -223,7 +238,10 @@ func validateToken(token *oauth2.Token) error {
 	if idToken == "" {
 		return fmt.Errorf("token validation failed: id token is misssing")
 	}
+	return validateIdentityToken(idToken)
+}
 
+func validateIdentityToken(idToken string) error {
 	// Build client
 	client := http.Client{
 		Timeout: tokenValidationRequestTimeout,
