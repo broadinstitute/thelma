@@ -11,7 +11,7 @@ const replacementText = "******"
 
 // MaskingWriter replaces sensitive text in log messages
 type MaskingWriter struct {
-	// inner writer to send log messages to
+	// inner writer to forward log messages to
 	inner io.Writer
 	// secrets set of strings to redact from log messages (kept as byte slices keyed by string representation)
 	secrets map[string][]byte
