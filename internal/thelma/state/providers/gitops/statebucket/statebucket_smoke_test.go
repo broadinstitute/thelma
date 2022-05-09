@@ -4,6 +4,7 @@
 package statebucket
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,10 @@ func TestStateBucket(t *testing.T) {
 			name: "real gcs bucket",
 			newFn: func(t *testing.T) (StateBucket, error) {
 				b := bucket.NewTestBucket(t)
-				return newWithBucket(b), nil
+				tcfg, err := config.NewTestConfig(t)
+				require.NoError(t, err)
+				cfg, err := loadConfig(tcfg)
+				return newWithBucket(b, cfg), nil
 			},
 		},
 		{

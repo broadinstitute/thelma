@@ -57,10 +57,12 @@ func WithTestDefaults(t *testing.T) Option {
 }
 
 // WithOverrides merges overrides on top of any that have already been set
-func WithOverrides(overrides map[string]interface{}) Option {
+func WithOverrides(overrides ...map[string]interface{}) Option {
 	return func(options *Options) {
-		for k, v := range overrides {
-			options.Overrides[k] = v
+		for _, _map := range overrides {
+			for k, v := range _map {
+				options.Overrides[k] = v
+			}
 		}
 	}
 }

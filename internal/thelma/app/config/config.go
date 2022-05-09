@@ -50,8 +50,8 @@ type config struct {
 // NewTestConfig creates an empty config with optional settings, suitable for use unit tests.
 // By default it sets "home" to the OS temp dir, but this be overridden in the settings map.
 // It DOES NOT include any configuration from the environment or config files (~/.thelma/config.yaml)
-func NewTestConfig(t *testing.T, settings map[string]interface{}) (Config, error) {
-	return Load(WithTestDefaults(t), WithOverrides(settings))
+func NewTestConfig(t *testing.T, settings ...map[string]interface{}) (Config, error) {
+	return Load(WithTestDefaults(t), WithOverrides(settings...))
 }
 
 // Load Thelma configuration from file, environment, etc into a new Config

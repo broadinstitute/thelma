@@ -64,8 +64,8 @@ type StateBucket interface {
 
 // New returns a new statebucket
 func New(thelmaConfig config.Config, googleClients google.Clients) (StateBucket, error) {
-	var cfg statebucketConfig
-	if err := thelmaConfig.Unmarshal(configKey, &cfg); err != nil {
+	cfg, err := loadConfig(thelmaConfig)
+	if err != nil {
 		return nil, err
 	}
 
@@ -89,6 +89,12 @@ func newWithBucket(_bucket bucket.Bucket, cfg statebucketConfig) *statebucket {
 	return &statebucket{
 		writer: newBucketWriter(_bucket, cfg),
 	}
+}
+
+func loadConfig(thelmaConfig config.Config) (statebucketConfig, error) {
+	var cfg statebucketConfig
+	err := thelmaConfig.Unmarshal(configKey, &cfg)
+	return cfg, err
 }
 
 type statebucket struct {
