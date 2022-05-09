@@ -19,6 +19,10 @@ type BucketOptions struct {
 	// For bucket called "my-bucket" with a prefix of "my-prefix-",
 	//    bucket.Read("foo") will read the object "gs://my-bucket/my-prefix-foo"
 	Prefix string
+	// StorageClient use a custom GCS client instead of default
+	StorageClient *storage.Client
+	// Context use a custom context instead of context.Background
+	Context context.Context
 }
 
 // Bucket offers a simple interface for operations on GCS buckets
@@ -71,23 +75,27 @@ func NewBucket(bucketName string, options ...BucketOption) (Bucket, error) {
 
 func newBucket(bucketName string, options ...BucketOption) (*bucket, error) {
 	opts := BucketOptions{
-		Prefix: "",
+		Prefix:        "",
+		Context:       context.Background(),
+		StorageClient: nil,
 	}
 	for _, optFn := range options {
 		optFn(&opts)
 	}
 
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		return nil, err
+	if opts.StorageClient == nil {
+		client, err := storage.NewClient(opts.Context)
+		if err != nil {
+			return nil, err
+		}
+		opts.StorageClient = client
 	}
 
 	return &bucket{
 		name:   bucketName,
-		ctx:    context.Background(),
+		ctx:    opts.Context,
 		prefix: opts.Prefix,
-		client: client,
+		client: opts.StorageClient,
 	}, nil
 }
 
