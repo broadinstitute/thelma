@@ -45,11 +45,8 @@ type ThelmaApp interface {
 }
 
 // New constructs a new ThelmaApp
-func New(cfg config.Config, creds credentials.Credentials, shellRunner shell.Runner, stateLoader terra.StateLoader) (ThelmaApp, error) {
+func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, shellRunner shell.Runner, stateLoader terra.StateLoader) (ThelmaApp, error) {
 	app := &thelmaApp{}
-	app.config = cfg
-	app.shellRunner = shellRunner
-	app.stateLoader = stateLoader
 
 	// Initialize paths
 	_paths, err := paths.New(cfg)
@@ -64,11 +61,8 @@ func New(cfg config.Config, creds credentials.Credentials, shellRunner shell.Run
 		return nil, err
 	}
 
-	// Initialize client factory
-	_clients := clients.New(cfg, creds, shellRunner)
-
 	return &thelmaApp{
-		clients:     _clients,
+		clients:     clients,
 		config:      cfg,
 		credentials: creds,
 		shellRunner: shellRunner,

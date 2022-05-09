@@ -4,9 +4,10 @@ import (
 	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/option"
 	"strings"
 	"time"
 )
@@ -19,10 +20,16 @@ type BucketOptions struct {
 	// For bucket called "my-bucket" with a prefix of "my-prefix-",
 	//    bucket.Read("foo") will read the object "gs://my-bucket/my-prefix-foo"
 	Prefix string
-	// StorageClient use a custom GCS client instead of default
-	StorageClient *storage.Client
+	// ClientOptions options to pass to storage client
+	ClientOptions []option.ClientOption
 	// Context use a custom context instead of context.Background
 	Context context.Context
+}
+
+func WithClientOptions(options ...option.ClientOption) BucketOption {
+	return func(b *BucketOptions) {
+		b.ClientOptions = append(b.ClientOptions, options...)
+	}
 }
 
 // Bucket offers a simple interface for operations on GCS buckets
@@ -75,27 +82,23 @@ func NewBucket(bucketName string, options ...BucketOption) (Bucket, error) {
 
 func newBucket(bucketName string, options ...BucketOption) (*bucket, error) {
 	opts := BucketOptions{
-		Prefix:        "",
-		Context:       context.Background(),
-		StorageClient: nil,
+		Prefix:  "",
+		Context: context.Background(),
 	}
 	for _, optFn := range options {
 		optFn(&opts)
 	}
 
-	if opts.StorageClient == nil {
-		client, err := storage.NewClient(opts.Context)
-		if err != nil {
-			return nil, err
-		}
-		opts.StorageClient = client
+	client, err := storage.NewClient(opts.Context, opts.ClientOptions...)
+	if err != nil {
+		return nil, err
 	}
 
 	return &bucket{
 		name:   bucketName,
 		ctx:    opts.Context,
 		prefix: opts.Prefix,
-		client: opts.StorageClient,
+		client: client,
 	}, nil
 }
 

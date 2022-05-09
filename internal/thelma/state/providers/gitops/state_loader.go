@@ -32,28 +32,12 @@ const envConfigDir = "environments"
 // clusterConfigDir is the subdirectory in terra-helmfile to search for cluster config files
 const clusterConfigDir = "clusters"
 
-// NewStateLoader returns a new StateLoader w/ given settings
-func NewStateLoader(thelmaHome string, shellRunner shell.Runner, options ...LoadOption) (terra.StateLoader, error) {
-	opts := LoadOptions{}
-	for _, option := range options {
-		opts = option(opts)
-	}
-
-	loader := &stateLoader{
+func NewStateLoader(thelmaHome string, shellRunner shell.Runner, statebucket statebucket.StateBucket) terra.StateLoader {
+	return &stateLoader{
 		thelmaHome:  thelmaHome,
 		shellRunner: shellRunner,
-		statebucket: opts.StateBucket,
+		statebucket: statebucket,
 	}
-
-	if loader.statebucket == nil {
-		sb, err := statebucket.New()
-		if err != nil {
-			return nil, err
-		}
-		loader.statebucket = sb
-	}
-
-	return loader, nil
 }
 
 // implements terra.StateLoader interface

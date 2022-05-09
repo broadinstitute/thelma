@@ -7,8 +7,10 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/broadinstitute/thelma/internal/thelma/clients"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"testing"
@@ -131,18 +133,29 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		shellRunner = shell.NewRunner()
 	}
 
-	stateLoader, err := b.getStateLoader(cfg.Home(), shellRunner)
+	// Initialize client factory
+	_clients, err := clients.New(cfg, _credentials, shellRunner)
+	if err != nil {
+		return nil, err
+	}
+
+	stateLoader, err := b.buildStateLoader(cfg, shellRunner, _clients)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing state loader: %v", err)
 	}
 
 	// Initialize app
-	return app.New(cfg, _credentials, shellRunner, stateLoader)
+	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader)
 }
 
-func (b *thelmaBuilder) getStateLoader(thelmaHome string, shellRunner shell.Runner) (terra.StateLoader, error) {
-	if !b.stateFixture.enabled {
-		return gitops.NewStateLoader(thelmaHome, shellRunner)
+func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Runner, clients clients.Clients) (terra.StateLoader, error) {
+	if b.stateFixture.enabled {
+		return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, cfg.Home(), shellRunner)
 	}
-	return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, thelmaHome, shellRunner)
+
+	sb, err := statebucket.New(cfg, clients.Google())
+	if err != nil {
+		return nil, err
+	}
+	return gitops.NewStateLoader(cfg.Home(), shellRunner, sb), nil
 }

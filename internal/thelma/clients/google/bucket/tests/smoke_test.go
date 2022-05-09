@@ -9,11 +9,11 @@ package tests
 // * This file lives in its own package so that it can use the `bassert` package without creating a dependency cycle
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
-	bassert "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/testing/assert"
-	brequire "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/testing/require"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
+	bassert "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/testing/assert"
+	brequire "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/testing/require"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
