@@ -36,6 +36,7 @@ type options struct {
 	fiabName      string
 	fiabIP        string
 	generatorOnly bool
+	waitHealthy   bool
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
@@ -46,6 +47,7 @@ var flagNames = struct {
 	fiabName      string
 	fiabIP        string
 	generatorOnly string
+	waitHealthy   string
 }{
 	name:          "name",
 	template:      "template",
@@ -53,6 +55,7 @@ var flagNames = struct {
 	fiabName:      "fiab-name",
 	fiabIP:        "fiab-ip",
 	generatorOnly: "generator-only",
+	waitHealthy:   "wait-healthy",
 }
 
 type createCommand struct {
@@ -73,8 +76,8 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.options.hybrid, flagNames.hybrid, false, "Set to true to create a hybrid (connected to a Fiab) environment")
 	cobraCommand.Flags().StringVar(&cmd.options.fiabName, flagNames.fiabName, "FIAB", "Name of the Fiab this hybrid environment should be connected to")
 	cobraCommand.Flags().StringVar(&cmd.options.fiabIP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
-	cobraCommand.Flags().BoolVar(&cmd.options.generatorOnly, flagNames.generatorOnly, false, "If true, sync bee generator but not downstream argo applications")
-
+	cobraCommand.Flags().BoolVar(&cmd.options.generatorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
+	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, false, "Wait for BEE's Argo apps to become healthy after syncing")
 }
 
 func (cmd *createCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -152,7 +155,9 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	return _argocd.SyncReleases(releases, 15)
+	return _argocd.SyncReleases(releases, 15, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = cmd.options.waitHealthy
+	})
 }
 
 func (cmd *createCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
