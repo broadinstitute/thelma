@@ -6,8 +6,8 @@ package tests
 // This file contains a simple example smoke test demonstrating the use of TestBucket
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
-	bassert "github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/testing/assert"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	bassert "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/testing/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

@@ -8,6 +8,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/mcuadros/go-defaults"
 	"github.com/rs/zerolog/log"
 	"os"
@@ -49,8 +50,8 @@ type config struct {
 // NewTestConfig creates an empty config with optional settings, suitable for use unit tests.
 // By default it sets "home" to the OS temp dir, but this be overridden in the settings map.
 // It DOES NOT include any configuration from the environment or config files (~/.thelma/config.yaml)
-func NewTestConfig(t *testing.T, settings map[string]interface{}) (Config, error) {
-	return Load(WithTestDefaults(t), WithOverrides(settings))
+func NewTestConfig(t *testing.T, settings ...map[string]interface{}) (Config, error) {
+	return Load(WithTestDefaults(t), WithOverrides(settings...))
 }
 
 // Load Thelma configuration from file, environment, etc into a new Config
@@ -61,6 +62,15 @@ func Load(opts ...Option) (Config, error) {
 	}
 
 	_koanf := koanf.New(keyDelimiter)
+
+	// load configuration defaults from profile. (these can be overridden by environment variables, config file, etc.)
+	profile, err := loadProfile(options)
+	if err != nil {
+		return nil, fmt.Errorf("error loading configuration profile: %v", err)
+	}
+	if err = _koanf.Load(rawbytes.Provider(profile), yaml.Parser()); err != nil {
+		return nil, fmt.Errorf("error loading configuration profile: %v", err)
+	}
 
 	// load config from file ~/.thelma/config.yaml
 	if options.ConfigFile != "" {

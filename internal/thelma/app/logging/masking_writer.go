@@ -4,31 +4,41 @@ import (
 	"bytes"
 	"github.com/rs/zerolog"
 	"io"
+	"sync"
 )
 
 const replacementText = "******"
 
 // MaskingWriter replaces sensitive text in log messages
 type MaskingWriter struct {
-	// inner writer to send log messages to
+	// inner writer to forward log messages to
 	inner io.Writer
-	// secrets list of strings to redact from log messages (as byte slices)
-	secrets [][]byte
+	// secrets set of strings to redact from log messages (kept as byte slices keyed by string representation)
+	secrets map[string][]byte
 	// replacementText text to replace secrets with (as byte slice)
 	replacementText []byte
+	// mutex used to protect updates to the secrets list
+	mutex sync.RWMutex
 }
 
-func NewMaskingWriter(inner io.Writer, secrets []string) zerolog.LevelWriter {
-	// convert secrets to byte array
-	_secrets := make([][]byte, len(secrets))
-	for i, s := range secrets {
-		_secrets[i] = []byte(s)
-	}
-
+func NewMaskingWriter(inner io.Writer) *MaskingWriter {
 	return &MaskingWriter{
 		inner:           inner,
-		secrets:         _secrets,
 		replacementText: []byte(replacementText),
+		secrets:         make(map[string][]byte),
+	}
+}
+
+func (w *MaskingWriter) MaskSecrets(secrets ...string) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	// convert secrets to byte arrays
+	for _, s := range secrets {
+		_, exists := w.secrets[s]
+		if !exists {
+			w.secrets[s] = []byte(s)
+		}
 	}
 }
 
@@ -51,6 +61,8 @@ func (w *MaskingWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err er
 }
 
 func (w *MaskingWriter) redactSecrets(msg []byte) []byte {
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
 	for _, secret := range w.secrets {
 		msg = bytes.ReplaceAll(msg, secret, w.replacementText)
 	}

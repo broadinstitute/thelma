@@ -4,7 +4,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/repo"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/rs/zerolog/log"
 )
 

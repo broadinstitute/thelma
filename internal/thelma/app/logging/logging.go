@@ -18,7 +18,7 @@ const configPrefix = "logging"
 // globalWriter is the writer that zerolog's global log.Logger is configured to write to.
 // We track it in a package-level variable so that WithMask can wrap it with a masking writer.
 // Initialized with a basic writer here that is overwritten with a more complex/configurable writer during InitializeLogging
-var globalWriter io.Writer = zerolog.ConsoleWriter{Out: os.Stderr}
+var globalWriter = NewMaskingWriter(zerolog.ConsoleWriter{Out: os.Stderr})
 
 // logConfig is a configuration struct for the logging package
 type logConfig struct {
@@ -44,6 +44,11 @@ type logConfig struct {
 // to catch any messages that are logged before full Thelma initialization
 func Bootstrap() {
 	log.Logger = log.Output(globalWriter).Level(zerolog.DebugLevel)
+}
+
+// MaskSecret configures the global logger to mask the given secret(s)
+func MaskSecret(secret ...string) {
+	globalWriter.MaskSecrets(secret...)
 }
 
 // InitializeLogging updates the global Zerolog logger to match Thelma's configuration.
@@ -72,12 +77,6 @@ func InitializeLogging(thelmaConfig config.Config, thelmaRoot root.Root) error {
 	return nil
 }
 
-// WithMask return a copy of the global logger that will mask the given secrets
-func WithMask(secrets ...string) zerolog.Logger {
-	writer := NewMaskingWriter(globalWriter, secrets)
-	return log.Output(writer)
-}
-
 // Initialize a logConfig based on given thelmaConfig
 func loadConfig(thelmaConfig config.Config, thelmaRoot root.Root) (*logConfig, error) {
 	cfg := &logConfig{}
@@ -94,8 +93,8 @@ func loadConfig(thelmaConfig config.Config, thelmaRoot root.Root) (*logConfig, e
 	return cfg, nil
 }
 
-// Construct a new composite console + file writer based on supplied configuration
-func newCompositeWriter(cfg *logConfig, consoleStream io.Writer) (zerolog.LevelWriter, error) {
+// Construct a new composite console + file writer based on supplied configuration, wrapped in a MaskingWriter for redacting secrets
+func newCompositeWriter(cfg *logConfig, consoleStream io.Writer) (*MaskingWriter, error) {
 	var writers []io.Writer
 
 	// Create console writer
@@ -111,7 +110,9 @@ func newCompositeWriter(cfg *logConfig, consoleStream io.Writer) (zerolog.LevelW
 	}
 
 	// Combine writers into a multi writer
-	return zerolog.MultiLevelWriter(writers...), nil
+	combined := zerolog.MultiLevelWriter(writers...)
+
+	return NewMaskingWriter(combined), nil
 }
 
 // Construct a new logger based on supplied configuration

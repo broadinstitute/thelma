@@ -1,8 +1,8 @@
 package require
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/testing/assert"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/testing/assert"
 	"testing"
 )
 

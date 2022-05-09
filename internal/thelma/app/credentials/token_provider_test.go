@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -187,8 +188,9 @@ func Test_Token_Get(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup(t, storeDir)
 			}
-			creds, err := New(storeDir)
+			store, err := stores.NewDirectoryStore(storeDir)
 			require.NoError(t, err)
+			creds := NewWithStore(store)
 
 			var options []TokenOption
 			if tc.option != nil {
@@ -242,8 +244,9 @@ func Test_Token_Reissue(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup(t, storeDir)
 			}
-			creds, err := New(storeDir)
+			store, err := stores.NewDirectoryStore(storeDir)
 			require.NoError(t, err)
+			creds := NewWithStore(store)
 
 			var options []TokenOption
 			if tc.option != nil {

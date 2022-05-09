@@ -1,7 +1,7 @@
 package bucket
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/lock"
 	"time"
 )
 

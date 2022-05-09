@@ -3,9 +3,9 @@ package entrypoint
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
-	argocd_login "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/login"
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
+	auth_argocd "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/argocd"
 	auth_iap "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/iap"
 	auth_vault "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
@@ -35,10 +35,10 @@ func Execute() {
 
 func withCommands(opts *cli.Options) {
 	opts.AddCommand("argocd", argocd.NewArgoCDCommand())
-	opts.AddCommand("argocd login", argocd_login.NewArgoCDLoginCommand())
 	opts.AddCommand("argocd sync", argocd_sync.NewArgoCDSyncCommand())
 
 	opts.AddCommand("auth", auth.NewAuthCommand())
+	opts.AddCommand("auth argocd", auth_argocd.NewAuthArgoCDCommand())
 	opts.AddCommand("auth iap", auth_iap.NewAuthIAPCommand())
 	opts.AddCommand("auth vault", auth_vault.NewAuthVaultCommand())
 

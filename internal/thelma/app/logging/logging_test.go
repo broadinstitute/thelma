@@ -193,14 +193,14 @@ func Test_newLogger(t *testing.T) {
 			require.NoError(t, err)
 
 			fakeConsoleWriter := &bytes.Buffer{}
-			compositeWriter, err := newCompositeWriter(cfg, fakeConsoleWriter)
+			maskingWriter, err := newCompositeWriter(cfg, fakeConsoleWriter)
 			require.NoError(t, err)
 
 			if len(tc.maskSecrets) > 0 {
-				compositeWriter = NewMaskingWriter(compositeWriter, tc.maskSecrets)
+				maskingWriter.MaskSecrets(tc.maskSecrets...)
 			}
 
-			logger, err := newLogger(cfg, compositeWriter)
+			logger, err := newLogger(cfg, maskingWriter)
 			require.NoError(t, err)
 
 			if tc.setupFn != nil {

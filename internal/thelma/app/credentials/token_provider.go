@@ -67,18 +67,18 @@ func (c credentials) NewTokenProvider(key string, options ...TokenOption) TokenP
 		opts.CredentialStore = c.defaultStore
 	}
 
-	return token{
+	return WithMasking(tokenProvider{
 		key:     key,
 		options: opts,
-	}
+	})
 }
 
-type token struct {
+type tokenProvider struct {
 	key     string
 	options TokenOptions
 }
 
-func (t token) Get() ([]byte, error) {
+func (t tokenProvider) Get() ([]byte, error) {
 	value := t.readFromEnv()
 	if len(value) != 0 {
 		return value, nil
@@ -95,7 +95,7 @@ func (t token) Get() ([]byte, error) {
 	return t.getNewToken()
 }
 
-func (t token) Reissue() ([]byte, error) {
+func (t tokenProvider) Reissue() ([]byte, error) {
 	return t.getNewToken()
 }
 
@@ -103,7 +103,7 @@ func (t token) Reissue() ([]byte, error) {
 // for example, ReadFromEnv("VAULT_TOKEN") will:
 // (1) check for an environment variable THELMA_VAULT_TOKEN and return it if it exists
 // (2) return the value of the VAULT_TOKEN environment variable
-func (t token) readFromEnv() []byte {
+func (t tokenProvider) readFromEnv() []byte {
 	value := os.Getenv(env.WithEnvPrefix(t.options.EnvVar))
 	if len(value) != 0 {
 		return []byte(value)
@@ -115,7 +115,7 @@ func (t token) readFromEnv() []byte {
 // If no value exists, the empty string is returned.
 // If a value for the token exists it is not valid, readFromStore will attempt to refresh the token,
 // returning the empty string if it can't be refreshed.
-func (t token) readFromStore() ([]byte, error) {
+func (t tokenProvider) readFromStore() ([]byte, error) {
 	exists, err := t.options.CredentialStore.Exists(t.key)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (t token) readFromStore() ([]byte, error) {
 // refreshToken - return nil, nil if the token could not be refreshed or refresh failed
 // returns an error if an exception (eg. error writing to credential store) occurs
 // returns a non-nil value and no error if the token was successfully refreshed
-func (t token) refreshToken(value []byte) ([]byte, error) {
+func (t tokenProvider) refreshToken(value []byte) ([]byte, error) {
 	if t.options.RefreshFn == nil {
 		return nil, nil
 	}
@@ -167,7 +167,7 @@ func (t token) refreshToken(value []byte) ([]byte, error) {
 	return newValue, nil
 }
 
-func (t token) validateToken(value []byte) error {
+func (t tokenProvider) validateToken(value []byte) error {
 	if t.options.ValidateFn == nil {
 		// no validation function provided, assume value is valid
 		return nil
@@ -180,7 +180,7 @@ func (t token) validateToken(value []byte) error {
 // (1) invoking the issueFn callback
 // (2) prompting the user for input
 // If a new value is successfully obtained (and validated), token is stored and return to user
-func (t token) getNewToken() ([]byte, error) {
+func (t tokenProvider) getNewToken() ([]byte, error) {
 	var value []byte
 	var err error
 
@@ -210,7 +210,7 @@ func (t token) getNewToken() ([]byte, error) {
 }
 
 // promptForNewValue will prompt the user for a new token value
-func (t token) promptForNewValue() ([]byte, error) {
+func (t tokenProvider) promptForNewValue() ([]byte, error) {
 	if !utils.Interactive() {
 		return nil, fmt.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.options.EnvVar, t.options.EnvVar)
 	}

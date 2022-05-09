@@ -8,7 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/rs/zerolog"
+	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"strings"
@@ -25,7 +25,7 @@ var envVars = struct {
 	token  string
 	server string
 }{
-	token:  "ARGOCD_TOKEN",
+	token:  "ARGOCD_AUTH_TOKEN",
 	server: "ARGOCD_SERVER",
 }
 
@@ -45,6 +45,7 @@ var flags = struct {
 type SyncOptions struct {
 	HardRefresh  bool
 	SyncIfNoDiff bool
+	WaitHealthy  bool
 }
 
 type SyncOption func(options *SyncOptions)
@@ -53,8 +54,15 @@ type argocdConfig struct {
 	// Host hostname of the ArgoCD server
 	Host string `valid:"hostname" default:"ap-argocd.dsp-devops.broadinstitute.org"`
 
-	// Token (optional) token to use authenticate to ArgoCD. If not supplied, local client creds will be used
+	// Token (optional) token to use authenticate to ArgoCD. If not supplied, alternative authentication will be used
 	Token string
+
+	// Vault (optional) pull ArgoCD token from Vault and use that to authenticate to ArgoCD. (should only be used in CI pipelines)
+	Vault struct {
+		Enabled bool   `default:"false"`
+		Path    string `default:"secret/devops/thelma/argocd"`
+		Key     string `default:"token"`
+	}
 
 	// GRPCWeb set to true to pass --grpc-web flag to all ArgoCD commands
 	GRPCWeb bool `default:"true"`
@@ -98,7 +106,7 @@ type ArgoCD interface {
 // * uses those SSO credentials to generate a new ArgoCD authentication token for the user's identity
 // * stores the generated token in ~/.argocd/config
 func Login(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) error {
-	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner, iapToken)
+	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner, iapToken, nil)
 	if err != nil {
 		return err
 	}
@@ -112,8 +120,8 @@ func Login(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string
 }
 
 // New return a new ArgoCD client
-func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) (ArgoCD, error) {
-	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner, iapToken)
+func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (ArgoCD, error) {
+	a, err := newWithoutLoginCheck(thelmaConfig, shellRunner, iapToken, vaultClient)
 	if err != nil {
 		return nil, err
 	}
@@ -123,23 +131,29 @@ func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) 
 	return a, nil
 }
 
-func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) (*argocd, error) {
+func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (*argocd, error) {
 	var cfg argocdConfig
 	if err := thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
 		return nil, err
 	}
 
-	var secrets []string
-	secrets = append(secrets, iapToken)
+	// load token from vault if enabled and token not already configured
+	if cfg.Token == "" && vaultClient != nil && cfg.Vault.Enabled {
+		token, err := readTokenFromVault(cfg, vaultClient)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Token = token
+	}
+
 	if cfg.Token != "" {
-		secrets = append(secrets, cfg.Token)
+		logging.MaskSecret(cfg.Token)
 	}
 
 	a := &argocd{
-		runner:        shellRunner,
-		cfg:           cfg,
-		iapToken:      iapToken,
-		maskingLogger: logging.WithMask(secrets...),
+		runner:   shellRunner,
+		cfg:      cfg,
+		iapToken: iapToken,
 	}
 
 	return a, nil
@@ -147,16 +161,16 @@ func newWithoutLoginCheck(thelmaConfig config.Config, shellRunner shell.Runner, 
 
 // implements ArgoCD interface
 type argocd struct {
-	runner        shell.Runner
-	cfg           argocdConfig
-	iapToken      string
-	maskingLogger zerolog.Logger
+	runner   shell.Runner
+	cfg      argocdConfig
+	iapToken string
 }
 
 func (a *argocd) defaultSyncOptions() SyncOptions {
 	return SyncOptions{
 		HardRefresh:  true,
 		SyncIfNoDiff: true,
+		WaitHealthy:  true,
 	}
 }
 
@@ -186,8 +200,11 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) error {
 	if err := a.sync(appName); err != nil {
 		return err
 	}
-	if err := a.waitHealthy(appName); err != nil {
-		return err
+
+	if opts.WaitHealthy {
+		if err := a.waitHealthy(appName); err != nil {
+			return err
+		}
 	}
 
 	log.Debug().Msgf("Successfully synced %s", appName)
@@ -452,11 +469,6 @@ func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
 
 	_args = append(_args, args...)
 
-	// make sure we use our masking logger for all commands so iap and argocd tokens aren't leaked
-	options = append(options, func(options *shell.RunOptions) {
-		options.Logger = &a.maskingLogger
-	})
-
 	return a.runner.Run(
 		shell.Command{
 			Prog: prog,
@@ -469,4 +481,21 @@ func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
 
 func (a *argocd) proxyAuthorizationHeader() string {
 	return fmt.Sprintf("Proxy-Authorization: Bearer %s", a.iapToken)
+}
+
+func readTokenFromVault(cfg argocdConfig, vaultClient *vaultapi.Client) (string, error) {
+	log.Debug().Msgf("Attempting to read ArgoCD token from Vault (%s)", cfg.Vault.Path)
+	secret, err := vaultClient.Logical().Read(cfg.Vault.Path)
+	if err != nil {
+		return "", fmt.Errorf("error loading ArgoCD token from Vault path %s: %v", cfg.Vault.Path, err)
+	}
+	v, exists := secret.Data[cfg.Vault.Key]
+	if !exists {
+		return "", fmt.Errorf("error loading ArgoCD token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
+	}
+	asStr, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf("error loading ArgoCD token from Vault path %s: expected string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
+	}
+	return asStr, nil
 }

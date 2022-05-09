@@ -27,8 +27,8 @@ func Test_DirectoryStore(t *testing.T) {
 	assert.Equal(t, "super secret", string(credential))
 }
 
-func Test_NoopStore(t *testing.T) {
-	s := NewNoopStore()
+func Test_MapStore(t *testing.T) {
+	s := NewMapStore()
 
 	exists, err := s.Exists("my-key")
 	require.NoError(t, err)
@@ -39,9 +39,9 @@ func Test_NoopStore(t *testing.T) {
 
 	exists, err = s.Exists("my-key")
 	require.NoError(t, err)
-	assert.False(t, exists)
+	assert.True(t, exists)
 
 	credential, err := s.Read("my-key")
 	require.NoError(t, err)
-	assert.Empty(t, credential)
+	assert.Equal(t, "super secret", string(credential))
 }

@@ -45,10 +45,7 @@ func NewFakeStateLoader(fixture FixtureName, t *testing.T, thelmaHome string, sh
 	}
 
 	// create new underlying loader
-	loader, err := gitops.NewStateLoader(thelmaHome, shellRunner, func(options gitops.LoadOptions) gitops.LoadOptions {
-		options.StateBucket = sb
-		return options
-	})
+	loader := gitops.NewStateLoader(thelmaHome, shellRunner, sb)
 
 	if err != nil {
 		return nil, err

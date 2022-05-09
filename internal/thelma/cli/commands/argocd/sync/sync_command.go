@@ -43,13 +43,6 @@ func (cmd *syncCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (cmd *syncCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
-	// build argo client
-	_argocd, err := app.Clients().ArgoCD()
-	if err != nil {
-		return err
-	}
-	cmd.argocd = _argocd
-
 	// compute selected releases
 	state, err := app.State()
 	if err != nil {
@@ -61,6 +54,14 @@ func (cmd *syncCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	}
 
 	cmd.releases = selection.Releases
+
+	// build argo client
+	_argocd, err := app.Clients().ArgoCD()
+	if err != nil {
+		return err
+	}
+	cmd.argocd = _argocd
+
 	return nil
 }
 

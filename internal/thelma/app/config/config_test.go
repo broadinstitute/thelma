@@ -53,6 +53,7 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 		env         map[string]string
 		overrides   map[string]interface{}
 		cfgFile     string
+		profile     string
 		expectError string
 		expect      func(*testConfig)
 	}{
@@ -142,6 +143,13 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 			},
 		},
 		{
+			name:    "fake profile should override defaults",
+			profile: "fake",
+			expect: func(c *testConfig) {
+				c.Logging.Console.Level = "trace"
+			},
+		},
+		{
 			name:        "validation failures should return a useful error",
 			cfgFile:     "testdata/invalid/config.yaml",
 			expectError: `(?s)invalid configuration under key "mykey", please check config file "testdata/invalid/config.yaml" and "THELMA_.*" environment variables:.*"mykey.logging.console.level" value this-is-not-a-valid-log-level does not match constraint "oneof: trace debug info warn error"`,
@@ -191,6 +199,12 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 				options.ConfigFile = tc.cfgFile
 				options.EnvPrefix = envPrefix
 
+				profile := defaultProfile
+				if tc.profile != "" {
+					profile = tc.profile
+				}
+				options.Profile = profile
+
 				overrides := map[string]interface{}{
 					"home": "fake/home/does/not/exist",
 				}
@@ -231,14 +245,11 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 func TestConfig_Home(t *testing.T) {
 	fakeHome := "relative/path/on/filesystem"
 
-	cfg, err := Load(func(options *Options) {
-		// don't use default config file or env prefix, to make sure we don't pick up random values from the environment
-		options.ConfigFile = "do/not/use/default/config/file"
-		options.EnvPrefix = "do/not/use/default/prefix"
-		options.Overrides = map[string]interface{}{
-			"home": fakeHome,
-		}
-	})
+	overrides := map[string]interface{}{
+		"home": fakeHome,
+	}
+
+	cfg, err := Load(WithTestDefaults(t), WithOverrides(overrides))
 
 	if !assert.NoError(t, err) {
 		return
@@ -255,12 +266,7 @@ func TestConfig_Dump(t *testing.T) {
 		"home": "does/not/exist",
 	}
 
-	cfg, err := Load(func(options *Options) {
-		// don't use default config file or env prefix, to make sure we don't pick up random values from the environment
-		options.ConfigFile = "do/not/use/default/config/file"
-		options.EnvPrefix = "do-not-use-default-prefix"
-		options.Overrides = expected
-	})
+	cfg, err := Load(WithTestDefaults(t), WithOverrides(expected))
 
 	if !assert.NoError(t, err) {
 		return

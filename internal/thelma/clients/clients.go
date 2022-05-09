@@ -4,6 +4,7 @@ package clients
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
@@ -19,20 +20,26 @@ type Clients interface {
 	Vault() (*vaultapi.Client, error)
 	// ArgoCD returns a client for the DSP ArgoCD instance
 	ArgoCD() (argocd.ArgoCD, error)
+	// Google returns a client factory for GCP clients
+	Google() google.Clients
 }
 
-func New(config config.Config, creds credentials.Credentials, runner shell.Runner) Clients {
+func New(thelmaConfig config.Config, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
 	return &clients{
-		config: config,
-		creds:  creds,
-		runner: runner,
-	}
+		thelmaConfig: thelmaConfig,
+		creds:        creds,
+		runner:       runner,
+	}, nil
 }
 
 type clients struct {
-	config config.Config
-	creds  credentials.Credentials
-	runner shell.Runner
+	thelmaConfig config.Config
+	creds        credentials.Credentials
+	runner       shell.Runner
+}
+
+func (c *clients) Google() google.Clients {
+	return google.New(c.thelmaConfig, c)
 }
 
 func (c *clients) IAPToken() (string, error) {
@@ -41,7 +48,7 @@ func (c *clients) IAPToken() (string, error) {
 		return "", err
 	}
 
-	tokenProvider, err := iap.TokenProvider(c.config, c.creds, vaultClient, c.runner)
+	tokenProvider, err := iap.TokenProvider(c.thelmaConfig, c.creds, vaultClient, c.runner)
 	if err != nil {
 		return "", err
 	}
@@ -55,7 +62,7 @@ func (c *clients) IAPToken() (string, error) {
 }
 
 func (c *clients) Vault() (*vaultapi.Client, error) {
-	return vault.NewClient(c.config, c.creds)
+	return vault.NewClient(c.thelmaConfig, c.creds)
 }
 
 func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
@@ -63,5 +70,11 @@ func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
 	if err != nil {
 		return nil, err
 	}
-	return argocd.New(c.config, c.runner, iapToken)
+
+	vaultClient, err := c.Vault()
+	if err != nil {
+		return nil, err
+	}
+
+	return argocd.New(c.thelmaConfig, c.runner, iapToken, vaultClient)
 }

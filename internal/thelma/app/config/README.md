@@ -57,6 +57,22 @@ These config values are retrieved using methods on the Config object itself. (eg
 
 Only truly global, cross-cutting values that have implications for many parts of Thelma should be added at the root level.
 
+### Profiles
+
+Thelma is run by humans, on laptops, as well as in CI/CD pipelines. Often it needs to behave slightly differently each situation. (For example, credentials should not be cached on disk on CI servers).
+
+Thelma configuration values should default to the manual, run-by-people case. However, it's possible to set configuration overrides for the CI/CD case in the `ci` configuration profile, located in `./profiles/ci.yaml`.
+
+Thelma will automatically apply the `ci` profile when it is run in a non-interactive shell.
+
+But it's possible to explicitly select a configuration profile using the `THELMA_CONFIG_PROFILE` environment variable:
+
+    # Run thelma with the default (i.e. "human-mode") config profile
+    THELMA_CONFIG_PROFILE=default thelma <...>
+
+    # Run thelma with the ci profile
+    THELMA_CONFIG_PROFILE=ci thelma <...>
+
 ### FAQ
 
 #### Why Koanf and not [Viper](https://github.com/spf13/viper)?

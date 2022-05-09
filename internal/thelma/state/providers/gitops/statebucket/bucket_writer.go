@@ -3,24 +3,26 @@ package statebucket
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/lock"
 	"github.com/rs/zerolog/log"
 )
 
-func newBucketWriter(bucket bucket.Bucket) writer {
+func newBucketWriter(bucket bucket.Bucket, cfg statebucketConfig) writer {
 	return &bucketWriter{
 		bucket: bucket,
+		cfg:    cfg,
 	}
 }
 
 type bucketWriter struct {
 	bucket bucket.Bucket
+	cfg    statebucketConfig
 }
 
 func (w *bucketWriter) read() (StateFile, error) {
 	var result StateFile
-	data, err := w.bucket.Read(stateObject)
+	data, err := w.bucket.Read(w.cfg.Object)
 
 	if err != nil {
 		return result, fmt.Errorf("error reading state file: %v", err)
@@ -40,7 +42,7 @@ func (w *bucketWriter) write(state StateFile) error {
 	}
 
 	return w.withLock(func() error {
-		return w.bucket.Write(stateObject, content)
+		return w.bucket.Write(w.cfg.Object, content)
 	})
 }
 
@@ -70,7 +72,7 @@ func (w *bucketWriter) updateUnsafe(transformFn transformFn) error {
 		return fmt.Errorf("error marshalling state file: %v", err)
 	}
 
-	if err := w.bucket.Write(stateObject, content); err != nil {
+	if err := w.bucket.Write(w.cfg.Object, content); err != nil {
 		return fmt.Errorf("error writing state file: %v", err)
 	}
 
@@ -78,8 +80,8 @@ func (w *bucketWriter) updateUnsafe(transformFn transformFn) error {
 }
 
 func (w *bucketWriter) withLock(fn func() error) error {
-	locker := w.bucket.NewLocker(lockObject, lockMaxWait, func(options *lock.Options) {
-		options.ExpiresAfter = lockExpiresAfter
+	locker := w.bucket.NewLocker(w.cfg.Lock.Object, w.cfg.Lock.MaxWait, func(options *lock.Options) {
+		options.ExpiresAfter = w.cfg.Lock.ExpiresAfter
 	})
 
 	lockId, err := locker.Lock()
@@ -91,7 +93,7 @@ func (w *bucketWriter) withLock(fn func() error) error {
 
 	err = locker.Unlock(lockId)
 	if err != nil {
-		log.Error().Err(err).Msgf("error releasing lock %s: %v", lockObject, err)
+		log.Error().Err(err).Msgf("error releasing lock %s: %v", w.cfg.Lock.Object, err)
 	}
 
 	// if we got a callback error, return it, else return lock release error

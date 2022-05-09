@@ -1,0 +1,26 @@
+# this file contains configuration defaults for Thelma when it is run in CI and other non-interactive environments
+
+argocd:
+  # pull token from Vault instead of local user credentials
+  vault:
+    enabled: true
+
+credentials:
+  # use inmemory store so creds aren't persistent to disk
+  storetype: inmemory
+
+google:
+  # authenticate to Google Cloud services using a service account from Vault
+  auth:
+    type: vault-sa
+
+iap:
+  # use workloadidentity to generate iap credentials instead of browser
+  provider: workloadidentity
+
+logging:
+  console:
+    level: debug
+  file:
+    # disable file logging
+    enabled: false

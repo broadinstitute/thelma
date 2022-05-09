@@ -1,10 +1,10 @@
 package repo
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/lock"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/testing/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/lock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/testing/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

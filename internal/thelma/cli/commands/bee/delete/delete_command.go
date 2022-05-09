@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -20,14 +21,17 @@ thelma bee delete \
 `
 
 type options struct {
-	name string
+	name     string
+	ifExists bool
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name string
+	name     string
+	ifExists string
 }{
-	name: "name",
+	name:     "name",
+	ifExists: "if-exists",
 }
 
 type deleteCommand struct {
@@ -44,6 +48,7 @@ func (cmd *deleteCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "NAME", "Required. Name of the BEE to delete")
+	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 }
 
 func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -70,8 +75,15 @@ func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
+
 	if env == nil {
-		return fmt.Errorf("could not delete environment %s: no environment by that name exists", cmd.options.name)
+		msg := fmt.Sprintf("Could not delete %s, no BEE by that name exists", cmd.options.name)
+		if cmd.options.ifExists {
+			log.Warn().Msg(msg)
+			return nil
+		} else {
+			return fmt.Errorf(msg)
+		}
 	}
 
 	if err = state.Environments().Delete(env.Name()); err != nil {
@@ -82,8 +94,20 @@ func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 
 	rc.SetOutput(views.ForTerraEnv(env))
 
-	log.Info().Msgf("Syncing %s", bee.GeneratorArgoApp)
-	return _argocd.SyncApp(bee.GeneratorArgoApp)
+	log.Info().Msgf("Syncing %s to delete applications", bee.GeneratorArgoApp)
+	err = _argocd.SyncApp(bee.GeneratorArgoApp, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = false
+	})
+	if err != nil {
+		return err
+	}
+
+	// Unfortunately we need to double-sync the generator to destroy the project after the applications are deleted
+	log.Info().Msgf("Syncing %s to delete projects", bee.GeneratorArgoApp)
+	return _argocd.SyncApp(bee.GeneratorArgoApp, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = false
+		options.HardRefresh = false
+	})
 }
 
 func (cmd *deleteCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

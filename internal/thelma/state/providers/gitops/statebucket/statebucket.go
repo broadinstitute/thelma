@@ -2,16 +2,27 @@ package statebucket
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"sort"
 	"time"
 )
 
-const bucketName = "thelma-state"
-const stateObject = "state.json"
-const lockObject = ".update.lk"
-const lockMaxWait = 30 * time.Second
-const lockExpiresAfter = 300 * time.Second
+const configKey = "statebucket"
+
+type statebucketConfig struct {
+	// Name of the GCS bucket
+	Name string `default:"thelma-state"`
+	// Object name of the object in the bucket where state is kept
+	Object string `default:"state.json"`
+	// Lock settings for the state lock used to prevent concurrent updates from stomping on each other
+	Lock struct {
+		Object       string        `default:".update.lk"`
+		MaxWait      time.Duration `default:"30s"`
+		ExpiresAfter time.Duration `default:"5m"`
+	}
+}
 
 // Fiab DEPRECATED struct for representing a Fiab in state file
 type Fiab struct {
@@ -52,27 +63,38 @@ type StateBucket interface {
 }
 
 // New returns a new statebucket
-func New() (StateBucket, error) {
-	_bucket, err := bucket.NewBucket(bucketName)
+func New(thelmaConfig config.Config, googleClients google.Clients) (StateBucket, error) {
+	cfg, err := loadConfig(thelmaConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error initializing state bucket %s: %v", bucketName, err)
+		return nil, err
 	}
 
-	return newWithBucket(_bucket), nil
+	_bucket, err := googleClients.Bucket(cfg.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing state bucket %s: %v", cfg.Name, err)
+	}
+
+	return newWithBucket(_bucket, cfg), nil
 }
 
 // NewFake (FOR USE IN TESTS ONLY) returns a new fake statebucket, backed by local filesystem instead of a GCS bucket
 func NewFake(dir string) (StateBucket, error) {
 	return &statebucket{
-		writer: newFileWriter(dir),
+		writer: newFileWriter(dir, "state.json"),
 	}, nil
 }
 
 // package-private constructor, used in testing
-func newWithBucket(_bucket bucket.Bucket) *statebucket {
+func newWithBucket(_bucket bucket.Bucket, cfg statebucketConfig) *statebucket {
 	return &statebucket{
-		writer: newBucketWriter(_bucket),
+		writer: newBucketWriter(_bucket, cfg),
 	}
+}
+
+func loadConfig(thelmaConfig config.Config) (statebucketConfig, error) {
+	var cfg statebucketConfig
+	err := thelmaConfig.Unmarshal(configKey, &cfg)
+	return cfg, err
 }
 
 type statebucket struct {

@@ -3,7 +3,7 @@ package lock
 import (
 	"cloud.google.com/go/storage"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
 	"github.com/rs/zerolog"
 )
 

@@ -4,7 +4,7 @@ import (
 	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket/object"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"

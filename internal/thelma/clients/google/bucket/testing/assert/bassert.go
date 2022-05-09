@@ -3,7 +3,7 @@ package assert
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/gcp/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

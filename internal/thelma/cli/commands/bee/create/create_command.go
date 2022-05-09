@@ -9,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -29,26 +30,32 @@ thelma bee create \
 `
 
 type options struct {
-	name     string
-	template string
-	hybrid   bool
-	fiabName string
-	fiabIP   string
+	name          string
+	template      string
+	hybrid        bool
+	fiabName      string
+	fiabIP        string
+	generatorOnly bool
+	waitHealthy   bool
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name     string
-	template string
-	hybrid   string
-	fiabName string
-	fiabIP   string
+	name          string
+	template      string
+	hybrid        string
+	fiabName      string
+	fiabIP        string
+	generatorOnly string
+	waitHealthy   string
 }{
-	name:     "name",
-	template: "template",
-	hybrid:   "hybrid",
-	fiabName: "fiab-name",
-	fiabIP:   "fiab-ip",
+	name:          "name",
+	template:      "template",
+	hybrid:        "hybrid",
+	fiabName:      "fiab-name",
+	fiabIP:        "fiab-ip",
+	generatorOnly: "generator-only",
+	waitHealthy:   "wait-healthy",
 }
 
 type createCommand struct {
@@ -65,10 +72,12 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "NAME", "Required. Name for this BEE")
-	cobraCommand.Flags().StringVarP(&cmd.options.template, flagNames.template, "t", "TEMPLATE", "Required. Template to use for this BEE")
+	cobraCommand.Flags().StringVarP(&cmd.options.template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
 	cobraCommand.Flags().BoolVar(&cmd.options.hybrid, flagNames.hybrid, false, "Set to true to create a hybrid (connected to a Fiab) environment")
 	cobraCommand.Flags().StringVar(&cmd.options.fiabName, flagNames.fiabName, "FIAB", "Name of the Fiab this hybrid environment should be connected to")
 	cobraCommand.Flags().StringVar(&cmd.options.fiabIP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
+	cobraCommand.Flags().BoolVar(&cmd.options.generatorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
+	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, false, "Wait for BEE's Argo apps to become healthy after syncing")
 }
 
 func (cmd *createCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -78,11 +87,6 @@ func (cmd *createCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	}
 	if err := validate.EnvironmentName(cmd.options.name); err != nil {
 		return fmt.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.options.name, err)
-	}
-
-	// validate --template
-	if !ctx.CobraCommand().Flags().Changed(flagNames.template) {
-		return fmt.Errorf("--%s is required", flagNames.template)
 	}
 
 	// validate --hybrid arguments
@@ -135,8 +139,15 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	ctx.SetOutput(views.ForTerraEnv(env))
 
 	log.Info().Msgf("Syncing %s", bee.GeneratorArgoApp)
-	if err := _argocd.SyncApp(bee.GeneratorArgoApp); err != nil {
+	if err := _argocd.SyncApp(bee.GeneratorArgoApp, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = false
+	}); err != nil {
 		return err
+	}
+
+	if cmd.options.generatorOnly {
+		log.Warn().Msgf("Not syncing Argo apps for %s (%s is true)", env.Name(), flagNames.generatorOnly)
+		return nil
 	}
 
 	log.Info().Msgf("Syncing all releases in environment %s", env.Name())
@@ -144,7 +155,9 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	return _argocd.SyncReleases(releases, 15)
+	return _argocd.SyncReleases(releases, 15, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = cmd.options.waitHealthy
+	})
 }
 
 func (cmd *createCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

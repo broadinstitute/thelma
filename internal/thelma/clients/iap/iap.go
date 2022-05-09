@@ -30,8 +30,11 @@ import (
 // * Chelsea Hoover: massaged into thelma
 //
 
+// configKey prefix used for configuration for this package
 const configKey = "iap"
-const credentialsKey = "iap-oauth-token"
+
+// tokenKey unique name for IAP tokens issued by this package, used to identify it in Thelma's token storage
+const tokenKey = "iap-oauth-token"
 
 // URL to request in order to validate IAP credentials are working
 // Note that Sherlock doesn't actually have a thelma-iap-check endpoint so this will 404, but we don't care.
@@ -44,9 +47,18 @@ const tokenValidationRequestTimeout = 15 * time.Second
 // Header returned by IAP indicating it intercepted the request and generated the response
 const tokenValidationIapResponseHeader = "x-goog-iap-generated-response"
 
+// how long to wait before timing out compute engine metadata request
+const computeEngineMetadataRequestTimeout = 15 * time.Second
+
 type iapConfig struct {
-	OAuthCredentialsVaultPath string `default:"secret/dsp/identity-aware-proxy/dsp-tools-k8s/dsp-tools-k8s-iap-oauth_client-credentials.json"`
-	OAuthCredentialsVaultKey  string `default:"web"`
+	Provider         string `default:"browser"  validate:"oneof=workloadidentity browser"`
+	OAuthCredentials struct {
+		VaultPath string `default:"secret/dsp/identity-aware-proxy/dsp-tools-k8s/dsp-tools-k8s-iap-oauth_client-credentials.json"`
+		VaultKey  string `default:"web"`
+	}
+	WorkloadIdentity struct {
+		ServiceAccount string `default:"default"` // default to using compute engine default service account
+	}
 }
 
 type oauthCredentials struct {
@@ -87,57 +99,74 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 		Endpoint:     google.Endpoint,
 	}
 
-	provider := creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
-		options.IssueFn = func() ([]byte, error) {
-			token, err := issueNewToken(oauthConfig, oauthCreds, runner)
-			if err != nil {
-				return nil, err
+	// if workload identity is enabled, try to issue an IAP token that way first, falling back to user credentials
+	if cfg.Provider == "workloadidentity" {
+		return creds.NewTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
+			options.IssueFn = func() ([]byte, error) {
+				return getTokenFromWorkloadIdentity(cfg, oauthConfig)
 			}
-			return marshalPersistentToken(token)
-		}
-		options.RefreshFn = func(data []byte) ([]byte, error) {
-			token, err := unmarshalPersistentToken(data)
-			if err != nil {
-				return nil, err
+			options.ValidateFn = func(token []byte) error {
+				return validateIdentityToken(string(token))
 			}
-			token, err = refreshToken(token, oauthConfig)
-			if err != nil {
-				return nil, err
-			}
-			return marshalPersistentToken(token)
-		}
-		options.ValidateFn = func(data []byte) error {
-			token, err := unmarshalPersistentToken(data)
-			if err != nil {
-				return err
-			}
-			return validateToken(token)
-		}
-	})
+		}), nil
+	}
 
-	return &tokenProvider{
-		provider,
-	}, nil
+	// else use browser provider
+	if cfg.Provider == "browser" {
+		provider := creds.NewTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
+			options.IssueFn = func() ([]byte, error) {
+				token, err := issueNewToken(oauthConfig, oauthCreds, runner)
+				if err != nil {
+					return nil, err
+				}
+				return marshalPersistentToken(token)
+			}
+			options.RefreshFn = func(data []byte) ([]byte, error) {
+				token, err := unmarshalPersistentToken(data)
+				if err != nil {
+					return nil, err
+				}
+				token, err = refreshToken(token, oauthConfig)
+				if err != nil {
+					return nil, err
+				}
+				return marshalPersistentToken(token)
+			}
+			options.ValidateFn = func(data []byte) error {
+				token, err := unmarshalPersistentToken(data)
+				if err != nil {
+					return err
+				}
+				return validateToken(token)
+			}
+		})
+
+		return &tokenProvider{
+			provider,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unknown iap provider type: %v", cfg.Provider)
 }
 
 func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapConfig) (*oauthCredentials, error) {
-	log.Debug().Msgf("Loading OAuth client credentials from Vault (%s)", cfg.OAuthCredentialsVaultPath)
-	secret, err := vaultClient.Logical().Read(cfg.OAuthCredentialsVaultPath)
+	log.Debug().Msgf("Loading OAuth client credentials from Vault (%s)", cfg.OAuthCredentials.VaultPath)
+	secret, err := vaultClient.Logical().Read(cfg.OAuthCredentials.VaultPath)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving OAuth client credentials from Vault: %v", err)
 	}
 
 	if secret == nil {
-		return nil, fmt.Errorf("error retrieving OAuth client credentials from Vault: no secret at %s", cfg.OAuthCredentialsVaultPath)
+		return nil, fmt.Errorf("error retrieving OAuth client credentials from Vault: no secret at %s", cfg.OAuthCredentials.VaultPath)
 	}
 
-	encodedCreds, exists := secret.Data[cfg.OAuthCredentialsVaultKey]
+	encodedCreds, exists := secret.Data[cfg.OAuthCredentials.VaultKey]
 	if !exists {
-		return nil, fmt.Errorf("OAuth client credential secret at %s has unexpected format (missing key %s)", cfg.OAuthCredentialsVaultPath, cfg.OAuthCredentialsVaultKey)
+		return nil, fmt.Errorf("OAuth client credential secret at %s has unexpected format (missing key %s)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
 	}
 	_, isMap := encodedCreds.(map[string]interface{})
 	if !isMap {
-		return nil, fmt.Errorf("OAuth client credential secret at %s (key %s) has unexpected format (expected value to be map type)", cfg.OAuthCredentialsVaultPath, cfg.OAuthCredentialsVaultKey)
+		return nil, fmt.Errorf("OAuth client credential secret at %s (key %s) has unexpected format (expected value to be map type)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
 	}
 
 	var oauthCreds oauthCredentials
@@ -147,6 +176,35 @@ func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapCo
 	}
 
 	return &oauthCreds, nil
+}
+
+func getTokenFromWorkloadIdentity(cfg iapConfig, oauthConfig *oauth2.Config) ([]byte, error) {
+	metadataUrl := fmt.Sprintf("http://metadata/computeMetadata/v1/instance/service-accounts/%s/identity?audience=%s&format=full", cfg.WorkloadIdentity.ServiceAccount, oauthConfig.ClientID)
+	log.Debug().Msgf("Attempting to issue new IAP token via workload identity")
+
+	req, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Metadata-Flavor", "Google")
+	client := http.Client{
+		Timeout: computeEngineMetadataRequestTimeout,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-200 response code from compute engine metadata: %v", resp.StatusCode)
+	}
+	token, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err = resp.Body.Close(); err != nil {
+		return nil, err
+	}
+	return token, nil
 }
 
 func issueNewToken(oauthConfig *oauth2.Config, oauthCreds *oauthCredentials, runner shell.Runner) (*oauth2.Token, error) {
@@ -160,7 +218,7 @@ func issueNewToken(oauthConfig *oauth2.Config, oauthCreds *oauthCredentials, run
 		return nil, err
 	}
 
-	log.Debug().Msgf("exchanging authorization code for access token...")
+	log.Debug().Msgf("Exchanging authorization code for access token...")
 	token, err := oauthConfig.Exchange(context.Background(), authorizationCode)
 	if err != nil {
 		return nil, err
@@ -183,7 +241,10 @@ func validateToken(token *oauth2.Token) error {
 	if idToken == "" {
 		return fmt.Errorf("token validation failed: id token is misssing")
 	}
+	return validateIdentityToken(idToken)
+}
 
+func validateIdentityToken(idToken string) error {
 	// Build client
 	client := http.Client{
 		Timeout: tokenValidationRequestTimeout,
@@ -292,7 +353,7 @@ func findRedirectURI(credentials *oauthCredentials) (string, int, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	log.Debug().Msgf("will listen for redirects on port %d", redirectPort)
+	log.Debug().Msgf("Will listen for redirects on port %d", redirectPort)
 	return redirectURI, redirectPort, nil
 }
 
@@ -353,6 +414,7 @@ func obtainAuthorizationCode(redirectPort int, oauthConfig *oauth2.Config, runne
 
 	log.Debug().Msgf("Using %s to launch browser on %s", openBrowserCmd.Prog, runtime.GOOS)
 	log.Info().Msgf("Please visit the following URL in your web browser:\n\t%s", browserUrl)
+
 	// Could blow up so we just let it fail silently; make the user copy-paste
 	if err := runner.Run(openBrowserCmd); err != nil {
 		log.Debug().Msgf("Failed to open browser: %v", err)

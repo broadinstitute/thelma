@@ -9,12 +9,13 @@ import (
 
 // fileWriter is used for testing
 
-func newFileWriter(dir string) writer {
-	return &fileWriter{dir: dir}
+func newFileWriter(dir string, filename string) writer {
+	return &fileWriter{dir: dir, filename: filename}
 }
 
 type fileWriter struct {
-	dir string
+	dir      string
+	filename string
 }
 
 func (f fileWriter) read() (StateFile, error) {
@@ -51,5 +52,5 @@ func (f fileWriter) update(fn transformFn) error {
 }
 
 func (f fileWriter) filepath() string {
-	return path.Join(f.dir, stateObject)
+	return path.Join(f.dir, f.filename)
 }
