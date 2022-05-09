@@ -15,11 +15,6 @@ import (
 const logFile = "thelma.log"
 const configPrefix = "logging"
 
-// okay I think we need global secret tracking... every time we create a new secret, we need to register it.
-// ideally as part of the vault client / token provider code
-// logging.MaskSecret(secret string)
-//
-// we already have this global state, so let's
 // globalWriter is the writer that zerolog's global log.Logger is configured to write to.
 // We track it in a package-level variable so that WithMask can wrap it with a masking writer.
 // Initialized with a basic writer here that is overwritten with a more complex/configurable writer during InitializeLogging
