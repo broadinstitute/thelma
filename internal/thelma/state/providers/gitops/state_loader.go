@@ -113,17 +113,15 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb s
 			_fiab = terra.NewFiab(dynamicEnv.Fiab.Name, dynamicEnv.Fiab.IP)
 		}
 
-		_releases := make(map[string]terra.AppRelease)
+		_releases := make(map[string]*appRelease)
 
 		for _, r := range template.Releases() {
-			templateRelease := r.(terra.AppRelease)
-			appVersion := templateRelease.AppVersion()
-			if override, exists := dynamicEnv.VersionPins[templateRelease.Name()]; exists {
-				appVersion = override
-			}
-			_releases[templateRelease.Name()] = &appRelease{
+			templateRelease := r.(*appRelease)
+
+			_release := &appRelease{
 				release: release{
 					name:           templateRelease.Name(),
+					enabled:        templateRelease.enabled,
 					releaseType:    templateRelease.Type(),
 					chartVersion:   templateRelease.ChartVersion(),
 					chartName:      templateRelease.ChartName(),
@@ -133,8 +131,30 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb s
 					clusterAddress: templateRelease.ClusterAddress(),
 					destination:    nil, // replaced after env is constructed
 				},
-				appVersion: appVersion,
+				appVersion: templateRelease.AppVersion(),
 			}
+
+			// apply dynamic overrides
+			override, hasOverride := dynamicEnv.Overrides[_release.name]
+			if hasOverride {
+				if override.HasEnableOverride() {
+					_release.enabled = override.IsEnabled()
+				}
+				if override.AppVersion != "" {
+					_release.appVersion = override.AppVersion
+				}
+				if override.ChartVersion != "" {
+					_release.chartVersion = override.ChartVersion
+				}
+				if override.FirecloudDevelopRef != "" {
+					_release.firecloudDevelopRef = override.FirecloudDevelopRef
+				}
+				if override.TerraHelmfileRef != "" {
+					_release.terraHelmfileRef = override.TerraHelmfileRef
+				}
+			}
+
+			_releases[templateRelease.Name()] = _release
 		}
 
 		env := NewEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, _releases)
@@ -201,14 +221,9 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		}
 	}
 
-	_releases := make(map[string]terra.AppRelease)
+	_releases := make(map[string]*appRelease)
 
 	for releaseName, releaseDefn := range envConfig.Releases {
-		// Skip releases that aren't enabled
-		if !releaseDefn.Enabled {
-			continue
-		}
-
 		_cluster := defaultCluster
 		if releaseDefn.Cluster != "" {
 			if _, exists := clusters[releaseDefn.Cluster]; !exists {
@@ -264,6 +279,7 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 			appVersion: appVersion,
 			release: release{
 				name:           releaseName,
+				enabled:        releaseDefn.Enabled,
 				releaseType:    terra.AppReleaseType,
 				chartVersion:   chartVersion,
 				chartName:      chartName,
@@ -288,7 +304,7 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 	)
 
 	for _, _release := range _releases {
-		_release.(*appRelease).destination = env
+		_release.destination = env
 	}
 
 	return env, nil
@@ -331,15 +347,9 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 		return nil, fmt.Errorf("cluster %s does not have a valid API address, please set `address` key in config file", clusterName)
 	}
 
-	releases := make(map[string]terra.ClusterRelease)
+	releases := make(map[string]*clusterRelease)
 
 	for releaseName, releaseDefn := range clusterDefn.Releases {
-		// Skip releaes that aren't enabled
-		if !releaseDefn.Enabled {
-			continue
-		}
-
-		// Release is enabled, so configure with proper settings
 		// chart version
 		chartVersion := releaseDefn.ChartVersion
 		if chartVersion == "" {
@@ -374,6 +384,7 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 		releases[releaseName] = &clusterRelease{
 			release: release{
 				name:           releaseName,
+				enabled:        releaseDefn.Enabled,
 				releaseType:    terra.ClusterReleaseType,
 				chartVersion:   chartVersion,
 				chartName:      chartName,
@@ -393,7 +404,7 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 	)
 
 	for _, _release := range releases {
-		_release.(*clusterRelease).destination = _cluster
+		_release.destination = _cluster
 	}
 
 	return _cluster, nil

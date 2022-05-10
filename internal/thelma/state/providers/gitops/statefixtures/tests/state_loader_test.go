@@ -29,7 +29,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 	// make sure we have the expected number of environments
 	envs, err := state.Environments().All()
 	require.NoError(t, err)
-	assert.Equal(t, 15, len(envs))
+	assert.Equal(t, 16, len(envs))
 
 	lives, err := state.Environments().Filter(ef.HasBase("live"))
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 
 	bees, err := state.Environments().Filter(ef.HasBase("bee"))
 	require.NoError(t, err)
-	assert.Equal(t, 7, len(bees))
+	assert.Equal(t, 8, len(bees))
 
 	personals, err := state.Environments().Filter(ef.HasBase("personal"))
 	require.NoError(t, err)
@@ -98,7 +98,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 
 	rawlses, err := state.Releases().Filter(rf.HasName("rawls"))
 	require.NoError(t, err)
-	assert.Equal(t, 9, len(rawlses)) // 5 live, 1 template, 3 bees
+	assert.Equal(t, 10, len(rawlses)) // 5 live, 1 template, 4 bees
 
 	datarepos, err := state.Releases().Filter(rf.HasName("datarepo"))
 	require.NoError(t, err)
@@ -149,6 +149,23 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "1.2.3", walrusSam[0].(terra.AppRelease).AppVersion())
 	assert.Equal(t, "0.34.0", walrusSam[0].ChartVersion())
+
+	snowflakeSam, err := state.Releases().Filter(rf.And(
+		rf.HasName("sam"),
+		rf.HasDestinationName("fiab-special-snowflake"),
+	))
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(snowflakeSam), "sam is disabled in fiab-special-snowflake")
+
+	snowflakeRawls, err := state.Releases().Filter(rf.And(
+		rf.HasName("rawls"),
+		rf.HasDestinationName("fiab-special-snowflake"),
+	))
+	require.NoError(t, err)
+	assert.Equal(t, "cead2f9206b5", snowflakeRawls[0].(terra.AppRelease).AppVersion())
+	assert.Equal(t, "100.200.300", snowflakeRawls[0].ChartVersion())
+	assert.Equal(t, "my-terra-helmfile-branch", snowflakeRawls[0].TerraHelmfileRef())
+	assert.Equal(t, "", snowflakeRawls[0].FirecloudDevelopRef())
 }
 
 func TestUpdateState(t *testing.T) {

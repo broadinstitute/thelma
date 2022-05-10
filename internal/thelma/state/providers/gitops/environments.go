@@ -76,12 +76,16 @@ func (e *environments) CreateHybridFromTemplate(name string, template terra.Envi
 	return e.state.statebucket.Add(env)
 }
 
-func (e *environments) PinVersions(name string, versions map[string]string) error {
-	return e.state.statebucket.PinVersions(name, versions)
+func (e *environments) EnableReleases(environmentName string, releaseNames []string) error {
+	return e.state.statebucket.EnableReleases(environmentName, releaseNames)
 }
 
-func (e *environments) UnpinVersions(name string) error {
-	return e.state.statebucket.UnpinVersions(name)
+func (e *environments) DisableReleases(environmentName string, releases []terra.Release) error {
+	return e.state.statebucket.DisableReleases(environmentName, releases)
+}
+
+func (e *environments) SetVersions(environmentName string, releases []terra.Release, overrideFn func(release terra.Release, override terra.VersionOverride)) error {
+	return e.state.statebucket.OverrideVersions(environmentName, releases, overrideFn)
 }
 
 func (e *environments) Delete(name string) error {

@@ -3,9 +3,10 @@
 package mocks
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
+	bucket "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	mock "github.com/stretchr/testify/mock"
+
+	object "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
 
 	storage "cloud.google.com/go/storage"
 

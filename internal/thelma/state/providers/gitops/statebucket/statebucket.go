@@ -5,14 +5,20 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"sort"
 	"time"
 )
 
 const configKey = "statebucket"
 
+// StateFile represents the structure of the statefile
+type StateFile struct {
+	Environments map[string]DynamicEnvironment `json:"environments"`
+}
+
 type statebucketConfig struct {
-	// Name of the GCS bucket
+	// Name of the GCS bucket where state file is kept
 	Name string `default:"thelma-state"`
 	// Object name of the object in the bucket where state is kept
 	Object string `default:"state.json"`
@@ -24,41 +30,21 @@ type statebucketConfig struct {
 	}
 }
 
-// Fiab DEPRECATED struct for representing a Fiab in state file
-type Fiab struct {
-	IP   string `json:"ip"`
-	Name string `json:"name"`
-}
-
-// DynamicEnvironment is a struct for representing a dynamic environment in the state file
-type DynamicEnvironment struct {
-	Name        string            `json:"name"`
-	Template    string            `json:"template"`
-	VersionPins map[string]string `json:"versionPins"`
-	Hybrid      bool              `json:"hybrid"` // Deprecated / temporary (while we run bees in hybrid mode)
-	Fiab        Fiab              `json:"fiab"`   // Deprecated / temporary (while we run bees in hybrid mode)
-}
-
-type StateFile struct {
-	Environments map[string]DynamicEnvironment `json:"environments"`
-}
-
-// StateBucket is for track state for dynamic environments. (Stored in a GCS bucket)
+// StateBucket is for tracking state for dynamic environments. (Stored in a GCS bucket)
 type StateBucket interface {
 	// Environments returns the list of all environments in the state file
 	Environments() ([]DynamicEnvironment, error)
 	// Add adds a new environment to the state file
 	Add(environment DynamicEnvironment) error
-	// PinVersions will update the environment's map of version pins in a merging fashion.
-	// For example, if the existing pins are {"A":v100", "B":"v200"}, and PinVersions is called
-	// with {"A":"v123"}, the new set of pins will be {"A":"v123", "B":"v200"}. UnpinVersions
-	// can be used to remove all version pins for the environment.
-	PinVersions(environmentName string, versionPins map[string]string) error
-	// UnpinVersions will remove all version pins for an environment.
-	UnpinVersions(environmentName string) error
+	// EnableReleases enables the given release(s) in the target environment
+	EnableReleases(environmentName string, releaseNames []string) error
+	// DisableReleases disables the given release(s) in the target environment
+	DisableReleases(environmentName string, releases []terra.Release) error
+	// OverrideVersions can be used to update the environment's map of version overrides for a given release
+	OverrideVersions(environmentName string, releases []terra.Release, updateFn func(terra.Release, terra.VersionOverride)) error
 	// Delete will delete an environment from the state file
 	Delete(environmentName string) error
-	// initialize will overwite existing state with a new empty state file
+	// initialize will overwrite existing state with a new empty state file
 	initialize() error
 }
 
@@ -130,10 +116,6 @@ func (s *statebucket) Add(environment DynamicEnvironment) error {
 			state.Environments = make(map[string]DynamicEnvironment)
 		}
 
-		// make sure marshaled json includes an empty map so version pins is never nil when unmarshaled
-		if environment.VersionPins == nil {
-			environment.VersionPins = make(map[string]string)
-		}
 		_, exists := state.Environments[environment.Name]
 		if exists {
 			return StateFile{}, fmt.Errorf("can't add new environment %s, an environment by that name already exists", environment.Name)
@@ -143,29 +125,33 @@ func (s *statebucket) Add(environment DynamicEnvironment) error {
 	})
 }
 
-func (s *statebucket) PinVersions(environmentName string, versionPins map[string]string) error {
-	return s.writer.update(func(state StateFile) (StateFile, error) {
-		environment, exists := state.Environments[environmentName]
-		if !exists {
-			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+func (s *statebucket) EnableReleases(environmentName string, releaseNames []string) error {
+	return s.update(environmentName, func(e *DynamicEnvironment) {
+		for _, releaseName := range releaseNames {
+			e.setOverride(releaseName, func(override *Override) {
+				override.Enable()
+			})
 		}
-		for service, version := range versionPins {
-			environment.VersionPins[service] = version
-		}
-		state.Environments[environmentName] = environment
-		return state, nil
 	})
 }
 
-func (s *statebucket) UnpinVersions(environmentName string) error {
-	return s.writer.update(func(state StateFile) (StateFile, error) {
-		environment, exists := state.Environments[environmentName]
-		if !exists {
-			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+func (s *statebucket) DisableReleases(environmentName string, releases []terra.Release) error {
+	return s.update(environmentName, func(e *DynamicEnvironment) {
+		for _, release := range releases {
+			e.setOverride(release.Name(), func(override *Override) {
+				override.Disable()
+			})
 		}
-		environment.VersionPins = map[string]string{}
-		state.Environments[environmentName] = environment
-		return state, nil
+	})
+}
+
+func (s *statebucket) OverrideVersions(environmentName string, releases []terra.Release, updateFn func(terra.Release, terra.VersionOverride)) error {
+	return s.update(environmentName, func(e *DynamicEnvironment) {
+		for _, release := range releases {
+			e.setOverride(release.Name(), func(override *Override) {
+				updateFn(release, override)
+			})
+		}
 	})
 }
 
@@ -176,6 +162,18 @@ func (s *statebucket) Delete(environmentName string) error {
 			return StateFile{}, fmt.Errorf("can't delete environment %s, it does not exist in the state file", environmentName)
 		}
 		delete(state.Environments, environmentName)
+		return state, nil
+	})
+}
+
+func (s *statebucket) update(environmentName string, updateFn func(environment *DynamicEnvironment)) error {
+	return s.writer.update(func(state StateFile) (StateFile, error) {
+		environment, exists := state.Environments[environmentName]
+		if !exists {
+			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+		}
+		updateFn(&environment)
+		state.Environments[environmentName] = environment
 		return state, nil
 	})
 }

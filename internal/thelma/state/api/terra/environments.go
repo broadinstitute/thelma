@@ -15,10 +15,15 @@ type Environments interface {
 	CreateFromTemplate(name string, template Environment) error
 	// CreateHybridFromTemplate creates a new hybrid environment with the given name from the given template.
 	CreateHybridFromTemplate(name string, template Environment, fiab Fiab) error
-	// PinVersions pins a set of services in an environment to specific versions. This is _additive_. In other words,
-	PinVersions(name string, versions map[string]string) error
-	// UnpinVersions removes version overrides for the given environment
-	UnpinVersions(name string) error
+	// EnableReleases enables a release in an environment
+	// TODO this should move to Environment at some point
+	EnableReleases(environmentName string, releaseNames []string) error
+	// DisableReleases disables a release in an environment
+	// TODO this should move to Environment at some point
+	DisableReleases(environmentName string, releases []Release) error
+	// SetVersions sets a version override in the given environment
+	// TODO this should move to Environment at some point
+	SetVersions(environmentName string, releases []Release, overrideFn func(release Release, override VersionOverride)) error
 	// Delete deletes the environment with the given name
 	Delete(name string) error
 }

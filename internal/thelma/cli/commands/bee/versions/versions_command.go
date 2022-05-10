@@ -1,4 +1,4 @@
-package delete
+package versions
 
 import (
 	"fmt"
@@ -11,13 +11,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const helpMessage = `Destroy a BEE (Branch Engineering Environment)
+// versions pin
+// versions unpin
+const helpMessage = `Sync a BEE (Branch Engineering Environment)
 
 Examples:
 
-# Create a hybrid BEE from the swatomation template
-thelma bee delete \
-  --name=swat-grungy-puma
+# Update a bee with 
+thelma bee update --name=fiab-automation-grungy-puma --from-versions-properties=images.properties
+
+thelma bee pin --versions-override='{"cromwell":""}'
+thelma bee unpin --
 `
 
 type options struct {
@@ -47,7 +51,7 @@ func (cmd *deleteCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Short = "Destroy a BEE"
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to delete")
+	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "NAME", "Required. Name of the BEE to delete")
 	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 }
 

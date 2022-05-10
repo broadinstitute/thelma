@@ -13,6 +13,10 @@ type ArgoApp struct {
 	ClusterName string `yaml:"ClusterName"`
 	// ClusterAddress address of the cluster this release is being deployed to
 	ClusterAddress string `yaml:"ClusterAddress"`
+	// TerraHelmfileRef override terra-helmfile ref
+	TerraHelmfileRef string `yaml:"TerraHelmfileRef"`
+	// FirecloudDevelopRef override firecloud-develop ref
+	FirecloudDevelopRef string `yaml:"FirecloudDevelopRef"`
 }
 
 // ArgoProject -- information about the ArgoProject that will be used to deploy this release
@@ -23,9 +27,11 @@ type ArgoProject struct {
 
 func forArgoApp(r terra.Release) ArgoApp {
 	return ArgoApp{
-		ProjectName:    argocd.ProjectName(r.Destination()),
-		ClusterName:    r.ClusterName(),
-		ClusterAddress: r.ClusterAddress(),
+		ProjectName:         argocd.ProjectName(r.Destination()),
+		ClusterName:         r.ClusterName(),
+		ClusterAddress:      r.ClusterAddress(),
+		TerraHelmfileRef:    r.TerraHelmfileRef(),
+		FirecloudDevelopRef: r.FirecloudDevelopRef(),
 	}
 }
 
