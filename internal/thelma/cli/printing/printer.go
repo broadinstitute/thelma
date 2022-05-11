@@ -13,7 +13,6 @@ import (
 )
 
 const stdoutFlagVal = "STDOUT"
-const loggingFormat = format.Yaml
 
 var flagNames = struct {
 	outputFile   string
