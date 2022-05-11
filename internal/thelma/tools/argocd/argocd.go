@@ -413,10 +413,11 @@ func (a *argocd) ensureLoggedIn() error {
 		LoggedIn bool `yaml:"loggedIn"`
 	}
 	err := a.runCommandAndParseYamlOutput([]string{"account", "get-user-info"}, &output)
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "failed with status code 401") {
+		// failed with status code 401 means auth token expired
 		return err
 	}
-	if !output.LoggedIn {
+	if err != nil || !output.LoggedIn {
 		return fmt.Errorf("ArgoCD client is not authenticated; please run `thelma auth argocd` or supply an ArgoCD token via THELMA_ARGOCD_TOKEN")
 	}
 	return nil

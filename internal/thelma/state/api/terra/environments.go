@@ -23,10 +23,10 @@ type Environments interface {
 	DisableRelease(environmentName string, releaseName string) error
 	//PinVersions sets a version override in the given environment
 	// TODO this should move to Environment at some point
-	PinVersions(environmentName string, versions map[string]VersionOverride) error
+	PinVersions(environmentName string, versions map[string]VersionOverride) (map[string]VersionOverride, error)
 	//UnpinVersions removes version overrides in the given environment
 	// TODO this should move to Environment at some point
-	UnpinVersions(environmentName string) error
+	UnpinVersions(environmentName string) (map[string]VersionOverride, error)
 	// Delete deletes the environment with the given name
 	Delete(name string) error
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +58,24 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	return state.Environments().UnpinVersions(cmd.options.name)
+	removed, err := state.Environments().UnpinVersions(cmd.options.name)
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("Removed all version overrides for %s", cmd.options.name)
+
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+	if err = bees.SyncGeneratorForName(cmd.options.name); err != nil {
+		return err
+	}
+
+	log.Info().Msgf("The following overrides were removed:")
+	rc.SetOutput(removed)
+	return nil
+
 }
 
 func (cmd *unpinCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

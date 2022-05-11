@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -150,7 +152,24 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	return state.Environments().PinVersions(cmd.options.name, cmd.versions)
+	versions, err := state.Environments().PinVersions(cmd.options.name, cmd.versions)
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
+
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+	if err = bees.SyncGeneratorForName(cmd.options.name); err != nil {
+		return err
+	}
+
+	log.Info().Msgf("Full set of overrides for %s:", cmd.options.name)
+	rc.SetOutput(versions)
+	return nil
 }
 
 func (cmd *pinCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
@@ -167,8 +186,23 @@ func (cmd *pinCommand) readVersionsFromFile() error {
 	if err != nil {
 		return err
 	}
-	cmd.versions = versions
+
+	cmd.versions = cmd.applyGitRefOverrides(versions)
 	return nil
+}
+
+func (cmd *pinCommand) applyGitRefOverrides(versions map[string]terra.VersionOverride) map[string]terra.VersionOverride {
+	result := make(map[string]terra.VersionOverride)
+	for releaseName, override := range versions {
+		if cmd.options.terraHelmfileRef != "" {
+			override.TerraHelmfileRef = cmd.options.terraHelmfileRef
+		}
+		if cmd.options.firecloudDevelopRef != "" {
+			override.FirecloudDevelopRef = cmd.options.firecloudDevelopRef
+		}
+		result[releaseName] = override
+	}
+	return result
 }
 
 func (cmd *pinCommand) buildVersionsForAllServices(env terra.Environment) error {

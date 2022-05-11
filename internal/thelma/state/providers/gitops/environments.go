@@ -84,11 +84,11 @@ func (e *environments) DisableRelease(environmentName string, releaseName string
 	return e.state.statebucket.DisableRelease(environmentName, releaseName)
 }
 
-func (e *environments) PinVersions(environmentName string, versions map[string]terra.VersionOverride) error {
+func (e *environments) PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error) {
 	return e.state.statebucket.PinVersions(environmentName, versions)
 }
 
-func (e *environments) UnpinVersions(environmentName string) error {
+func (e *environments) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {
 	return e.state.statebucket.UnpinVersions(environmentName)
 }
 

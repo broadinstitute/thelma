@@ -15,6 +15,7 @@ type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
 	CreateWith(name string, options CreateOptions) (terra.Environment, error)
 	GetTemplate(name string) (terra.Environment, error)
+	SyncGeneratorForName(name string) error
 	SyncGeneratorFor(env terra.Environment) error
 }
 
@@ -137,6 +138,17 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 	}
 
 	return env, nil
+}
+
+func (b *bees) SyncGeneratorForName(name string) error {
+	env, err := b.state.Environments().Get(name)
+	if err != nil {
+		return err
+	}
+	if env == nil {
+		return fmt.Errorf("no such bee: %s", name)
+	}
+	return b.SyncGeneratorFor(env)
 }
 
 func (b *bees) SyncGeneratorFor(env terra.Environment) error {
