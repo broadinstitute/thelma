@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const maxErrorBufLenBytes = 5 * 1024 // 5 kb
+const maxErrorBufLenBytes = 100 * 1024 // 100 kb
 const eol = '\n'
 
 // RealRunner is an implementation of the Runner interface that actually executes shell commands
