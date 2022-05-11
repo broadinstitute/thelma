@@ -10,8 +10,8 @@ import (
 type state struct {
 	statebucket  statebucket.StateBucket
 	versions     Versions
-	environments map[string]terra.Environment
-	clusters     map[string]terra.Cluster
+	environments map[string]*environment
+	clusters     map[string]*cluster
 }
 
 func (s *state) Destinations() terra.Destinations {

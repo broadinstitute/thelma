@@ -7,13 +7,12 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestStateBucketOverrides(t *testing.T) {
+func TestStateBucket_Overrides(t *testing.T) {
 	testCases := []struct {
 		name  string
 		newFn func(t *testing.T) (StateBucket, error)
@@ -38,13 +37,6 @@ func TestStateBucketOverrides(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// create some mock releases for use in tests
-			leo := new(mocks.Release)
-			leo.On("Name").Return("leonardo")
-
-			sam := new(mocks.Release)
-			sam.On("Name").Return("sam")
-
 			// create statebucket
 			sb, err := tc.newFn(t)
 			require.NoError(t, err)
@@ -70,22 +62,14 @@ func TestStateBucketOverrides(t *testing.T) {
 			assert.Equal(t, 1, len(envs))
 			assert.Empty(t, envs[0].Overrides, "should have no overrides")
 
-			// setting overrides with empty set of releases should have no effect
-			require.NoError(t, sb.EnableReleases("fake-env-1", []string{}))
-			require.NoError(t, sb.DisableReleases("fake-env-1", []terra.Release{}), "empty list should have no effect")
-			require.NoError(t, sb.OverrideVersions("fake-env-1", []terra.Release{}, func(release terra.Release, override terra.VersionOverride) {
-				panic("This should never be called")
-			}))
-
 			envs, err = sb.Environments()
 			require.NoError(t, err)
 			assert.Equal(t, 1, len(envs))
 			assert.Empty(t, envs[0].Overrides, "should have no overrides")
 
 			// set a version override
-			err = sb.OverrideVersions("fake-env-1", []terra.Release{sam}, func(release terra.Release, override terra.VersionOverride) {
-				assert.Same(t, sam, release)
-				override.SetAppVersion("100")
+			err = sb.PinVersions("fake-env-1", map[string]terra.VersionOverride{
+				"sam": {AppVersion: "100"},
 			})
 			require.NoError(t, err)
 
@@ -94,14 +78,14 @@ func TestStateBucketOverrides(t *testing.T) {
 			assert.Equal(t, 1, len(envs))
 			assert.Equal(t, 1, len(envs[0].Overrides), "should have one override")
 
-			assert.Equal(t, "100", envs[0].Overrides["sam"].AppVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].ChartVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].TerraHelmfileRef)
-			assert.Equal(t, "", envs[0].Overrides["sam"].FirecloudDevelopRef)
+			assert.Equal(t, "100", envs[0].Overrides["sam"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.FirecloudDevelopRef)
 			assert.False(t, envs[0].Overrides["sam"].HasEnableOverride())
 
 			// set disable override on a different release
-			err = sb.DisableReleases("fake-env-1", []terra.Release{leo})
+			err = sb.DisableRelease("fake-env-1", "leonardo")
 			require.NoError(t, err)
 			envs, err = sb.Environments()
 			require.NoError(t, err)
@@ -109,24 +93,25 @@ func TestStateBucketOverrides(t *testing.T) {
 			assert.Equal(t, 2, len(envs[0].Overrides), "should have two overrides")
 
 			// make sure leo matches what we expect
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].AppVersion)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].ChartVersion)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].TerraHelmfileRef)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].FirecloudDevelopRef)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.FirecloudDevelopRef)
 			assert.True(t, envs[0].Overrides["leonardo"].HasEnableOverride())
 			assert.False(t, envs[0].Overrides["leonardo"].IsEnabled())
 
 			// make sure sam hasn't changed
-			assert.Equal(t, "100", envs[0].Overrides["sam"].AppVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].ChartVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].TerraHelmfileRef)
-			assert.Equal(t, "", envs[0].Overrides["sam"].FirecloudDevelopRef)
+			assert.Equal(t, "100", envs[0].Overrides["sam"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.FirecloudDevelopRef)
 			assert.False(t, envs[0].Overrides["sam"].HasEnableOverride())
 
 			// set another version override on sam
-			err = sb.OverrideVersions("fake-env-1", []terra.Release{sam}, func(release terra.Release, override terra.VersionOverride) {
-				assert.Same(t, sam, release)
-				override.SetFirecloudDevelopRef("my-fc-branch")
+			err = sb.PinVersions("fake-env-1", map[string]terra.VersionOverride{
+				"sam": {
+					FirecloudDevelopRef: "my-fc-branch",
+				},
 			})
 			require.NoError(t, err)
 			envs, err = sb.Environments()
@@ -135,47 +120,47 @@ func TestStateBucketOverrides(t *testing.T) {
 			assert.Equal(t, 2, len(envs[0].Overrides), "should have two overrides")
 
 			// make sure sam matches what we expect
-			assert.Equal(t, "100", envs[0].Overrides["sam"].AppVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].ChartVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].TerraHelmfileRef)
-			assert.Equal(t, "my-fc-branch", envs[0].Overrides["sam"].FirecloudDevelopRef)
+			assert.Equal(t, "100", envs[0].Overrides["sam"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "my-fc-branch", envs[0].Overrides["sam"].Versions.FirecloudDevelopRef)
 			assert.False(t, envs[0].Overrides["sam"].HasEnableOverride())
 
 			// make sure leo hasn't changed
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].AppVersion)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].ChartVersion)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].TerraHelmfileRef)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].FirecloudDevelopRef)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.FirecloudDevelopRef)
 			assert.True(t, envs[0].Overrides["leonardo"].HasEnableOverride())
 			assert.False(t, envs[0].Overrides["leonardo"].IsEnabled())
 
 			// enable sam
-			err = sb.EnableReleases("fake-env-1", []string{"sam"})
+			err = sb.EnableRelease("fake-env-1", "sam")
 			require.NoError(t, err)
 			envs, err = sb.Environments()
 			assert.Equal(t, 1, len(envs))
 			assert.Equal(t, 2, len(envs[0].Overrides), "should have two overrides")
 
 			// make sure sam matches what we expect
-			assert.Equal(t, "100", envs[0].Overrides["sam"].AppVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].ChartVersion)
-			assert.Equal(t, "", envs[0].Overrides["sam"].TerraHelmfileRef)
-			assert.Equal(t, "my-fc-branch", envs[0].Overrides["sam"].FirecloudDevelopRef)
+			assert.Equal(t, "100", envs[0].Overrides["sam"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "my-fc-branch", envs[0].Overrides["sam"].Versions.FirecloudDevelopRef)
 			assert.True(t, envs[0].Overrides["sam"].HasEnableOverride())
 			assert.True(t, envs[0].Overrides["sam"].IsEnabled())
 
 			// make sure leo hasn't changed
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].AppVersion)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].ChartVersion)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].TerraHelmfileRef)
-			assert.Equal(t, "", envs[0].Overrides["leonardo"].FirecloudDevelopRef)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.FirecloudDevelopRef)
 			assert.True(t, envs[0].Overrides["leonardo"].HasEnableOverride())
 			assert.False(t, envs[0].Overrides["leonardo"].IsEnabled())
 		})
 	}
 }
 
-func TestStateBucket(t *testing.T) {
+func TestStateBucket_AddRemove(t *testing.T) {
 	testCases := []struct {
 		name  string
 		newFn func(t *testing.T) (StateBucket, error)
@@ -200,13 +185,6 @@ func TestStateBucket(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// create some mock releases for use in tests
-			leo := new(mocks.Release)
-			leo.On("Name").Return("leonardo")
-
-			sam := new(mocks.Release)
-			sam.On("Name").Return("sam")
-
 			sb, err := tc.newFn(t)
 			require.NoError(t, err)
 
@@ -236,7 +214,9 @@ func TestStateBucket(t *testing.T) {
 				Template: "fake-template",
 				Overrides: map[string]*Override{
 					"sam": {
-						AppVersion: "1.2.3",
+						Versions: terra.VersionOverride{
+							AppVersion: "1.2.3",
+						},
 					},
 				},
 			}))
@@ -260,7 +240,7 @@ func TestStateBucket(t *testing.T) {
 			assert.Equal(t, "fake-env-2", envs[1].Name)
 			assert.Equal(t, "fake-template", envs[1].Template)
 			assert.Equal(t, 1, len(envs[1].Overrides))
-			assert.Equal(t, "1.2.3", envs[1].Overrides["sam"].AppVersion)
+			assert.Equal(t, "1.2.3", envs[1].Overrides["sam"].Versions.AppVersion)
 			assert.False(t, envs[1].Hybrid)
 			assert.Equal(t, "", envs[1].Fiab.Name)
 			assert.Equal(t, "", envs[1].Fiab.IP)
@@ -298,10 +278,10 @@ func TestStateBucket(t *testing.T) {
 			envs, err = sb.Environments()
 			require.NoError(t, err)
 			assert.Equal(t, 1, len(envs[1].Overrides))
-			assert.Equal(t, "1.2.3", envs[1].Overrides["sam"].AppVersion)
-			assert.Equal(t, "", envs[1].Overrides["sam"].ChartVersion)
-			assert.Equal(t, "", envs[1].Overrides["sam"].TerraHelmfileRef)
-			assert.Equal(t, "", envs[1].Overrides["sam"].FirecloudDevelopRef)
+			assert.Equal(t, "1.2.3", envs[1].Overrides["sam"].Versions.AppVersion)
+			assert.Equal(t, "", envs[1].Overrides["sam"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[1].Overrides["sam"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "", envs[1].Overrides["sam"].Versions.FirecloudDevelopRef)
 			assert.False(t, envs[1].Overrides["sam"].HasEnableOverride())
 
 			// test environment deletion
@@ -322,6 +302,56 @@ func TestStateBucket(t *testing.T) {
 			envs, err = sb.Environments()
 			require.NoError(t, err)
 			assert.Equal(t, 0, len(envs))
+		})
+	}
+}
+
+func Test_SchemaVersionChecking(t *testing.T) {
+	testCases := []struct {
+		name  string
+		newFn func(t *testing.T) (StateBucket, error)
+	}{
+		{
+			name: "real gcs bucket",
+			newFn: func(t *testing.T) (StateBucket, error) {
+				b := bucket.NewTestBucket(t)
+				tcfg, err := config.NewTestConfig(t)
+				require.NoError(t, err)
+				cfg, err := loadConfig(tcfg)
+				return newWithBucket(b, cfg), nil
+			},
+		},
+		{
+			name: "fake bucket backed by filesystem",
+			newFn: func(t *testing.T) (StateBucket, error) {
+				return NewFake(t.TempDir())
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sb, err := tc.newFn(t)
+			require.NoError(t, err)
+
+			// add empty statefile to the bucket
+			err = sb.initialize()
+			require.NoError(t, err)
+
+			_, err = sb.Environments()
+			require.NoError(t, err)
+
+			// forcibly update schema version to one more than current schema version
+			// i.e. pretend that this is an outdated version of Thelma trying to consume an updated statefile
+			err = sb.(*statebucket).writer.update(func(input StateFile) (output StateFile, err error) {
+				input.SchemaVersion = schemaVersion + 1
+				return input, nil
+			})
+			require.NoError(t, err)
+
+			_, err = sb.Environments()
+			require.Error(t, err)
+			assert.Regexp(t, "statefile schema version", err.Error())
 		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +45,7 @@ func (cmd *listCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVarP(&cmd.options.template, flagNames.template, "t", "", "Only list BEEs created from the given template")
 }
 
-func (cmd *listCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *listCommand) PreRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do here
 	return nil
 }
@@ -74,12 +75,22 @@ func (cmd *listCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	rc.SetOutput(views.ForTerraEnvs(envs))
+	sb, err := statebucket.New(app.Config(), app.Clients().Google())
+	if err != nil {
+		return err
+	}
+	dynEnvs, err := sb.Environments()
+	if err != nil {
+		return err
+	}
+
+	view := views.ForTerraEnvsWithOverrides(envs, dynEnvs)
+	rc.SetOutput(view)
 
 	return nil
 }
 
-func (cmd *listCommand) PostRun(app app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *listCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do here
 	return nil
 }

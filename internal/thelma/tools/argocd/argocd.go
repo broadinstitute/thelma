@@ -17,7 +17,6 @@ import (
 
 const prog = `argocd`
 const configPrefix = `argocd`
-
 const yamlFormat = "yaml"
 
 // envVars holds names of environment variables we pass to the `argocd` cli
@@ -46,6 +45,7 @@ type SyncOptions struct {
 	HardRefresh  bool
 	SyncIfNoDiff bool
 	WaitHealthy  bool
+	OnlyLabels   map[string]string
 }
 
 type SyncOption func(options *SyncOptions)
@@ -197,7 +197,7 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) error {
 	if err := a.waitForInProgressSyncToComplete(appName); err != nil {
 		return err
 	}
-	if err := a.sync(appName); err != nil {
+	if err := a.sync(appName, opts); err != nil {
 		return err
 	}
 
@@ -317,10 +317,10 @@ func (a *argocd) waitForInProgressSyncToComplete(appName string) error {
 	})
 }
 
-func (a *argocd) sync(appName string) error {
+func (a *argocd) sync(appName string, opts SyncOptions) error {
 	log.Debug().Msgf("Syncing ArgoCD app: %s", appName)
 
-	return a.runCommand([]string{
+	args := []string{
 		"app",
 		"sync",
 		appName,
@@ -329,7 +329,24 @@ func (a *argocd) sync(appName string) error {
 		"--prune",
 		"--timeout",
 		fmt.Sprintf("%d", a.cfg.SyncTimeoutSeconds),
-	})
+	}
+
+	if len(opts.OnlyLabels) > 0 {
+		args = append(args, "--label", joinSelector(opts.OnlyLabels))
+	}
+
+	err := a.runCommand(args)
+	if err == nil {
+		return nil
+	}
+
+	// Log a warning instead of returning an error if we got "No matching resources found"
+	if strings.Contains(err.Error(), "No matching resources found for labels") {
+		log.Warn().Err(err).Msgf("Selective sync failed: no matching resources")
+		return nil
+	}
+
+	return err
 }
 
 func (a *argocd) waitHealthy(appName string) error {

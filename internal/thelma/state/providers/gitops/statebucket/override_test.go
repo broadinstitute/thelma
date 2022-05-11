@@ -2,6 +2,7 @@ package statebucket
 
 import (
 	"encoding/json"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -13,35 +14,29 @@ func Test_Override_Versions(t *testing.T) {
 
 	assert.Equal(t, *empty, *override)
 
-	override.SetAppVersion("1.2.3")
-	assert.Equal(t, "1.2.3", override.AppVersion)
-	override.UnsetAppVersion()
-	assert.Equal(t, "", override.AppVersion)
+	override.PinVersions(terra.VersionOverride{AppVersion: "1.2.3"})
+	assert.Equal(t, "1.2.3", override.Versions.AppVersion)
 
-	override.SetChartVersion("4.5.6")
-	assert.Equal(t, "4.5.6", override.ChartVersion)
-	override.UnsetChartVersion()
-	assert.Equal(t, "", override.ChartVersion)
+	override.PinVersions(terra.VersionOverride{ChartVersion: "4.5.6"})
+	assert.Equal(t, "1.2.3", override.Versions.AppVersion)
+	assert.Equal(t, "4.5.6", override.Versions.ChartVersion)
 
-	override.SetTerraHelmfileRef("my-branch")
-	assert.Equal(t, "my-branch", override.TerraHelmfileRef)
-	override.UnsetTerraHelmfileRef()
-	assert.Equal(t, "", override.TerraHelmfileRef)
+	override.PinVersions(terra.VersionOverride{TerraHelmfileRef: "pr-1"})
+	assert.Equal(t, "1.2.3", override.Versions.AppVersion)
+	assert.Equal(t, "4.5.6", override.Versions.ChartVersion)
+	assert.Equal(t, "pr-1", override.Versions.TerraHelmfileRef)
 
-	override.SetFirecloudDevelopRef("my-branch")
-	assert.Equal(t, "my-branch", override.FirecloudDevelopRef)
-	override.UnsetFirecloudDevelopRef()
-	assert.Equal(t, "", override.FirecloudDevelopRef)
+	override.PinVersions(terra.VersionOverride{FirecloudDevelopRef: "pr-2"})
+	assert.Equal(t, "1.2.3", override.Versions.AppVersion)
+	assert.Equal(t, "4.5.6", override.Versions.ChartVersion)
+	assert.Equal(t, "pr-1", override.Versions.TerraHelmfileRef)
+	assert.Equal(t, "pr-2", override.Versions.FirecloudDevelopRef)
 
-	assert.Equal(t, *empty, *override)
-	override.SetAppVersion("1.2.3")
-	override.SetChartVersion("4.5.6")
-	override.SetTerraHelmfileRef("my-branch")
-	override.SetFirecloudDevelopRef("my-branch")
-
-	assert.NotEqual(t, *empty, *override)
-	override.UnsetAll()
-	assert.Equal(t, *empty, *override)
+	override.UnpinVersions()
+	assert.Equal(t, "", override.Versions.AppVersion)
+	assert.Equal(t, "", override.Versions.ChartVersion)
+	assert.Equal(t, "", override.Versions.TerraHelmfileRef)
+	assert.Equal(t, "", override.Versions.FirecloudDevelopRef)
 }
 
 func Test_Override_EnableDisable(t *testing.T) {

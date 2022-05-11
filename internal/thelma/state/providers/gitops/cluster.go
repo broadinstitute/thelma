@@ -9,8 +9,8 @@ type cluster struct {
 	destination
 }
 
-// NewCluster constructs a new Cluster
-func NewCluster(name string, base string, address string, releases map[string]*clusterRelease) terra.Cluster {
+// newCluster constructs a new Cluster
+func newCluster(name string, base string, address string, releases map[string]*clusterRelease) *cluster {
 	return &cluster{
 		address:  address,
 		releases: releases,

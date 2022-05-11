@@ -57,6 +57,13 @@ func releaseSelector(release terra.Release) map[string]string {
 	}
 }
 
+// EnvironmentSelector returns set of selectors for all argo apps associated with an environment
+func EnvironmentSelector(env terra.Environment) map[string]string {
+	return map[string]string{
+		"env": env.Name(),
+	}
+}
+
 // joinSelector join map of label key-value pairs {"a":"b", "c":"d"} into selector string "a=b,c=d"
 func joinSelector(labels map[string]string) string {
 	var list []string

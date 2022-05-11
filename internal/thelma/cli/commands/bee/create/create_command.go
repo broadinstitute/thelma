@@ -3,17 +3,13 @@ package create
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 const helpMessage = `Create a new BEE (Branch Engineering Environment) from a template
@@ -28,16 +24,6 @@ thelma bee create \
   --fiab-name=fiab-automation-grungy-puma \
   --fiab-ip=35.36.37.38
 `
-
-type options struct {
-	name          string
-	template      string
-	hybrid        bool
-	fiabName      string
-	fiabIP        string
-	generatorOnly bool
-	waitHealthy   bool
-}
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
@@ -59,7 +45,8 @@ var flagNames = struct {
 }
 
 type createCommand struct {
-	options options
+	name    string
+	options bee.CreateOptions
 }
 
 func NewBeeCreateCommand() cli.ThelmaCommand {
@@ -71,34 +58,44 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Short = "Create a new BEE from a template"
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "NAME", "Required. Name for this BEE")
-	cobraCommand.Flags().StringVarP(&cmd.options.template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
-	cobraCommand.Flags().BoolVar(&cmd.options.hybrid, flagNames.hybrid, false, "Set to true to create a hybrid (connected to a Fiab) environment")
-	cobraCommand.Flags().StringVar(&cmd.options.fiabName, flagNames.fiabName, "FIAB", "Name of the Fiab this hybrid environment should be connected to")
-	cobraCommand.Flags().StringVar(&cmd.options.fiabIP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
-	cobraCommand.Flags().BoolVar(&cmd.options.generatorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
-	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, false, "Wait for BEE's Argo apps to become healthy after syncing")
+	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "NAME", "Required. Name for this BEE")
+	cobraCommand.Flags().StringVarP(&cmd.options.Template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
+	cobraCommand.Flags().BoolVar(&cmd.options.Hybrid, flagNames.hybrid, false, "Set to true to create a hybrid (connected to a Fiab) environment")
+	cobraCommand.Flags().StringVar(&cmd.options.Fiab.Name, flagNames.fiabName, "FIAB", "Name of the Fiab this hybrid environment should be connected to")
+	cobraCommand.Flags().StringVar(&cmd.options.Fiab.IP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
+	cobraCommand.Flags().BoolVar(&cmd.options.GeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
+	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, false, "Wait for BEE's Argo apps to become healthy after syncing")
 }
 
-func (cmd *createCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
 	// validate --name
 	if !ctx.CobraCommand().Flags().Changed(flagNames.name) {
 		return fmt.Errorf("--%s is required", flagNames.name)
 	}
-	if err := validate.EnvironmentName(cmd.options.name); err != nil {
-		return fmt.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.options.name, err)
+	if err := validate.EnvironmentName(cmd.name); err != nil {
+		return fmt.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.name, err)
+	}
+
+	// validate --template
+	bees, err := builders.NewBees(thelmaApp)
+	if err != nil {
+		return err
+	}
+	_, err = bees.GetTemplate(cmd.options.Template)
+	if err != nil {
+		return fmt.Errorf("--%s: %v", flagNames.template, err)
 	}
 
 	// validate --hybrid arguments
-	if cmd.options.hybrid {
-		if !ctx.CobraCommand().Flags().Changed(flagNames.fiabName) || cmd.options.fiabName == "" {
+	if cmd.options.Hybrid {
+		if !ctx.CobraCommand().Flags().Changed(flagNames.fiabName) || cmd.options.Fiab.Name == "" {
 			return fmt.Errorf("--%s is required for hybrid environments", flagNames.fiabName)
 		}
 		if !ctx.CobraCommand().Flags().Changed(flagNames.fiabIP) {
 			return fmt.Errorf("--%s is required for hybrid environments", flagNames.fiabIP)
 		}
-		if !utils.IsIPV4Address(cmd.options.fiabIP) {
-			return fmt.Errorf("--%s: %q is not a valid ipv4 address", flagNames.fiabIP, cmd.options.fiabIP)
+		if !utils.IsIPV4Address(cmd.options.Fiab.IP) {
+			return fmt.Errorf("--%s: %q is not a valid ipv4 address", flagNames.fiabIP, cmd.options.Fiab.IP)
 		}
 	}
 
@@ -106,97 +103,15 @@ func (cmd *createCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
-	state, err := app.State()
-	if err != nil {
-		return err
+	bees, err := builders.NewBees(app)
+	env, err := bees.CreateWith(cmd.name, cmd.options)
+	if env != nil {
+		ctx.SetOutput(views.ForTerraEnv(env))
 	}
-
-	_argocd, err := app.Clients().ArgoCD()
-	if err != nil {
-		return err
-	}
-
-	err = createEnv(cmd, state)
-	if err != nil {
-		return err
-	}
-
-	log.Info().Msgf("Created new environment %s", cmd.options.name)
-
-	// reload state and print environment to console
-	state, err = app.State()
-	if err != nil {
-		return err
-	}
-	env, err := state.Environments().Get(cmd.options.name)
-	if err != nil {
-		return err
-	}
-	if env == nil {
-		// don't think this could ever happen, but let's provide a useful error anyway
-		return fmt.Errorf("error creating environment %q: missing from state after creation", cmd.options.name)
-	}
-	ctx.SetOutput(views.ForTerraEnv(env))
-
-	log.Info().Msgf("Syncing %s", bee.GeneratorArgoApp)
-	if err := _argocd.SyncApp(bee.GeneratorArgoApp, func(options *argocd.SyncOptions) {
-		options.WaitHealthy = false
-	}); err != nil {
-		return err
-	}
-
-	if cmd.options.generatorOnly {
-		log.Warn().Msgf("Not syncing Argo apps for %s (%s is true)", env.Name(), flagNames.generatorOnly)
-		return nil
-	}
-
-	log.Info().Msgf("Syncing all releases in environment %s", env.Name())
-	releases, err := state.Releases().Filter(filter.Releases().BelongsToEnvironment(env))
-	if err != nil {
-		return err
-	}
-	return _argocd.SyncReleases(releases, 15, func(options *argocd.SyncOptions) {
-		options.WaitHealthy = cmd.options.waitHealthy
-	})
+	return err
 }
 
 func (cmd *createCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do yet
 	return nil
-}
-
-func createEnv(cmd *createCommand, state terra.State) error {
-	template, err := getTemplate(state, cmd.options.template)
-
-	if err != nil {
-		return err
-	}
-
-	if cmd.options.hybrid {
-		return state.Environments().CreateHybridFromTemplate(cmd.options.name, template, terra.NewFiab(cmd.options.fiabName, cmd.options.fiabIP))
-	} else {
-		return state.Environments().CreateFromTemplate(cmd.options.name, template)
-	}
-}
-
-// return the template by the given name, or a helpful error listing valid configuration template names
-func getTemplate(state terra.State, name string) (terra.Environment, error) {
-	template, err := state.Environments().Get(name)
-	if err != nil {
-		return nil, err
-	}
-	if template != nil {
-		return template, nil
-	}
-
-	templates, err := state.Environments().Filter(filter.Environments().HasLifecycle(terra.Template))
-	if err != nil {
-		return nil, err
-	}
-
-	var names []string
-	for _, t := range templates {
-		names = append(names, t.Name())
-	}
-	return nil, fmt.Errorf("--%s: no template by the name %q exists, valid templates are: %s", flagNames.template, name, strings.Join(names, ", "))
 }

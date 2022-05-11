@@ -12,9 +12,14 @@ import (
 
 const configKey = "statebucket"
 
+// bump this whenever backwards-incompatible schema changes are made. This way any clients that attempt to update
+// the state with the old schema will return an error.
+const schemaVersion = 1
+
 // StateFile represents the structure of the statefile
 type StateFile struct {
-	Environments map[string]DynamicEnvironment `json:"environments"`
+	SchemaVersion int32
+	Environments  map[string]DynamicEnvironment `json:"environments"`
 }
 
 type statebucketConfig struct {
@@ -36,12 +41,14 @@ type StateBucket interface {
 	Environments() ([]DynamicEnvironment, error)
 	// Add adds a new environment to the state file
 	Add(environment DynamicEnvironment) error
-	// EnableReleases enables the given release(s) in the target environment
-	EnableReleases(environmentName string, releaseNames []string) error
-	// DisableReleases disables the given release(s) in the target environment
-	DisableReleases(environmentName string, releases []terra.Release) error
-	// OverrideVersions can be used to update the environment's map of version overrides for a given release
-	OverrideVersions(environmentName string, releases []terra.Release, updateFn func(terra.Release, terra.VersionOverride)) error
+	// EnableRelease enables the given release in the target environment
+	EnableRelease(environmentName string, releaseName string) error
+	// DisableRelease disables the given release in the target environment
+	DisableRelease(environmentName string, releaseName string) error
+	// PinVersions can be used to update the environment's map of version overrides
+	PinVersions(environmentName string, versions map[string]terra.VersionOverride) error
+	// UnpinVersions can be used to remove the environment's map of version overrides
+	UnpinVersions(environmentName string) error
 	// Delete will delete an environment from the state file
 	Delete(environmentName string) error
 	// initialize will overwrite existing state with a new empty state file
@@ -66,14 +73,14 @@ func New(thelmaConfig config.Config, googleClients google.Clients) (StateBucket,
 // NewFake (FOR USE IN TESTS ONLY) returns a new fake statebucket, backed by local filesystem instead of a GCS bucket
 func NewFake(dir string) (StateBucket, error) {
 	return &statebucket{
-		writer: newFileWriter(dir, "state.json"),
+		writer: newSchemaVerifier(schemaVersion, newFileWriter(dir, "state.json")),
 	}, nil
 }
 
 // package-private constructor, used in testing
 func newWithBucket(_bucket bucket.Bucket, cfg statebucketConfig) *statebucket {
 	return &statebucket{
-		writer: newBucketWriter(_bucket, cfg),
+		writer: newSchemaVerifier(schemaVersion, newBucketWriter(_bucket, cfg)),
 	}
 }
 
@@ -91,6 +98,10 @@ func (s *statebucket) Environments() ([]DynamicEnvironment, error) {
 	state, err := s.writer.read()
 	if err != nil {
 		return nil, err
+	}
+
+	if state.SchemaVersion > schemaVersion {
+
 	}
 
 	var result []DynamicEnvironment
@@ -125,36 +136,37 @@ func (s *statebucket) Add(environment DynamicEnvironment) error {
 	})
 }
 
-func (s *statebucket) EnableReleases(environmentName string, releaseNames []string) error {
-	return s.update(environmentName, func(e *DynamicEnvironment) {
-		for _, releaseName := range releaseNames {
+func (s *statebucket) EnableRelease(environmentName string, releaseName string) error {
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		e.setOverride(releaseName, func(override *Override) {
+			override.Enable()
+		})
+	})
+}
+
+func (s *statebucket) DisableRelease(environmentName string, releaseName string) error {
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		e.setOverride(releaseName, func(override *Override) {
+			override.Disable()
+		})
+	})
+}
+
+func (s *statebucket) PinVersions(environmentName string, versions map[string]terra.VersionOverride) error {
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		for releaseName, v := range versions {
 			e.setOverride(releaseName, func(override *Override) {
-				override.Enable()
+				override.PinVersions(v)
 			})
 		}
 	})
 }
 
-func (s *statebucket) DisableReleases(environmentName string, releases []terra.Release) error {
-	return s.update(environmentName, func(e *DynamicEnvironment) {
-		for _, release := range releases {
-			e.setOverride(release.Name(), func(override *Override) {
-				override.Disable()
-			})
-		}
+func (s *statebucket) UnpinVersions(environmentName string) error {
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		e.Overrides = map[string]*Override{}
 	})
 }
-
-func (s *statebucket) OverrideVersions(environmentName string, releases []terra.Release, updateFn func(terra.Release, terra.VersionOverride)) error {
-	return s.update(environmentName, func(e *DynamicEnvironment) {
-		for _, release := range releases {
-			e.setOverride(release.Name(), func(override *Override) {
-				updateFn(release, override)
-			})
-		}
-	})
-}
-
 func (s *statebucket) Delete(environmentName string) error {
 	return s.writer.update(func(state StateFile) (StateFile, error) {
 		_, exists := state.Environments[environmentName]
@@ -166,7 +178,7 @@ func (s *statebucket) Delete(environmentName string) error {
 	})
 }
 
-func (s *statebucket) update(environmentName string, updateFn func(environment *DynamicEnvironment)) error {
+func (s *statebucket) updateEnvironment(environmentName string, updateFn func(environment *DynamicEnvironment)) error {
 	return s.writer.update(func(state StateFile) (StateFile, error) {
 		environment, exists := state.Environments[environmentName]
 		if !exists {
@@ -180,5 +192,5 @@ func (s *statebucket) update(environmentName string, updateFn func(environment *
 
 // populate a new empty statefile in the bucket
 func (s *statebucket) initialize() error {
-	return s.writer.write(StateFile{})
+	return s.writer.write(StateFile{SchemaVersion: schemaVersion})
 }

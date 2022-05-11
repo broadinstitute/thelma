@@ -1,14 +1,9 @@
 package terra
 
-// VersionOverride can be used to set and unset version overrides for a release
-type VersionOverride interface {
-	SetAppVersion(version string)
-	UnsetAppVersion()
-	SetChartVersion(version string)
-	UnsetChartVersion()
-	SetFirecloudDevelopRef(ref string)
-	UnsetFirecloudDevelopRef()
-	SetTerraHelmfileRef(ref string)
-	UnsetTerraHelmfileRef()
-	UnsetAll()
+// VersionOverride represents version overrides for a release in an environment
+type VersionOverride struct {
+	AppVersion          string `json:"appVersion,omitempty" yaml:"appVersion,omitempty"`
+	ChartVersion        string `json:"chartVersion,omitempty" yaml:"chartVersion,omitempty"`
+	TerraHelmfileRef    string `json:"terraHelmfileRef,omitempty" yaml:"terraHelmfileRef,omitempty"`
+	FirecloudDevelopRef string `json:"firecloudDevelopRef,omitempty" yaml:"firecloudDevelopRef,omitempty"`
 }

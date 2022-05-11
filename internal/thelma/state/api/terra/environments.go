@@ -15,15 +15,18 @@ type Environments interface {
 	CreateFromTemplate(name string, template Environment) error
 	// CreateHybridFromTemplate creates a new hybrid environment with the given name from the given template.
 	CreateHybridFromTemplate(name string, template Environment, fiab Fiab) error
-	// EnableReleases enables a release in an environment
+	// EnableRelease enables a release in an environment
 	// TODO this should move to Environment at some point
-	EnableReleases(environmentName string, releaseNames []string) error
-	// DisableReleases disables a release in an environment
+	EnableRelease(environmentName string, releaseName string) error
+	// DisableRelease disables a release in an environment
 	// TODO this should move to Environment at some point
-	DisableReleases(environmentName string, releases []Release) error
-	// SetVersions sets a version override in the given environment
+	DisableRelease(environmentName string, releaseName string) error
+	//PinVersions sets a version override in the given environment
 	// TODO this should move to Environment at some point
-	SetVersions(environmentName string, releases []Release, overrideFn func(release Release, override VersionOverride)) error
+	PinVersions(environmentName string, versions map[string]VersionOverride) error
+	//UnpinVersions removes version overrides in the given environment
+	// TODO this should move to Environment at some point
+	UnpinVersions(environmentName string) error
 	// Delete deletes the environment with the given name
 	Delete(name string) error
 }

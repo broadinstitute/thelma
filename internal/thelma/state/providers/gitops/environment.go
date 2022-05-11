@@ -17,8 +17,8 @@ type environment struct {
 	destination
 }
 
-// NewEnvironment constructs a new Environment
-func NewEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, template string, fiab terra.Fiab, releases map[string]*appRelease) terra.Environment {
+// newEnvironment constructs a new Environment
+func newEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, template string, fiab terra.Fiab, releases map[string]*appRelease) *environment {
 	return &environment{
 		defaultCluster: defaultCluster,
 		releases:       releases,
@@ -85,4 +85,10 @@ func (e *environment) Fiab() terra.Fiab {
 // environmentNamespace return environment namespace for a given environment name
 func environmentNamespace(envName string) string {
 	return fmt.Sprintf("%s%s", envNamespacePrefix, envName)
+}
+
+// return true if the release is defined in this environments releases map (even if it is not enabled)
+func (e *environment) releaseDefined(name string) bool {
+	_, exists := e.releases[name]
+	return exists
 }

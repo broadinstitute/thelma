@@ -40,6 +40,8 @@ type ThelmaApp interface {
 	Scratch() scratch.Scratch
 	// State returns a new terra.State instance for this ThelmaApp
 	State() (terra.State, error)
+	// StateLoader returns the terra.StateLoader instance for this ThelmaApp
+	StateLoader() terra.StateLoader
 	// Close deletes local resources associated with this ThelmaApp, and should be called once before the program exits.
 	Close() error
 }
@@ -108,6 +110,10 @@ func (t *thelmaApp) Scratch() scratch.Scratch {
 
 func (t *thelmaApp) State() (terra.State, error) {
 	return t.stateLoader.Load()
+}
+
+func (t *thelmaApp) StateLoader() terra.StateLoader {
+	return t.stateLoader
 }
 
 func (t *thelmaApp) Close() error {

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 0,
   "environments": {
     "fiab-swirly-rabbit": {
       "name": "fiab-swirly-rabbit",
@@ -14,11 +15,15 @@
       "template": "swatomation",
       "overrides": {
         "rawls": {
-          "appVersion": "my-rawls-pr-0ef4"
+          "versions": {
+            "appVersion": "my-rawls-pr-0ef4"
+          }
         },
         "sam": {
-          "terraHelmfileRef": "my-th-branch-1",
-          "firecloudDevelopRef": "my-fc-branch-1"
+          "versions": {
+            "terraHelmfileRef": "my-th-branch-1",
+            "firecloudDevelopRef": "my-fc-branch-1"
+          }
         }
       },
       "hybrid": true,
@@ -32,7 +37,9 @@
       "template": "swatomation",
       "overrides": {
         "sam": {
-          "appVersion": "1.2.3"
+          "versions": {
+            "appVersion": "1.2.3"
+          }
         }
       },
       "hybrid": true,
@@ -49,8 +56,10 @@
           "enabled": false
         },
         "rawls": {
-          "chartVersion": "100.200.300",
-          "terraHelmfileRef": "my-terra-helmfile-branch"
+          "versions": {
+            "chartVersion": "100.200.300",
+            "terraHelmfileRef": "my-terra-helmfile-branch"
+          }
         }
       },
       "hybrid": true,
