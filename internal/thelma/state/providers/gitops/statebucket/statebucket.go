@@ -100,10 +100,6 @@ func (s *statebucket) Environments() ([]DynamicEnvironment, error) {
 		return nil, err
 	}
 
-	if state.SchemaVersion > schemaVersion {
-
-	}
-
 	var result []DynamicEnvironment
 
 	if state.Environments == nil {

@@ -45,14 +45,12 @@ func ForTerraEnvs(environments []terra.Environment) []Environment {
 }
 
 func ForTerraEnvsWithOverrides(environments []terra.Environment, dynamicEnvs []statebucket.DynamicEnvironment) []Environment {
-	result := ForTerraEnvs(environments)
-
 	dynEnvMap := make(map[string]statebucket.DynamicEnvironment)
 	for _, dynEnv := range dynamicEnvs {
 		dynEnvMap[dynEnv.Name] = dynEnv
 	}
 
-	result = make([]Environment, len(environments))
+	result := make([]Environment, len(environments))
 
 	for i, e := range environments {
 		dynEnv, exists := dynEnvMap[e.Name()]

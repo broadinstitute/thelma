@@ -104,6 +104,9 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 
 func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
 	env, err := bees.CreateWith(cmd.name, cmd.options)
 	if env != nil {
 		ctx.SetOutput(views.ForTerraEnv(env))

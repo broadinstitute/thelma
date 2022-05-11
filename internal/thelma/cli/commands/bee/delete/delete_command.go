@@ -55,6 +55,9 @@ func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 
 func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
 	env, err := bees.DeleteWith(cmd.name, cmd.options)
 	if env != nil {
 		rc.SetOutput(views.ForTerraEnv(env))

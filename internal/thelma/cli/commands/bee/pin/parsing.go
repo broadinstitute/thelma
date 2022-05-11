@@ -32,7 +32,7 @@ func parseVersions(format string, input []byte) (map[string]terra.VersionOverrid
 
 func versionFormats() []string {
 	var result []string
-	for name, _ := range versionsParsers {
+	for name := range versionsParsers {
 		result = append(result, name)
 	}
 	return result

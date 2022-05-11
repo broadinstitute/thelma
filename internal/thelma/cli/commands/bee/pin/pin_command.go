@@ -55,7 +55,6 @@ type options struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
-	releases            []string
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages

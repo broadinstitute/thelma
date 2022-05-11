@@ -86,9 +86,3 @@ func (e *environment) Fiab() terra.Fiab {
 func environmentNamespace(envName string) string {
 	return fmt.Sprintf("%s%s", envNamespacePrefix, envName)
 }
-
-// return true if the release is defined in this environments releases map (even if it is not enabled)
-func (e *environment) releaseDefined(name string) bool {
-	_, exists := e.releases[name]
-	return exists
-}
