@@ -414,7 +414,7 @@ func (a *argocd) ensureLoggedIn() error {
 	}
 	err := a.runCommandAndParseYamlOutput([]string{"account", "get-user-info"}, &output)
 	if err != nil && strings.Contains(err.Error(), "failed with status code 401") {
-		// failed with status code 401 means auth token expired
+		// failed with status code 401 means auth token expired, we return a special error message (see below) in that case
 		return err
 	}
 	if err != nil || !output.LoggedIn {

@@ -36,7 +36,11 @@ func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environme
 }
 
 func (e *environments) Get(name string) (terra.Environment, error) {
-	return e.state.environments[name], nil
+	env, exists := e.state.environments[name]
+	if !exists {
+		return nil, nil
+	}
+	return env, nil
 }
 
 func (e *environments) Exists(name string) (bool, error) {

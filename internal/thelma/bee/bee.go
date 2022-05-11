@@ -17,6 +17,7 @@ type Bees interface {
 	GetTemplate(name string) (terra.Environment, error)
 	SyncGeneratorForName(name string) error
 	SyncGeneratorFor(env terra.Environment) error
+	SyncArgoAppsFor(env terra.Environment, options ...argocd.SyncOption) error
 }
 
 type DeleteOptions struct {
