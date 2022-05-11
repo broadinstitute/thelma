@@ -14,6 +14,7 @@ import (
 	bee_list "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/list"
 	bee_pin "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/pin"
 	bee_unpin "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/unpin"
+	bee_vars "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/vars"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts"
 	charts_import "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/import"
 	charts_publish "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/publish"
@@ -50,6 +51,7 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("bee list", bee_list.NewBeeListCommand())
 	opts.AddCommand("bee pin", bee_pin.NewBeePinCommand())
 	opts.AddCommand("bee unpin", bee_unpin.NewBeeUnpinCommand())
+	opts.AddCommand("bee vars", bee_vars.NewBeeVarsCommand())
 
 	opts.AddCommand("charts", charts.NewChartsCommand())
 	opts.AddCommand("charts import", charts_import.NewChartsImportCommand())
