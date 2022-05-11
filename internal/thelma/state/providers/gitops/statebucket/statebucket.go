@@ -5,14 +5,25 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"sort"
 	"time"
 )
 
 const configKey = "statebucket"
 
+// bump this whenever backwards-incompatible schema changes are made. This way any clients that attempt to update
+// the state with the old schema will return an error.
+const schemaVersion = 1
+
+// StateFile represents the structure of the statefile
+type StateFile struct {
+	SchemaVersion int32
+	Environments  map[string]DynamicEnvironment `json:"environments"`
+}
+
 type statebucketConfig struct {
-	// Name of the GCS bucket
+	// Name of the GCS bucket where state file is kept
 	Name string `default:"thelma-state"`
 	// Object name of the object in the bucket where state is kept
 	Object string `default:"state.json"`
@@ -24,41 +35,23 @@ type statebucketConfig struct {
 	}
 }
 
-// Fiab DEPRECATED struct for representing a Fiab in state file
-type Fiab struct {
-	IP   string `json:"ip"`
-	Name string `json:"name"`
-}
-
-// DynamicEnvironment is a struct for representing a dynamic environment in the state file
-type DynamicEnvironment struct {
-	Name        string            `json:"name"`
-	Template    string            `json:"template"`
-	VersionPins map[string]string `json:"versionPins"`
-	Hybrid      bool              `json:"hybrid"` // Deprecated / temporary (while we run bees in hybrid mode)
-	Fiab        Fiab              `json:"fiab"`   // Deprecated / temporary (while we run bees in hybrid mode)
-}
-
-type StateFile struct {
-	Environments map[string]DynamicEnvironment `json:"environments"`
-}
-
-// StateBucket is for track state for dynamic environments. (Stored in a GCS bucket)
+// StateBucket is for tracking state for dynamic environments. (Stored in a GCS bucket)
 type StateBucket interface {
 	// Environments returns the list of all environments in the state file
 	Environments() ([]DynamicEnvironment, error)
 	// Add adds a new environment to the state file
 	Add(environment DynamicEnvironment) error
-	// PinVersions will update the environment's map of version pins in a merging fashion.
-	// For example, if the existing pins are {"A":v100", "B":"v200"}, and PinVersions is called
-	// with {"A":"v123"}, the new set of pins will be {"A":"v123", "B":"v200"}. UnpinVersions
-	// can be used to remove all version pins for the environment.
-	PinVersions(environmentName string, versionPins map[string]string) error
-	// UnpinVersions will remove all version pins for an environment.
+	// EnableRelease enables the given release in the target environment
+	EnableRelease(environmentName string, releaseName string) error
+	// DisableRelease disables the given release in the target environment
+	DisableRelease(environmentName string, releaseName string) error
+	// PinVersions can be used to update the environment's map of version overrides
+	PinVersions(environmentName string, versions map[string]terra.VersionOverride) error
+	// UnpinVersions can be used to remove the environment's map of version overrides
 	UnpinVersions(environmentName string) error
 	// Delete will delete an environment from the state file
 	Delete(environmentName string) error
-	// initialize will overwite existing state with a new empty state file
+	// initialize will overwrite existing state with a new empty state file
 	initialize() error
 }
 
@@ -80,14 +73,14 @@ func New(thelmaConfig config.Config, googleClients google.Clients) (StateBucket,
 // NewFake (FOR USE IN TESTS ONLY) returns a new fake statebucket, backed by local filesystem instead of a GCS bucket
 func NewFake(dir string) (StateBucket, error) {
 	return &statebucket{
-		writer: newFileWriter(dir, "state.json"),
+		writer: newSchemaVerifier(schemaVersion, newFileWriter(dir, "state.json")),
 	}, nil
 }
 
 // package-private constructor, used in testing
 func newWithBucket(_bucket bucket.Bucket, cfg statebucketConfig) *statebucket {
 	return &statebucket{
-		writer: newBucketWriter(_bucket, cfg),
+		writer: newSchemaVerifier(schemaVersion, newBucketWriter(_bucket, cfg)),
 	}
 }
 
@@ -130,10 +123,6 @@ func (s *statebucket) Add(environment DynamicEnvironment) error {
 			state.Environments = make(map[string]DynamicEnvironment)
 		}
 
-		// make sure marshaled json includes an empty map so version pins is never nil when unmarshaled
-		if environment.VersionPins == nil {
-			environment.VersionPins = make(map[string]string)
-		}
 		_, exists := state.Environments[environment.Name]
 		if exists {
 			return StateFile{}, fmt.Errorf("can't add new environment %s, an environment by that name already exists", environment.Name)
@@ -143,32 +132,49 @@ func (s *statebucket) Add(environment DynamicEnvironment) error {
 	})
 }
 
-func (s *statebucket) PinVersions(environmentName string, versionPins map[string]string) error {
-	return s.writer.update(func(state StateFile) (StateFile, error) {
-		environment, exists := state.Environments[environmentName]
-		if !exists {
-			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+func (s *statebucket) EnableRelease(environmentName string, releaseName string) error {
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		e.setOverride(releaseName, func(override *Override) {
+			override.Enable()
+		})
+	})
+}
+
+func (s *statebucket) DisableRelease(environmentName string, releaseName string) error {
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		e.setOverride(releaseName, func(override *Override) {
+			override.Disable()
+		})
+	})
+}
+
+func (s *statebucket) PinVersions(environmentName string, versions map[string]terra.VersionOverride) error {
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		for releaseName, v := range versions {
+			e.setOverride(releaseName, func(override *Override) {
+				override.PinVersions(v)
+			})
 		}
-		for service, version := range versionPins {
-			environment.VersionPins[service] = version
-		}
-		state.Environments[environmentName] = environment
-		return state, nil
 	})
 }
 
 func (s *statebucket) UnpinVersions(environmentName string) error {
-	return s.writer.update(func(state StateFile) (StateFile, error) {
-		environment, exists := state.Environments[environmentName]
-		if !exists {
-			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+		var deletions []string
+
+		for releaseName, override := range e.Overrides {
+			override.UnpinVersions()
+			if !override.HasEnableOverride() {
+				// no version or enable override, so we should delete the key
+				deletions = append(deletions, releaseName)
+			}
 		}
-		environment.VersionPins = map[string]string{}
-		state.Environments[environmentName] = environment
-		return state, nil
+
+		for _, releaseName := range deletions {
+			delete(e.Overrides, releaseName)
+		}
 	})
 }
-
 func (s *statebucket) Delete(environmentName string) error {
 	return s.writer.update(func(state StateFile) (StateFile, error) {
 		_, exists := state.Environments[environmentName]
@@ -180,7 +186,19 @@ func (s *statebucket) Delete(environmentName string) error {
 	})
 }
 
+func (s *statebucket) updateEnvironment(environmentName string, updateFn func(environment *DynamicEnvironment)) error {
+	return s.writer.update(func(state StateFile) (StateFile, error) {
+		environment, exists := state.Environments[environmentName]
+		if !exists {
+			return StateFile{}, fmt.Errorf("can't update environment %s, it does not exist in the state file", environmentName)
+		}
+		updateFn(&environment)
+		state.Environments[environmentName] = environment
+		return state, nil
+	})
+}
+
 // populate a new empty statefile in the bucket
 func (s *statebucket) initialize() error {
-	return s.writer.write(StateFile{})
+	return s.writer.write(StateFile{SchemaVersion: schemaVersion})
 }

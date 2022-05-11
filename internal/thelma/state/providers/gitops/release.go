@@ -5,15 +5,18 @@ import (
 )
 
 type release struct {
-	name           string
-	releaseType    terra.ReleaseType
-	chartVersion   string
-	chartName      string
-	repo           string
-	namespace      string
-	clusterName    string
-	clusterAddress string
-	destination    terra.Destination
+	name                string
+	enabled             bool
+	releaseType         terra.ReleaseType
+	chartVersion        string
+	chartName           string
+	repo                string
+	namespace           string
+	clusterName         string
+	clusterAddress      string
+	destination         terra.Destination
+	terraHelmfileRef    string
+	firecloudDevelopRef string
 }
 
 func (r *release) Name() string {
@@ -58,4 +61,12 @@ func (r *release) ClusterAddress() string {
 
 func (r *release) Destination() terra.Destination {
 	return r.destination
+}
+
+func (r *release) TerraHelmfileRef() string {
+	return r.terraHelmfileRef
+}
+
+func (r *release) FirecloudDevelopRef() string {
+	return r.firecloudDevelopRef
 }

@@ -5,12 +5,12 @@ import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 // Cluster represents a Terra cluster
 type cluster struct {
 	address  string // Cluster API address. Eg "https://10.0.0.1/api"
-	releases map[string]terra.ClusterRelease
+	releases map[string]*clusterRelease
 	destination
 }
 
-// NewCluster constructs a new Cluster
-func NewCluster(name string, base string, address string, releases map[string]terra.ClusterRelease) terra.Cluster {
+// newCluster constructs a new Cluster
+func newCluster(name string, base string, address string, releases map[string]*clusterRelease) *cluster {
 	return &cluster{
 		address:  address,
 		releases: releases,
@@ -25,7 +25,9 @@ func NewCluster(name string, base string, address string, releases map[string]te
 func (c *cluster) Releases() []terra.Release {
 	var result []terra.Release
 	for _, r := range c.releases {
-		result = append(result, r)
+		if r.enabled {
+			result = append(result, r)
+		}
 	}
 	return result
 }

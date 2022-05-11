@@ -71,7 +71,7 @@ func (s *stateLoader) Load() (terra.State, error) {
 	}, nil
 }
 
-func loadEnvironments(configRepoPath string, versions Versions, clusters map[string]terra.Cluster, sb statebucket.StateBucket) (map[string]terra.Environment, error) {
+func loadEnvironments(configRepoPath string, versions Versions, clusters map[string]*cluster, sb statebucket.StateBucket) (map[string]*environment, error) {
 	yamlEnvs, err := loadYamlEnvironments(configRepoPath, versions, clusters)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func loadEnvironments(configRepoPath string, versions Versions, clusters map[str
 		return nil, err
 	}
 
-	merged := make(map[string]terra.Environment)
+	merged := make(map[string]*environment)
 	for k, e := range yamlEnvs {
 		merged[k] = e
 	}
@@ -92,13 +92,13 @@ func loadEnvironments(configRepoPath string, versions Versions, clusters map[str
 	return merged, nil
 }
 
-func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb statebucket.StateBucket) (map[string]terra.Environment, error) {
+func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb statebucket.StateBucket) (map[string]*environment, error) {
 	dynamicEnvironments, err := sb.Environments()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]terra.Environment)
+	result := make(map[string]*environment)
 	for _, dynamicEnv := range dynamicEnvironments {
 		if _, exists := yamlEnvironments[dynamicEnv.Name]; exists {
 			return nil, fmt.Errorf("error laoding dynamic environment %q: an environment by that name is already declared in YAML", dynamicEnv.Name)
@@ -113,17 +113,15 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb s
 			_fiab = terra.NewFiab(dynamicEnv.Fiab.Name, dynamicEnv.Fiab.IP)
 		}
 
-		_releases := make(map[string]terra.AppRelease)
+		_releases := make(map[string]*appRelease)
 
 		for _, r := range template.Releases() {
-			templateRelease := r.(terra.AppRelease)
-			appVersion := templateRelease.AppVersion()
-			if override, exists := dynamicEnv.VersionPins[templateRelease.Name()]; exists {
-				appVersion = override
-			}
-			_releases[templateRelease.Name()] = &appRelease{
+			templateRelease := r.(*appRelease)
+
+			_release := &appRelease{
 				release: release{
 					name:           templateRelease.Name(),
+					enabled:        templateRelease.enabled,
 					releaseType:    templateRelease.Type(),
 					chartVersion:   templateRelease.ChartVersion(),
 					chartName:      templateRelease.ChartName(),
@@ -133,11 +131,33 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb s
 					clusterAddress: templateRelease.ClusterAddress(),
 					destination:    nil, // replaced after env is constructed
 				},
-				appVersion: appVersion,
+				appVersion: templateRelease.AppVersion(),
 			}
+
+			// apply dynamic overrides
+			override, hasOverride := dynamicEnv.Overrides[_release.name]
+			if hasOverride {
+				if override.HasEnableOverride() {
+					_release.enabled = override.IsEnabled()
+				}
+				if override.Versions.AppVersion != "" {
+					_release.appVersion = override.Versions.AppVersion
+				}
+				if override.Versions.ChartVersion != "" {
+					_release.chartVersion = override.Versions.ChartVersion
+				}
+				if override.Versions.FirecloudDevelopRef != "" {
+					_release.firecloudDevelopRef = override.Versions.FirecloudDevelopRef
+				}
+				if override.Versions.TerraHelmfileRef != "" {
+					_release.terraHelmfileRef = override.Versions.TerraHelmfileRef
+				}
+			}
+
+			_releases[templateRelease.Name()] = _release
 		}
 
-		env := NewEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, _releases)
+		env := newEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, _releases)
 		result[dynamicEnv.Name] = env
 		for _, r := range env.Releases() {
 			r.(*appRelease).destination = env
@@ -148,7 +168,7 @@ func loadDynamicEnvironments(yamlEnvironments map[string]terra.Environment, sb s
 }
 
 // loadYamlEnvironments scans through the environments/ subdirectory and build a slice of defined environments
-func loadYamlEnvironments(configRepoPath string, versions Versions, clusters map[string]terra.Cluster) (map[string]terra.Environment, error) {
+func loadYamlEnvironments(configRepoPath string, versions Versions, clusters map[string]*cluster) (map[string]*environment, error) {
 	configDir := path.Join(configRepoPath, envConfigDir)
 
 	destConfigs, err := loadDestinationsFromDirectory(configDir, terra.EnvironmentDestination)
@@ -156,7 +176,7 @@ func loadYamlEnvironments(configRepoPath string, versions Versions, clusters map
 		return nil, err
 	}
 
-	result := make(map[string]terra.Environment)
+	result := make(map[string]*environment)
 
 	for _, destConfig := range destConfigs {
 		if cluster, exists := clusters[destConfig.name]; exists {
@@ -172,7 +192,7 @@ func loadYamlEnvironments(configRepoPath string, versions Versions, clusters map
 	return result, nil
 }
 
-func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters map[string]terra.Cluster) (terra.Environment, error) {
+func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters map[string]*cluster) (*environment, error) {
 	envName := destConfig.name
 	envBase := destConfig.base
 
@@ -201,14 +221,9 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		}
 	}
 
-	_releases := make(map[string]terra.AppRelease)
+	_releases := make(map[string]*appRelease)
 
 	for releaseName, releaseDefn := range envConfig.Releases {
-		// Skip releases that aren't enabled
-		if !releaseDefn.Enabled {
-			continue
-		}
-
 		_cluster := defaultCluster
 		if releaseDefn.Cluster != "" {
 			if _, exists := clusters[releaseDefn.Cluster]; !exists {
@@ -264,6 +279,7 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 			appVersion: appVersion,
 			release: release{
 				name:           releaseName,
+				enabled:        releaseDefn.Enabled,
 				releaseType:    terra.AppReleaseType,
 				chartVersion:   chartVersion,
 				chartName:      chartName,
@@ -277,7 +293,7 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		_releases[releaseName] = _release
 	}
 
-	env := NewEnvironment(
+	env := newEnvironment(
 		envName,
 		envBase,
 		defaultClusterName,
@@ -288,14 +304,14 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 	)
 
 	for _, _release := range _releases {
-		_release.(*appRelease).destination = env
+		_release.destination = env
 	}
 
 	return env, nil
 }
 
 // loadClusters scans through the cluster/ subdirectory and build a slice of defined clusters
-func loadClusters(configRepoPath string, versions Versions) (map[string]terra.Cluster, error) {
+func loadClusters(configRepoPath string, versions Versions) (map[string]*cluster, error) {
 	configDir := path.Join(configRepoPath, clusterConfigDir)
 
 	destConfigs, err := loadDestinationsFromDirectory(configDir, terra.ClusterDestination)
@@ -303,7 +319,7 @@ func loadClusters(configRepoPath string, versions Versions) (map[string]terra.Cl
 		return nil, err
 	}
 
-	result := make(map[string]terra.Cluster)
+	result := make(map[string]*cluster)
 
 	for _, destConfig := range destConfigs {
 		_cluster, err := loadCluster(destConfig, versions)
@@ -316,7 +332,7 @@ func loadClusters(configRepoPath string, versions Versions) (map[string]terra.Cl
 	return result, nil
 }
 
-func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluster, error) {
+func loadCluster(destConfig destinationConfig, _versions Versions) (*cluster, error) {
 	clusterName := destConfig.name
 	clusterBase := destConfig.base
 
@@ -331,15 +347,9 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 		return nil, fmt.Errorf("cluster %s does not have a valid API address, please set `address` key in config file", clusterName)
 	}
 
-	releases := make(map[string]terra.ClusterRelease)
+	releases := make(map[string]*clusterRelease)
 
 	for releaseName, releaseDefn := range clusterDefn.Releases {
-		// Skip releaes that aren't enabled
-		if !releaseDefn.Enabled {
-			continue
-		}
-
-		// Release is enabled, so configure with proper settings
 		// chart version
 		chartVersion := releaseDefn.ChartVersion
 		if chartVersion == "" {
@@ -374,6 +384,7 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 		releases[releaseName] = &clusterRelease{
 			release: release{
 				name:           releaseName,
+				enabled:        releaseDefn.Enabled,
 				releaseType:    terra.ClusterReleaseType,
 				chartVersion:   chartVersion,
 				chartName:      chartName,
@@ -385,7 +396,7 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 		}
 	}
 
-	_cluster := NewCluster(
+	_cluster := newCluster(
 		clusterName,
 		clusterBase,
 		clusterDefn.Address,
@@ -393,7 +404,7 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (terra.Cluste
 	)
 
 	for _, _release := range releases {
-		_release.(*clusterRelease).destination = _cluster
+		_release.destination = _cluster
 	}
 
 	return _cluster, nil

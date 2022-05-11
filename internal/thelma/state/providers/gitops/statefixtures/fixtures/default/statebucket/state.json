@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 0,
   "environments": {
     "fiab-swirly-rabbit": {
       "name": "fiab-swirly-rabbit",
@@ -12,8 +13,18 @@
     "fiab-funky-chipmunk": {
       "name": "fiab-funky-chipmunk",
       "template": "swatomation",
-      "versionPins": {
-        "rawls": "my-rawls-pr-0ef4"
+      "overrides": {
+        "rawls": {
+          "versions": {
+            "appVersion": "my-rawls-pr-0ef4"
+          }
+        },
+        "sam": {
+          "versions": {
+            "terraHelmfileRef": "my-th-branch-1",
+            "firecloudDevelopRef": "my-fc-branch-1"
+          }
+        }
       },
       "hybrid": true,
       "fiab": {
@@ -24,13 +35,37 @@
     "fiab-nerdy-walrus": {
       "name": "fiab-nerdy-walrus",
       "template": "swatomation",
-      "versionPins": {
-        "sam": "1.2.3"
+      "overrides": {
+        "sam": {
+          "versions": {
+            "appVersion": "1.2.3"
+          }
+        }
       },
       "hybrid": true,
       "fiab": {
         "name": "fiab-automation-nerdy-walrus",
         "ip": "10.0.0.3"
+      }
+    },
+    "fiab-special-snowflake": {
+      "name": "fiab-special-snowflake",
+      "template": "swatomation",
+      "overrides": {
+        "sam": {
+          "enabled": false
+        },
+        "rawls": {
+          "versions": {
+            "chartVersion": "100.200.300",
+            "terraHelmfileRef": "my-terra-helmfile-branch"
+          }
+        }
+      },
+      "hybrid": true,
+      "fiab": {
+        "name": "fiab-automation-special-snowflake",
+        "ip": "10.0.0.4"
       }
     },
     "sam-ci-001": {

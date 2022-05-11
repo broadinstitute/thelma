@@ -14,4 +14,6 @@ type Release interface {
 	ClusterName() string
 	ClusterAddress() string
 	Destination() Destination
+	TerraHelmfileRef() string
+	FirecloudDevelopRef() string
 }

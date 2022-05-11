@@ -104,9 +104,11 @@ func Test_BuildStateValues(t *testing.T) {
 				},
 			},
 			expectedArgoApp: ArgoApp{
-				ProjectName:    "terra-fiab-funky-chipmunk",
-				ClusterName:    "terra-qa",
-				ClusterAddress: "https://35.224.175.229",
+				ProjectName:         "terra-fiab-funky-chipmunk",
+				ClusterName:         "terra-qa",
+				ClusterAddress:      "https://35.224.175.229",
+				TerraHelmfileRef:    "my-th-branch-1",
+				FirecloudDevelopRef: "my-fc-branch-1",
 			},
 		},
 		{
