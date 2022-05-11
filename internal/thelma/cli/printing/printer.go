@@ -95,5 +95,11 @@ func printToFile(output interface{}, ft format.Format, filename string) error {
 }
 
 func loggingWriter(inner io.Writer) io.Writer {
-	return shell.NewLoggingWriter(zerolog.DebugLevel, log.Logger, "[out] ", inner)
+	if utils.Interactive() {
+		// only log stdout if we're running in interactive mode
+		// this prevents output from getting mixed with log messages in CI/CD environments
+		return shell.NewLoggingWriter(zerolog.DebugLevel, log.Logger, "[out] ", inner)
+	} else {
+		return inner
+	}
 }
