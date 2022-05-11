@@ -12,7 +12,6 @@ import (
 const generatorArgoApp = "terra-bee-generator"
 
 type Bees interface {
-	Delete(name string, options ...DeleteOption) (terra.Environment, error)
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
 	CreateWith(name string, options CreateOptions) (terra.Environment, error)
 	GetTemplate(name string) (terra.Environment, error)
@@ -22,7 +21,6 @@ type Bees interface {
 type DeleteOptions struct {
 	IgnoreMissing bool
 }
-type DeleteOption func(options *DeleteOptions)
 
 type CreateOptions struct {
 	Template string
@@ -104,15 +102,6 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		_options.WaitHealthy = options.WaitHealthy
 	})
 	return env, err
-}
-
-func (b *bees) Delete(name string, options ...DeleteOption) (terra.Environment, error) {
-	var opts DeleteOptions
-	for _, option := range options {
-		option(&opts)
-	}
-
-	return b.DeleteWith(name, opts)
 }
 
 func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment, error) {
