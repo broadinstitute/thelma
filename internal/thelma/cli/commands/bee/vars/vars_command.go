@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -96,12 +95,4 @@ func (cmd *varsCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 func (cmd *varsCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do here
 	return nil
-}
-
-func releasesByName(env terra.Environment) map[string]terra.Release {
-	result := make(map[string]terra.Release)
-	for _, r := range env.Releases() {
-		result[r.Name()] = r
-	}
-	return result
 }
