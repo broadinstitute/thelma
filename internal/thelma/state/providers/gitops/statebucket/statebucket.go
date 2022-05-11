@@ -160,7 +160,19 @@ func (s *statebucket) PinVersions(environmentName string, versions map[string]te
 
 func (s *statebucket) UnpinVersions(environmentName string) error {
 	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
-		e.Overrides = map[string]*Override{}
+		var deletions []string
+
+		for releaseName, override := range e.Overrides {
+			override.UnpinVersions()
+			if !override.HasEnableOverride() {
+				// no version or enable override, so we should delete the key
+				deletions = append(deletions, releaseName)
+			}
+		}
+
+		for _, releaseName := range deletions {
+			delete(e.Overrides, releaseName)
+		}
 	})
 }
 func (s *statebucket) Delete(environmentName string) error {
