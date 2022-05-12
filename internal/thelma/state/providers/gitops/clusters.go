@@ -24,7 +24,11 @@ func (c *clusters) All() ([]terra.Cluster, error) {
 }
 
 func (c *clusters) Get(name string) (terra.Cluster, error) {
-	return c.state.clusters[name], nil
+	cl, exists := c.state.clusters[name]
+	if !exists {
+		return nil, nil
+	}
+	return cl, nil
 }
 
 func (c *clusters) Exists(name string) (bool, error) {

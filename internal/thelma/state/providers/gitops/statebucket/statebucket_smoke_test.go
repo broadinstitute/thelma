@@ -68,7 +68,7 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Empty(t, envs[0].Overrides, "should have no overrides")
 
 			// set a version override
-			err = sb.PinVersions("fake-env-1", map[string]terra.VersionOverride{
+			_, err = sb.PinVersions("fake-env-1", map[string]terra.VersionOverride{
 				"sam": {AppVersion: "100"},
 			})
 			require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.False(t, envs[0].Overrides["sam"].HasEnableOverride())
 
 			// set another version override on sam
-			err = sb.PinVersions("fake-env-1", map[string]terra.VersionOverride{
+			_, err = sb.PinVersions("fake-env-1", map[string]terra.VersionOverride{
 				"sam": {
 					FirecloudDevelopRef: "my-fc-branch",
 				},

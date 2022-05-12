@@ -36,7 +36,11 @@ func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environme
 }
 
 func (e *environments) Get(name string) (terra.Environment, error) {
-	return e.state.environments[name], nil
+	env, exists := e.state.environments[name]
+	if !exists {
+		return nil, nil
+	}
+	return env, nil
 }
 
 func (e *environments) Exists(name string) (bool, error) {
@@ -84,11 +88,11 @@ func (e *environments) DisableRelease(environmentName string, releaseName string
 	return e.state.statebucket.DisableRelease(environmentName, releaseName)
 }
 
-func (e *environments) PinVersions(environmentName string, versions map[string]terra.VersionOverride) error {
+func (e *environments) PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error) {
 	return e.state.statebucket.PinVersions(environmentName, versions)
 }
 
-func (e *environments) UnpinVersions(environmentName string) error {
+func (e *environments) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {
 	return e.state.statebucket.UnpinVersions(environmentName)
 }
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing/format"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"io"
@@ -68,11 +70,12 @@ func (p *printer) PrintOutput(output interface{}, stdout io.Writer) error {
 	}
 
 	if p.options.outputFile == stdoutFlagVal {
-		return ft.Format(output, stdout)
+		// write to stdout
+		return ft.Format(output, loggingWriter(stdout))
+	} else {
+		// write to file
+		return printToFile(output, ft, p.options.outputFile)
 	}
-
-	// write to file
-	return printToFile(output, ft, p.options.outputFile)
 }
 
 func printToFile(output interface{}, ft format.Format, filename string) error {
@@ -81,7 +84,7 @@ func printToFile(output interface{}, ft format.Format, filename string) error {
 		return err
 	}
 
-	if err := ft.Format(output, f); err != nil {
+	if err := ft.Format(output, loggingWriter(f)); err != nil {
 		if err2 := f.Close(); err2 != nil {
 			log.Err(err2)
 		}
@@ -89,4 +92,14 @@ func printToFile(output interface{}, ft format.Format, filename string) error {
 	}
 
 	return f.Close()
+}
+
+func loggingWriter(inner io.Writer) io.Writer {
+	if utils.Interactive() {
+		// only log stdout if we're running in interactive mode
+		// this prevents output from getting mixed with log messages in CI/CD environments
+		return shell.NewLoggingWriter(zerolog.DebugLevel, log.Logger, "[out] ", inner)
+	} else {
+		return inner
+	}
 }

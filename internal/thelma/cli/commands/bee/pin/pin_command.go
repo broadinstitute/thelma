@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -55,6 +58,9 @@ type options struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
+	ifExists            bool
+	sync                bool
+	waitHealthy         bool
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
@@ -67,6 +73,9 @@ var flagNames = struct {
 	versionsFile        string
 	versionsFormat      string
 	releases            string
+	ifExists            string
+	sync                string
+	waitHealthy         string
 }{
 	name:                "name",
 	appVersion:          "app-version",
@@ -76,6 +85,9 @@ var flagNames = struct {
 	versionsFile:        "versions-file",
 	versionsFormat:      "versions-format",
 	releases:            "releases",
+	ifExists:            "if-exists",
+	sync:                "sync",
+	waitHealthy:         "wait-healthy",
 }
 
 type pinCommand struct {
@@ -99,31 +111,75 @@ func (cmd *pinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin to specific firecloud-develop ref")
 	cobraCommand.Flags().StringVar(&cmd.options.versionsFile, flagNames.versionsFile, "", "Path to versions file")
 	cobraCommand.Flags().StringVar(&cmd.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
+	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
+	cobraCommand.Flags().BoolVar(&cmd.options.sync, flagNames.sync, true, "Sync all services in BEE after updating versions")
+	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
 }
 
-func (cmd *pinCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *pinCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	flags := ctx.CobraCommand().Flags()
 
 	// validate --name
 	if !flags.Changed(flagNames.name) {
 		return fmt.Errorf("--%s is required", flagNames.name)
 	}
-	state, err := thelmaApp.State()
+
+	return nil
+}
+
+func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
+	state, err := app.State()
 	if err != nil {
 		return err
 	}
+
 	env, err := state.Environments().Get(cmd.options.name)
 	if err != nil {
 		return err
 	}
+
 	if env == nil {
+		if cmd.options.ifExists {
+			log.Warn().Msgf("Could not pin %s, no BEE by that name exists", cmd.options.name)
+			return nil
+		}
 		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
 	}
 
-	// check incompatible positionals and flags, then populate versions
-	if len(ctx.Args()) > 1 {
-		return fmt.Errorf("usage: too many positional arguments: %v", ctx.Args())
+	if err = cmd.loadVersions(ctx, env); err != nil {
+		return err
 	}
+
+	versions, err := state.Environments().PinVersions(cmd.options.name, cmd.versions)
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
+
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+	if err = bees.SyncGeneratorFor(env); err != nil {
+		return err
+	}
+
+	if cmd.options.sync {
+		if err = bees.SyncArgoAppsFor(env, func(options *argocd.SyncOptions) {
+			options.WaitHealthy = cmd.options.waitHealthy
+		}); err != nil {
+			return err
+		}
+	}
+
+	log.Info().Msgf("Full set of overrides for %s:", cmd.options.name)
+	ctx.SetOutput(versions)
+	return nil
+}
+
+func (cmd *pinCommand) loadVersions(ctx cli.RunContext, env terra.Environment) error {
+	flags := ctx.CobraCommand().Flags()
 
 	if len(ctx.Args()) == 0 {
 		if flags.Changed(flagNames.appVersion) || flags.Changed(flagNames.chartVersion) {
@@ -145,14 +201,6 @@ func (cmd *pinCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error
 	}
 }
 
-func (cmd *pinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
-	state, err := app.State()
-	if err != nil {
-		return err
-	}
-	return state.Environments().PinVersions(cmd.options.name, cmd.versions)
-}
-
 func (cmd *pinCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do here
 	return nil
@@ -167,8 +215,23 @@ func (cmd *pinCommand) readVersionsFromFile() error {
 	if err != nil {
 		return err
 	}
-	cmd.versions = versions
+
+	cmd.versions = cmd.applyGitRefOverrides(versions)
 	return nil
+}
+
+func (cmd *pinCommand) applyGitRefOverrides(versions map[string]terra.VersionOverride) map[string]terra.VersionOverride {
+	result := make(map[string]terra.VersionOverride)
+	for releaseName, override := range versions {
+		if cmd.options.terraHelmfileRef != "" {
+			override.TerraHelmfileRef = cmd.options.terraHelmfileRef
+		}
+		if cmd.options.firecloudDevelopRef != "" {
+			override.FirecloudDevelopRef = cmd.options.firecloudDevelopRef
+		}
+		result[releaseName] = override
+	}
+	return result
 }
 
 func (cmd *pinCommand) buildVersionsForAllServices(env terra.Environment) error {

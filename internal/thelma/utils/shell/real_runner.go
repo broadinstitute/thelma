@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 const maxErrorBufLenBytes = 100 * 1024 // 100 kb
@@ -47,8 +46,8 @@ func (r *RealRunner) Run(cmd Command, options ...RunOption) error {
 	errCapture := newCapturingWriter(maxErrorBufLenBytes, logger, stderr)
 
 	// Wrap user-supplied stdout and stderr in new io.Writers that log messages at debug level
-	stdout = newLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stdout").Logger(), "[out] ", stdout)
-	stderr = newLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errCapture)
+	stdout = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stdout").Logger(), "[out] ", stdout)
+	stderr = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errCapture)
 
 	// Convert our command arguments to exec.Cmd struct
 	execCmd := exec.Command(cmd.Prog, cmd.Args...)
@@ -144,55 +143,4 @@ func (cw *capturingWriter) rollover() {
 		Msg("capturing writer: buffer rolled over")
 	cw.buf = bytes.NewBuffer([]byte{})
 	cw.len = 0
-}
-
-// An io.Writer that logs messages that are sent to it with Write() and optionally forwards to another io.Writer
-type loggingWriter struct {
-	level  zerolog.Level
-	logger zerolog.Logger
-	prefix string
-	inner  io.Writer
-}
-
-func newLoggingWriter(level zerolog.Level, logger zerolog.Logger, prefix string, inner io.Writer) *loggingWriter {
-	return &loggingWriter{
-		level:  level,
-		logger: logger,
-		prefix: prefix,
-		inner:  inner,
-	}
-}
-
-func (lw *loggingWriter) Write(p []byte) (n int, err error) {
-	n, err = lw.streamLinesToLog(p)
-
-	if lw.inner == nil {
-		return n, err
-	}
-
-	return lw.inner.Write(p)
-}
-
-func (lw *loggingWriter) streamLinesToLog(p []byte) (n int, err error) {
-	p2 := make([]byte, len(p))
-	copy(p2, p)
-
-	eolStr := string(eol)
-
-	buf := bytes.NewBuffer(p2)
-	for {
-		line, err := buf.ReadString(eol)
-		n += len(line)
-
-		if err == nil || len(line) > 0 {
-			line = strings.TrimSuffix(line, eolStr)
-			lw.logger.WithLevel(lw.level).Msgf("%s%s", lw.prefix, line)
-		}
-
-		if err == io.EOF {
-			return n, nil
-		} else if err != nil {
-			return n, fmt.Errorf("logging writer: error reading from buffer: %v", err)
-		}
-	}
 }

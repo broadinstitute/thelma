@@ -15,7 +15,9 @@ type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
 	CreateWith(name string, options CreateOptions) (terra.Environment, error)
 	GetTemplate(name string) (terra.Environment, error)
+	SyncGeneratorForName(name string) error
 	SyncGeneratorFor(env terra.Environment) error
+	SyncArgoAppsFor(env terra.Environment, options ...argocd.SyncOption) error
 }
 
 type DeleteOptions struct {
@@ -90,7 +92,7 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", name)
 	}
 
-	if err = b.SyncGeneratorFor(env); err != nil {
+	if err = b.SyncGenerator(); err != nil {
 		return env, err
 	}
 	if options.GeneratorOnly {
@@ -125,18 +127,27 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 
 	log.Info().Msgf("Deleted environment %s from state", name)
 	log.Info().Msgf("Deleting Argo apps for %s", name)
-	err = b.SyncGeneratorFor(env)
-	if err != nil {
+	if err = b.SyncGenerator(); err != nil {
 		return env, err
 	}
 
 	log.Info().Msgf("Deleting Argo project for %s", name)
-	err = b.SyncGeneratorFor(env)
-	if err != nil {
+	if err = b.SyncGenerator(); err != nil {
 		return env, err
 	}
 
 	return env, nil
+}
+
+func (b *bees) SyncGeneratorForName(name string) error {
+	env, err := b.state.Environments().Get(name)
+	if err != nil {
+		return err
+	}
+	if env == nil {
+		return fmt.Errorf("no such bee: %s", name)
+	}
+	return b.SyncGeneratorFor(env)
 }
 
 func (b *bees) SyncGeneratorFor(env terra.Environment) error {
@@ -152,6 +163,11 @@ func (b *bees) SyncArgoAppsFor(env terra.Environment, options ...argocd.SyncOpti
 		return err
 	}
 	return b.argocd.SyncReleases(releases, 15, options...)
+}
+
+func (b *bees) SyncGenerator() error {
+	log.Info().Msgf("Syncing %s", generatorArgoApp)
+	return b.syncGenerator()
 }
 
 func (b *bees) syncGenerator(options ...argocd.SyncOption) error {

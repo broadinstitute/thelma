@@ -46,9 +46,9 @@ type StateBucket interface {
 	// DisableRelease disables the given release in the target environment
 	DisableRelease(environmentName string, releaseName string) error
 	// PinVersions can be used to update the environment's map of version overrides
-	PinVersions(environmentName string, versions map[string]terra.VersionOverride) error
+	PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error)
 	// UnpinVersions can be used to remove the environment's map of version overrides
-	UnpinVersions(environmentName string) error
+	UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error)
 	// Delete will delete an environment from the state file
 	Delete(environmentName string) error
 	// initialize will overwrite existing state with a new empty state file
@@ -148,21 +148,35 @@ func (s *statebucket) DisableRelease(environmentName string, releaseName string)
 	})
 }
 
-func (s *statebucket) PinVersions(environmentName string, versions map[string]terra.VersionOverride) error {
-	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+func (s *statebucket) PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error) {
+	result := make(map[string]terra.VersionOverride)
+
+	err := s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
 		for releaseName, v := range versions {
 			e.setOverride(releaseName, func(override *Override) {
 				override.PinVersions(v)
 			})
 		}
+
+		for releaseName, override := range e.Overrides {
+			result[releaseName] = override.Versions
+		}
 	})
+
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
-func (s *statebucket) UnpinVersions(environmentName string) error {
-	return s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
+func (s *statebucket) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {
+	result := make(map[string]terra.VersionOverride)
+
+	err := s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
 		var deletions []string
 
 		for releaseName, override := range e.Overrides {
+			result[releaseName] = override.Versions
 			override.UnpinVersions()
 			if !override.HasEnableOverride() {
 				// no version or enable override, so we should delete the key
@@ -174,7 +188,13 @@ func (s *statebucket) UnpinVersions(environmentName string) error {
 			delete(e.Overrides, releaseName)
 		}
 	})
+
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
+
 func (s *statebucket) Delete(environmentName string) error {
 	return s.writer.update(func(state StateFile) (StateFile, error) {
 		_, exists := state.Environments[environmentName]
