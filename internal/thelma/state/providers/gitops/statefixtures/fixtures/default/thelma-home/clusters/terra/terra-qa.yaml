@@ -3,7 +3,7 @@
 address: https://35.224.175.229
 
 releases:
-  # TODO: these will eventually be enabled as part of our preview environment
+  # TODO: these will eventually be enabled as part of our BEE environment
   #       implementation
   diskmanager:
     enabled: false

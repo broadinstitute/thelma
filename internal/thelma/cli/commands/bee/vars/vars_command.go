@@ -79,7 +79,7 @@ func (cmd *varsCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 				port = 389
 			}
 
-			host := fmt.Sprintf("%s.%s.preview.envs-terra.bio", r.Name(), env.Name())
+			host := fmt.Sprintf("%s.%s.bee.envs-terra.bio", r.Name(), env.Name())
 			url := fmt.Sprintf("%s://%s", proto, host)
 
 			fmt.Printf("%s_HOST=%s\n", upname, host)
