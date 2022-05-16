@@ -120,16 +120,17 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 
 			_release := &appRelease{
 				release: release{
-					name:           templateRelease.Name(),
-					enabled:        templateRelease.enabled,
-					releaseType:    templateRelease.Type(),
-					chartVersion:   templateRelease.ChartVersion(),
-					chartName:      templateRelease.ChartName(),
-					repo:           templateRelease.Repo(),
-					namespace:      environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
-					clusterName:    templateRelease.ClusterName(),
-					clusterAddress: templateRelease.ClusterAddress(),
-					destination:    nil, // replaced after env is constructed
+					name:             templateRelease.Name(),
+					enabled:          templateRelease.enabled,
+					releaseType:      templateRelease.Type(),
+					chartVersion:     templateRelease.ChartVersion(),
+					chartName:        templateRelease.ChartName(),
+					repo:             templateRelease.Repo(),
+					namespace:        environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
+					clusterName:      templateRelease.ClusterName(),
+					clusterAddress:   templateRelease.ClusterAddress(),
+					destination:      nil,                         // replaced after env is constructed
+					terraHelmfileRef: dynamicEnv.TerraHelmfileRef, // might be overridden on a per-release basis
 				},
 				appVersion: templateRelease.AppVersion(),
 			}
@@ -151,6 +152,8 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 				}
 				if override.Versions.TerraHelmfileRef != "" {
 					_release.terraHelmfileRef = override.Versions.TerraHelmfileRef
+				} else {
+					_release.terraHelmfileRef = dynamicEnv.TerraHelmfileRef
 				}
 			}
 

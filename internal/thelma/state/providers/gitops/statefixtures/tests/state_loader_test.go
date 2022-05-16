@@ -29,7 +29,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 	// make sure we have the expected number of environments
 	envs, err := state.Environments().All()
 	require.NoError(t, err)
-	assert.Equal(t, 16, len(envs))
+	assert.Equal(t, 17, len(envs))
 
 	lives, err := state.Environments().Filter(ef.HasBase("live"))
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 
 	bees, err := state.Environments().Filter(ef.HasBase("bee"))
 	require.NoError(t, err)
-	assert.Equal(t, 8, len(bees))
+	assert.Equal(t, 9, len(bees))
 
 	personals, err := state.Environments().Filter(ef.HasBase("personal"))
 	require.NoError(t, err)
@@ -51,7 +51,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 	// make sure we have the expected number of releases
 	sams, err := state.Releases().Filter(rf.HasName("sam"))
 	require.NoError(t, err)
-	assert.Equal(t, 12, len(sams))
+	assert.Equal(t, 13, len(sams))
 
 	liveSams, err := state.Releases().Filter(rf.And(
 		rf.HasName("sam"),
@@ -74,7 +74,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 		),
 	))
 	require.NoError(t, err)
-	assert.Equal(t, 3, len(swatBeeSams))
+	assert.Equal(t, 4, len(swatBeeSams))
 
 	samciBeeSams, err := state.Releases().Filter(rf.And(
 		rf.HasName("sam"),
@@ -98,7 +98,7 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 
 	rawlses, err := state.Releases().Filter(rf.HasName("rawls"))
 	require.NoError(t, err)
-	assert.Equal(t, 10, len(rawlses)) // 5 live, 1 template, 4 bees
+	assert.Equal(t, 11, len(rawlses)) // 5 live, 1 template, 5 bees
 
 	datarepos, err := state.Releases().Filter(rf.HasName("datarepo"))
 	require.NoError(t, err)
@@ -166,6 +166,20 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 	assert.Equal(t, "100.200.300", snowflakeRawls[0].ChartVersion())
 	assert.Equal(t, "my-terra-helmfile-branch", snowflakeRawls[0].TerraHelmfileRef())
 	assert.Equal(t, "", snowflakeRawls[0].FirecloudDevelopRef())
+
+	paniniSam, err := state.Releases().Filter(rf.And(
+		rf.HasName("sam"),
+		rf.HasDestinationName("fiab-snarky-panini"),
+	))
+	require.NoError(t, err)
+	assert.Equal(t, "some-pr", paniniSam[0].TerraHelmfileRef())
+
+	paniniRawls, err := state.Releases().Filter(rf.And(
+		rf.HasName("rawls"),
+		rf.HasDestinationName("fiab-snarky-panini"),
+	))
+	require.NoError(t, err)
+	assert.Equal(t, "completely-different-pr", paniniRawls[0].TerraHelmfileRef())
 }
 
 func TestUpdateState(t *testing.T) {

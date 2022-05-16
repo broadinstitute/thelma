@@ -6,9 +6,10 @@ import (
 
 // implements the terra.Destination interface
 type destination struct {
-	name            string
-	base            string
-	destinationType terra.DestinationType
+	name             string
+	base             string
+	destinationType  terra.DestinationType
+	terraHelmfileRef string
 }
 
 func (t *destination) Name() string {
@@ -21,6 +22,10 @@ func (t *destination) Base() string {
 
 func (t *destination) Type() terra.DestinationType {
 	return t.destinationType
+}
+
+func (t *destination) TerraHelmfileRef() string {
+	return t.terraHelmfileRef
 }
 
 func (t *destination) IsCluster() bool {

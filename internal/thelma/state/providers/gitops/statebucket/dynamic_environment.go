@@ -6,11 +6,12 @@ import (
 
 // DynamicEnvironment is a struct representing a dynamic environment in the state file
 type DynamicEnvironment struct {
-	Name      string               `json:"name"`
-	Template  string               `json:"template"`
-	Overrides map[string]*Override `json:"overrides"`
-	Hybrid    bool                 `json:"hybrid"` // Deprecated / temporary (while we run bees in hybrid mode)
-	Fiab      Fiab                 `json:"fiab"`   // Deprecated / temporary (while we run bees in hybrid mode)
+	Name             string               `json:"name"`
+	Template         string               `json:"template"`
+	Overrides        map[string]*Override `json:"overrides"`
+	Hybrid           bool                 `json:"hybrid"` // Deprecated / temporary (while we run bees in hybrid mode)
+	Fiab             Fiab                 `json:"fiab"`   // Deprecated / temporary (while we run bees in hybrid mode)
+	TerraHelmfileRef string               `json:"terraHelmfileRef"`
 }
 
 // Fiab (DEPRECATED) is a struct for representing a Fiab in the state file

@@ -65,7 +65,12 @@ func TestStateBucket_Overrides(t *testing.T) {
 			envs, err = sb.Environments()
 			require.NoError(t, err)
 			assert.Equal(t, 1, len(envs))
+			assert.Empty(t, envs[0].TerraHelmfileRef, "should have no overrides")
 			assert.Empty(t, envs[0].Overrides, "should have no overrides")
+
+			// set a terraHelmfileRef override
+			err = sb.PinEnvironmentToTerraHelmfileRef("fake-env-1", "my-pr-branch")
+			require.NoError(t, err)
 
 			// set a version override
 			_, err = sb.PinVersions("fake-env-1", map[string]terra.VersionOverride{
@@ -76,6 +81,9 @@ func TestStateBucket_Overrides(t *testing.T) {
 			envs, err = sb.Environments()
 			require.NoError(t, err)
 			assert.Equal(t, 1, len(envs))
+
+			assert.Equal(t, "my-pr-branch", envs[0].TerraHelmfileRef, "should have global terra helmfile ref override")
+
 			assert.Equal(t, 1, len(envs[0].Overrides), "should have one override")
 
 			assert.Equal(t, "100", envs[0].Overrides["sam"].Versions.AppVersion)
@@ -138,6 +146,7 @@ func TestStateBucket_Overrides(t *testing.T) {
 			err = sb.EnableRelease("fake-env-1", "sam")
 			require.NoError(t, err)
 			envs, err = sb.Environments()
+			require.NoError(t, err)
 			assert.Equal(t, 1, len(envs))
 			assert.Equal(t, 2, len(envs[0].Overrides), "should have two overrides")
 
@@ -154,6 +163,33 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.ChartVersion)
 			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.TerraHelmfileRef)
 			assert.Equal(t, "", envs[0].Overrides["leonardo"].Versions.FirecloudDevelopRef)
+			assert.True(t, envs[0].Overrides["leonardo"].HasEnableOverride())
+			assert.False(t, envs[0].Overrides["leonardo"].IsEnabled())
+
+			// unpin versions
+			versions, err := sb.UnpinVersions("fake-env-1")
+			require.NoError(t, err)
+
+			// make sure removed version overrides were returned
+			require.NotNil(t, versions["sam"])
+			assert.Equal(t, "100", versions["sam"].AppVersion)
+			assert.Equal(t, "", versions["sam"].ChartVersion)
+			assert.Equal(t, "", versions["sam"].TerraHelmfileRef)
+			assert.Equal(t, "my-fc-branch", versions["sam"].FirecloudDevelopRef)
+
+			// reload environments
+			envs, err = sb.Environments()
+			require.NoError(t, err)
+
+			// make sure there are no longer any version overrides for sam
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.AppVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.ChartVersion)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.TerraHelmfileRef)
+			assert.Equal(t, "", envs[0].Overrides["sam"].Versions.FirecloudDevelopRef)
+
+			// make sure enable overrides have not changed
+			assert.True(t, envs[0].Overrides["sam"].HasEnableOverride())
+			assert.True(t, envs[0].Overrides["sam"].IsEnabled())
 			assert.True(t, envs[0].Overrides["leonardo"].HasEnableOverride())
 			assert.False(t, envs[0].Overrides["leonardo"].IsEnabled())
 		})
