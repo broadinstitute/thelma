@@ -18,7 +18,7 @@ const schemaVersion = 1
 
 // StateFile represents the structure of the statefile
 type StateFile struct {
-	SchemaVersion int32
+	SchemaVersion int32                         `json:"schemaVersion"`
 	Environments  map[string]DynamicEnvironment `json:"environments"`
 }
 

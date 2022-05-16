@@ -134,6 +134,11 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+
 	env, err := state.Environments().Get(cmd.options.name)
 	if err != nil {
 		return err
@@ -152,6 +157,7 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	}
 
 	if !cmd.serviceScoped && ctx.CobraCommand().Flags().Changed(flagNames.terraHelmfileRef) {
+		log.Info().Msgf("Pinning environment %s to terra-helmfile ref: %s", cmd.options.name, cmd.options.terraHelmfileRef)
 		if err = state.Environments().PinEnvironmentToTerraHelmfileRef(cmd.options.name, cmd.options.terraHelmfileRef); err != nil {
 			return err
 		}
@@ -164,10 +170,6 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 
 	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
 
-	bees, err := builders.NewBees(app)
-	if err != nil {
-		return err
-	}
 	if err = bees.SyncGeneratorFor(env); err != nil {
 		return err
 	}
