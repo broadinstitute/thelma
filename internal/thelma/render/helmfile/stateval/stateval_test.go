@@ -46,6 +46,13 @@ func Test_BuildStateValues(t *testing.T) {
 				ClusterName:    "terra-dev",
 				ClusterAddress: "https://35.238.186.116",
 			},
+			expectedArgoProject: ArgoProject{
+				ProjectName: "terra-dev",
+				Generator: Generator{
+					Name:             "terra-dev-generator",
+					TerraHelmfileRef: "",
+				},
+			},
 		},
 		{
 			name:    "template env release",
@@ -175,7 +182,12 @@ func Test_BuildStateValues(t *testing.T) {
 
 			assert.Equal(t, expectedArgoApp, BuildArgoAppValues(tc.release))
 
-			assert.Equal(t, tc.expectedArgoProject, BuildArgoProjectValues(tc.release.Destination()))
+			var expectedArgoProject ArgoProjectValues
+			expectedArgoProject.ArgoProject = tc.expectedArgoProject
+			// copy common settings over from app values
+			expectedArgoProject.Destination = tc.expectedAppValues.Destination
+
+			assert.Equal(t, expectedArgoProject, BuildArgoProjectValues(tc.release.Destination()))
 		})
 	}
 }
