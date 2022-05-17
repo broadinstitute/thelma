@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
@@ -14,9 +15,10 @@ import (
 // Options encapsulates CLI options for a render
 type Options struct {
 	Releases        []terra.Release // Releases list of releases that will be rendered
-	ReleaseScoped   bool            // ReleaseScoped true implies we are rendering a specific release, like leonardo, and not all releases in a cluster or env
+	Scope           scope.Scope     // Scope indicates whether to render release-specific resources, destination-specific resources, or both
 	Stdout          bool            // Stdout if true, render to stdout instead of output directory
 	OutputDir       string          // OutputDir output directory where manifests should be rendered
+	DebugMode       bool            // DebugMode if true, pass --debug to helmfile to render out invalid manifests
 	ChartSourceDir  string          // ChartSourceDir path on filesystem where chart sources live
 	ResolverMode    resolver.Mode   // ResolverMode resolver mode
 	ParallelWorkers int             // ParallelWorkers number of parallel workers
@@ -91,6 +93,7 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 		ResolverMode:     options.ResolverMode,
 		HelmfileLogLevel: cfg.Helmfile.LogLevel,
 		Stdout:           options.Stdout,
+		DebugMode:        options.DebugMode,
 		OutputDir:        options.OutputDir,
 		ScratchDir:       scratchDir,
 		ShellRunner:      app.ShellRunner(),
@@ -123,17 +126,19 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 	var jobs []pool.Job
 
-	for _, release := range r.options.Releases {
-		_r := release
-		jobs = append(jobs, pool.Job{
-			Description: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
-			Run: func() error {
-				return r.configRepo.RenderForRelease(_r, helmfileArgs)
-			},
-		})
+	if r.options.Scope != scope.Destination {
+		for _, release := range r.options.Releases {
+			_r := release
+			jobs = append(jobs, pool.Job{
+				Description: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
+				Run: func() error {
+					return r.configRepo.RenderForRelease(_r, helmfileArgs)
+				},
+			})
+		}
 	}
 
-	if !r.options.ReleaseScoped && helmfileArgs.ArgocdMode {
+	if r.options.Scope != scope.Release && helmfileArgs.ArgocdMode {
 		// build set of unique destinations from our collection of releases
 		destinations := make(map[string]terra.Destination)
 		for _, release := range r.options.Releases {

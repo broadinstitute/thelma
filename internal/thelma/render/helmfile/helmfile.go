@@ -37,7 +37,8 @@ type Options struct {
 	ResolverMode     resolver.Mode // Resolver mode
 	HelmfileLogLevel string        // HelmfileLogLevel is the --log-level argument to pass to `helmfile` command
 	Stdout           bool          // Stdout if true, render to stdout instead of output directory
-	OutputDir        string        // Output directory where manifests should be rendered
+	OutputDir        string        // OutputDir directory where manifests should be rendered
+	DebugMode        bool          // DebugMode if true, pass the --debug flag to helmfile to render out invalid yaml
 	ScratchDir       string        // Scratch directory where temporary files should be written
 	ShellRunner      shell.Runner  // ShellRunner shell Runner to use for executing helmfile commands
 }
@@ -48,6 +49,7 @@ type ConfigRepo struct {
 	chartResolver    resolver.Resolver
 	helmfileLogLevel string
 	stdout           bool
+	debugMode        bool
 	outputDir        string
 	scratchDir       string
 	shellRunner      shell.Runner
@@ -67,6 +69,7 @@ func NewConfigRepo(options Options) *ConfigRepo {
 		chartResolver:    chartResolver,
 		helmfileLogLevel: options.HelmfileLogLevel,
 		stdout:           options.Stdout,
+		debugMode:        options.DebugMode,
 		outputDir:        options.OutputDir,
 		scratchDir:       path.Join(options.ScratchDir, "helmfile"),
 		shellRunner:      options.ShellRunner,
@@ -170,6 +173,7 @@ func (r *ConfigRepo) renderArgocdProjectManifests(destination terra.Destination)
 	cmd.setStateValuesFile(stateValuesFile)
 	cmd.setOutputDir(outputDir)
 	cmd.setStdout(r.stdout)
+	cmd.setDebugMode(r.debugMode)
 	cmd.setDir(path.Join(r.thelmaHome, "argocd", "project"))
 	cmd.setLogLevel(r.helmfileLogLevel)
 	cmd.setSkipDeps(true) // argocd project chart is local & has no dependencies
@@ -195,6 +199,7 @@ func (r *ConfigRepo) renderArgocdApplicationManifests(release terra.Release) err
 	cmd.setStateValuesFile(stateValuesFile)
 	cmd.setOutputDir(outputDir)
 	cmd.setStdout(r.stdout)
+	cmd.setDebugMode(r.debugMode)
 	cmd.setDir(path.Join(r.thelmaHome, "argocd", "application"))
 	cmd.setLogLevel(r.helmfileLogLevel)
 	cmd.setSkipDeps(true) // argocd application chart is local & has no dependencies
@@ -235,6 +240,7 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 	cmd.setStateValuesFile(stateValuesFile)
 	cmd.setOutputDir(outputDir)
 	cmd.setStdout(r.stdout)
+	cmd.setDebugMode(r.debugMode)
 	cmd.setDir(r.thelmaHome)
 	cmd.setLogLevel(r.helmfileLogLevel)
 

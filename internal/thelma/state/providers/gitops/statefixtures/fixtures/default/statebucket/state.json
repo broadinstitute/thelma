@@ -68,6 +68,23 @@
         "ip": "10.0.0.4"
       }
     },
+    "fiab-snarky-panini": {
+      "name": "fiab-snarky-panini",
+      "template": "swatomation",
+      "terraHelmfileRef": "some-pr",
+      "overrides": {
+        "rawls": {
+          "versions": {
+            "terraHelmfileRef": "completely-different-pr"
+          }
+        }
+      },
+      "hybrid": true,
+      "fiab": {
+        "name": "fiab-automation-snarky-panini",
+        "ip": "10.0.0.5"
+      }
+    },
     "sam-ci-001": {
       "name": "sam-ci-001",
       "template": "sam-ci",

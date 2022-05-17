@@ -91,8 +91,9 @@ var flagNames = struct {
 }
 
 type pinCommand struct {
-	options  options
-	versions map[string]terra.VersionOverride
+	options       options
+	serviceScoped bool
+	versions      map[string]terra.VersionOverride
 }
 
 func NewBeePinCommand() cli.ThelmaCommand {
@@ -133,6 +134,11 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+
 	env, err := state.Environments().Get(cmd.options.name)
 	if err != nil {
 		return err
@@ -150,6 +156,13 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
+	if !cmd.serviceScoped && ctx.CobraCommand().Flags().Changed(flagNames.terraHelmfileRef) {
+		log.Info().Msgf("Pinning environment %s to terra-helmfile ref: %s", cmd.options.name, cmd.options.terraHelmfileRef)
+		if err = state.Environments().PinEnvironmentToTerraHelmfileRef(cmd.options.name, cmd.options.terraHelmfileRef); err != nil {
+			return err
+		}
+	}
+
 	versions, err := state.Environments().PinVersions(cmd.options.name, cmd.versions)
 	if err != nil {
 		return err
@@ -157,10 +170,6 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 
 	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
 
-	bees, err := builders.NewBees(app)
-	if err != nil {
-		return err
-	}
 	if err = bees.SyncGeneratorFor(env); err != nil {
 		return err
 	}
@@ -182,6 +191,7 @@ func (cmd *pinCommand) loadVersions(ctx cli.RunContext, env terra.Environment) e
 	flags := ctx.CobraCommand().Flags()
 
 	if len(ctx.Args()) == 0 {
+		cmd.serviceScoped = false
 		if flags.Changed(flagNames.appVersion) || flags.Changed(flagNames.chartVersion) {
 			return fmt.Errorf("--%s and --%s can only be used with a positional argument", flagNames.appVersion, flagNames.chartVersion)
 		}
@@ -196,6 +206,7 @@ func (cmd *pinCommand) loadVersions(ctx cli.RunContext, env terra.Environment) e
 		if flags.Changed(flagNames.versionsFile) {
 			return fmt.Errorf("--%s cannot be used with a positional argument", flagNames.versionsFile)
 		}
+		cmd.serviceScoped = true
 		serviceName := ctx.Args()[0]
 		return cmd.buildVersionsForService(env, serviceName)
 	}

@@ -23,6 +23,8 @@ type ArgoApp struct {
 type ArgoProject struct {
 	// ProjectName name of the ArgoCD project that is being rendered
 	ProjectName string `yaml:"ProjectName"`
+	// TerraHelmfileRef override terra-helmfile ref for the project's app generator
+	TerraHelmfileRef string `yaml:"TerraHelmfileRef"`
 }
 
 func forArgoApp(r terra.Release) ArgoApp {
@@ -37,6 +39,7 @@ func forArgoApp(r terra.Release) ArgoApp {
 
 func forArgoProject(d terra.Destination) ArgoProject {
 	return ArgoProject{
-		ProjectName: argocd.ProjectName(d),
+		ProjectName:      argocd.ProjectName(d),
+		TerraHelmfileRef: d.TerraHelmfileRef(),
 	}
 }

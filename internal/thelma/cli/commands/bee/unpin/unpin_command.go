@@ -63,6 +63,11 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+
 	env, err := state.Environments().Get(cmd.options.name)
 	if err != nil {
 		return err
@@ -81,10 +86,6 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 	log.Info().Msgf("Removed all version overrides for %s", cmd.options.name)
 
-	bees, err := builders.NewBees(app)
-	if err != nil {
-		return err
-	}
 	if err = bees.SyncGeneratorForName(cmd.options.name); err != nil {
 		return err
 	}
@@ -92,7 +93,6 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	log.Info().Msgf("The following overrides were removed:")
 	rc.SetOutput(removed)
 	return nil
-
 }
 
 func (cmd *unpinCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

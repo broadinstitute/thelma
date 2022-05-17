@@ -92,6 +92,10 @@ func (e *environments) PinVersions(environmentName string, versions map[string]t
 	return e.state.statebucket.PinVersions(environmentName, versions)
 }
 
+func (e *environments) PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error {
+	return e.state.statebucket.PinEnvironmentToTerraHelmfileRef(environmentName, terraHelmfileRef)
+}
+
 func (e *environments) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {
 	return e.state.statebucket.UnpinVersions(environmentName)
 }

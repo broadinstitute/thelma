@@ -8,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -61,10 +62,12 @@ var flagNames = struct {
 	argocd          string
 	outputDir       string
 	stdout          string
+	debug           string
 	parallelWorkers string
 	mode            string
 	apps            string
 	chartDir        string
+	scope           string
 }{
 	argocd:          "argocd",
 	chartDir:        "chart-dir",
@@ -73,9 +76,11 @@ var flagNames = struct {
 	valuesFile:      "values-file",
 	outputDir:       "output-dir",
 	stdout:          "stdout",
+	debug:           "debug",
 	parallelWorkers: "parallel-workers",
 	mode:            "mode",
 	apps:            "apps",
+	scope:           "scope",
 }
 
 // flagValues is a struct for capturing flag values that are parsed by Cobra.
@@ -86,10 +91,12 @@ type flagValues struct {
 	valuesFile      []string
 	outputDir       string
 	stdout          bool
+	debug           bool
 	parallelWorkers int
 	mode            string
 	apps            string
 	chartDir        string
+	scope           string
 }
 
 // NewRenderCommand constructs a new renderCommand
@@ -120,8 +127,10 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.argocd, flagNames.argocd, false, "Render ArgoCD manifests instead of application manifests")
 	cobraCommand.Flags().StringVarP(&cmd.flagVals.outputDir, flagNames.outputDir, "d", "path/to/output/dir", "Render manifests to custom output directory")
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.stdout, flagNames.stdout, false, "Render manifests to stdout instead of output directory")
+	cobraCommand.Flags().BoolVar(&cmd.flagVals.debug, flagNames.debug, false, "Pass --debug to helmfile to render out invalid YAML for debugging")
 	cobraCommand.Flags().IntVar(&cmd.flagVals.parallelWorkers, flagNames.parallelWorkers, 1, "Number of parallel workers to launch when rendering")
 	cobraCommand.Flags().StringVar(&cmd.flagVals.mode, flagNames.mode, "development", `Either "development" (render from chart source directory) or "deploy" (render using released chart versions). Defaults to "development"`)
+	cobraCommand.Flags().StringVar(&cmd.flagVals.scope, flagNames.scope, "all", `One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types)`)
 
 	// Single-chart flags -- these can only be used for renders of a single chart
 	cobraCommand.Flags().StringVar(&cmd.flagVals.chartVersion, flagNames.chartVersion, "", "Override chart version")
@@ -192,7 +201,18 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 		return fmt.Errorf("0 releases matched command-line arguments, nothing to render")
 	}
 	renderOptions.Releases = selection.Releases
-	renderOptions.ReleaseScoped = selection.IsReleaseScoped
+
+	_scope, err := scope.FromString(flagVals.scope)
+	if err != nil {
+		return fmt.Errorf("--%s: invalid scope: %q", flagNames.scope, flagVals.scope)
+	}
+	if selection.IsReleaseScoped {
+		if flags.Changed(flagNames.scope) && _scope != scope.Release {
+			return fmt.Errorf("--%s %q cannot be used when a release is specified", flagNames.scope, flagVals.scope)
+		}
+		_scope = scope.Release
+	}
+	renderOptions.Scope = _scope
 
 	// output dir
 	if flags.Changed(flagNames.outputDir) {
@@ -211,6 +231,9 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 
 	// stdout
 	renderOptions.Stdout = flagVals.stdout
+
+	// debug mode
+	renderOptions.DebugMode = flagVals.debug
 
 	// parallelWorkers
 	if flags.Changed(flagNames.parallelWorkers) && flags.Changed(flagNames.stdout) {

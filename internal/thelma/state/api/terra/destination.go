@@ -7,6 +7,7 @@ type Destination interface {
 	Name() string             // Name is the name of the environment or cluster
 	ReleaseType() ReleaseType // ReleaseType returns the types of releases that can be deployed to this destination
 	Releases() []Release      // Releases returns the set of releases configured for this destination
+	TerraHelmfileRef() string // TerraHelmfileRef this destination's generator should be pinned to
 	IsCluster() bool          // IsCluster Returns true if this destination is a cluster
 	IsEnvironment() bool      // IsEnvironment Returns true if this destination is an environment
 }

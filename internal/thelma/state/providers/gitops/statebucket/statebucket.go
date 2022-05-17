@@ -18,7 +18,7 @@ const schemaVersion = 1
 
 // StateFile represents the structure of the statefile
 type StateFile struct {
-	SchemaVersion int32
+	SchemaVersion int32                         `json:"schemaVersion"`
 	Environments  map[string]DynamicEnvironment `json:"environments"`
 }
 
@@ -49,6 +49,8 @@ type StateBucket interface {
 	PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error)
 	// UnpinVersions can be used to remove the environment's map of version overrides
 	UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error)
+	// PinEnvironmentToTerraHelmfileRef pins an entire environment to a specific terra-helmfile ref
+	PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error
 	// Delete will delete an environment from the state file
 	Delete(environmentName string) error
 	// initialize will overwrite existing state with a new empty state file
@@ -167,6 +169,12 @@ func (s *statebucket) PinVersions(environmentName string, versions map[string]te
 		return nil, err
 	}
 	return result, nil
+}
+
+func (s *statebucket) PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error {
+	return s.updateEnvironment(environmentName, func(environment *DynamicEnvironment) {
+		environment.TerraHelmfileRef = terraHelmfileRef
+	})
 }
 
 func (s *statebucket) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {

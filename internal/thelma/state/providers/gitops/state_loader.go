@@ -120,16 +120,17 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 
 			_release := &appRelease{
 				release: release{
-					name:           templateRelease.Name(),
-					enabled:        templateRelease.enabled,
-					releaseType:    templateRelease.Type(),
-					chartVersion:   templateRelease.ChartVersion(),
-					chartName:      templateRelease.ChartName(),
-					repo:           templateRelease.Repo(),
-					namespace:      environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
-					clusterName:    templateRelease.ClusterName(),
-					clusterAddress: templateRelease.ClusterAddress(),
-					destination:    nil, // replaced after env is constructed
+					name:             templateRelease.Name(),
+					enabled:          templateRelease.enabled,
+					releaseType:      templateRelease.Type(),
+					chartVersion:     templateRelease.ChartVersion(),
+					chartName:        templateRelease.ChartName(),
+					repo:             templateRelease.Repo(),
+					namespace:        environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
+					clusterName:      templateRelease.ClusterName(),
+					clusterAddress:   templateRelease.ClusterAddress(),
+					destination:      nil,                         // replaced after env is constructed
+					terraHelmfileRef: dynamicEnv.TerraHelmfileRef, // might be overridden, but default to env-wide setting
 				},
 				appVersion: templateRelease.AppVersion(),
 			}
@@ -158,6 +159,8 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 		}
 
 		env := newEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, _releases)
+		env.terraHelmfileRef = dynamicEnv.TerraHelmfileRef
+
 		result[dynamicEnv.Name] = env
 		for _, r := range env.Releases() {
 			r.(*appRelease).destination = env

@@ -20,6 +20,7 @@ type Cmd struct {
 	valuesFiles     []string
 	outputDir       string
 	stdout          bool
+	debugMode       bool
 }
 
 // newCmd returns a new Cmd object with all fields initialized
@@ -37,6 +38,10 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 
 	if cmd.stateValuesFile != "" {
 		cliArgs = append(cliArgs, fmt.Sprintf("--state-values-file=%s", cmd.stateValuesFile))
+	}
+
+	if cmd.debugMode {
+		cliArgs = append(cliArgs, "--debug")
 	}
 
 	// Append Helmfile command we're running (template)
@@ -95,6 +100,10 @@ func (cmd *Cmd) setOutputDir(outputDir string) {
 
 func (cmd *Cmd) setStdout(stdout bool) {
 	cmd.stdout = stdout
+}
+
+func (cmd *Cmd) setDebugMode(debugMode bool) {
+	cmd.debugMode = debugMode
 }
 
 func (cmd *Cmd) addValuesFiles(valuesFiles ...string) {
