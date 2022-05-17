@@ -14,10 +14,10 @@ const generatorArgoApp = "terra-bee-generator"
 type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
 	CreateWith(name string, options CreateOptions) (terra.Environment, error)
-	GetTemplate(name string) (terra.Environment, error)
-	SyncGeneratorForName(name string) error
-	SyncGeneratorFor(env terra.Environment) error
-	SyncArgoAppsFor(env terra.Environment, options ...argocd.SyncOption) error
+	GetTemplate(templateName string) (terra.Environment, error)
+	RefreshBeeGenerator() error
+	SyncEnvironmentGenerator(env terra.Environment) error
+	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error
 }
 
 type DeleteOptions struct {
@@ -92,7 +92,10 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", name)
 	}
 
-	if err = b.SyncGenerator(); err != nil {
+	if err = b.RefreshBeeGenerator(); err != nil {
+		return env, err
+	}
+	if err = b.SyncEnvironmentGenerator(env); err != nil {
 		return env, err
 	}
 	if options.GeneratorOnly {
@@ -100,7 +103,7 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		return env, nil
 	}
 	log.Info().Msgf("Syncing all Argo apps in environment %s", env.Name())
-	err = b.SyncArgoAppsFor(env, func(_options *argocd.SyncOptions) {
+	err = b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
 		_options.WaitHealthy = options.WaitHealthy
 	})
 	return env, err
@@ -126,38 +129,27 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 	}
 
 	log.Info().Msgf("Deleted environment %s from state", name)
+
 	log.Info().Msgf("Deleting Argo apps for %s", name)
-	if err = b.SyncGenerator(); err != nil {
+	if err = b.RefreshBeeGenerator(); err != nil {
 		return env, err
 	}
 
 	log.Info().Msgf("Deleting Argo project for %s", name)
-	if err = b.SyncGenerator(); err != nil {
+	if err = b.RefreshBeeGenerator(); err != nil {
 		return env, err
 	}
 
 	return env, nil
 }
 
-func (b *bees) SyncGeneratorForName(name string) error {
-	env, err := b.state.Environments().Get(name)
-	if err != nil {
-		return err
-	}
-	if env == nil {
-		return fmt.Errorf("no such bee: %s", name)
-	}
-	return b.SyncGeneratorFor(env)
+func (b *bees) SyncEnvironmentGenerator(env terra.Environment) error {
+	appName := argocd.GeneratorName(env)
+	log.Info().Msgf("Syncing generator %s for %s", appName, env.Name())
+	return b.argocd.SyncApp(appName)
 }
 
-func (b *bees) SyncGeneratorFor(env terra.Environment) error {
-	log.Info().Msgf("Syncing %s for %s", generatorArgoApp, env.Name())
-	return b.syncGenerator(func(options *argocd.SyncOptions) {
-		options.OnlyLabels = argocd.EnvironmentSelector(env)
-	})
-}
-
-func (b *bees) SyncArgoAppsFor(env terra.Environment, options ...argocd.SyncOption) error {
+func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error {
 	releases, err := b.state.Releases().Filter(filter.Releases().BelongsToEnvironment(env))
 	if err != nil {
 		return err
@@ -165,17 +157,16 @@ func (b *bees) SyncArgoAppsFor(env terra.Environment, options ...argocd.SyncOpti
 	return b.argocd.SyncReleases(releases, 15, options...)
 }
 
-func (b *bees) SyncGenerator() error {
-	log.Info().Msgf("Syncing %s", generatorArgoApp)
-	return b.syncGenerator()
-}
-
-func (b *bees) syncGenerator(options ...argocd.SyncOption) error {
-	options = append(options, func(options *argocd.SyncOptions) {
-		// never wait for generator to be healthy -- it gets a lot of traffic that can cause it to go out of sync
-		options.WaitHealthy = false
-	})
-	return b.argocd.SyncApp(generatorArgoApp, options...)
+func (b *bees) RefreshBeeGenerator() error {
+	log.Info().Msgf("Refreshing %s", generatorArgoApp)
+	// workaround for a bug in ArgoCD:
+	//   https://github.com/argoproj/argo-cd/issues/4505#issuecomment-880271371
+	// hard refresh + wait for the app to become healthy
+	// instead of attempting to sync the app.
+	if err := b.argocd.HardRefresh(generatorArgoApp); err != nil {
+		return err
+	}
+	return b.argocd.WaitHealthy(generatorArgoApp)
 }
 
 func (b *bees) GetTemplate(name string) (terra.Environment, error) {

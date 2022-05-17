@@ -40,6 +40,12 @@ func ProjectName(destination terra.Destination) string {
 	}
 }
 
+// GeneratorName name of a destinations app generator, eg. "terra-dev-generator"
+func GeneratorName(destination terra.Destination) string {
+	projectName := ProjectName(destination)
+	return fmt.Sprintf("%s-generator", projectName)
+}
+
 // releaseSelector returns set of selectors for all argo apps associated with a release
 // (often just the primary application, but can include the legacy configs application as well)
 func releaseSelector(release terra.Release) map[string]string {
