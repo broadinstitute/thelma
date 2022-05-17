@@ -27,7 +27,7 @@ type Environments interface {
 	// UnpinVersions removes version overrides in the given environment
 	// TODO this should move to Environment at some point
 	UnpinVersions(environmentName string) (map[string]VersionOverride, error)
-	// PinEnvironmentToTerraHelmfileREf pins an environment to a specific terra-helmfile ref
+	// PinEnvironmentToTerraHelmfileRef pins an environment to a specific terra-helmfile ref
 	// Note this can be overridden by individual service version overrides
 	PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error
 	// Delete deletes the environment with the given name
