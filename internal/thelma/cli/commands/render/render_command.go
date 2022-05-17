@@ -62,6 +62,7 @@ var flagNames = struct {
 	argocd          string
 	outputDir       string
 	stdout          string
+	debug           string
 	parallelWorkers string
 	mode            string
 	apps            string
@@ -75,6 +76,7 @@ var flagNames = struct {
 	valuesFile:      "values-file",
 	outputDir:       "output-dir",
 	stdout:          "stdout",
+	debug:           "debug",
 	parallelWorkers: "parallel-workers",
 	mode:            "mode",
 	apps:            "apps",
@@ -89,6 +91,7 @@ type flagValues struct {
 	valuesFile      []string
 	outputDir       string
 	stdout          bool
+	debug           bool
 	parallelWorkers int
 	mode            string
 	apps            string
@@ -124,6 +127,7 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.argocd, flagNames.argocd, false, "Render ArgoCD manifests instead of application manifests")
 	cobraCommand.Flags().StringVarP(&cmd.flagVals.outputDir, flagNames.outputDir, "d", "path/to/output/dir", "Render manifests to custom output directory")
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.stdout, flagNames.stdout, false, "Render manifests to stdout instead of output directory")
+	cobraCommand.Flags().BoolVar(&cmd.flagVals.debug, flagNames.debug, false, "Pass --debug to helmfile to render out invalid YAML for debugging")
 	cobraCommand.Flags().IntVar(&cmd.flagVals.parallelWorkers, flagNames.parallelWorkers, 1, "Number of parallel workers to launch when rendering")
 	cobraCommand.Flags().StringVar(&cmd.flagVals.mode, flagNames.mode, "development", `Either "development" (render from chart source directory) or "deploy" (render using released chart versions). Defaults to "development"`)
 	cobraCommand.Flags().StringVar(&cmd.flagVals.scope, flagNames.scope, "all", `One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types)`)
@@ -227,6 +231,9 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 
 	// stdout
 	renderOptions.Stdout = flagVals.stdout
+
+	// debug mode
+	renderOptions.DebugMode = flagVals.debug
 
 	// parallelWorkers
 	if flags.Changed(flagNames.parallelWorkers) && flags.Changed(flagNames.stdout) {
