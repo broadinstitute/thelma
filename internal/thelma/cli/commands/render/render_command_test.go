@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
+	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	tsort "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
@@ -191,7 +192,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "-r should set release name",
 			setupFn: func(tc *testConfig) error {
 				tc.options.SetArgs(Args("render -r datarepo"))
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("datarepo", "alpha"),
 					fixture.Release("datarepo", "staging"),
@@ -204,7 +205,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "first positional should set release name",
 			setupFn: func(tc *testConfig) error {
 				tc.options.SetArgs(Args("render -r datarepo"))
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("datarepo", "alpha"),
 					fixture.Release("datarepo", "staging"),
@@ -248,7 +249,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "-e and -r should intersect",
 			setupFn: func(tc *testConfig) error {
 				tc.options.SetArgs(Args("render -e dev -r externalcreds"))
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("externalcreds", "dev"),
 				}
@@ -259,7 +260,7 @@ func TestRenderArgParsing(t *testing.T) {
 			description: "multiple -e and -r flags should be additive",
 			setupFn: func(tc *testConfig) error {
 				tc.options.SetArgs(Args("render -e dev -e perf -e alpha -r sam -r leonardo"))
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("sam", "dev"),
 					fixture.Release("sam", "perf"),
@@ -314,7 +315,7 @@ func TestRenderArgParsing(t *testing.T) {
 			arguments:   Args("render -e dev -r leonardo --app-version 1.2.3"),
 			setupFn: func(tc *testConfig) error {
 				version := "1.2.3"
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("leonardo", "dev"),
 				}
@@ -327,7 +328,7 @@ func TestRenderArgParsing(t *testing.T) {
 			arguments:   Args("render -e dev leonardo --chart-version 4.5.6"),
 			setupFn: func(tc *testConfig) error {
 				version := "4.5.6"
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("leonardo", "dev"),
 				}
@@ -369,7 +370,7 @@ func TestRenderArgParsing(t *testing.T) {
 					return err
 				}
 
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("leonardo", "dev"),
 				}
@@ -396,7 +397,7 @@ func TestRenderArgParsing(t *testing.T) {
 					}
 				}
 
-				tc.expected.renderOptions.ReleaseScoped = true
+				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("leonardo", "dev"),
 				}
@@ -442,6 +443,7 @@ func TestRenderArgParsing(t *testing.T) {
 			expected.renderOptions.OutputDir = path.Join(thelmaHome, "output")
 			expected.renderOptions.ChartSourceDir = path.Join(thelmaHome, "charts")
 			expected.renderOptions.ParallelWorkers = 1
+			expected.renderOptions.Scope = scope.All
 			expected.renderOptions.Releases = defaultReleases(fixture)
 
 			// set command-line args
