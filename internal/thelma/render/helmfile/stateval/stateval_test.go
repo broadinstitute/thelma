@@ -13,10 +13,11 @@ func Test_BuildStateValues(t *testing.T) {
 	chartPath := t.TempDir()
 
 	testCases := []struct {
-		name              string
-		release           terra.Release
-		expectedAppValues AppValues
-		expectedArgoApp   ArgoApp
+		name                string
+		release             terra.Release
+		expectedAppValues   AppValues
+		expectedArgoApp     ArgoApp
+		expectedArgoProject ArgoProject
 	}{
 		{
 			name:    "static env release",
@@ -45,6 +46,13 @@ func Test_BuildStateValues(t *testing.T) {
 				ClusterName:    "terra-dev",
 				ClusterAddress: "https://35.238.186.116",
 			},
+			expectedArgoProject: ArgoProject{
+				ProjectName: "terra-dev",
+				Generator: Generator{
+					Name:             "terra-dev-generator",
+					TerraHelmfileRef: "",
+				},
+			},
 		},
 		{
 			name:    "template env release",
@@ -72,6 +80,13 @@ func Test_BuildStateValues(t *testing.T) {
 				ProjectName:    "terra-swatomation",
 				ClusterName:    "terra-qa",
 				ClusterAddress: "https://35.224.175.229",
+			},
+			expectedArgoProject: ArgoProject{
+				ProjectName: "terra-swatomation",
+				Generator: Generator{
+					Name:             "terra-swatomation-generator",
+					TerraHelmfileRef: "",
+				},
 			},
 		},
 		{
@@ -110,6 +125,13 @@ func Test_BuildStateValues(t *testing.T) {
 				TerraHelmfileRef:    "my-th-branch-1",
 				FirecloudDevelopRef: "my-fc-branch-1",
 			},
+			expectedArgoProject: ArgoProject{
+				ProjectName: "terra-fiab-funky-chipmunk",
+				Generator: Generator{
+					Name:             "terra-fiab-funky-chipmunk-generator",
+					TerraHelmfileRef: "",
+				},
+			},
 		},
 		{
 			name:    "cluster release",
@@ -136,6 +158,13 @@ func Test_BuildStateValues(t *testing.T) {
 				ClusterName:    "terra-dev",
 				ClusterAddress: "https://35.238.186.116",
 			},
+			expectedArgoProject: ArgoProject{
+				ProjectName: "cluster-terra-dev",
+				Generator: Generator{
+					Name:             "cluster-terra-dev-generator",
+					TerraHelmfileRef: "",
+				},
+			},
 		},
 	}
 
@@ -154,10 +183,7 @@ func Test_BuildStateValues(t *testing.T) {
 			assert.Equal(t, expectedArgoApp, BuildArgoAppValues(tc.release))
 
 			var expectedArgoProject ArgoProjectValues
-			// copy project name over from expected argo app
-			expectedArgoProject.ArgoProject = ArgoProject{
-				ProjectName: expectedArgoApp.ArgoApp.ProjectName,
-			}
+			expectedArgoProject.ArgoProject = tc.expectedArgoProject
 			// copy common settings over from app values
 			expectedArgoProject.Destination = tc.expectedAppValues.Destination
 

@@ -183,6 +183,8 @@ func (s *statebucket) UnpinVersions(environmentName string) (map[string]terra.Ve
 	err := s.updateEnvironment(environmentName, func(e *DynamicEnvironment) {
 		var deletions []string
 
+		e.TerraHelmfileRef = ""
+
 		for releaseName, override := range e.Overrides {
 			result[releaseName] = override.Versions
 			override.UnpinVersions()

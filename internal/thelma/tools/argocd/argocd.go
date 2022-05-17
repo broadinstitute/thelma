@@ -95,9 +95,13 @@ type argocdConfig struct {
 type ArgoCD interface {
 	// SyncApp will sync an ArgoCD app
 	SyncApp(appName string, options ...SyncOption) error
+	// HardRefresh will hard refresh an ArgoCD app (force a manifest re-render without a corresponding git change)
+	HardRefresh(appName string) error
+	// WaitHealthy will wait for an ArgoCD app to become healthy
+	WaitHealthy(appName string) error
 	// SyncRelease will sync a Terra release's ArgoCD app(s), including the legacy configs app if there is one
 	SyncRelease(release terra.Release, options ...SyncOption) error
-	// SyncReleases will sync the ArgoCD apps for multiple Terra releases in paralle
+	// SyncReleases will sync the ArgoCD apps for multiple Terra releases in parallel
 	SyncReleases(releases []terra.Release, maxParallel int, options ...SyncOption) error
 }
 
@@ -202,7 +206,7 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) error {
 	}
 
 	if opts.WaitHealthy {
-		if err := a.waitHealthy(appName); err != nil {
+		if err := a.WaitHealthy(appName); err != nil {
 			return err
 		}
 	}
@@ -256,6 +260,23 @@ func (a *argocd) SyncReleases(releases []terra.Release, maxParallel int, options
 		options.StopProcessingOnError = false
 	})
 	return _pool.Execute()
+}
+
+func (a *argocd) HardRefresh(appName string) error {
+	_, err := a.diffWithRetries(appName, a.defaultSyncOptions())
+	return err
+}
+
+func (a *argocd) WaitHealthy(appName string) error {
+	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", a.cfg.WaitHealthyTimeoutSeconds, appName)
+
+	return a.runCommand([]string{
+		"app",
+		"wait",
+		appName,
+		"--timeout",
+		fmt.Sprintf("%d", a.cfg.WaitHealthyTimeoutSeconds),
+	})
 }
 
 func (a *argocd) restartDeployments(appName string) error {
@@ -347,18 +368,6 @@ func (a *argocd) sync(appName string, opts SyncOptions) error {
 	}
 
 	return err
-}
-
-func (a *argocd) waitHealthy(appName string) error {
-	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", a.cfg.WaitHealthyTimeoutSeconds, appName)
-
-	return a.runCommand([]string{
-		"app",
-		"wait",
-		appName,
-		"--timeout",
-		fmt.Sprintf("%d", a.cfg.WaitHealthyTimeoutSeconds),
-	})
 }
 
 func (a *argocd) diffWithRetries(appName string, opts SyncOptions) (hasDifferences bool, err error) {

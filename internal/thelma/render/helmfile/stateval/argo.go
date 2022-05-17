@@ -23,6 +23,14 @@ type ArgoApp struct {
 type ArgoProject struct {
 	// ProjectName name of the ArgoCD project that is being rendered
 	ProjectName string `yaml:"ProjectName"`
+	// Generator settings for the project's application generator, if enabled
+	Generator Generator `yaml:"Generator"`
+}
+
+// Generator information about an Argo project's application generator
+type Generator struct {
+	// Name name of the project's application generator
+	Name string `yaml:"Name"`
 	// TerraHelmfileRef override terra-helmfile ref for the project's app generator
 	TerraHelmfileRef string `yaml:"TerraHelmfileRef"`
 }
@@ -39,7 +47,10 @@ func forArgoApp(r terra.Release) ArgoApp {
 
 func forArgoProject(d terra.Destination) ArgoProject {
 	return ArgoProject{
-		ProjectName:      argocd.ProjectName(d),
-		TerraHelmfileRef: d.TerraHelmfileRef(),
+		ProjectName: argocd.ProjectName(d),
+		Generator: Generator{
+			Name:             argocd.GeneratorName(d),
+			TerraHelmfileRef: d.TerraHelmfileRef(),
+		},
 	}
 }

@@ -170,12 +170,15 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 
 	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
 
-	if err = bees.SyncGeneratorFor(env); err != nil {
+	if err = bees.RefreshBeeGenerator(); err != nil {
+		return err
+	}
+	if err = bees.SyncEnvironmentGenerator(env); err != nil {
 		return err
 	}
 
 	if cmd.options.sync {
-		if err = bees.SyncArgoAppsFor(env, func(options *argocd.SyncOptions) {
+		if err = bees.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
 			options.WaitHealthy = cmd.options.waitHealthy
 		}); err != nil {
 			return err
