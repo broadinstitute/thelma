@@ -35,13 +35,6 @@ type CreateOptions struct {
 	WaitHealthy   bool
 }
 
-type VersionOptions struct {
-	AppVersion          string
-	ChartVersion        string
-	TerraHelmfileRef    string
-	FirecloudDevelopRef string
-}
-
 func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
@@ -131,11 +124,6 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 	log.Info().Msgf("Deleted environment %s from state", name)
 
 	log.Info().Msgf("Deleting Argo apps for %s", name)
-	if err = b.RefreshBeeGenerator(); err != nil {
-		return env, err
-	}
-
-	log.Info().Msgf("Deleting Argo project for %s", name)
 	if err = b.RefreshBeeGenerator(); err != nil {
 		return env, err
 	}
