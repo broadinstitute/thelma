@@ -31,8 +31,9 @@ type CreateOptions struct {
 		Name string
 		IP   string
 	}
-	GeneratorOnly bool
-	WaitHealthy   bool
+	SyncGeneratorOnly bool
+	WaitHealthy       bool
+	TerraHelmfileRef  string
 }
 
 func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader) (Bees, error) {
@@ -73,6 +74,13 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 
 	log.Info().Msgf("Created new environment %s", name)
 
+	if options.TerraHelmfileRef != "" {
+		log.Info().Msgf("Pinning %s to terra-helmfile ref: %s", name, options.TerraHelmfileRef)
+		if err = b.state.Environments().PinEnvironmentToTerraHelmfileRef(name, options.TerraHelmfileRef); err != nil {
+			return nil, err
+		}
+	}
+
 	if err = b.reloadState(); err != nil {
 		return nil, err
 	}
@@ -91,7 +99,7 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 	if err = b.SyncEnvironmentGenerator(env); err != nil {
 		return env, err
 	}
-	if options.GeneratorOnly {
+	if options.SyncGeneratorOnly {
 		log.Warn().Msgf("Won't sync Argo apps for %s", env.Name())
 		return env, nil
 	}

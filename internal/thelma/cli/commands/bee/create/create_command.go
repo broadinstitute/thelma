@@ -27,21 +27,23 @@ thelma bee create \
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name          string
-	template      string
-	hybrid        string
-	fiabName      string
-	fiabIP        string
-	generatorOnly string
-	waitHealthy   string
+	name             string
+	template         string
+	hybrid           string
+	fiabName         string
+	fiabIP           string
+	generatorOnly    string
+	waitHealthy      string
+	terraHelmfileRef string
 }{
-	name:          "name",
-	template:      "template",
-	hybrid:        "hybrid",
-	fiabName:      "fiab-name",
-	fiabIP:        "fiab-ip",
-	generatorOnly: "generator-only",
-	waitHealthy:   "wait-healthy",
+	name:             "name",
+	template:         "template",
+	hybrid:           "hybrid",
+	fiabName:         "fiab-name",
+	fiabIP:           "fiab-ip",
+	generatorOnly:    "generator-only",
+	waitHealthy:      "wait-healthy",
+	terraHelmfileRef: "terra-helmfile-ref",
 }
 
 type createCommand struct {
@@ -63,8 +65,9 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.options.Hybrid, flagNames.hybrid, false, "Set to true to create a hybrid (connected to a Fiab) environment")
 	cobraCommand.Flags().StringVar(&cmd.options.Fiab.Name, flagNames.fiabName, "FIAB", "Name of the Fiab this hybrid environment should be connected to")
 	cobraCommand.Flags().StringVar(&cmd.options.Fiab.IP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
-	cobraCommand.Flags().BoolVar(&cmd.options.GeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
+	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, false, "Wait for BEE's Argo apps to become healthy after syncing")
+	cobraCommand.Flags().StringVar(&cmd.options.TerraHelmfileRef, flagNames.terraHelmfileRef, "", "Custom terra-helmfile branch/ref")
 }
 
 func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
