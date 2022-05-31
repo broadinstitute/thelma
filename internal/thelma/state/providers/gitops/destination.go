@@ -8,6 +8,7 @@ import (
 type destination struct {
 	name             string
 	base             string
+	requireSuitable  bool
 	destinationType  terra.DestinationType
 	terraHelmfileRef string
 }
@@ -42,4 +43,8 @@ func (t *destination) Releases() []terra.Release {
 
 func (t *destination) ReleaseType() terra.ReleaseType {
 	panic("abstract method implemented by children")
+}
+
+func (t *destination) RequireSuitable() bool {
+	return t.requireSuitable
 }

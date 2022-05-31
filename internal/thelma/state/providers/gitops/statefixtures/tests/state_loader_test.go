@@ -17,6 +17,10 @@ var rf = filter.Releases()
 var ef = filter.Environments()
 var df = filter.Destinations()
 
+func TestSuitabilityIsLoaded(t *testing.T) {
+	t.Fatalf("Makek sure RequireSuitable is set properly on both clusters and environments")
+}
+
 // verify the default fixture has the data we expect
 func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 	thelmaBuilder := builder.NewBuilder().WithTestDefaults(t)

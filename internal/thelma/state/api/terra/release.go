@@ -11,6 +11,7 @@ type Release interface {
 	ChartName() string
 	Repo() string
 	Namespace() string
+	Cluster() Cluster
 	ClusterName() string
 	ClusterAddress() string
 	Destination() Destination

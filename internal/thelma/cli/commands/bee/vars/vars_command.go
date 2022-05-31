@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const helpMessage = `Generate variables for fiab config rendering`
+const helpMessage = `Generate variables for firecloud-develop FiaB config rendering`
 
 type options struct {
 	name string
@@ -32,10 +32,10 @@ func NewBeeVarsCommand() cli.ThelmaCommand {
 
 func (cmd *varsCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Use = "vars [options]"
-	cobraCommand.Short = "Generate Fiab rendering variables for a BEE"
+	cobraCommand.Short = helpMessage
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to pin")
+	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to generate variables for")
 }
 
 func (cmd *varsCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -49,18 +49,18 @@ func (cmd *varsCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	return nil
 }
 
-func (cmd *varsCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *varsCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 	state, err := app.State()
 	if err != nil {
 		return err
 	}
-
 	env, err := state.Environments().Get(cmd.options.name)
 	if err != nil {
 		return err
 	}
 
-	// okay here's a trick. we want to generate output in key-value format. Not JSON, not YAML.
+	// We want to generate output in plain key-value format (not json or yaml). So, we print directly to stdout
+	// instead of using rc.SetOutput()
 	if env == nil {
 		log.Info().Msgf("%s is a vanilla Fiab, not a BEE", cmd.options.name)
 		fmt.Println("HYBRID_FIAB=false")

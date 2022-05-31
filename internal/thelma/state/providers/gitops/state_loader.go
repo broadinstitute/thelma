@@ -127,8 +127,7 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 					chartName:        templateRelease.ChartName(),
 					repo:             templateRelease.Repo(),
 					namespace:        environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
-					clusterName:      templateRelease.ClusterName(),
-					clusterAddress:   templateRelease.ClusterAddress(),
+					cluster:          templateRelease.Cluster(),
 					destination:      nil,                         // replaced after env is constructed
 					terraHelmfileRef: dynamicEnv.TerraHelmfileRef, // might be overridden, but default to env-wide setting
 				},
@@ -158,7 +157,7 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 			_releases[templateRelease.Name()] = _release
 		}
 
-		env := newEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, _releases)
+		env := newEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, template.requireSuitable, _releases)
 		env.terraHelmfileRef = dynamicEnv.TerraHelmfileRef
 
 		result[dynamicEnv.Name] = env
@@ -234,8 +233,6 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 			}
 			_cluster = clusters[releaseDefn.Cluster]
 		}
-		clusterName := _cluster.Name()
-		clusterAddress := _cluster.Address()
 
 		// chart version
 		chartVersion := releaseDefn.ChartVersion
@@ -281,15 +278,14 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		_release := &appRelease{
 			appVersion: appVersion,
 			release: release{
-				name:           releaseName,
-				enabled:        releaseDefn.Enabled,
-				releaseType:    terra.AppReleaseType,
-				chartVersion:   chartVersion,
-				chartName:      chartName,
-				repo:           repo,
-				namespace:      namespace,
-				clusterName:    clusterName,
-				clusterAddress: clusterAddress,
+				name:         releaseName,
+				enabled:      releaseDefn.Enabled,
+				releaseType:  terra.AppReleaseType,
+				chartVersion: chartVersion,
+				chartName:    chartName,
+				repo:         repo,
+				namespace:    namespace,
+				cluster:      _cluster,
 			},
 		}
 
@@ -299,10 +295,11 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 	env := newEnvironment(
 		envName,
 		envBase,
-		defaultClusterName,
+		defaultCluster,
 		lifecycle,
 		"",
 		nil,
+		envConfig.RequireSuitable,
 		_releases,
 	)
 
@@ -350,6 +347,14 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (*cluster, er
 		return nil, fmt.Errorf("cluster %s does not have a valid API address, please set `address` key in config file", clusterName)
 	}
 
+	if clusterDefn.Project == "" {
+		return nil, fmt.Errorf("cluster %s does not have a Google project, please set `project` key in config file", clusterName)
+	}
+
+	if clusterDefn.Location == "" {
+		return nil, fmt.Errorf("cluster %s does not have a location, please set `location` key in config file", clusterName)
+	}
+
 	releases := make(map[string]*clusterRelease)
 
 	for releaseName, releaseDefn := range clusterDefn.Releases {
@@ -386,15 +391,13 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (*cluster, er
 
 		releases[releaseName] = &clusterRelease{
 			release: release{
-				name:           releaseName,
-				enabled:        releaseDefn.Enabled,
-				releaseType:    terra.ClusterReleaseType,
-				chartVersion:   chartVersion,
-				chartName:      chartName,
-				repo:           repo,
-				namespace:      namespace,
-				clusterName:    clusterName,
-				clusterAddress: clusterAddress,
+				name:         releaseName,
+				enabled:      releaseDefn.Enabled,
+				releaseType:  terra.ClusterReleaseType,
+				chartVersion: chartVersion,
+				chartName:    chartName,
+				repo:         repo,
+				namespace:    namespace,
 			},
 		}
 	}
@@ -403,11 +406,15 @@ func loadCluster(destConfig destinationConfig, _versions Versions) (*cluster, er
 		clusterName,
 		clusterBase,
 		clusterDefn.Address,
+		clusterDefn.Project,
+		clusterDefn.Location,
+		clusterDefn.RequireSuitable,
 		releases,
 	)
 
 	for _, _release := range releases {
 		_release.destination = _cluster
+		_release.cluster = _cluster
 	}
 
 	return _cluster, nil

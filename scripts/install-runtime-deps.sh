@@ -11,6 +11,7 @@ HELMFILE_VERSION=0.143.1
 YQ_VERSION=4.11.2
 HELM_DOCS_VERSION=1.5.0
 ARGOCD_VERSION=2.3.2
+KUBECTL_VERSION=1.24.0
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
@@ -135,6 +136,16 @@ install_argocd() {
     mv ./argocd "${INSTALL_DIR}/argocd"
 }
 
+
+install_kubectl() {
+  URL="https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/${OS}/${ARCH}/kubectl"
+  echo "Downloading kubectl from ${URL}"
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O ./kubectl &&
+    chmod +x ./kubectl &&
+    testexec ./kubectl version --client &&
+    mv ./kubectl "${INSTALL_DIR}/kubectl"
+}
+
 mkdir -p "${INSTALL_DIR}"
 mkdir -p "${SCRATCH_DIR}"
 
@@ -168,7 +179,7 @@ if [[ ! -f "${INSTALL_DIR}/yq" ]]; then
   fi
 fi
 
-# Install helm_docs
+# Install helm-docs
 if [[ ! -f "${INSTALL_DIR}/helm-docs" ]]; then
   if ! install_helm_docs; then
     echo "helm-docs install failed!" >&2
@@ -180,6 +191,14 @@ fi
 if [[ ! -f "${INSTALL_DIR}/argocd" ]]; then
   if ! install_argocd; then
     echo "ArgoCD client install failed!" >&2
+    exit 1
+  fi
+fi
+
+# Install kubectl
+if [[ ! -f "${INSTALL_DIR}/kubectl" ]]; then
+  if ! install_kubectl; then
+    echo "kubectl install failed!" >&2
     exit 1
   fi
 fi

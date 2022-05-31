@@ -1,8 +1,8 @@
 package terra
 
 type Environment interface {
-	// DefaultCluster Returns the name of the default cluster for this environment. Eg. "terra-qa"
-	DefaultCluster() string
+	// DefaultCluster Returns the default cluster for this environment.
+	DefaultCluster() Cluster
 	// Namespace Returns the namespace for this environment. Eg. "terra-dev"
 	Namespace() string
 	// Lifecycle returns the lifecycle for this environment.

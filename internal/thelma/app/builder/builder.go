@@ -134,7 +134,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize client factory
-	_clients, err := clients.New(cfg, _credentials, shellRunner)
+	_clients, err := clients.New(cfg, thelmaRoot, _credentials, shellRunner)
 	if err != nil {
 		return nil, err
 	}

@@ -34,8 +34,10 @@ type Root interface {
 	CachesDir() string
 	// CredentialsDir returns the path to Thelma credentials directory ($ROOT/credentials)
 	CredentialsDir() string
-	// ReleasesDir returns the Thelma releases directory ($ROOT/releases)
-	ReleasesDir() string
+	// ConfigDir returns the path to Thelma config directory
+	ConfigDir() string
+	// InstallDir returns the Thelma installation directory ($ROOT/install)
+	InstallDir() string
 }
 
 // Default returns a Root instance rooted at the default directory returned by DefaultDir
@@ -96,6 +98,10 @@ func (r root) CredentialsDir() string {
 	return path.Join(r.Dir(), "credentials")
 }
 
-func (r root) ReleasesDir() string {
-	return path.Join(r.Dir(), "releases")
+func (r root) InstallDir() string {
+	return path.Join(r.Dir(), "install")
+}
+
+func (r root) ConfigDir() string {
+	return path.Join(r.Dir(), "config")
 }

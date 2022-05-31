@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func TestWithLockEnsuresConcurrentExecution(t *testing.T) {
+func TestWithLockPreventsConcurrentExecution(t *testing.T) {
 	numWorkers := 25 // Number of worker routines that should attempt to grab the lock
 
 	lockRetryInterval := 10 * time.Millisecond // How frequently flock should retry to get the lock
@@ -27,7 +27,7 @@ func TestWithLockEnsuresConcurrentExecution(t *testing.T) {
 
 	var wg sync.WaitGroup
 	resultCh := make(chan result, numWorkers)
-	opts := testOptions(t, lockRetryInterval, lockTimeout)
+	locker := testLocker(t, lockRetryInterval, lockTimeout)
 
 	var lockOwner int32 = -1
 
@@ -35,7 +35,7 @@ func TestWithLockEnsuresConcurrentExecution(t *testing.T) {
 		id := i // Copy to local variable to prevent leaks
 		wg.Add(1)
 		go func() {
-			err := WithLock(opts, func() error {
+			err := locker.WithLock(func() error {
 				log.Debug().Msgf("[%d] got lock", id)
 				owner := atomic.LoadInt32(&lockOwner)
 				if owner != -1 {
@@ -90,7 +90,7 @@ func TestWithLockTimesOut(t *testing.T) {
 	lockSleepTime := 2 * lockTimeout          // (4s) How long workers should sleep after obtaining lock (we _want_ to trigger a timeout)
 	testTimeout := 10 * lockSleepTime         // (40s) How long to wait for workers to complete before failing the test (shouldn't happen)
 
-	lockOpts := testOptions(t, lockRetryInterval, lockTimeout)
+	locker := testLocker(t, lockRetryInterval, lockTimeout)
 
 	type victimResult struct {
 		err       error
@@ -109,7 +109,7 @@ func TestWithLockTimesOut(t *testing.T) {
 		defer wg.Done()
 		defer close(thiefErrCh)
 
-		thiefErrCh <- WithLock(lockOpts, func() error {
+		thiefErrCh <- locker.WithLock(func() error {
 			log.Debug().Msgf("[thief] obtained the lock, sending signal")
 			close(thiefHasLockCh)
 			log.Debug().Msgf("[thief] sleeping for %s", lockSleepTime)
@@ -131,7 +131,7 @@ func TestWithLockTimesOut(t *testing.T) {
 		log.Debug().Msgf("[victim] thief has stolen lock, calling withLock...")
 
 		startTime := time.Now()
-		err := WithLock(lockOpts, func() error {
+		err := locker.WithLock(func() error {
 			// this should never be called because we should hit a timeout
 			t.Error("[victim] I should never have obtained the lock!")
 			return nil
@@ -163,7 +163,6 @@ func TestWithLockTimesOut(t *testing.T) {
 		assert.WithinDuration(t, expectedStopTime, actualStopTime, delta, "Expected to get a timeout after about ~%s, got one after %s (allowed delta %s)", lockTimeout, actualWaitDuration, delta)
 
 		// Verify we got an flock timeout error and not something else
-		assert.ErrorIs(t, r.err, r.err.(*Error), "Expected an Flock timeout error")
 		assert.Regexp(t, regexp.MustCompile("deadline exceeded"), r.err.Error())
 
 		// Verify the thief worker didn't encounter an unexpected error
@@ -186,18 +185,19 @@ func TestWithLockReturnsCallbackError(t *testing.T) {
 	lockRetryInterval := 1 * time.Millisecond
 	lockTimeout := 1_000 * time.Millisecond
 
+	locker := testLocker(t, lockRetryInterval, lockTimeout)
+
 	// We don't expect any timeouts here! Just want to make sure errors are correctly propagated to caller
-	err := WithLock(testOptions(t, lockRetryInterval, lockTimeout), func() error {
+	err := locker.WithLock(func() error {
 		return fmt.Errorf("fake error from callback")
 	})
 	assert.Error(t, err, "Expected error to propagate up from WithLock")
 	assert.Equal(t, "fake error from callback", err.Error())
 }
 
-func testOptions(t *testing.T, lockRetryInterval time.Duration, lockTimeout time.Duration) Options {
-	return Options{
-		Path:          path.Join(t.TempDir(), "lock"),
-		RetryInterval: lockRetryInterval,
-		Timeout:       lockTimeout,
-	}
+func testLocker(t *testing.T, lockRetryInterval time.Duration, lockTimeout time.Duration) Locker {
+	return NewLocker(path.Join(t.TempDir(), "lock"), func(options *Options) {
+		options.RetryInterval = lockRetryInterval
+		options.Timeout = lockTimeout
+	})
 }

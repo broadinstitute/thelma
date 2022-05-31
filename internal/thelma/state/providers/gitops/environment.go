@@ -9,7 +9,7 @@ const envNamespacePrefix = "terra-"
 
 // implements the terra.Environment interface
 type environment struct {
-	defaultCluster string                 // Name of the default cluster for this environment. eg "terra-dev"
+	defaultCluster terra.Cluster          // Default cluster for this environment.
 	releases       map[string]*appRelease // Set of releases configured in this environment
 	lifecycle      terra.Lifecycle        // Lifecycle for this environment
 	template       string                 // Template for this environment, if it has one
@@ -18,7 +18,7 @@ type environment struct {
 }
 
 // newEnvironment constructs a new Environment
-func newEnvironment(name string, base string, defaultCluster string, lifecycle terra.Lifecycle, template string, fiab terra.Fiab, releases map[string]*appRelease) *environment {
+func newEnvironment(name string, base string, defaultCluster terra.Cluster, lifecycle terra.Lifecycle, template string, fiab terra.Fiab, requireSuitable bool, releases map[string]*appRelease) *environment {
 	return &environment{
 		defaultCluster: defaultCluster,
 		releases:       releases,
@@ -29,6 +29,7 @@ func newEnvironment(name string, base string, defaultCluster string, lifecycle t
 			name:            name,
 			base:            base,
 			destinationType: terra.EnvironmentDestination,
+			requireSuitable: requireSuitable,
 		},
 	}
 }
@@ -43,7 +44,7 @@ func (e *environment) Releases() []terra.Release {
 	return result
 }
 
-func (e *environment) DefaultCluster() string {
+func (e *environment) DefaultCluster() terra.Cluster {
 	return e.defaultCluster
 }
 
