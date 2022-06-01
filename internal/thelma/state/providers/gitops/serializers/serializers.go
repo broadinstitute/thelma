@@ -1,14 +1,18 @@
 package serializers
 
 type Environment struct {
-	DefaultCluster string                `yaml:"defaultCluster"`
-	Releases       map[string]AppRelease `yaml:"releases"`
-	Lifecycle      string                `yaml:"lifecycle"`
+	DefaultCluster  string                `yaml:"defaultCluster"`
+	Releases        map[string]AppRelease `yaml:"releases"`
+	Lifecycle       string                `yaml:"lifecycle"`
+	RequireSuitable bool                  `yaml:"requireSuitable"`
 }
 
 type Cluster struct {
-	Address  string                    `yaml:"address"`
-	Releases map[string]ClusterRelease `yaml:"releases"`
+	Address         string                    `yaml:"address"`
+	Project         string                    `yaml:"project"`
+	Location        string                    `yaml:"location"`
+	RequireSuitable bool                      `yaml:"requireSuitable"`
+	Releases        map[string]ClusterRelease `yaml:"releases"`
 }
 
 type ClusterRelease struct {

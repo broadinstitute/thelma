@@ -1,3 +1,5 @@
 # Configuration overrides for the datarepo-staging cluster
 
 address: https://35.202.44.141
+project: terra-datarepo-staging
+location: us-central1

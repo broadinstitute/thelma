@@ -4,6 +4,7 @@ package clients
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
@@ -24,9 +25,10 @@ type Clients interface {
 	Google() google.Clients
 }
 
-func New(thelmaConfig config.Config, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
+func New(thelmaConfig config.Config, thelmaRoot root.Root, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
 	return &clients{
 		thelmaConfig: thelmaConfig,
+		thelmaRoot:   thelmaRoot,
 		creds:        creds,
 		runner:       runner,
 	}, nil
@@ -34,12 +36,13 @@ func New(thelmaConfig config.Config, creds credentials.Credentials, runner shell
 
 type clients struct {
 	thelmaConfig config.Config
+	thelmaRoot   root.Root
 	creds        credentials.Credentials
 	runner       shell.Runner
 }
 
 func (c *clients) Google() google.Clients {
-	return google.New(c.thelmaConfig, c)
+	return google.New(c.thelmaConfig, c.thelmaRoot, c.runner, c)
 }
 
 func (c *clients) IAPToken() (string, error) {

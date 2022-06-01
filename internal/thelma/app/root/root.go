@@ -34,8 +34,12 @@ type Root interface {
 	CachesDir() string
 	// CredentialsDir returns the path to Thelma credentials directory ($ROOT/credentials)
 	CredentialsDir() string
-	// ReleasesDir returns the Thelma releases directory ($ROOT/releases)
-	ReleasesDir() string
+	// ConfigDir returns the path to Thelma config directory
+	ConfigDir() string
+	// InstallDir returns the Thelma installation directory ($ROOT/install)
+	InstallDir() string
+	// CreateDirectories create directories if they do not exist. Will be called as part of Thelma initialization
+	CreateDirectories() error
 }
 
 // Default returns a Root instance rooted at the default directory returned by DefaultDir
@@ -96,6 +100,26 @@ func (r root) CredentialsDir() string {
 	return path.Join(r.Dir(), "credentials")
 }
 
-func (r root) ReleasesDir() string {
-	return path.Join(r.Dir(), "releases")
+func (r root) InstallDir() string {
+	return path.Join(r.Dir(), "install")
+}
+
+func (r root) ConfigDir() string {
+	return path.Join(r.Dir(), "config")
+}
+
+func (r root) CreateDirectories() error {
+	dirs := []string{
+		r.CachesDir(),
+		r.CredentialsDir(),
+		r.ConfigDir(),
+		r.LogDir(),
+		r.InstallDir(),
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0600); err != nil {
+			return fmt.Errorf("error creating directory %s: %v", dir, err)
+		}
+	}
+	return nil
 }

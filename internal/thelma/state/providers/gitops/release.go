@@ -12,8 +12,7 @@ type release struct {
 	chartName           string
 	repo                string
 	namespace           string
-	clusterName         string
-	clusterAddress      string
+	cluster             terra.Cluster
 	destination         terra.Destination
 	terraHelmfileRef    string
 	firecloudDevelopRef string
@@ -51,12 +50,16 @@ func (r *release) Namespace() string {
 	return r.namespace
 }
 
+func (r *release) Cluster() terra.Cluster {
+	return r.cluster
+}
+
 func (r *release) ClusterName() string {
-	return r.clusterName
+	return r.cluster.Name()
 }
 
 func (r *release) ClusterAddress() string {
-	return r.clusterAddress
+	return r.cluster.Address()
 }
 
 func (r *release) Destination() terra.Destination {

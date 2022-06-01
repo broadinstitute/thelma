@@ -2,64 +2,78 @@ package flock
 
 import (
 	"context"
-	"fmt"
 	"github.com/gofrs/flock"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"time"
 )
 
-// flock is a thin wrapper around the open-source flock library with a simpler interface
+// flock is a thin wrapper around the open-source flock library with a more user-friendly interface
+
+type Locker interface {
+	WithLock(cb func() error) error
+}
 
 // Options holds necessary attributes for a file lock with a timeout.
 type Options struct {
-	Path          string        // Path to file to use for lock
 	RetryInterval time.Duration // RetryInterval how often to retry lock attempts
 	Timeout       time.Duration // Timeout how long to wait for the lock before giving up
 }
 
-// Error for errors generated in the flock package
-type Error struct {
-	message string // message custom message for this error
-	Err     error  // Err underlying error (if there was one)
-}
+type Option func(*Options)
 
-// Error() implements error interface
-func (err *Error) Error() string {
-	return err.message
-}
+func NewLocker(lockFile string, options ...Option) Locker {
+	opts := Options{
+		Timeout:       5 * time.Second,
+		RetryInterval: 100 * time.Millisecond,
+	}
 
-// newError constructs an Error from underlying error, format string and args
-func newError(err error, format string, args ...interface{}) *Error {
-	return &Error{
-		message: fmt.Sprintf(format, args...),
-		Err:     err,
+	for _, optFn := range options {
+		optFn(&opts)
+	}
+
+	return &locker{
+		file:    lockFile,
+		options: opts,
 	}
 }
 
-// WithLock executes a callback function with a global exclusive file-system lock
-// If the lock is never acquired, the returned error will be of type flock.Error
-// Else, the error will be whatever was returned by the callback function
-func WithLock(options Options, syncFn func() error) error {
-	lock := flock.New(options.Path)
+type locker struct {
+	file    string
+	options Options
+}
 
-	ctx, cancel := context.WithTimeout(context.Background(), options.Timeout)
+func (l *locker) WithLock(userFn func() error) error {
+	lock, err := l.tryLock()
+	if err != nil {
+		return err
+	}
+
+	err = userFn()
+
+	unlockErr := lock.Unlock()
+	if err == nil {
+		return unlockErr
+	}
+	if unlockErr != nil {
+		log.Error().Err(unlockErr).Msgf("error releasing lock on %s: %v", l.file, unlockErr)
+	}
+	return err
+}
+
+func (l *locker) tryLock() (*flock.Flock, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), l.options.Timeout)
 	defer cancel()
 
 	// Wait for lock
-	log.Debug().Msgf("Attempting to acquire lock on %s, will time out after %s", options.Path, options.Timeout)
-	locked, err := lock.TryLockContext(ctx, options.RetryInterval)
+	log.Debug().Msgf("Attempting to acquire lock on %s, will time out after %s", l.file, l.options.Timeout)
+
+	lock := flock.New(l.file)
+	locked, err := lock.TryLockContext(ctx, l.options.RetryInterval)
 	if err != nil || !locked {
-		return newError(err, "error acquiring lock on %s (timeout %s): %v", options.Path, options.Timeout, err)
+		return nil, errors.WithMessagef(err, "error acquiring lock on %s (timeout %s): %v", l.file, l.options.Timeout, err)
 	}
-	log.Debug().Msgf("Acquired lock on %s", options.Path)
 
-	// Defer unlock, logging an error if something goes wrong when we release the lock
-	defer func() {
-		if err := lock.Unlock(); err != nil {
-			log.Error().Msgf("error releasing lock on %s: %v", options.Path, err)
-		}
-	}()
-
-	// Invoke callback
-	return syncFn()
+	log.Debug().Msgf("Acquired lock on %s", l.file)
+	return lock, nil
 }

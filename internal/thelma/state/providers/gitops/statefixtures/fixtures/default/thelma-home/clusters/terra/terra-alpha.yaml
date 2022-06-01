@@ -1,5 +1,7 @@
 # Configuration overrides for the terra-alpha cluster
 
 address: https://34.70.215.101
+project: broad-dsde-alpha
+location: us-central1-a
 
 releases: {}

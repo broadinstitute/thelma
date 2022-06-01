@@ -13,6 +13,8 @@ type Destination struct {
 	// ConfigName configuration name for this environment for cluster.
 	// (same as Name except for dynamically-created environments)
 	ConfigName string `yaml:"ConfigName"`
+	// RequireSuitable whether users must be suitable in order to access/deploy to this destination
+	RequireSuitable bool `yaml:"RequireSuitable"`
 }
 
 func forDestination(destination terra.Destination) Destination {
@@ -28,9 +30,10 @@ func forDestination(destination terra.Destination) Destination {
 	}
 
 	return Destination{
-		Name:       destination.Name(),
-		Type:       destination.Type().String(),
-		ConfigBase: destination.Base(),
-		ConfigName: configName,
+		Name:            destination.Name(),
+		Type:            destination.Type().String(),
+		ConfigBase:      destination.Base(),
+		ConfigName:      configName,
+		RequireSuitable: destination.RequireSuitable(),
 	}
 }
