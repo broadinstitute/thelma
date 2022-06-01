@@ -13,6 +13,8 @@ google:
   # authenticate to Google Cloud services using a service account from Vault
   auth:
     type: vault-sa
+    adc:
+      verifybroademail: false
 
 iap:
   # use workloadidentity to generate iap credentials instead of browser
