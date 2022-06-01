@@ -95,8 +95,8 @@ func (c *kubeconfig) addAllReleases(env terra.Environment) ([]kubectx, error) {
 	// add context for any releases that aren't in the environment's default cluster
 	for _, release := range env.Releases() {
 		if release.Cluster().Name() != env.DefaultCluster().Name() {
-			_kubectx := c.kubectxForRelease(release)
-			if err := c.writeContext(_kubectx); err != nil {
+			_kubectx, err := c.addRelease(release)
+			if err != nil {
 				return nil, err
 			}
 			kubectxts = append(kubectxts, _kubectx)

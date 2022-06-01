@@ -152,9 +152,7 @@ func (g *google) oauthCredentials() (*oauth2google.Credentials, error) {
 
 func (g *google) copyTokenScopes() []string {
 	var scopes []string
-	for _, s := range tokenScopes {
-		scopes = append(scopes, s)
-	}
+	scopes = append(scopes, tokenScopes...)
 	return scopes
 }
 
@@ -164,6 +162,9 @@ func (g *google) verifyTokenUsesBroadEmail(ctx context.Context, tokenSource oaut
 		return err
 	}
 	info, err := oauth2Service.Userinfo.Get().Do()
+	if err != nil {
+		return err
+	}
 
 	if !strings.HasSuffix(info.Email, broadEmailSuffix) {
 		return fmt.Errorf(`
