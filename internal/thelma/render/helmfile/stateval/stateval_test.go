@@ -31,10 +31,11 @@ func Test_BuildStateValues(t *testing.T) {
 					AppVersion: "2d309b1645a0",
 				},
 				Destination: Destination{
-					Name:       "dev",
-					Type:       "environment",
-					ConfigBase: "live",
-					ConfigName: "dev",
+					Name:            "dev",
+					Type:            "environment",
+					ConfigBase:      "live",
+					ConfigName:      "dev",
+					RequireSuitable: false,
 				},
 				Environment: Environment{
 					Name:     "dev",
@@ -55,6 +56,42 @@ func Test_BuildStateValues(t *testing.T) {
 			},
 		},
 		{
+			name:    "suitable release",
+			release: state.Release("sam", "prod"),
+			expectedAppValues: AppValues{
+				ChartPath: chartPath,
+				Release: Release{
+					Name:       "sam",
+					Type:       "app",
+					Namespace:  "terra-prod",
+					AppVersion: "8f69c32bd9fe",
+				},
+				Destination: Destination{
+					Name:            "prod",
+					Type:            "environment",
+					ConfigBase:      "live",
+					ConfigName:      "prod",
+					RequireSuitable: true,
+				},
+				Environment: Environment{
+					Name:     "prod",
+					IsHybrid: false,
+				},
+			},
+			expectedArgoApp: ArgoApp{
+				ProjectName:    "terra-prod",
+				ClusterName:    "terra-prod",
+				ClusterAddress: "https://35.232.149.177",
+			},
+			expectedArgoProject: ArgoProject{
+				ProjectName: "terra-prod",
+				Generator: Generator{
+					Name:             "terra-prod-generator",
+					TerraHelmfileRef: "",
+				},
+			},
+		},
+		{
 			name:    "template env release",
 			release: state.Release("sam", "swatomation"),
 			expectedAppValues: AppValues{
@@ -66,10 +103,11 @@ func Test_BuildStateValues(t *testing.T) {
 					AppVersion: "2d309b1645a0",
 				},
 				Destination: Destination{
-					Name:       "swatomation",
-					Type:       "environment",
-					ConfigBase: "bee",
-					ConfigName: "swatomation",
+					Name:            "swatomation",
+					Type:            "environment",
+					ConfigBase:      "bee",
+					ConfigName:      "swatomation",
+					RequireSuitable: false,
 				},
 				Environment: Environment{
 					Name:     "swatomation",
@@ -101,10 +139,11 @@ func Test_BuildStateValues(t *testing.T) {
 					AppVersion: "2d309b1645a0",
 				},
 				Destination: Destination{
-					Name:       "fiab-funky-chipmunk",
-					Type:       "environment",
-					ConfigBase: "bee",
-					ConfigName: "swatomation",
+					Name:            "fiab-funky-chipmunk",
+					Type:            "environment",
+					ConfigBase:      "bee",
+					ConfigName:      "swatomation",
+					RequireSuitable: false,
 				},
 				Environment: Environment{
 					Name:     "fiab-funky-chipmunk",
@@ -144,10 +183,11 @@ func Test_BuildStateValues(t *testing.T) {
 					Namespace: "default",
 				},
 				Destination: Destination{
-					Name:       "terra-dev",
-					Type:       "cluster",
-					ConfigBase: "terra",
-					ConfigName: "terra-dev",
+					Name:            "terra-dev",
+					Type:            "cluster",
+					ConfigBase:      "terra",
+					ConfigName:      "terra-dev",
+					RequireSuitable: false,
 				},
 				Cluster: Cluster{
 					Name: "terra-dev",

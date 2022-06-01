@@ -38,6 +38,8 @@ type Root interface {
 	ConfigDir() string
 	// InstallDir returns the Thelma installation directory ($ROOT/install)
 	InstallDir() string
+	// CreateDirectories create directories if they do not exist. Will be called as part of Thelma initialization
+	CreateDirectories() error
 }
 
 // Default returns a Root instance rooted at the default directory returned by DefaultDir
@@ -104,4 +106,20 @@ func (r root) InstallDir() string {
 
 func (r root) ConfigDir() string {
 	return path.Join(r.Dir(), "config")
+}
+
+func (r root) CreateDirectories() error {
+	dirs := []string{
+		r.CachesDir(),
+		r.CredentialsDir(),
+		r.ConfigDir(),
+		r.LogDir(),
+		r.InstallDir(),
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0600); err != nil {
+			return fmt.Errorf("error creating directory %s: %v", dir, err)
+		}
+	}
+	return nil
 }

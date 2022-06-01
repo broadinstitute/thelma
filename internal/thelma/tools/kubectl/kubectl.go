@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"path"
 )
@@ -50,9 +51,11 @@ type kubectl struct {
 }
 
 func (k *kubectl) ShutDown(env terra.Environment) error {
+	log.Info().Msgf("Downscaling all deployments in %s to 0 replicas", env.Name())
 	if err := k.runForEnv(env, []string{"scale", "--replicas=0", "deployment", "--all"}); err != nil {
 		return err
 	}
+	log.Info().Msgf("Downscaling all statefulsets in %s to 0 replicas", env.Name())
 	if err := k.runForEnv(env, []string{"scale", "--replicas=0", "statefulset", "--all"}); err != nil {
 		return err
 	}
@@ -64,6 +67,7 @@ func (k *kubectl) DeletePVCs(env terra.Environment) error {
 		// Guard against kabooming data in long-lived static environments (such as, for example, prod)
 		return fmt.Errorf("DeletePVCs can only be called for dynamic environments")
 	}
+	log.Info().Msgf("Deleting all PVCs in %s", env.Name())
 	return k.runForEnv(env, []string{"delete", "persistentvolumeclaims", "--all", "--wait=true"})
 }
 

@@ -3,7 +3,7 @@ package statebucket
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"sort"
@@ -58,13 +58,13 @@ type StateBucket interface {
 }
 
 // New returns a new statebucket
-func New(thelmaConfig config.Config, googleClients google.Clients) (StateBucket, error) {
+func New(thelmaConfig config.Config, bucketFactory api.BucketFactory) (StateBucket, error) {
 	cfg, err := loadConfig(thelmaConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	_bucket, err := googleClients.Bucket(cfg.Name)
+	_bucket, err := bucketFactory.Bucket(cfg.Name)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing state bucket %s: %v", cfg.Name, err)
 	}

@@ -17,8 +17,30 @@ var rf = filter.Releases()
 var ef = filter.Environments()
 var df = filter.Destinations()
 
-func TestSuitabilityIsLoaded(t *testing.T) {
-	t.Fatalf("Makek sure RequireSuitable is set properly on both clusters and environments")
+func TestRequireSuitableIsSetCorrectly(t *testing.T) {
+	thelmaBuilder := builder.NewBuilder().WithTestDefaults(t)
+	app, err := thelmaBuilder.Build()
+	require.NoError(t, err)
+
+	state, err := app.State()
+	require.NoError(t, err)
+
+	devCluster, err := state.Clusters().Get("terra-dev")
+	require.NoError(t, err)
+
+	devEnv, err := state.Environments().Get("dev")
+	require.NoError(t, err)
+
+	prodCluster, err := state.Clusters().Get("terra-prod")
+	require.NoError(t, err)
+
+	prodEnv, err := state.Environments().Get("prod")
+	require.NoError(t, err)
+
+	assert.False(t, devCluster.RequireSuitable())
+	assert.False(t, devEnv.RequireSuitable())
+	assert.True(t, prodCluster.RequireSuitable())
+	assert.True(t, prodEnv.RequireSuitable())
 }
 
 // verify the default fixture has the data we expect

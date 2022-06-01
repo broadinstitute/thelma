@@ -2,5 +2,7 @@
 base: terra
 
 address: https://35.224.104.186
+project: broad-dsde-perf
+location: us-central1-a
 
 releases: {}

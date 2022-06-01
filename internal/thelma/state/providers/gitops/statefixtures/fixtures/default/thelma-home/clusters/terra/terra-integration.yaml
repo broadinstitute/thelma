@@ -1,6 +1,8 @@
 # Configuration overrides for the terra-integration cluster
 
 address: https://34.70.205.77
+project: terra-kernel-k8s
+location: us-central1-a
 
 releases:
   diskmanager:

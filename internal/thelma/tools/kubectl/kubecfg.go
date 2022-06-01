@@ -125,7 +125,7 @@ func (c *kubeconfig) addRelease(release terra.Release) (kubectx, error) {
 // writeContext writes a context with the given name, namespace and target cluster to the kubeconfig file
 // a file lock is used to prevent concurrent updates from stomping on one another
 func (c *kubeconfig) writeContext(ctx kubectx) error {
-	log.Info().
+	log.Debug().
 		Str("context", ctx.contextName).
 		Str("namespace", ctx.namespace).
 		Str("cluster", ctx.cluster.Name()).
@@ -180,7 +180,7 @@ func (c *kubeconfig) writeContextUnsafe(contextName string, namespace string, cl
 	cfg.Contexts[contextName] = &clientcmdapi.Context{
 		Cluster:   cluster.Name(),
 		Namespace: namespace,
-		AuthInfo:  cluster.Name(),
+		AuthInfo:  defaultAuthInfo,
 	}
 
 	if len(cfg.AuthInfos) == 0 {
@@ -195,11 +195,12 @@ func (c *kubeconfig) writeContextUnsafe(contextName string, namespace string, cl
 	// https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuration
 	cfg.AuthInfos[defaultAuthInfo] = &clientcmdapi.AuthInfo{
 		// TODO we can use an exec command here to run thelma and print out the auth token.
+		// This would make kubecfg entries stable/re-usable, so we only need to generate them once.
+		// Eg. 	Exec: &clientcmdapi.ExecConfig{
+		//			Command: "thelma",
+		//			Args:    []string{"auth", "gcp", "--access-token", "--cluster", cluster.Name(), "--echo"},
+		//		},
 		Token: token.AccessToken,
-		Exec: &clientcmdapi.ExecConfig{
-			Command: "thelma",
-			Args:    []string{"auth", "gcp", "--access-token", "--cluster", cluster.Name(), "--echo"},
-		},
 	}
 
 	return clientcmd.WriteToFile(*cfg, c.file)

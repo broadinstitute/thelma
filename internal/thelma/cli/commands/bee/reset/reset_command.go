@@ -90,6 +90,8 @@ func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 	if err = kubectl.DeletePVCs(env); err != nil {
 		return err
 	}
+
+	log.Info().Msgf("Syncing ArgoCD to provision new disks and bring services back up")
 	if err = bees.SyncArgoAppsIn(env); err != nil {
 		return err
 	}

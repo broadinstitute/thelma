@@ -106,6 +106,9 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		rootDir = root.DefaultDir()
 	}
 	thelmaRoot := root.New(rootDir)
+	if err := thelmaRoot.CreateDirectories(); err != nil {
+		return nil, err
+	}
 
 	// Initialize config
 	var configOptions []config.Option

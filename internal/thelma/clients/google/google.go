@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	oauth2google "golang.org/x/oauth2/google"
@@ -51,11 +51,7 @@ type googleConfig struct {
 	}
 }
 
-type VaultClientFactory interface {
-	Vault() (*vaultapi.Client, error)
-}
-
-func New(thelmaConfig config.Config, thelmaRoot root.Root, shellRunner shell.Runner, vaultFactory VaultClientFactory) Clients {
+func New(thelmaConfig config.Config, thelmaRoot root.Root, shellRunner shell.Runner, vaultFactory api.VaultFactory) Clients {
 	return &google{
 		thelmaConfig: thelmaConfig,
 		thelmaRoot:   thelmaRoot,
@@ -68,7 +64,7 @@ type google struct {
 	thelmaConfig config.Config
 	thelmaRoot   root.Root
 	shellRunner  shell.Runner
-	vaultFactory VaultClientFactory
+	vaultFactory api.VaultFactory
 }
 
 func (g *google) Bucket(name string, options ...bucket.BucketOption) (bucket.Bucket, error) {
