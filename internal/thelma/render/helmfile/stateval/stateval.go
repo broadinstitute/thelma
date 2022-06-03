@@ -18,7 +18,7 @@ type AppValues struct {
 	Destination Destination `yaml:"Destination"`
 	// Environment environment where the release is being deployed (for app releases only)
 	Environment Environment `yaml:"Environment,omitempty"`
-	// Cluster cluster where the release is being deployed (for cluster releases only)
+	// Cluster cluster where the release is being deployed
 	Cluster Cluster `yaml:"Cluster,omitempty"`
 }
 
@@ -33,8 +33,8 @@ type ArgoAppValues struct {
 	ArgoApp ArgoApp `yaml:"ArgoApp"`
 	// Environment environment where the release is being deployed (for app releases only)
 	Environment Environment `yaml:"Environment,omitempty"`
-	// Cluster cluster where the release is being deployed (for cluster releases only)
-	Cluster Cluster `yaml:"Cluster,omitempty"`
+	// Cluster cluster where the release is being deployed
+	Cluster Cluster `yaml:"Cluster"`
 }
 
 // ArgoProjectValues -- the full set of helmfile state values for rendering argo projects
@@ -56,9 +56,7 @@ func BuildAppValues(r terra.Release, chartPath string) AppValues {
 	if r.Destination().IsEnvironment() {
 		values.Environment = forEnvironment(r.Destination().(terra.Environment))
 	}
-	if r.Destination().IsCluster() {
-		values.Cluster = forCluster(r.Destination().(terra.Cluster))
-	}
+	values.Cluster = forCluster(r.Cluster())
 	return values
 }
 
@@ -72,13 +70,11 @@ func BuildArgoAppValues(r terra.Release) ArgoAppValues {
 	if r.Destination().IsEnvironment() {
 		values.Environment = forEnvironment(r.Destination().(terra.Environment))
 	}
-	if r.Destination().IsCluster() {
-		values.Cluster = forCluster(r.Destination().(terra.Cluster))
-	}
+	values.Cluster = forCluster(r.Cluster())
 	return values
 }
 
-// BuildArgoProjectValues genreates an ArgoProjectValues for the given destination
+// BuildArgoProjectValues generates an ArgoProjectValues for the given destination
 func BuildArgoProjectValues(d terra.Destination) ArgoProjectValues {
 	return ArgoProjectValues{
 		Destination: forDestination(d),

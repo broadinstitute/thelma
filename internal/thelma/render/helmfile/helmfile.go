@@ -255,7 +255,7 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 		Str("chartVersion", resolvedChart.Version()).
 		Str("chartSource", resolvedChart.SourceDescription())
 	if release.IsAppRelease() {
-		logEvent.Str("appVersion", release.(terra.AppRelease).AppVersion())
+		logEvent.Str("appVersion", stateValues.Release.AppVersion)
 	}
 	logEvent.Msgf("Rendering %s in %s", release.Name(), release.Destination().Name())
 
