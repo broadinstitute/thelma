@@ -41,6 +41,11 @@ func Test_BuildStateValues(t *testing.T) {
 					Name:     "dev",
 					IsHybrid: false,
 				},
+				Cluster: Cluster{
+					Name:                "terra-dev",
+					GoogleProject:       "broad-dsde-dev",
+					GoogleProjectSuffix: "dev",
+				},
 			},
 			expectedArgoApp: ArgoApp{
 				ProjectName:    "terra-dev",
@@ -77,6 +82,11 @@ func Test_BuildStateValues(t *testing.T) {
 					Name:     "prod",
 					IsHybrid: false,
 				},
+				Cluster: Cluster{
+					Name:                "terra-prod",
+					GoogleProject:       "broad-dsde-prod",
+					GoogleProjectSuffix: "prod",
+				},
 			},
 			expectedArgoApp: ArgoApp{
 				ProjectName:    "terra-prod",
@@ -112,6 +122,11 @@ func Test_BuildStateValues(t *testing.T) {
 				Environment: Environment{
 					Name:     "swatomation",
 					IsHybrid: false,
+				},
+				Cluster: Cluster{
+					Name:                "terra-qa",
+					GoogleProject:       "broad-dsde-qa",
+					GoogleProjectSuffix: "qa",
 				},
 			},
 			expectedArgoApp: ArgoApp{
@@ -156,6 +171,11 @@ func Test_BuildStateValues(t *testing.T) {
 						IP:   "10.0.0.2",
 					},
 				},
+				Cluster: Cluster{
+					Name:                "terra-qa",
+					GoogleProject:       "broad-dsde-qa",
+					GoogleProjectSuffix: "qa",
+				},
 			},
 			expectedArgoApp: ArgoApp{
 				ProjectName:         "terra-fiab-funky-chipmunk",
@@ -190,7 +210,9 @@ func Test_BuildStateValues(t *testing.T) {
 					RequireSuitable: false,
 				},
 				Cluster: Cluster{
-					Name: "terra-dev",
+					Name:                "terra-dev",
+					GoogleProject:       "broad-dsde-dev",
+					GoogleProjectSuffix: "dev",
 				},
 			},
 			expectedArgoApp: ArgoApp{
