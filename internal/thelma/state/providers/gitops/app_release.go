@@ -9,9 +9,9 @@ import (
 // implements the terra.AppRelease interface
 type appRelease struct {
 	appVersion string
-	subdomain  string
-	protocol   string
-	port       int
+	subdomain  string // subdomain that the app will be available on
+	protocol   string // primary protocol that the app can be contacted on
+	port       int    // port that the app can be contacted on via protocol
 	release
 }
 
