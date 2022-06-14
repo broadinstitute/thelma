@@ -9,22 +9,37 @@ const envNamespacePrefix = "terra-"
 
 // implements the terra.Environment interface
 type environment struct {
-	defaultCluster terra.Cluster          // Default cluster for this environment.
-	releases       map[string]*appRelease // Set of releases configured in this environment
-	lifecycle      terra.Lifecycle        // Lifecycle for this environment
-	template       string                 // Template for this environment, if it has one
-	fiab           terra.Fiab             // DEPRECATED fiab associated with this environment, if there is one
+	defaultCluster     terra.Cluster          // Default cluster for this environment.
+	releases           map[string]*appRelease // Set of releases configured in this environment
+	lifecycle          terra.Lifecycle        // Lifecycle for this environment
+	template           string                 // Template for this environment, if it has one
+	fiab               terra.Fiab             // DEPRECATED fiab associated with this environment, if there is one
+	baseDomain         string
+	namePrefixesDomain bool
 	destination
 }
 
 // newEnvironment constructs a new Environment
-func newEnvironment(name string, base string, defaultCluster terra.Cluster, lifecycle terra.Lifecycle, template string, fiab terra.Fiab, requireSuitable bool, releases map[string]*appRelease) *environment {
+func newEnvironment(
+	name string,
+	base string,
+	defaultCluster terra.Cluster,
+	lifecycle terra.Lifecycle,
+	template string,
+	fiab terra.Fiab,
+	requireSuitable bool,
+	baseDomain string,
+	namePrefixesDomain bool,
+	releases map[string]*appRelease,
+) *environment {
 	return &environment{
-		defaultCluster: defaultCluster,
-		releases:       releases,
-		lifecycle:      lifecycle,
-		template:       template,
-		fiab:           fiab,
+		defaultCluster:     defaultCluster,
+		releases:           releases,
+		lifecycle:          lifecycle,
+		template:           template,
+		fiab:               fiab,
+		baseDomain:         baseDomain,
+		namePrefixesDomain: namePrefixesDomain,
 		destination: destination{
 			name:            name,
 			base:            base,
@@ -81,6 +96,14 @@ func (e *environment) IsHybrid() bool {
 
 func (e *environment) Fiab() terra.Fiab {
 	return e.fiab
+}
+
+func (e *environment) BaseDomain() string {
+	return e.baseDomain
+}
+
+func (e *environment) NamePrefixesDomain() bool {
+	return e.namePrefixesDomain
 }
 
 // environmentNamespace return environment namespace for a given environment name

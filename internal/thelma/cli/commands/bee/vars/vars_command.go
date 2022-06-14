@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -69,23 +70,21 @@ func (cmd *varsCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 
 		fmt.Println("HYBRID_FIAB=true")
 
-		for _, r := range env.Releases() {
-			upname := strings.ToUpper(r.Name())
-			proto := "https"
-			port := 443
-
-			if r.Name() == "opendj" {
-				proto = "ldap"
-				port = 389
+		for _, release := range env.Releases() {
+			if release.IsAppRelease() {
+				appRelease, wasAppRelease := release.(terra.AppRelease)
+				if wasAppRelease {
+					upname := strings.ToUpper(appRelease.Name())
+					fmt.Printf("%s_HOST=%s\n", upname, appRelease.Host())
+					fmt.Printf("%s_URL=%s\n", upname, appRelease.URL())
+					fmt.Printf("%s_PORT=%d\n", upname, appRelease.Port())
+					fmt.Printf("%s_PROTO=%s\n", upname, appRelease.Protocol())
+				} else {
+					log.Error().Msgf("%s was an App Release but failed to type-assert", release.Name())
+				}
+			} else {
+				log.Error().Msgf("%s was not an App Release", release.Name())
 			}
-
-			host := fmt.Sprintf("%s.%s.bee.envs-terra.bio", r.Name(), env.Name())
-			url := fmt.Sprintf("%s://%s", proto, host)
-
-			fmt.Printf("%s_HOST=%s\n", upname, host)
-			fmt.Printf("%s_URL=%s\n", upname, url)
-			fmt.Printf("%s_PORT=%d\n", upname, port)
-			fmt.Printf("%s_PROTO=%s\n", upname, proto)
 		}
 	}
 

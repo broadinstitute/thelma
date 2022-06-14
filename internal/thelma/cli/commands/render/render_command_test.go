@@ -241,6 +241,7 @@ func TestRenderArgParsing(t *testing.T) {
 					fixture.Release("sam", "fiab-nerdy-walrus"),
 					fixture.Release("rawls", "fiab-nerdy-walrus"),
 					fixture.Release("opendj", "fiab-nerdy-walrus"),
+					fixture.Release("workspacemanager", "fiab-nerdy-walrus"),
 				}
 				return nil
 			},

@@ -1,10 +1,12 @@
 package serializers
 
 type Environment struct {
-	DefaultCluster  string                `yaml:"defaultCluster"`
-	Releases        map[string]AppRelease `yaml:"releases"`
-	Lifecycle       string                `yaml:"lifecycle"`
-	RequireSuitable bool                  `yaml:"requireSuitable"`
+	DefaultCluster     string                `yaml:"defaultCluster"`
+	Releases           map[string]AppRelease `yaml:"releases"`
+	Lifecycle          string                `yaml:"lifecycle"`
+	RequireSuitable    bool                  `yaml:"requireSuitable"`
+	BaseDomain         string                `yaml:"baseDomain"`
+	NamePrefixesDomain bool                  `yaml:"namePrefixesDomain"`
 }
 
 type Cluster struct {
@@ -30,4 +32,7 @@ type AppRelease struct {
 	ChartName    string `yaml:"chartName"`
 	ChartVersion string `yaml:"chartVersion"`
 	Repo         string `yaml:"repo"`
+	Subdomain    string `yaml:"subdomain"`
+	Protocol     string `yaml:"protocol"`
+	Port         int    `yaml:"port"`
 }

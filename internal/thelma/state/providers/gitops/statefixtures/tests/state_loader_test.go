@@ -247,11 +247,56 @@ func Test_EnvironmentAttributes(t *testing.T) {
 	assert.Equal(t, terra.Static, devEnv.Lifecycle())
 	assert.False(t, devEnv.IsHybrid())
 
-	assert.Equal(t, 5, len(swatEnv.Releases()))
+	assert.Equal(t, 6, len(swatEnv.Releases()))
 	assert.Equal(t, terra.Template, swatEnv.Lifecycle())
 	assert.False(t, swatEnv.IsHybrid())
 
-	assert.Equal(t, 5, len(hybridEnv.Releases()))
+	assert.Equal(t, 6, len(hybridEnv.Releases()))
 	assert.Equal(t, terra.Dynamic, hybridEnv.Lifecycle())
 	assert.True(t, hybridEnv.IsHybrid())
+}
+
+func Test_ReleaseURLs(t *testing.T) {
+	f := statefixtures.LoadFixture(statefixtures.Default, t)
+
+	devReleases := make(map[string]terra.AppRelease)
+	for _, r := range f.Environment("dev").Releases() {
+		devReleases[r.Name()] = r.(terra.AppRelease)
+	}
+	perfReleases := make(map[string]terra.AppRelease)
+	for _, r := range f.Environment("perf").Releases() {
+		perfReleases[r.Name()] = r.(terra.AppRelease)
+	}
+	swatReleases := make(map[string]terra.AppRelease)
+	for _, r := range f.Environment("swatomation").Releases() {
+		swatReleases[r.Name()] = r.(terra.AppRelease)
+	}
+	beeReleases := make(map[string]terra.AppRelease)
+	for _, r := range f.Environment("fiab-funky-chipmunk").Releases() {
+		beeReleases[r.Name()] = r.(terra.AppRelease)
+	}
+
+	t.Run("domain handled per environment via flag", func(t *testing.T) {
+		assert.Equal(t, "leonardo", devReleases["leonardo"].Host()) // env defines no domain at all
+		assert.Equal(t, "leonardo.dsde-perf.broadinstitute.org", perfReleases["leonardo"].Host())
+		assert.Equal(t, "leonardo.swatomation.bee.envs-terra.bio", swatReleases["leonardo"].Host())
+		assert.Equal(t, "leonardo.fiab-funky-chipmunk.bee.envs-terra.bio", beeReleases["leonardo"].Host())
+	})
+	t.Run("protocol can be overridden", func(t *testing.T) {
+		assert.Equal(t, "ldap://opendj.fiab-funky-chipmunk.bee.envs-terra.bio", beeReleases["opendj"].URL())
+		assert.Equal(t, "https://leonardo.fiab-funky-chipmunk.bee.envs-terra.bio", beeReleases["leonardo"].URL())
+	})
+	t.Run("port can be overridden", func(t *testing.T) {
+		assert.Equal(t, 389, beeReleases["opendj"].Port())
+		assert.Equal(t, 443, beeReleases["leonardo"].Port())
+	})
+	t.Run("subdomain can be overridden", func(t *testing.T) {
+		assert.Equal(t, "https://workspace.fiab-funky-chipmunk.bee.envs-terra.bio", beeReleases["workspacemanager"].URL())
+		assert.Equal(t, "https://leonardo.fiab-funky-chipmunk.bee.envs-terra.bio", beeReleases["leonardo"].URL())
+	})
+	t.Run("defaults still work outside bees", func(t *testing.T) {
+		assert.Equal(t, 443, devReleases["leonardo"].Port())
+		assert.Equal(t, "leonardo", devReleases["leonardo"].Subdomain())
+		assert.Equal(t, "https", devReleases["leonardo"].Protocol())
+	})
 }

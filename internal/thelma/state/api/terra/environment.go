@@ -14,5 +14,12 @@ type Environment interface {
 	IsHybrid() bool
 	// Fiab DEPRECATED returns the Fiab associated with this hybrid environment (nil if this is not a hybrid environment)
 	Fiab() Fiab
+	// BaseDomain returns static domain name part for this environment or environment type.
+	// E.g. "bee.envs-terra.bio", "dsde-prod.broadinstitute.org"
+	BaseDomain() string
+	// NamePrefixesDomain returns whether this particular environment's name should come before its BaseDomain when
+	// deriving full hostnames/URLs in this environment.
+	// E.g. 'true' for dynamic/template environments, 'false' for static
+	NamePrefixesDomain() bool
 	Destination
 }
