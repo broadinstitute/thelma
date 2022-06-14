@@ -14,8 +14,8 @@ type environment struct {
 	lifecycle          terra.Lifecycle        // Lifecycle for this environment
 	template           string                 // Template for this environment, if it has one
 	fiab               terra.Fiab             // DEPRECATED fiab associated with this environment, if there is one
-	baseDomain         string
-	namePrefixesDomain bool
+	baseDomain         string                 // the stable domain part for this environment
+	namePrefixesDomain bool                   // if baseDomain should be prefixed with destination.name
 	destination
 }
 
