@@ -93,39 +93,41 @@ func (cmd *unseedCommand) step1UnregisterAllUsers(thelma app.ThelmaApp, appRelea
 
 		log.Info().Msgf("found %d users to remove", len(userEmailToID))
 
-		googleClient, err := seed.GoogleAuthAs(thelma, sam)
-		if err != nil {
-			return fmt.Errorf("couldn't prepare Google authentication as Sam's SA: %v", err)
-		}
-		terraClient, err := googleClient.Terra()
-		if err != nil {
-			return fmt.Errorf("error authenticating to Google: %v", err)
-		}
-
-		samEmail := terraClient.GoogleUserInfo().Email
-		if _, exists := userEmailToID[samEmail]; !exists {
-			if err := cmd.handleErrorWithForce(fmt.Errorf("%s (Sam's SA) is not a Sam user and cannot unregister users", samEmail)); err != nil {
-				return err
+		if len(userEmailToID) > 0 {
+			googleClient, err := seed.GoogleAuthAs(thelma, sam)
+			if err != nil {
+				return fmt.Errorf("couldn't prepare Google authentication as Sam's SA: %v", err)
 			}
-		}
+			terraClient, err := googleClient.Terra()
+			if err != nil {
+				return fmt.Errorf("error authenticating to Google: %v", err)
+			}
 
-		for email, id := range userEmailToID {
-			if email != samEmail {
-				log.Info().Msgf("unregistering %s", email)
-				_, _, err = terraClient.Sam(sam).UnregisterUser(id)
-				if err := cmd.handleErrorWithForce(err); err != nil {
-					return fmt.Errorf("error unregistering %s (%s): %v", email, id, err)
+			samEmail := terraClient.GoogleUserInfo().Email
+			if _, exists := userEmailToID[samEmail]; !exists {
+				if err := cmd.handleErrorWithForce(fmt.Errorf("%s (Sam's SA) is not a Sam user and cannot unregister users", samEmail)); err != nil {
+					return err
 				}
-			} else {
-				log.Debug().Msgf("skipping %s for now since it is %s's own user, can't delete it yet", id, samEmail)
 			}
-		}
 
-		if samId, exists := userEmailToID[samEmail]; exists {
-			log.Info().Msgf("unregistering Sam's own %s user", samEmail)
-			_, _, err = terraClient.Sam(sam).UnregisterUser(samId)
-			if err := cmd.handleErrorWithForce(err); err != nil {
-				return fmt.Errorf("error unregistering %s (%s): %v", samEmail, samId, err)
+			for email, id := range userEmailToID {
+				if email != samEmail {
+					log.Info().Msgf("unregistering %s", email)
+					_, _, err = terraClient.Sam(sam).UnregisterUser(id)
+					if err := cmd.handleErrorWithForce(err); err != nil {
+						return fmt.Errorf("error unregistering %s (%s): %v", email, id, err)
+					}
+				} else {
+					log.Debug().Msgf("skipping %s for now since it is %s's own user, can't delete it yet", id, samEmail)
+				}
+			}
+
+			if samId, exists := userEmailToID[samEmail]; exists {
+				log.Info().Msgf("unregistering Sam's own %s user", samEmail)
+				_, _, err = terraClient.Sam(sam).UnregisterUser(samId)
+				if err := cmd.handleErrorWithForce(err); err != nil {
+					return fmt.Errorf("error unregistering %s (%s): %v", samEmail, samId, err)
+				}
 			}
 		}
 

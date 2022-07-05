@@ -172,7 +172,6 @@ type realSubprocess struct {
 }
 
 func (s *realSubprocess) Start() error {
-	s.execCmd.StdoutPipe()
 	return s.execCmd.Start()
 }
 
