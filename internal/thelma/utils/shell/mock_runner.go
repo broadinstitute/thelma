@@ -138,16 +138,7 @@ func CmdFromArgs(args ...string) Command {
 
 // Run Instead of executing the command, logs an info message and registers the call with testify mock
 func (m *MockRunner) Run(cmd Command, options ...RunOption) error {
-	// collate options
-	opts := defaultRunOptions()
-	for _, option := range options {
-		option(&opts)
-	}
-
-	log.Info().Msgf("[MockRunner] Command: %q\n", cmd.PrettyFormat())
-
-	// Remove ignored attributes
-	cmd = m.applyIgnores(cmd)
+	cmd, opts := m.prepareCmd(cmd, options...)
 
 	// we synchronize Run calls on the mock because testify mock isn't safe for concurrent access, and neither are our
 	// order verification callback hooks
@@ -161,11 +152,49 @@ func (m *MockRunner) Run(cmd Command, options ...RunOption) error {
 	return nil
 }
 
+// PrepareSubprocess creates a Subprocess with a Start method that has the same mock behavior as Run.
+// Note that this isn't sufficient to fully mock parallel execution; this exists largely to maintain
+// type compatibility with the very real implementation offered by RealRunner.
+func (m *MockRunner) PrepareSubprocess(cmd Command, options ...RunOption) Subprocess {
+	cmd, opts := m.prepareCmd(cmd, options...)
+	return &mockSubprocess{
+		cmd:    cmd,
+		opts:   opts,
+		runner: m,
+	}
+}
+
+func (m *MockRunner) prepareCmd(cmd Command, options ...RunOption) (Command, RunOptions) {
+	// collate options
+	opts := defaultRunOptions()
+	for _, option := range options {
+		option(&opts)
+	}
+
+	log.Info().Msgf("[MockRunner] Command: %q\n", cmd.PrettyFormat())
+
+	// Remove ignored attributes
+	cmd = m.applyIgnores(cmd)
+
+	return cmd, opts
+}
+
 // ExpectCmd sets an expectation for a command that should be run.
 func (m *MockRunner) ExpectCmd(cmd Command) *Call {
 	cmd = m.applyIgnores(cmd)
-
 	mockCall := m.Mock.On("Run", cmd, mock.AnythingOfType("RunOptions"))
+	return m.addOrderingCheck(cmd, mockCall)
+}
+
+// ExpectSubprocessCmd sets an expectation for a command run from a Subprocess.
+func (m *MockRunner) ExpectSubprocessCmd(cmd Command) *Call {
+	cmd = m.applyIgnores(cmd)
+	mockCall := m.Mock.On("Start", cmd, mock.AnythingOfType("RunOptions"))
+	return m.addOrderingCheck(cmd, mockCall)
+}
+
+// addOrderingCheck is a common helper for ExpectCmd and ExpectSubprocessCmd checking ordering
+func (m *MockRunner) addOrderingCheck(cmd Command, mockCall *mock.Call) *Call {
 	callWrapper := &Call{
 		command: cmd,
 		Call:    mockCall,
@@ -298,4 +327,31 @@ func (m *MockRunner) panicOrFailNow(err error) {
 	}
 	m.t.Error(err)
 	m.t.FailNow()
+}
+
+type mockSubprocess struct {
+	cmd    Command
+	opts   RunOptions
+	runner *MockRunner
+}
+
+func (s *mockSubprocess) Start() error {
+	// we synchronize Run calls on the mock because testify mock isn't safe for concurrent access, and neither are our
+	// order verification callback hooks
+	s.runner.mutex.Lock()
+	defer s.runner.mutex.Unlock()
+
+	args := s.runner.Mock.Called(s.cmd, s.opts)
+	if len(args) > 0 {
+		return args.Error(0)
+	}
+	return nil
+}
+
+func (s *mockSubprocess) Wait() error {
+	return nil
+}
+
+func (s *mockSubprocess) Stop() error {
+	return nil
 }

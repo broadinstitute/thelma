@@ -1,6 +1,9 @@
 package gitops
 
-import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+import (
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"strings"
+)
 
 // Cluster represents a Terra cluster
 type cluster struct {
@@ -43,6 +46,11 @@ func (c *cluster) Address() string {
 
 func (c *cluster) Project() string {
 	return c.project
+}
+
+func (c *cluster) ProjectSuffix() string {
+	tokens := strings.Split(c.Project(), "-")
+	return tokens[len(tokens)-1]
 }
 
 func (c *cluster) Location() string {
