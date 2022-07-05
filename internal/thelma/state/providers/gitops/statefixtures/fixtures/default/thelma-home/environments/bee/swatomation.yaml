@@ -7,7 +7,12 @@ releases:
     enabled: true
   opendj:
     enabled: true
+    port: 389
+    protocol: ldap
   rawls:
     enabled: true
   sam:
     enabled: true
+  workspacemanager:
+    enabled: true
+    subdomain: workspace

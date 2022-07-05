@@ -132,6 +132,9 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 					terraHelmfileRef: dynamicEnv.TerraHelmfileRef, // might be overridden, but default to env-wide setting
 				},
 				appVersion: templateRelease.AppVersion(),
+				subdomain:  templateRelease.Subdomain(),
+				protocol:   templateRelease.Protocol(),
+				port:       templateRelease.Port(),
 			}
 
 			// apply dynamic overrides
@@ -157,7 +160,18 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 			_releases[templateRelease.Name()] = _release
 		}
 
-		env := newEnvironment(dynamicEnv.Name, template.Base(), template.DefaultCluster(), terra.Dynamic, template.Name(), _fiab, template.requireSuitable, _releases)
+		env := newEnvironment(
+			dynamicEnv.Name,
+			template.Base(),
+			template.DefaultCluster(),
+			terra.Dynamic,
+			template.Name(),
+			_fiab,
+			template.requireSuitable,
+			template.baseDomain,
+			template.namePrefixesDomain,
+			_releases,
+		)
 		env.terraHelmfileRef = dynamicEnv.TerraHelmfileRef
 
 		result[dynamicEnv.Name] = env
@@ -277,6 +291,9 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 
 		_release := &appRelease{
 			appVersion: appVersion,
+			subdomain:  releaseDefn.Subdomain,
+			protocol:   releaseDefn.Protocol,
+			port:       releaseDefn.Port,
 			release: release{
 				name:         releaseName,
 				enabled:      releaseDefn.Enabled,
@@ -300,6 +317,8 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		"",
 		nil,
 		envConfig.RequireSuitable,
+		envConfig.BaseDomain,
+		envConfig.NamePrefixesDomain,
 		_releases,
 	)
 
