@@ -63,6 +63,9 @@ func (c *terraClient) doJsonRequest(method string, url string, body io.Reader) (
 		return response, "", err
 	}
 	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return response, "", err
+	}
 	if response.StatusCode > 299 {
 		return response, string(responseBody), fmt.Errorf("%s from %s (%s)", response.Status, url, responseBody)
 	}
