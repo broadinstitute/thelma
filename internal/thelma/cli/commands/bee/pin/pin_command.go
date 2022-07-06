@@ -116,7 +116,7 @@ func (cmd *pinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin to specific firecloud-develop ref")
 	cobraCommand.Flags().StringVar(&cmd.options.versionsFile, flagNames.versionsFile, "", "Path to versions file")
 	cobraCommand.Flags().StringVar(&cmd.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
-	cobraCommand.Flags().IntVar(&cmd.options.buildNumber, flagNames.buildNumber, 0, "Build number to set")
+	cobraCommand.Flags().IntVar(&cmd.options.buildNumber, flagNames.buildNumber, 0, "Configure environment's currently running build number (for use in CI/CD pipelines)")
 	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 	cobraCommand.Flags().BoolVar(&cmd.options.sync, flagNames.sync, true, "Sync all services in BEE after updating versions")
 	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
