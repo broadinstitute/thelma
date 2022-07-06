@@ -177,6 +177,18 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Equal(t, "", versions["sam"].TerraHelmfileRef)
 			assert.Equal(t, "my-fc-branch", versions["sam"].FirecloudDevelopRef)
 
+			// set build number
+			assert.Equal(t, 0, envs[0].BuildNumber)
+			oldNumber, err := sb.SetBuildNumber(envs[0].Name, 123)
+			require.NoError(t, err)
+			assert.Equal(t, 0, oldNumber)
+			oldNumber, err = sb.SetBuildNumber(envs[0].Name, 456)
+			require.NoError(t, err)
+			assert.Equal(t, 123, oldNumber)
+			oldNumber, err = sb.UnsetBuildNumber(envs[0].Name)
+			require.NoError(t, err)
+			assert.Equal(t, 456, oldNumber)
+
 			// reload environments
 			envs, err = sb.Environments()
 			require.NoError(t, err)
@@ -192,6 +204,9 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.True(t, envs[0].Overrides["sam"].IsEnabled())
 			assert.True(t, envs[0].Overrides["leonardo"].HasEnableOverride())
 			assert.False(t, envs[0].Overrides["leonardo"].IsEnabled())
+
+			// make sure build number is 0
+			assert.Equal(t, 0, envs[0].BuildNumber)
 		})
 	}
 }

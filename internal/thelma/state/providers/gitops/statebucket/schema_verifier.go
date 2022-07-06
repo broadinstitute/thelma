@@ -43,7 +43,7 @@ func (s *schemaVerifier) update(fn transformFn) error {
 func (s *schemaVerifier) checkSchemaVersion(state StateFile) error {
 	if state.SchemaVersion > s.schemaVersion {
 		return fmt.Errorf("statefile schema version %d is greater than %d, the latest "+
-			"schema support by this version of Thelma. Upgrade Thelma to use features that interact with the "+
+			"schema supported by this version of Thelma. Upgrade Thelma to use features that interact with the "+
 			"state file", state.SchemaVersion, s.schemaVersion)
 	}
 	return nil

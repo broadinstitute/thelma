@@ -91,6 +91,12 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 	log.Info().Msgf("Removed all version overrides for %s", cmd.options.name)
 
+	buildNumber, err := state.Environments().UnsetBuildNumber(cmd.options.name)
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("Unset build number for %s (was %d)", cmd.options.name, buildNumber)
+
 	if err = bees.RefreshBeeGenerator(); err != nil {
 		return err
 	}

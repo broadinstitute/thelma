@@ -21,5 +21,8 @@ type Environment interface {
 	// deriving full hostnames/URLs in this environment.
 	// E.g. 'true' for dynamic/template environments, 'false' for static
 	NamePrefixesDomain() bool
+	// BuildNumber returns the current build number for any CI builds actively running against the environment.
+	// Returns 0 if no build number has been set.
+	BuildNumber() int
 	Destination
 }

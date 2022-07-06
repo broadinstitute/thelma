@@ -100,6 +100,14 @@ func (e *environments) UnpinVersions(environmentName string) (map[string]terra.V
 	return e.state.statebucket.UnpinVersions(environmentName)
 }
 
+func (e *environments) SetBuildNumber(environmentName string, buildNumber int) (int, error) {
+	return e.state.statebucket.SetBuildNumber(environmentName, buildNumber)
+}
+
+func (e *environments) UnsetBuildNumber(environmentName string) (int, error) {
+	return e.state.statebucket.UnsetBuildNumber(environmentName)
+}
+
 func (e *environments) Delete(name string) error {
 	return e.state.statebucket.Delete(name)
 }

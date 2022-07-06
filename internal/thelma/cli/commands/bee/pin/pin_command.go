@@ -59,6 +59,7 @@ type options struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
+	buildNumber         int
 	ifExists            bool
 	sync                bool
 	waitHealthy         bool
@@ -73,6 +74,7 @@ var flagNames = struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
+	buildNumber         string
 	releases            string
 	ifExists            string
 	sync                string
@@ -85,6 +87,7 @@ var flagNames = struct {
 	firecloudDevelopRef: "firecloud-develop-ref",
 	versionsFile:        "versions-file",
 	versionsFormat:      "versions-format",
+	buildNumber:         "build-number",
 	releases:            "releases",
 	ifExists:            "if-exists",
 	sync:                "sync",
@@ -113,6 +116,7 @@ func (cmd *pinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin to specific firecloud-develop ref")
 	cobraCommand.Flags().StringVar(&cmd.options.versionsFile, flagNames.versionsFile, "", "Path to versions file")
 	cobraCommand.Flags().StringVar(&cmd.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
+	cobraCommand.Flags().IntVar(&cmd.options.buildNumber, flagNames.buildNumber, 0, "Build number to set")
 	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 	cobraCommand.Flags().BoolVar(&cmd.options.sync, flagNames.sync, true, "Sync all services in BEE after updating versions")
 	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
@@ -174,6 +178,14 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	}
 
 	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
+
+	if cmd.options.buildNumber != 0 {
+		oldNumber, err := state.Environments().SetBuildNumber(cmd.options.name, cmd.options.buildNumber)
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("Set build number to %d for %s (was: %d)", cmd.options.buildNumber, cmd.options.name, oldNumber)
+	}
 
 	if err = bees.RefreshBeeGenerator(); err != nil {
 		return err

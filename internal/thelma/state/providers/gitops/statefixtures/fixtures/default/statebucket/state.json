@@ -8,7 +8,8 @@
       "fiab": {
         "name": "fiab-automation-swirly-rabbit",
         "ip": "10.0.0.1"
-      }
+      },
+      "buildNumber": 123
     },
     "fiab-funky-chipmunk": {
       "name": "fiab-funky-chipmunk",

@@ -16,6 +16,7 @@ type environment struct {
 	fiab               terra.Fiab             // DEPRECATED fiab associated with this environment, if there is one
 	baseDomain         string                 // the stable domain part for this environment
 	namePrefixesDomain bool                   // if baseDomain should be prefixed with destination.name
+	buildNumber        int                    // buildNumber number of a CI build running against the environment, if there is one
 	destination
 }
 
@@ -31,6 +32,7 @@ func newEnvironment(
 	baseDomain string,
 	namePrefixesDomain bool,
 	releases map[string]*appRelease,
+	buildNumber int,
 ) *environment {
 	return &environment{
 		defaultCluster:     defaultCluster,
@@ -40,6 +42,7 @@ func newEnvironment(
 		fiab:               fiab,
 		baseDomain:         baseDomain,
 		namePrefixesDomain: namePrefixesDomain,
+		buildNumber:        buildNumber,
 		destination: destination{
 			name:            name,
 			base:            base,
@@ -104,6 +107,10 @@ func (e *environment) BaseDomain() string {
 
 func (e *environment) NamePrefixesDomain() bool {
 	return e.namePrefixesDomain
+}
+
+func (e *environment) BuildNumber() int {
+	return e.buildNumber
 }
 
 // environmentNamespace return environment namespace for a given environment name

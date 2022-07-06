@@ -30,6 +30,10 @@ type Environments interface {
 	// PinEnvironmentToTerraHelmfileRef pins an environment to a specific terra-helmfile ref
 	// Note this can be overridden by individual service version overrides
 	PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error
+	// SetBuildNumber sets the number for the currently-running build, returning the previous value
+	SetBuildNumber(environmentName string, buildNumber int) (int, error)
+	// UnsetBuildNumber unsets the build number in an environment (i.e. sets it to zero)
+	UnsetBuildNumber(environmentName string) (int, error)
 	// Delete deletes the environment with the given name
 	Delete(name string) error
 }

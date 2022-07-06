@@ -29,7 +29,8 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
     "ip": "",
     "name": ""
   },
-  "terraHelmfileRef": ""
+  "terraHelmfileRef": "",
+  "buildNumber": 0
 }`,
 		},
 		{
@@ -38,6 +39,7 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
 				d.Name = "e1"
 				d.Template = "t1"
 				d.TerraHelmfileRef = "deadbeef"
+				d.BuildNumber = 12
 				d.Hybrid = true
 				d.Fiab.Name = "fiab1"
 				d.Fiab.IP = "0.0.0.0"
@@ -73,7 +75,8 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
     "ip": "0.0.0.0",
     "name": "fiab1"
   },
-  "terraHelmfileRef": "deadbeef"
+  "terraHelmfileRef": "deadbeef",
+  "buildNumber": 12
 }`,
 		},
 	}
@@ -111,7 +114,7 @@ func Test_DynamicEnvironment_JSON_Marshaller_ReplacesNilOverrides(t *testing.T) 
 
 	assert.Nil(t, d.Overrides)
 
-	expected := `{"name":"","template":"","overrides":{},"hybrid":false,"fiab":{"ip":"","name":""},"terraHelmfileRef":""}`
+	expected := `{"name":"","template":"","overrides":{},"hybrid":false,"fiab":{"ip":"","name":""},"terraHelmfileRef":"","buildNumber":0}`
 
 	data, err := json.Marshal(d)
 	require.NoError(t, err)
@@ -126,7 +129,7 @@ func Test_DynamicEnvironment_JSON_Marshaller_ReplacesNilOverrides(t *testing.T) 
 func Test_DynamicEnvironment_JSON_Unmarshaller_ReplacesNilOverrides(t *testing.T) {
 	var d DynamicEnvironment
 
-	input := `{"name":"","template":"","overrides":null,"hybrid":false,"fiab":{"ip":"","name":""},"terraHelmfileRef":""}`
+	input := `{"name":"","template":"","overrides":null,"hybrid":false,"fiab":{"ip":"","name":""},"terraHelmfileRef":"","buildNumber":0}`
 	err := json.Unmarshal([]byte(input), &d)
 	require.NoError(t, err)
 
