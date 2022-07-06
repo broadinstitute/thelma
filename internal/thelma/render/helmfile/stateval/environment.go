@@ -7,7 +7,7 @@ type Environment struct {
 	// Name of the environment this release is being deployed to
 	Name string `yaml:"Name"`
 	// BuildNumber Number for a running CI build currently running against this environment (0 if unset)
-	BuildNumber int `yaml:"BuildNumber""`
+	BuildNumber int `yaml:"BuildNumber"`
 	// DEPRECATED (remove once we are no longer running hybrids bee/fiab envs)
 	IsHybrid bool `yaml:"IsHybrid"`
 	// DEPRECATED (remove once we are no longer running hybrid bee/fiab envs)
