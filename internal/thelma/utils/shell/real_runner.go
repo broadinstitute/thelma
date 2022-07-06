@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"time"
 )
 
 const maxErrorBufLenBytes = 100 * 1024 // 100 kb
@@ -24,6 +25,23 @@ func NewRunner() Runner {
 
 // Run runs a Command, returning an error if the command exits non-zero
 func (r *RealRunner) Run(cmd Command, options ...RunOption) error {
+	execCmd, logger, errCapture := r.prepareExecCmd(cmd, options...)
+	err := execCmd.Run()
+	return handleExecCmdError(cmd, err, logger, errCapture)
+}
+
+// PrepareSubprocess sets up a Subprocess to run a Command asynchronously
+func (r *RealRunner) PrepareSubprocess(cmd Command, options ...RunOption) Subprocess {
+	execCmd, logger, errCapture := r.prepareExecCmd(cmd, options...)
+	return &realSubprocess{
+		cmd:        cmd,
+		execCmd:    execCmd,
+		logger:     logger,
+		errCapture: errCapture,
+	}
+}
+
+func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cmd, zerolog.Logger, *capturingWriter) {
 	// collate options
 	opts := defaultRunOptions()
 	for _, option := range options {
@@ -60,8 +78,10 @@ func (r *RealRunner) Run(cmd Command, options ...RunOption) error {
 	execCmd.Stderr = stderr
 
 	logger.WithLevel(level).Str("dir", cmd.Dir).Msgf("Executing: %q", cmd.PrettyFormat())
+	return execCmd, logger, errCapture
+}
 
-	err := execCmd.Run()
+func handleExecCmdError(cmd Command, err error, logger zerolog.Logger, errCapture *capturingWriter) error {
 	if err != nil {
 		logger.Debug().Msgf("Command failed: %v\n", err)
 
@@ -78,7 +98,6 @@ func (r *RealRunner) Run(cmd Command, options ...RunOption) error {
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -143,4 +162,50 @@ func (cw *capturingWriter) rollover() {
 		Msg("capturing writer: buffer rolled over")
 	cw.buf = bytes.NewBuffer([]byte{})
 	cw.len = 0
+}
+
+type realSubprocess struct {
+	cmd        Command
+	execCmd    *exec.Cmd
+	logger     zerolog.Logger
+	errCapture *capturingWriter
+}
+
+func (s *realSubprocess) Start() error {
+	return s.execCmd.Start()
+}
+
+func (s *realSubprocess) Wait() error {
+	return handleExecCmdError(s.cmd, s.execCmd.Wait(), s.logger, s.errCapture)
+}
+
+func (s *realSubprocess) Stop() error {
+	if s.execCmd.ProcessState != nil && s.execCmd.ProcessState.Exited() {
+		log.Debug().Msg("process had already exited")
+		return nil
+	}
+	if s.execCmd.Process == nil {
+		return fmt.Errorf("no process associated with command")
+	} else {
+		if err := s.execCmd.Process.Signal(os.Interrupt); err != nil {
+			// Can't send SIGINT on Windows; it'll error, so send SIGKILL
+			if err := s.execCmd.Process.Signal(os.Kill); err != nil {
+				// If signals fail, just kill the underlying process
+				if err := s.execCmd.Process.Kill(); err != nil {
+					log.Debug().Msg("seemed to be unable to SIGINT, SIGKILL, or directly kill a process...")
+				}
+			}
+		}
+		done := make(chan error)
+		go func() {
+			done <- s.execCmd.Wait()
+		}()
+		select {
+		case err := <-done:
+			return handleExecCmdError(s.cmd, err, s.logger, s.errCapture)
+		case <-time.After(3 * time.Second):
+			_ = s.execCmd.Process.Kill()
+			return fmt.Errorf("process did not exit after 3 seconds")
+		}
+	}
 }

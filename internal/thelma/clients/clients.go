@@ -21,8 +21,14 @@ type Clients interface {
 	Vault() (*vaultapi.Client, error)
 	// ArgoCD returns a client for the DSP ArgoCD instance
 	ArgoCD() (argocd.ArgoCD, error)
-	// Google returns a client factory for GCP clients
+	// Google returns a client factory for GCP clients, using Thelma's default configuration
 	Google() google.Clients
+	// GoogleUsingVaultSA is like Google but allows a vault path/key for the service account key file
+	// to be specified directly at runtime
+	GoogleUsingVaultSA(string, string) google.Clients
+	// GoogleUsingADC is like Google but forces usage of the environment's Application Default Credentials,
+	// optionally allowing non-Broad email addresses
+	GoogleUsingADC(bool) google.Clients
 }
 
 func New(thelmaConfig config.Config, thelmaRoot root.Root, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
@@ -43,6 +49,14 @@ type clients struct {
 
 func (c *clients) Google() google.Clients {
 	return google.New(c.thelmaConfig, c.thelmaRoot, c.runner, c)
+}
+
+func (c *clients) GoogleUsingVaultSA(vaultPath string, vaultKey string) google.Clients {
+	return google.NewUsingVaultSA(c.thelmaConfig, c.thelmaRoot, c.runner, c, vaultPath, vaultKey)
+}
+
+func (c *clients) GoogleUsingADC(allowNonBroad bool) google.Clients {
+	return google.NewUsingADC(c.thelmaConfig, c.thelmaRoot, c.runner, c, allowNonBroad)
 }
 
 func (c *clients) IAPToken() (string, error) {

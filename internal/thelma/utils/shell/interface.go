@@ -17,6 +17,8 @@ type Runner interface {
 	// Run runs a Command, streaming stdout and stderr to the log at debug level.
 	// Behavior can be customized by passing in one or more RunOption functions
 	Run(cmd Command, opts ...RunOption) error
+	// PrepareSubprocess sets up a Subprocess to run a Command, similar to Run but asynchronous.
+	PrepareSubprocess(cmd Command, opts ...RunOption) Subprocess
 }
 
 // RunOptions are option for a RunWith() invocation
@@ -43,6 +45,17 @@ type Command struct {
 	Env         []string // Env List of environment variables, eg []string{ "FOO=BAR", "BAZ=QUUX" }, to set when executing
 	Dir         string   // Dir Directory where command should be run
 	PristineEnv bool     // PristineEnv When true, set only supplied Env vars without inheriting current process's env vars
+}
+
+// Subprocess allows running a shell command in parallel with Thelma's main process
+type Subprocess interface {
+	// Start begins running the actual Command the Subprocess is configured for
+	Start() error
+	// Wait synchronously blocks until normal completion of the Command
+	Wait() error
+	// Stop signals the process to exit, and synchronously waits until it does; after three seconds it will be forcibly
+	// killed and an error returned
+	Stop() error
 }
 
 func defaultRunOptions() RunOptions {

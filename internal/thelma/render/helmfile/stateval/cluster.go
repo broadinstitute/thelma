@@ -2,7 +2,6 @@ package stateval
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"strings"
 )
 
 // Cluster -- information about the cluster the release is being deployed to
@@ -19,11 +18,6 @@ func forCluster(cluster terra.Cluster) Cluster {
 	return Cluster{
 		Name:                cluster.Name(),
 		GoogleProject:       cluster.Project(),
-		GoogleProjectSuffix: projectSuffix(cluster),
+		GoogleProjectSuffix: cluster.ProjectSuffix(),
 	}
-}
-
-func projectSuffix(cluster terra.Cluster) string {
-	tokens := strings.Split(cluster.Project(), "-")
-	return tokens[len(tokens)-1]
 }

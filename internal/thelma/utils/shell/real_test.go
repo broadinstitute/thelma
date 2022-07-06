@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
 func TestRunSuccess(t *testing.T) {
@@ -25,6 +26,109 @@ func TestRunSuccess(t *testing.T) {
 
 	// Verify that the command was run and created the directory
 	testDir := path.Join(tmpdir, "test-dir-foo")
+	f, err := os.Stat(testDir)
+	if err != nil {
+		t.Errorf("testDir does not exist: %v", err)
+	}
+	if !f.IsDir() {
+		t.Errorf("testDir is not directory: %v", f)
+	}
+}
+
+func TestSubprocessSuccess(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	runner := NewRunner()
+	cmd := Command{}
+	cmd.Prog = "sh"
+	cmd.Env = []string{"VAR1=bar"}
+	cmd.Args = []string{"-c", "mkdir test-dir-$VAR1"}
+	cmd.Dir = tmpdir
+
+	subprocess := runner.PrepareSubprocess(cmd)
+
+	if err := subprocess.Start(); err != nil {
+		t.Error(err)
+	}
+
+	if err := subprocess.Wait(); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that the command was run and created the directory
+	testDir := path.Join(tmpdir, "test-dir-bar")
+	f, err := os.Stat(testDir)
+	if err != nil {
+		t.Errorf("testDir does not exist: %v", err)
+	}
+	if !f.IsDir() {
+		t.Errorf("testDir is not directory: %v", f)
+	}
+}
+
+func TestSubprocessDuplicateTermination(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	runner := NewRunner()
+	cmd := Command{}
+	cmd.Prog = "sh"
+	cmd.Env = []string{"VAR1=baz"}
+	cmd.Args = []string{"-c", "mkdir test-dir-$VAR1"}
+	cmd.Dir = tmpdir
+
+	subprocess := runner.PrepareSubprocess(cmd)
+
+	if err := subprocess.Start(); err != nil {
+		t.Error(err)
+	}
+
+	if err := subprocess.Wait(); err != nil {
+		t.Error(err)
+	}
+
+	if err := subprocess.Stop(); err != nil {
+		t.Error(err)
+	}
+
+	if err := subprocess.Stop(); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that the command was run and created the directory
+	testDir := path.Join(tmpdir, "test-dir-baz")
+	f, err := os.Stat(testDir)
+	if err != nil {
+		t.Errorf("testDir does not exist: %v", err)
+	}
+	if !f.IsDir() {
+		t.Errorf("testDir is not directory: %v", f)
+	}
+}
+
+func TestSubprocessUnawaitedTermination(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	runner := NewRunner()
+	cmd := Command{}
+	cmd.Prog = "sh"
+	cmd.Env = []string{"VAR1=boo"}
+	cmd.Args = []string{"-c", "mkdir test-dir-$VAR1"}
+	cmd.Dir = tmpdir
+
+	subprocess := runner.PrepareSubprocess(cmd)
+
+	if err := subprocess.Start(); err != nil {
+		t.Error(err)
+	}
+
+	time.Sleep(1 * time.Second) // never .Wait() the process, just assume it is running
+
+	if err := subprocess.Stop(); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that the command was run and created the directory
+	testDir := path.Join(tmpdir, "test-dir-boo")
 	f, err := os.Stat(testDir)
 	if err != nil {
 		t.Errorf("testDir does not exist: %v", err)

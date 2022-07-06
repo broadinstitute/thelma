@@ -26,6 +26,26 @@ func TestMockRunnerPassesSingleCommand(t *testing.T) {
 	m.AssertExpectations(t)
 }
 
+// Should pass when we execute a command "asynchronously"
+func TestMockRunnerPassesSingleCommandSubprocess(t *testing.T) {
+	m := DefaultMockRunner()
+	m.Test(t)
+
+	m.ExpectSubprocessCmd(CmdFromArgs("FOO=BAR", "echo", "hello", "world"))
+
+	subprocess := m.PrepareSubprocess(Command{
+		Prog: "echo",
+		Args: []string{"hello", "world"},
+		Env:  []string{"FOO=BAR"},
+	})
+	err := subprocess.Start()
+	assert.NoError(t, err)
+	err = subprocess.Stop()
+	assert.NoError(t, err)
+
+	m.AssertExpectations(t)
+}
+
 // Should pass when we run multiple commands in order
 func TestMockRunnerPassesMultipleCommandsInOrder(t *testing.T) {
 	m := DefaultMockRunner()
@@ -39,6 +59,32 @@ func TestMockRunnerPassesMultipleCommandsInOrder(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = m.Run(CmdFromArgs("echo", "2"))
+	assert.NoError(t, err)
+
+	m.AssertExpectations(t)
+}
+
+// Should pass when we run multiple commands in order, "asynchronously"
+func TestMockRunnerPassesMultipleCommandsInOrderSubprocess(t *testing.T) {
+	m := DefaultMockRunner()
+	m.Test(t)
+
+	m.ExpectSubprocessCmd(CmdFromArgs("echo", "1"))
+	m.ExpectSubprocessCmd(CmdFromArgs("echo", "2"))
+
+	two := m.PrepareSubprocess(CmdFromArgs("echo", "2"))
+	one := m.PrepareSubprocess(CmdFromArgs("echo", "1"))
+
+	var err error
+	err = one.Start()
+	assert.NoError(t, err)
+
+	err = two.Start()
+	assert.NoError(t, err)
+
+	err = two.Stop()
+	assert.NoError(t, err)
+	err = one.Stop()
 	assert.NoError(t, err)
 
 	m.AssertExpectations(t)
