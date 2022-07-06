@@ -27,6 +27,7 @@
           }
         }
       },
+      "buildNumber": 456,
       "hybrid": true,
       "fiab": {
         "name": "fiab-automation-funky-chipmunk",
