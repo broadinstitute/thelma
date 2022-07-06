@@ -180,11 +180,11 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
 
 	if cmd.options.buildNumber != 0 {
-		oldNumber, err := state.Environments().SetBuildNumber(cmd.options.name, cmd.options.buildNumber)
+		oldBuildNumber, err := state.Environments().SetBuildNumber(cmd.options.name, cmd.options.buildNumber)
 		if err != nil {
 			return err
 		}
-		log.Info().Msgf("Set build number to %d for %s (was: %d)", cmd.options.buildNumber, cmd.options.name, oldNumber)
+		log.Info().Msgf("Set build number to %d for %s (was: %d)", cmd.options.buildNumber, cmd.options.name, oldBuildNumber)
 	}
 
 	if err = bees.RefreshBeeGenerator(); err != nil {
