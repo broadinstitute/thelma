@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 type options struct {
@@ -105,7 +106,11 @@ func (cmd *seedCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 
 	// validate --name
 	if !flags.Changed(flagNames.name) {
-		return fmt.Errorf("--%s is required", flagNames.name)
+		return fmt.Errorf("no environment name specified; --%s is required", flagNames.name)
+	}
+	if strings.TrimSpace(cmd.options.name) == "" {
+		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
+		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
 
 	// handle --no-steps
