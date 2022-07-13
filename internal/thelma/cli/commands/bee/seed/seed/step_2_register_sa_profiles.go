@@ -57,6 +57,16 @@ func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appRelease
 			log.Info().Msg("Import Service not present in environment, skipping")
 		}
 
+		if workspaceManager, workspaceManagerPresent := appReleases["workspacemanager"]; workspaceManagerPresent {
+			log.Info().Msgf("registering Workspace Manager SA profile with %s", orch.Host())
+			err = cmd.handleErrorWithForce(_registerSaProfile(thelma, workspaceManager, orch))
+			if err != nil {
+				return err
+			}
+		} else {
+			log.Info().Msg("Workspace Manager not present in environment, skipping")
+		}
+
 	} else {
 		log.Info().Msg("Orch not present in environment, skipping all")
 	}

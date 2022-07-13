@@ -54,6 +54,11 @@ type Config struct {
 			VaultPath string `default:"secret/dsde/firecloud/%s/common/firecloud-account.json"`
 			VaultKey  string `default:""`
 		}
+		WorkspaceManager struct {
+			// WSM dev SA used for both Dev and QA BEEs, as of 7/13/2022
+			VaultPath string `default:"secret/dsde/terra/kernel/dev/dev/workspace/app-sa"`
+			VaultKey  string `default:"key.json"`
+		}
 	}
 	TestUsers struct {
 		Dev []TestUser
@@ -113,6 +118,9 @@ func GoogleAuthAs(thelma app.ThelmaApp, appRelease terra.AppRelease) (google.Cli
 	case "firecloudorch":
 		vaultPath = config.Auth.FirecloudOrch.VaultPath
 		vaultKey = config.Auth.FirecloudOrch.VaultKey
+	case "workspacemanager":
+		vaultPath = config.Auth.WorkspaceManager.VaultPath
+		vaultKey = config.Auth.WorkspaceManager.VaultKey
 	default:
 		return nil, fmt.Errorf("thelma doesn't know how to authenticate as %s", appRelease.Name())
 	}
