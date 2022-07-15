@@ -72,6 +72,9 @@ type Config struct {
 			QA  []AgoraPermission
 		}
 	}
+	Elasticsearch struct {
+		Service string `default:"elasticsearch-0"`
+	}
 	Sam struct {
 		Database struct {
 			Service     string `default:"sam-postgres-service"`
