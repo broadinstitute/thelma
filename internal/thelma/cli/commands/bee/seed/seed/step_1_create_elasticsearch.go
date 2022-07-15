@@ -33,11 +33,11 @@ func (cmd *seedCommand) step1CreateElasticsearch(thelma app.ThelmaApp, appReleas
 		defer func() { _ = stopFunc() }()
 
 		httpClient := http.Client{}
-		err = _createIndex(httpClient, localPort, "ontology")
+		err = _createIndex(httpClient, elasticsearch.Protocol(), localPort, "ontology")
 		if err = cmd.handleErrorWithForce(err); err != nil {
 			return err
 		}
-		err = _setElasticsearchReplicas(httpClient, localPort, 0)
+		err = _setElasticsearchReplicas(httpClient, elasticsearch.Protocol(), localPort, 0)
 		if err = cmd.handleErrorWithForce(err); err != nil {
 			return err
 		}
@@ -48,8 +48,8 @@ func (cmd *seedCommand) step1CreateElasticsearch(thelma app.ThelmaApp, appReleas
 	return nil
 }
 
-func _createIndex(client http.Client, localElasticsearchPort int, index string) error {
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("localhost:%d/%s", localElasticsearchPort, index), &bytes.Buffer{})
+func _createIndex(client http.Client, protocol string, localElasticsearchPort int, index string) error {
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s://localhost:%d/%s", protocol, localElasticsearchPort, index), &bytes.Buffer{})
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func _createIndex(client http.Client, localElasticsearchPort int, index string) 
 	return nil
 }
 
-func _setElasticsearchReplicas(client http.Client, localElasticsearchPort int, replicas int) error {
+func _setElasticsearchReplicas(client http.Client, protocol string, localElasticsearchPort int, replicas int) error {
 	bodyStruct := struct {
 		Index struct {
 			NumberOfReplicas int `json:"number_of_replicas"`
@@ -80,7 +80,7 @@ func _setElasticsearchReplicas(client http.Client, localElasticsearchPort int, r
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("localhost:%d/_settings", localElasticsearchPort), bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s://localhost:%d/_settings", protocol, localElasticsearchPort), bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
