@@ -127,8 +127,11 @@ func GoogleAuthAs(thelma app.ThelmaApp, appRelease terra.AppRelease) (google.Cli
 	default:
 		return nil, fmt.Errorf("thelma doesn't know how to authenticate as %s", appRelease.Name())
 	}
+	if strings.ContainsRune(vaultPath, '%') {
+		vaultPath = fmt.Sprintf(vaultPath, appRelease.Cluster().ProjectSuffix())
+	}
 	return thelma.Clients().GoogleUsingVaultSA(
-		fmt.Sprintf(vaultPath, appRelease.Cluster().ProjectSuffix()),
+		vaultPath,
 		vaultKey,
 	), nil
 }
