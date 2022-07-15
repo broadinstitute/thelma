@@ -20,6 +20,8 @@ type options struct {
 	step5CreateAgora         bool
 	step6ExtraUser           []string
 	noSteps                  bool
+	ifExists                 bool
+	registerSelfShortcut     bool
 }
 
 var flagNames = struct {
@@ -32,6 +34,8 @@ var flagNames = struct {
 	step5CreateAgora         string
 	step6ExtraUser           string
 	noSteps                  string
+	ifExists                 string
+	registerSelfShortcut     string
 }{
 	name:                     "name",
 	force:                    "force",
@@ -42,6 +46,8 @@ var flagNames = struct {
 	step5CreateAgora:         "step-5-create-agora",
 	step6ExtraUser:           "step-6-extra-user",
 	noSteps:                  "no-steps",
+	ifExists:                 "if-exists",
+	registerSelfShortcut:     "me",
 }
 
 type seedCommand struct {
@@ -98,6 +104,8 @@ Examples (you'd need to set the --name of your environment):
 	cobraCommand.Flags().BoolVar(&cmd.options.step5CreateAgora, flagNames.step5CreateAgora, true, "create Agora's methods repository with Orch")
 	cobraCommand.Flags().StringSliceVarP(&cmd.options.step6ExtraUser, flagNames.step6ExtraUser, "u", []string{}, "optionally register extra users for log-in (skipped by default; can specify multiple times; provide `email` address, \"set-adc\", or \"use-adc\")")
 	cobraCommand.Flags().BoolVar(&cmd.options.noSteps, flagNames.noSteps, false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
+	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "do not return an error if the BEE does not exist")
+	cobraCommand.Flags().BoolVar(&cmd.options.registerSelfShortcut, flagNames.registerSelfShortcut, false, "shorthand for --step-6-extra-user use-adc")
 
 }
 
@@ -132,6 +140,12 @@ func (cmd *seedCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 		}
 		// No need to handle step6ExtraUser; it is empty and does nothing by default
 	}
+
+	// handle --me
+	if cmd.options.registerSelfShortcut {
+		cmd.options.step6ExtraUser = append(cmd.options.step6ExtraUser, "use-adc")
+	}
+
 	return nil
 }
 
@@ -145,6 +159,11 @@ func (cmd *seedCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 		return err
 	}
 	if env == nil {
+		if cmd.options.ifExists {
+			log.Warn().Msgf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
+			log.Info().Msgf("Cannot seed, exiting normally to due --%s", flagNames.ifExists)
+			return nil
+		}
 		return fmt.Errorf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
 	}
 	if !env.Lifecycle().IsDynamic() {
@@ -208,8 +227,8 @@ func (cmd *seedCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 
 func (cmd *seedCommand) handleErrorWithForce(err error) error {
 	if err != nil && cmd.options.force {
-		log.Warn().Msg(err.Error())
-		log.Warn().Msg("Continuing despite above error due to --force")
+		log.Warn().Msgf("%v", err.Error())
+		log.Warn().Msgf("Continuing despite above error due to --%s", flagNames.force)
 		return nil
 	} else {
 		return err
