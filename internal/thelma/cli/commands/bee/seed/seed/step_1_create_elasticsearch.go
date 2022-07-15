@@ -4,21 +4,40 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"net/http"
 )
 
-func (cmd *seedCommand) step1CreateElasticsearch(appReleases map[string]terra.AppRelease) error {
+func (cmd *seedCommand) step1CreateElasticsearch(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
 	log.Info().Msg("creating healthy Ontology index with Elasticsearch...")
 	if elasticsearch, elasticsearchPresent := appReleases["elasticsearch"]; elasticsearchPresent {
+
+		kubectl, err := thelma.Clients().Google().Kubectl()
+		if err != nil {
+			return fmt.Errorf("error getting kubectl client: %v", err)
+		}
+
+		config, err := seed.ConfigWithBasicDefaults(thelma)
+		if err != nil {
+			return fmt.Errorf("error getting Elasticsearch's info: %v", err)
+		}
+
+		localPort, stopFunc, err := kubectl.PortForward(elasticsearch, fmt.Sprintf("service/%s", config.Elasticsearch.Service), elasticsearch.Port())
+		if err != nil {
+			return fmt.Errorf("error port-forwarding to Elasticsearch: %v", err)
+		}
+		defer func() { _ = stopFunc() }()
+
 		httpClient := http.Client{}
-		err := _createIndex(httpClient, elasticsearch, "ontology")
+		err = _createIndex(httpClient, elasticsearch.Protocol(), localPort, "ontology")
 		if err = cmd.handleErrorWithForce(err); err != nil {
 			return err
 		}
-		err = _setElasticsearchReplicas(httpClient, elasticsearch, 0)
+		err = _setElasticsearchReplicas(httpClient, elasticsearch.Protocol(), localPort, 0)
 		if err = cmd.handleErrorWithForce(err); err != nil {
 			return err
 		}
@@ -29,14 +48,14 @@ func (cmd *seedCommand) step1CreateElasticsearch(appReleases map[string]terra.Ap
 	return nil
 }
 
-func _createIndex(client http.Client, elasticsearch terra.AppRelease, index string) error {
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s:%d/%s", elasticsearch.URL(), elasticsearch.Port(), index), &bytes.Buffer{})
+func _createIndex(client http.Client, protocol string, localElasticsearchPort int, index string) error {
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s://localhost:%d/%s", protocol, localElasticsearchPort, index), &bytes.Buffer{})
 	if err != nil {
 		return err
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error creating %s:%d/%s: %v", elasticsearch.URL(), elasticsearch.Port(), index, err)
+		return fmt.Errorf("error creating %s: %v", index, err)
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	_ = resp.Body.Close()
@@ -45,12 +64,12 @@ func _createIndex(client http.Client, elasticsearch terra.AppRelease, index stri
 	}
 	respBodyString := string(respBody)
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("%s status creating %s:%d/%s (%s)", resp.Status, elasticsearch.URL(), elasticsearch.Port(), index, respBodyString)
+		return fmt.Errorf("%s status creating %s (%s)", resp.Status, index, respBodyString)
 	}
 	return nil
 }
 
-func _setElasticsearchReplicas(client http.Client, elasticsearch terra.AppRelease, replicas int) error {
+func _setElasticsearchReplicas(client http.Client, protocol string, localElasticsearchPort int, replicas int) error {
 	bodyStruct := struct {
 		Index struct {
 			NumberOfReplicas int `json:"number_of_replicas"`
@@ -61,13 +80,13 @@ func _setElasticsearchReplicas(client http.Client, elasticsearch terra.AppReleas
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s:%d/_settings", elasticsearch.URL(), elasticsearch.Port()), bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s://localhost:%d/_settings", protocol, localElasticsearchPort), bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error setting replica count on %s:%d: %v", elasticsearch.URL(), elasticsearch.Port(), err)
+		return fmt.Errorf("error setting replica count: %v", err)
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	_ = resp.Body.Close()
@@ -76,7 +95,7 @@ func _setElasticsearchReplicas(client http.Client, elasticsearch terra.AppReleas
 	}
 	respBodyString := string(respBody)
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("%s status setting replica count %s:%d (%s)", resp.Status, elasticsearch.URL(), elasticsearch.Port(), respBodyString)
+		return fmt.Errorf("%s status setting replica count (%s)", resp.Status, respBodyString)
 	}
 	return nil
 }

@@ -187,7 +187,7 @@ func (cmd *seedCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 	}
 
 	if cmd.options.step1CreateElasticsearch {
-		if err := cmd.handleErrorWithForce(cmd.step1CreateElasticsearch(appReleases)); err != nil {
+		if err := cmd.handleErrorWithForce(cmd.step1CreateElasticsearch(app, appReleases)); err != nil {
 			return err
 		}
 	}
