@@ -55,7 +55,6 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("bee pin", bee_pin.NewBeePinCommand())
 	opts.AddCommand("bee reset", bee_reset.NewBeeResetCommand())
 	opts.AddCommand("bee seed", bee_seed.NewBeeSeedCommand())
-	opts.AddCommand("bee seed me", bee_seed.NewBeeSeedMeCommand())
 	opts.AddCommand("bee unseed", bee_unseed.NewBeeUnseedCommand())
 	opts.AddCommand("bee unpin", bee_unpin.NewBeeUnpinCommand())
 	opts.AddCommand("bee vars", bee_vars.NewBeeVarsCommand())

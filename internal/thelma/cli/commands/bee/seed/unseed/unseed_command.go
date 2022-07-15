@@ -15,6 +15,7 @@ type options struct {
 	force                   bool
 	step1UnregisterAllUsers bool
 	noSteps                 bool
+	ifExists                bool
 }
 
 var flagNames = struct {
@@ -22,11 +23,13 @@ var flagNames = struct {
 	force                   string
 	step1UnregisterAllUsers string
 	noSteps                 string
+	ifExists                string
 }{
 	name:                    "name",
 	force:                   "force",
 	step1UnregisterAllUsers: "step-1-unregister-all-users",
 	noSteps:                 "no-steps",
+	ifExists:                "if-exists",
 }
 
 type unseedCommand struct {
@@ -68,6 +71,7 @@ Examples (you'd need to set the --name of your environment):
 	cobraCommand.Flags().BoolVarP(&cmd.options.force, flagNames.force, "f", false, "attempt to ignore errors during seeding")
 	cobraCommand.Flags().BoolVar(&cmd.options.step1UnregisterAllUsers, flagNames.step1UnregisterAllUsers, true, "unregister all user accounts with Sam")
 	cobraCommand.Flags().BoolVar(&cmd.options.noSteps, flagNames.noSteps, false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
+	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "do not return an error if the BEE does not exist")
 
 }
 
@@ -102,6 +106,11 @@ func (cmd *unseedCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 		return err
 	}
 	if env == nil {
+		if cmd.options.ifExists {
+			log.Warn().Msgf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
+			log.Info().Msgf("Cannot seed, exiting normally to due --%s", flagNames.ifExists)
+			return nil
+		}
 		return fmt.Errorf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
 	}
 	if !env.Lifecycle().IsDynamic() {
@@ -140,8 +149,8 @@ func (cmd *unseedCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 
 func (cmd *unseedCommand) handleErrorWithForce(err error) error {
 	if err != nil && cmd.options.force {
-		log.Warn().Msg(err.Error())
-		log.Warn().Msg("Continuing despite above error due to --force")
+		log.Warn().Msgf("%v", err.Error())
+		log.Warn().Msgf("Continuing despite above error due to --%s", flagNames.force)
 		return nil
 	} else {
 		return err
