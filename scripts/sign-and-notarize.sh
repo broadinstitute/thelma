@@ -1,5 +1,12 @@
 #!/bin/bash
 
+set -eo pipefail
+
+if [[ $# -ne 2 ]]; then
+  echo "Usage: $0 <release dir> <release tarball>" >&2
+  exit 1
+fi
+
 # This script signs and notarizes release binaries as follows:
 # * sign each file in the ${RELEASE_DIR}/bin/ directory
 # * zip up the whole provided directory (.tar.gz is not supported by Apple)
