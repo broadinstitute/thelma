@@ -17,15 +17,11 @@ APPLE_ID=appledev@broadinstitute.org
 TEAM_ID=R787A9V6VV
 CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${APP_PWD} --team-id ${TEAM_ID}"
 
-_tar() {
-	tar -C "${1}" -czf "${2}" .
-}
-
 sign() {
 	codesign -f -o runtime --timestamp -s "5784A30A5BFD511E8636B9F6BBE7EE36D0F0A726" "${1}"
 }
 
-_zip() {
+archive() {
 	# Get the absolute path to the input path
 	local _absdir="$(readlink -f "${1}")"
 
@@ -153,7 +149,7 @@ do
 done
 
 # Submit the release to Apple for notarization
-notarize "$(_zip "${RELEASE_DIR}")"
+notarize "$(archive "${RELEASE_DIR}")"
 
 # Verify all files were notarized
 for bin in "${RELEASE_DIR}"/bin/*
