@@ -105,6 +105,7 @@ verify() {
 	if echo "${_not_info}" | tr '\n' ' ' | grep -Eq 'valid on disk.*satisfies its Designated Requirement.*explicit requirement satisfied'; then
 		echo "${1} was successfully notarized!"
 	else
+		echo "${_not_info}"
 		echo "${1} was NOT successfully notarized :("
 	fi
 }

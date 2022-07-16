@@ -39,6 +39,14 @@ else
 	RUNTIME_DEPS_TESTEXEC=true
 endif
 
+# MACOS_SIGN_AND_NOTARIZE: When a macOS host and target are selected, default to signing
+#                          and notarizing by default. This value can be manually set to
+#                          false in cases where you want to generate a macOS release tarball
+#                          from a macOS host without performing any signing and notarizing,
+#                          i.e. when locally testing updates to the release process without
+#                          having the certs and other creds on your local machine.
+MACOS_SIGN_AND_NOTARIZE=true
+
 # OUTPUT_DIR root directory for all build output
 OUTPUT_DIR=./output
 
@@ -124,8 +132,27 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
     # Generate build.json manifest in staging dir
 	VERSION=${VERSION} GIT_SHA=${GIT_SHA} BUILD_TIMESTAMP=${BUILD_TIMESTAMP} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}/build.json
 
-    # Package all files into tar.gz archive
-	tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
+	# Sign and notarize logic
+	ifeq ($(LOCAL_OS),darwin)
+		ifeq ($(TARGET_OS),darwin)
+			ifeq ($(MACOS_SIGN_AND_NOTARIZE),true)
+				# If the host and target are macOS and signing and notarization are requested
+				./scripts/sign-and-notarize.sh ${RELEASE_STAGING_DIR} ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME}
+			ifeq ($(MACOS_SIGN_AND_NOTARIZE),false)
+				# If the host and target are macOS but signing and notarization are turned off
+				tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
+			else
+				echo "Bad value for MACOS_SIGN_AND_NOTARIZE (${MACOS_SIGN_AND_NOTARIZE}), options are true or false."
+			endif
+		endif
+	else
+		# For linux (host and/or target), no signing and notarization is needed/possible.
+		# Note: since it's impossible to sign and notarize binaries for macOS from linux hosts,
+		#       the resulting release artifact will not pass gatekeeper checks upon install.
+		#       Do not build release artifacts for macOS on linux!
+	    # Package all files into tar.gz archive
+		tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
+	endif
 
 checksum: # Generate sha256sum file for tarball archives in the release archive directory
 	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_ARCHIVE_DIR}
