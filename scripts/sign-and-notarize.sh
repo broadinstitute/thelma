@@ -7,6 +7,7 @@
 # * verify that all files were notarized
 # * create the release tarball
 
+# TODO: remove this when ready
 exit 0
 
 # Files and dirs
