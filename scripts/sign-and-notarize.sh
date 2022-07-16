@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# This script signs and notarizes release binaries as follows:
+# * sign each file in the bin/ directory
+# * zip up the whole provided directory (.tar.gz is not supported by Apple)
+# * submit the zip to Apple for notarizing
+# * verify that all files were notarized
+# * create the release tarball
+
+exit 0
+
 # Files and dirs
 RELEASE_TARBALL=${1}
 WORKING_DIR=$(basename "${1}" .tar.gz)

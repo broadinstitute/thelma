@@ -83,11 +83,12 @@ echo-vars: # Echo makefile variables for debugging purposes
 	@echo "-----------------------------------------------------------"
 	@echo "Build Parameters"
 	@echo "-----------------------------------------------------------"
-	@echo "Target OS:      ${TARGET_OS}"
-	@echo "Target Arch:    ${TARGET_ARCH}"
-	@echo "Local OS:       ${LOCAL_OS}"
-	@echo "Local Arch:     ${LOCAL_ARCH}"
-	@echo "Cross-platform? ${CROSSPLATFORM}"
+	@echo "Target OS:         ${TARGET_OS}"
+	@echo "Target Arch:       ${TARGET_ARCH}"
+	@echo "Local OS:          ${LOCAL_OS}"
+	@echo "Local Arch:        ${LOCAL_ARCH}"
+	@echo "Cross-platform?    ${CROSSPLATFORM}"
+	@echo "Sign and notarize? ${MACOS_SIGN_AND_NOTARIZE}"
 	@echo
 	@echo "Version:     ${VERSION}"
 	@echo "Git Sha:     ${GIT_SHA}"
@@ -133,26 +134,19 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
 	VERSION=${VERSION} GIT_SHA=${GIT_SHA} BUILD_TIMESTAMP=${BUILD_TIMESTAMP} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}/build.json
 
 	# Sign and notarize logic
-	ifeq ($(LOCAL_OS),darwin)
-		ifeq ($(TARGET_OS),darwin)
-			ifeq ($(MACOS_SIGN_AND_NOTARIZE),true)
-				# If the host and target are macOS and signing and notarization are requested
-				./scripts/sign-and-notarize.sh ${RELEASE_STAGING_DIR} ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME}
-			ifeq ($(MACOS_SIGN_AND_NOTARIZE),false)
-				# If the host and target are macOS but signing and notarization are turned off
-				tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
-			else
-				echo "Bad value for MACOS_SIGN_AND_NOTARIZE (${MACOS_SIGN_AND_NOTARIZE}), options are true or false."
-			endif
-		endif
-	else
-		# For linux (host and/or target), no signing and notarization is needed/possible.
-		# Note: since it's impossible to sign and notarize binaries for macOS from linux hosts,
-		#       the resulting release artifact will not pass gatekeeper checks upon install.
-		#       Do not build release artifacts for macOS on linux!
-	    # Package all files into tar.gz archive
-		tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
-	endif
+
+	# If signing and notarization are requested
+	if [ ${MACOS_SIGN_AND_NOTARIZE} = true ]; then \
+		if [ ${LOCAL_OS} = darwin ] && [ ${TARGET_OS} = darwin ]; then \
+			echo "Signing and notarizing release binary"; \
+			./scripts/sign-and-notarize.sh ${RELEASE_STAGING_DIR} ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME}; \
+		else \
+			echo "ERROR: Signing and notarizing only supported with Local OS of darwin (macOS) and Target OS of darwin (macOS) - Local OS is ${LOCAL_OS} and Target OS is ${TARGET_OS}"; \
+			exit 1; \
+		fi; \
+	elif [ ${MACOS_SIGN_AND_NOTARIZE} = false ]; then \
+		tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .; \
+	fi;
 
 checksum: # Generate sha256sum file for tarball archives in the release archive directory
 	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_ARCHIVE_DIR}
