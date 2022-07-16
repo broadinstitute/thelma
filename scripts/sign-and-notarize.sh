@@ -30,10 +30,12 @@ APPLE_ID=appledev@broadinstitute.org
 TEAM_ID=R787A9V6VV
 CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${APP_PWD} --team-id ${TEAM_ID}"
 
+# Sign one file
 sign() {
 	codesign -f -o runtime --timestamp -s "5784A30A5BFD511E8636B9F6BBE7EE36D0F0A726" "${1}"
 }
 
+# Zip the given directory into the working dir
 archive() {
 	# Get the absolute path to the input path
 	local _absdir="$(readlink -f "${1}")"
@@ -60,6 +62,7 @@ archive() {
 	echo "${_outfile}"
 }
 
+# Upload the zip file for notarization and wait for a response
 notarize() {
 	echo "Notarizing ${1}, uploading to Apple..."
 	exec 5>&1
@@ -140,6 +143,7 @@ notarize() {
 	fi
 }
 
+# Check the notarization status of the given file
 verify() {
 	_not_info=$(codesign -vvvv -R="notarized" --check-notarization "${1}" 2>&1)
 	if echo "${_not_info}" | tr '\n' ' ' | grep -Eq 'valid on disk.*satisfies its Designated Requirement.*explicit requirement satisfied'; then
@@ -165,6 +169,16 @@ done
 notarize "$(archive "${RELEASE_DIR}")"
 
 # Verify all files were notarized
+# Note: Oddly, there's no need to check the notarization status of the files
+#       that were archived and sent to Apple, as it seems like gatekeeper
+#       is able to check files off a specific hash (or similar) rather than
+#       relying on some cryptographic information appended to the binaries
+#       included in the original zip, which makes sense since we never
+#       download anything from Apple post-notarization, and it seems like
+#       the temp zip's hash doesn't change before/after notarization, implying
+#       that Apple registers the binaries as "safe" and then lets users computers
+#       do a check later when they're run....or something. This is all very opaque
+#       and the process is unclear.
 for bin in "${RELEASE_DIR}"/bin/*
 do
 	verify "${bin}"
