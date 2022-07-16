@@ -2,17 +2,23 @@
 
 set -eo pipefail
 
-if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <release dir> <release tarball>" >&2
-  exit 1
-fi
-
 # This script signs and notarizes release binaries as follows:
 # * sign each file in the ${RELEASE_DIR}/bin/ directory
 # * zip up the whole provided directory (.tar.gz is not supported by Apple)
 # * submit the zip to Apple for notarizing
 # * verify that all files were notarized
 # * create the release tarball
+
+if [[ $# -ne 2 ]]; then
+  echo "Usage: $0 <release dir> <release tarball>" >&2
+  exit 1
+fi
+
+# Check for required env vars
+if [ -z "${APP_PWD}" ]; then
+	echo "ERROR: Apple Developer application password env var APP_PWD unset but required. Exiting."
+	exit 1
+fi
 
 # Files and dirs
 RELEASE_DIR=${1}
