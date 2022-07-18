@@ -46,6 +46,11 @@ endif
 #                          i.e. when locally testing updates to the release process without
 #                          having the certs and other creds on your local machine.
 MACOS_SIGN_AND_NOTARIZE=true
+ifeq ($(LOCAL_OS)-$(TARGET_OS),darwin-darwin)
+	MACOS_SIGN_AND_NOTARIZE=true
+else
+	MACOS_SIGN_AND_NOTARIZE=false
+endif
 
 # OUTPUT_DIR root directory for all build output
 OUTPUT_DIR=./output
@@ -146,6 +151,9 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
 		fi; \
 	elif [ ${MACOS_SIGN_AND_NOTARIZE} = false ]; then \
 		tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .; \
+	else \
+		echo "ERROR: Bad value (${MACOS_SIGN_AND_NOTARIZE}) given for MACOS_SIGN_AND_NOTARIZE. Options are true and false. Exiting."; \
+		exit 1; \
 	fi;
 
 checksum: # Generate sha256sum file for tarball archives in the release archive directory
