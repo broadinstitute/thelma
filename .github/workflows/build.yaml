@@ -110,7 +110,6 @@ jobs:
       - name: Sign and notarize macOS release and create tarball
         id: san-tarball
         run: |
-          brew install bash
           ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.checkout-and-bump.outputs.version }}_darwin_amd64.tar.gz
 
   build2:
@@ -165,7 +164,6 @@ jobs:
       - name: Sign and notarize macOS release and create tarball
         id: san-tarball
         run: |
-          brew install bash
           ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.checkout-and-bump.outputs.version }}_darwin_arm64.tar.gz
 
   dockerize-and-push:
