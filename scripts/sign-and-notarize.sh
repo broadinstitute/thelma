@@ -15,8 +15,16 @@ if [[ $# -ne 2 ]]; then
 fi
 
 # Check for required env vars
-if [ -z "${APP_PWD}" ]; then
-	echo "ERROR: Apple Developer application password env var APP_PWD unset but required. Exiting."
+if [ -z "${THELMA_MACOS_APP_PWD}" ]; then
+	echo "ERROR: Apple Developer application password env var THELMA_MACOS_APP_PWD unset but required. Exiting."
+	exit 1
+fi
+if [ -z "${THELMA_MACOS_CERT}" ]; then
+	echo "ERROR: Signing cert env var THELMA_MACOS_CERT unset but required. Exiting."
+	exit 1
+fi
+if [ -z "${THELMA_MACOS_CERT_PWD}" ]; then
+	echo "ERROR: Signing cert password env var THELMA_MACOS_CERT unset but required. Exiting."
 	exit 1
 fi
 
@@ -29,11 +37,34 @@ WORKING_DIR=$(dirname "$(readlink -f "${RELEASE_DIR}")")/san
 APPLE_ID=appledev@broadinstitute.org
 TEAM_ID=R787A9V6VV
 SECURITY_ID=5784A30A5BFD511E8636B9F6BBE7EE36D0F0A726
-CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${APP_PWD} --team-id ${TEAM_ID}"
+CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${THELMA_MACOS_APP_PWD} --team-id ${TEAM_ID}"
+
+# Create a temporary keychain to hold the cert for signing
+create_keychain() {
+	# Decode the signing cert
+	local _cert_file="${WORKING_DIR}"/certificate.p12
+	echo "${THELMA_MACOS_CERT}" | base64 -d > "${_cert_file}"
+
+	# Create a temp keychain in the working dir
+	local _kc_file="${WORKING_DIR}"/release.keychain
+	local _temp_keychain_pwd=temp-kc-pwd
+	security create-keychain -p ${_temp_keychain_pwd} "${_kc_file}" 2>&1 > /dev/null
+
+	# Unlock the keychain
+	security unlock-keychain -p ${_temp_keychain_pwd} "${_kc_file}" 2>&1 > /dev/null
+
+	# Add the cert to the keychain
+	security import "${_cert_file}" -k "${_kc_file}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign 2>&1 > /dev/null
+
+	# Allow codesign to use the keychain without a password prompt
+	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${_kc_file}" 2>&1 > /dev/null
+
+	echo "${_kc_file}"
+}
 
 # Sign one file
 sign() {
-	codesign -f -o runtime,library --timestamp -s "${SECURITY_ID}" "${1}"
+	codesign --keychain "${1}" -f -o runtime,library --timestamp -s "${SECURITY_ID}" "${2}"
 }
 
 # Zip the given directory into the working dir
@@ -156,15 +187,18 @@ verify() {
 }
 
 # Make working dir
-echo "Making ${WORKING_DIR}"
 mkdir -p "${WORKING_DIR}"
 
+# Create the temp keychain
+keychain_file="$(create_keychain)"
+
 # Sign each binary
-echo "Signing binaries..."
+echo -n "Signing binaries..."
 for bin in "${RELEASE_DIR}"/bin/*
 do
-	sign "${bin}"
+	sign "${keychain_file}" "${bin}"
 done
+echo "done"
 
 # Submit the release to Apple for notarization
 notarize "$(archive "${RELEASE_DIR}")"
