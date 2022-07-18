@@ -39,13 +39,15 @@ else
 	RUNTIME_DEPS_TESTEXEC=true
 endif
 
-# MACOS_SIGN_AND_NOTARIZE: When a macOS host and target are selected, default to sign and
+# MACOS_SIGN_AND_NOTARIZE: When false, creates a release tarball as part of the make process,
+#                          when true, create it using a separate GHA job using the sign
+#                          and notarize script.
+#                          When a macOS host and target are used, default to sign and
 #                          notarize releases. This value can be manually set to false in
 #                          cases where you want to generate a macOS release tarball from
 #                          a macOS host without performing any signing and notarizing,
 #                          i.e. when locally testing updates to the release process without
 #                          having the certs and other creds on your local machine.
-MACOS_SIGN_AND_NOTARIZE=true
 ifeq ($(LOCAL_OS)-$(TARGET_OS),darwin-darwin)
 	MACOS_SIGN_AND_NOTARIZE=true
 else
@@ -138,22 +140,9 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
     # Generate build.json manifest in staging dir
 	VERSION=${VERSION} GIT_SHA=${GIT_SHA} BUILD_TIMESTAMP=${BUILD_TIMESTAMP} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}/build.json
 
-	# Sign and notarize logic
-
-	# If signing and notarization are requested
-	if [ ${MACOS_SIGN_AND_NOTARIZE} = true ]; then \
-		if [ ${LOCAL_OS} = darwin ] && [ ${TARGET_OS} = darwin ]; then \
-			echo "Signing and notarizing release binary"; \
-			./scripts/sign-and-notarize.sh ${RELEASE_STAGING_DIR} ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME}; \
-		else \
-			echo "ERROR: Signing and notarizing only supported with Local OS of darwin (macOS) and Target OS of darwin (macOS) - Local OS is ${LOCAL_OS} and Target OS is ${TARGET_OS}"; \
-			exit 1; \
-		fi; \
-	elif [ ${MACOS_SIGN_AND_NOTARIZE} = false ]; then \
+	# Create a release tarball unless signing and notarizing, which take place in a separate GHA job
+	if [ ${MACOS_SIGN_AND_NOTARIZE} = false ]; then \
 		tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .; \
-	else \
-		echo "ERROR: Bad value (${MACOS_SIGN_AND_NOTARIZE}) given for MACOS_SIGN_AND_NOTARIZE. Options are true and false. Exiting."; \
-		exit 1; \
 	fi;
 
 checksum: # Generate sha256sum file for tarball archives in the release archive directory

@@ -42,7 +42,7 @@ env:
   # Apple Developer application password
   THELMA_MACOS_APP_PWD: ${{ secrets.THELMA_MACOS_APP_PWD }}
 jobs:
-  checkout-and-bump:
+  bump-and-build1:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ needs.checkout-and-bump.outputs.version }}
@@ -58,8 +58,8 @@ jobs:
         env:
           cache-name: build-dir-cache
         with:
-          path: ~/output
-          key: commit-${{ github.sha }}-job-${{ github.job}}
+          path: ${GITHUB_WORKSPACE}/output
+          key: commit-${{ github.sha }}-job-${{ github.job }}
 
       - name: Bump tag to new version
         uses: databiosphere/github-actions/actions/bumper@bumper-0.0.6
@@ -69,24 +69,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BROADBOT_TOKEN }}
           RELEASE_BRANCHES: main
           WITH_V: true
-
-  build:
-    runs-on: macos-11
-    needs: checkout-and-bump
-    steps:
-      - name: Checkout current code
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
-
-      - name: Cache build directory
-        id: cache-build
-        uses: actions/cache@v3
-        env:
-          cache-name: build-dir-cache
-        with:
-          path: ~/output
-          key: commit-${{ github.sha }}-job-${{ github.job}}
 
       #
       # Build binary artifacts for Darwin and Linux
@@ -99,14 +81,45 @@ jobs:
           os: linux
           arch: amd64
           version: ${{ needs.checkout-and-bump.outputs.version }}
-      - name: Build darwin binary distribution
+      - name: Build amd64 darwin binary distribution
         uses: ./.github/actions/make
         with:
           target: "release"
           os: darwin
           arch: amd64
           version: ${{ needs.checkout-and-bump.outputs.version }}
-      - name: Build M1 darwin binary distribution
+
+  sign-and-notarize-amd64:
+    runs-on: macos-11
+    needs: bump-and-build1
+    steps:
+      - name: Cache build directory
+        id: cache-build
+        uses: actions/cache@v3
+        env:
+          cache-name: build-dir-cache
+        with:
+          path: ${GITHUB_WORKSPACE}/output
+          key: commit-${{ github.sha }}-job-${{ github.job }}
+
+      - name: Sign and notarize macOS release and create tarball
+        id: san-tarball
+        run: |
+          ${GITHUB_WORKSPACE}/scripts/sign-and-notarize.sh ${GITHUB_WORKSPACE}/output/release-assembly ${GITHUB_WORKSPACE}/output/releases/thelma_${{ needs.checkout-and-bump.outputs.version }}_darwin_amd64.tar.gz
+
+  build2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache build directory
+        id: cache-build
+        uses: actions/cache@v3
+        env:
+          cache-name: build-dir-cache
+        with:
+          path: ${GITHUB_WORKSPACE}/output
+          key: commit-${{ github.sha }}-job-${{ github.job }}
+
+      - name: Build arm64 M1 darwin binary distribution
         uses: ./.github/actions/make
         with:
           target: "release"
@@ -119,9 +132,9 @@ jobs:
           target: "checksum"
           version: ${{ needs.checkout-and-bump.outputs.version }}
 
-  dockerize-and-push:
-    runs-on: ubuntu-latest
-    needs: build
+  sign-and-notarize-arm64:
+    runs-on: macos-11
+    needs: build2
     steps:
       - name: Cache build directory
         id: cache-build
@@ -129,7 +142,25 @@ jobs:
         env:
           cache-name: build-dir-cache
         with:
-          path: ~/output
+          path: ${GITHUB_WORKSPACE}/output
+          key: commit-${{ github.sha }}-job-${{ github.job }}
+
+      - name: Sign and notarize macOS release and create tarball
+        id: san-tarball
+        run: |
+          ${GITHUB_WORKSPACE}/scripts/sign-and-notarize.sh ${GITHUB_WORKSPACE}/output/release-assembly ${GITHUB_WORKSPACE}/output/releases/thelma_${{ needs.checkout-and-bump.outputs.version }}_darwin_arm64.tar.gz
+
+  dockerize-and-push:
+    runs-on: ubuntu-latest
+    needs: sign-and-notarize-arm64
+    steps:
+      - name: Cache build directory
+        id: cache-build
+        uses: actions/cache@v3
+        env:
+          cache-name: build-dir-cache
+        with:
+          path: ${GITHUB_WORKSPACE}/output
           key: commit-${{ github.sha }}-job-${{ github.job}}
 
       #
