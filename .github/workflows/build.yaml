@@ -90,7 +90,7 @@ jobs:
           version: ${{ needs.checkout-and-bump.outputs.version }}
 
   sign-and-notarize-amd64:
-    runs-on: macos-11
+    runs-on: macos-latest
     needs: bump-and-build1
     steps:
       - name: Checkout current code
@@ -110,8 +110,6 @@ jobs:
       - name: Sign and notarize macOS release and create tarball
         id: san-tarball
         run: |
-          pwd
-          ls
           ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.checkout-and-bump.outputs.version }}_darwin_amd64.tar.gz
 
   build2:
@@ -146,7 +144,7 @@ jobs:
           version: ${{ needs.checkout-and-bump.outputs.version }}
 
   sign-and-notarize-arm64:
-    runs-on: macos-11
+    runs-on: macos-latest
     needs: build2
     steps:
       - name: Checkout current code
