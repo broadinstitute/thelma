@@ -39,10 +39,10 @@ else
 	RUNTIME_DEPS_TESTEXEC=true
 endif
 
-# MACOS_SIGN_AND_NOTARIZE: When a macOS host and target are selected, default to signing
-#                          and notarizing by default. This value can be manually set to
-#                          false in cases where you want to generate a macOS release tarball
-#                          from a macOS host without performing any signing and notarizing,
+# MACOS_SIGN_AND_NOTARIZE: When a macOS host and target are selected, default to sign and
+#                          notarize releases. This value can be manually set to false in
+#                          cases where you want to generate a macOS release tarball from
+#                          a macOS host without performing any signing and notarizing,
 #                          i.e. when locally testing updates to the release process without
 #                          having the certs and other creds on your local machine.
 MACOS_SIGN_AND_NOTARIZE=true
