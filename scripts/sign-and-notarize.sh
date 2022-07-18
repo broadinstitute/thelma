@@ -25,14 +25,15 @@ RELEASE_DIR=${1}
 RELEASE_TARBALL=${2}
 WORKING_DIR=$(dirname "$(readlink -f "${RELEASE_DIR}")")/san
 
-# XCode command stuff
+# XCode signing info - doesn't contain secrets
 APPLE_ID=appledev@broadinstitute.org
 TEAM_ID=R787A9V6VV
+SECURITY_ID=5784A30A5BFD511E8636B9F6BBE7EE36D0F0A726
 CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${APP_PWD} --team-id ${TEAM_ID}"
 
 # Sign one file
 sign() {
-	codesign -f -o runtime,library --timestamp -s "5784A30A5BFD511E8636B9F6BBE7EE36D0F0A726" "${1}"
+	codesign -f -o runtime,library --timestamp -s "${SECURITY_ID}" "${1}"
 }
 
 # Zip the given directory into the working dir
