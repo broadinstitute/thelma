@@ -32,7 +32,7 @@ CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${APP_PWD} --team-id ${TEAM_ID
 
 # Sign one file
 sign() {
-	codesign -f -o runtime --timestamp -s "5784A30A5BFD511E8636B9F6BBE7EE36D0F0A726" "${1}"
+	codesign -f -o runtime,library --timestamp -s "5784A30A5BFD511E8636B9F6BBE7EE36D0F0A726" "${1}"
 }
 
 # Zip the given directory into the working dir
