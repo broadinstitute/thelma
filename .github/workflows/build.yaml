@@ -123,6 +123,15 @@ jobs:
           path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
+      - name: Create release cache
+        id: release-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: release-dir-cache
+        with:
+          path: ./output/releases
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
+
       - name: Create temp keychain
         id: create-kc
         run: |
@@ -137,6 +146,7 @@ jobs:
       - name: Sign and notarize macOS releases and create tarball
         id: san-tarball
         run: |
+          mkdir -p 
           ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_amd64.tar.gz
           ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_arm64.tar.gz
 
@@ -149,14 +159,14 @@ jobs:
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
-      - name: Pull cache
-        id: pull-cache
+      - name: Pull release cache
+        id: release-cache
         uses: actions/cache@v3
         env:
-          cache-name: build-dir-cache
+          cache-name: release-dir-cache
         with:
-          path: ./output
-          key: commit-${{ github.sha }}-job-${{ github.run_id}}
+          path: ./output/releases
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
 
       #
       # Build Docker image
