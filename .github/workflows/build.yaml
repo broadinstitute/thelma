@@ -146,7 +146,6 @@ jobs:
       - name: Sign and notarize macOS releases and create tarball
         id: san-tarball
         run: |
-          mkdir -p 
           ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_amd64.tar.gz
           ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_arm64.tar.gz
 
