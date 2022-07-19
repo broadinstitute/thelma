@@ -98,12 +98,6 @@ jobs:
           arch: amd64
           version: ${{ steps.tag.outputs.tag }}
 
-      - name: Generate checksum file
-        uses: ./.github/actions/make
-        with:
-          target: "checksum"
-          version: ${{ steps.tag.outputs.tag }}
-
   sign-and-notarize:
     runs-on: macos-latest
     needs: build
@@ -152,6 +146,12 @@ jobs:
           ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_amd64.tar.gz
           ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_arm64.tar.gz
 
+      - name: Generate checksum file
+        uses: ./.github/actions/make
+        with:
+          target: "checksum"
+          version: ${{ steps.tag.outputs.tag }}
+
   dockerize-and-push:
     runs-on: ubuntu-latest
     needs: [build, sign-and-notarize]
@@ -169,7 +169,6 @@ jobs:
         with:
           path: ./output/releases
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
-
       #
       # Build Docker image
       #
