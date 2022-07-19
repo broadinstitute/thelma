@@ -80,14 +80,14 @@ jobs:
           target: "release"
           os: linux
           arch: amd64
-          version: ${{ needs.bump-and-build1.outputs.version }}
+          version: ${{ needs.build.outputs.version }}
       - name: Build amd64 darwin binary distribution
         uses: ./.github/actions/make
         with:
           target: "release"
           os: darwin
           arch: amd64
-          version: ${{ needs.bump-and-build1.outputs.version }}
+          version: ${{ needs.build.outputs.version }}
 
       - name: Build arm64 M1 darwin binary distribution
         uses: ./.github/actions/make
@@ -95,12 +95,12 @@ jobs:
           target: "release"
           os: darwin
           arch: arm64
-          version: ${{ needs.bump-and-build1.outputs.version }}
+          version: ${{ needs.build.outputs.version }}
       - name: Generate checksum file
         uses: ./.github/actions/make
         with:
           target: "checksum"
-          version: ${{ needs.bump-and-build1.outputs.version }}
+          version: ${{ needs.build.outputs.version }}
 
   sign-and-notarize:
     runs-on: macos-latest
@@ -123,8 +123,8 @@ jobs:
       - name: Sign and notarize macOS release and create tarball
         id: san-tarball
         run: |
-          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_amd64.tar.gz
-          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_arm64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_amd64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_arm64.tar.gz
 
   dockerize-and-push:
     runs-on: ubuntu-latest
@@ -153,14 +153,14 @@ jobs:
         id: image-name
         run: |
           NAME="${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}"
-          DOCKER_TAG="${{ needs.bump-and-build1.outputs.version }}"
+          DOCKER_TAG="${{ needs.build.outputs.version }}"
           TAGGED="${NAME}:${DOCKER_TAG}"
           echo "NAME: ${NAME}"
           echo "TAGGED: ${TAGGED}"
           echo ::set-output "name=name::${NAME}"
           echo ::set-output "name=tagged::${TAGGED}"
       - name: Build image
-        run: "docker build --build-arg THELMA_VERSION=${{ needs.bump-and-build1.outputs.version }} -t ${{ steps.image-name.outputs.tagged }} ."
+        run: "docker build --build-arg THELMA_VERSION=${{ needs.build.outputs.version }} -t ${{ steps.image-name.outputs.tagged }} ."
       - name: Run Trivy vulnerability scanner
         # From https://github.com/broadinstitute/dsp-appsec-trivy-action
         uses: broadinstitute/dsp-appsec-trivy-action@v1
@@ -176,14 +176,14 @@ jobs:
           service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
       - name: Upload release files to bucket
         run: |
-          gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ needs.bump-and-build1.outputs.version }}/
+          gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ needs.build.outputs.version }}/
       - name: Update tags.json
         # TODO: we can make this more sophisticated at some point, but the goal right now
         # is to minimally simulate Docker's "latest" tag for thelma releases, to support auto-update.
         if: github.event_name != 'pull_request'
         run: |
           cat <<EOF > tags.json
-          {"latest":"${{ needs.bump-and-build1.outputs.version }}"}
+          {"latest":"${{ needs.build.outputs.version }}"}
           EOF
           gsutil cp tags.json gs://${{ env.THELMA_RELEASE_BUCKET }}/tags.json
 
