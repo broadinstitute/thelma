@@ -170,14 +170,17 @@ verify() {
 }
 
 # Make working dir
+echo "Make working dir ${WORKING_DIR}"
 mkdir -p "${WORKING_DIR}"
 
 # Make untar dir
 untar_dir="${WORKING_DIR}"/release-files
+echo "Unpacking input tarball to ${untar_dir}"
 mkdir -p "${untar_dir}"
 tar -xf "${RELEASE_TARBALL}" -C "${untar_dir}"
 
 # Remove current release tarball
+echo "Removing input tarball ${RELEASE_TARBALL} so it can be replaced"
 rm "${RELEASE_TARBALL}"
 
 # Sign each binary
