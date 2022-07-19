@@ -56,19 +56,19 @@ create_keychain() {
 	local KEYCHAIN_FILE="${WORKING_DIR}"/release.keychain
 	local _temp_keychain_pwd=temp-kc-pwd
 	echo "Creating keychain ${KEYCHAIN_FILE}"
-	security create-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
+	security create-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Unlock the keychain
 	echo "Unlocking keychain ${KEYCHAIN_FILE}"
-	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
+	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Add the cert to the keychain
 	echo "Importing cert"
-	security import "${_cert_file}" -k "${KEYCHAIN_FILE}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign 2>&1 > /dev/null
+	security import "${_cert_file}" -k "${KEYCHAIN_FILE}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign # 2>&1 > /dev/null
 
 	# Allow codesign to use the keychain without a password prompt
 	echo "Setting partition list"
-	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
+	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	echo "${KEYCHAIN_FILE}"
 }
