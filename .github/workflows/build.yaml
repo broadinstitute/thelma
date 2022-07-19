@@ -123,6 +123,17 @@ jobs:
           path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
+      - name: Create temp keychain
+        id: create-kc
+        run: |
+          mkdir -p ./output/kc
+          echo ${THELMA_MACOS_CERT} | base64 —decode > ./output/kc/certificate.p12
+          security create-keychain -p temp-kc-pwd ./output/kc/certificate.p12
+          security default-keychain -s ./output/kc/release.keychain
+          security unlock-keychain -p temp-kc-pwd ./output/kc/release.keychain
+          security import ./output/kc/certificate.p12 -k ./output/kc/release.keychain -P ${THELMA_MACOS_CERT_PWD} -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k temp-kc-pwd ./output/kc/release.keychain
+
       - name: Sign and notarize macOS releases and create tarball
         id: san-tarball
         run: |
