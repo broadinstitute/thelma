@@ -123,6 +123,10 @@ jobs:
           path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
+      # A second cache is needed to force GH to upload the new macOS tarballs,
+      # since the existing cache already exists and therefore changes made during this step
+      # are not saved for some reason. This new cache will be used during the final job
+      # where the docker image is made and the release artifacts are uploaded.
       - name: Create release cache
         id: release-cache
         uses: actions/cache@v3
