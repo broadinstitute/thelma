@@ -37,6 +37,8 @@ RELEASE_DIR=${1}
 RELEASE_TARBALL=${2}
 WORKING_DIR=$(dirname "$(readlinkf "${RELEASE_DIR}")")/san
 
+KEYCHAIN_FILE="${WORKING_DIR}"/release.keychain
+
 # XCode signing info - doesn't contain secrets
 APPLE_ID=appledev@broadinstitute.org
 TEAM_ID=R787A9V6VV
@@ -47,23 +49,28 @@ CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${THELMA_MACOS_APP_PWD} --team
 create_keychain() {
 	# Decode the signing cert
 	local _cert_file="${WORKING_DIR}"/certificate.p12
+	echo "Writing cert ${_cert_file}"
 	echo "${THELMA_MACOS_CERT}" | base64 -d > "${_cert_file}"
 
 	# Create a temp keychain in the working dir
-	local _kc_file="${WORKING_DIR}"/release.keychain
+	local KEYCHAIN_FILE="${WORKING_DIR}"/release.keychain
 	local _temp_keychain_pwd=temp-kc-pwd
-	security create-keychain -p ${_temp_keychain_pwd} "${_kc_file}" 2>&1 > /dev/null
+	echo "Creating keychain ${KEYCHAIN_FILE}"
+	security create-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
 
 	# Unlock the keychain
-	security unlock-keychain -p ${_temp_keychain_pwd} "${_kc_file}" 2>&1 > /dev/null
+	echo "Unlocking keychain ${KEYCHAIN_FILE}"
+	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
 
 	# Add the cert to the keychain
-	security import "${_cert_file}" -k "${_kc_file}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign 2>&1 > /dev/null
+	echo "Importing cert"
+	security import "${_cert_file}" -k "${KEYCHAIN_FILE}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign 2>&1 > /dev/null
 
 	# Allow codesign to use the keychain without a password prompt
-	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${_kc_file}" 2>&1 > /dev/null
+	echo "Setting partition list"
+	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
 
-	echo "${_kc_file}"
+	echo "${KEYCHAIN_FILE}"
 }
 
 # Sign one file
@@ -194,13 +201,13 @@ verify() {
 mkdir -p "${WORKING_DIR}"
 
 # Create the temp keychain
-keychain_file="$(create_keychain)"
+create_keychain
 
 # Sign each binary
 echo -n "Signing binaries..."
 for bin in "${RELEASE_DIR}"/bin/*
 do
-	sign "${keychain_file}" "${bin}"
+	sign "${KEYCHAIN_FILE}" "${bin}"
 done
 echo "done"
 
