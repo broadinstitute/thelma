@@ -20,7 +20,10 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Set up GCP auth
-      run: echo '${{ secrets.THELMA_CI_KEY }}' > /github/workspace/service_account.json
+      run: |
+        pwd
+        ls
+        echo '${{ secrets.THELMA_CI_KEY }}' > service_account.json
 
     - name: Run tests
       uses: ./.github/actions/make
