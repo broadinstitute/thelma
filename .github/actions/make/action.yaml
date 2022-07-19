@@ -22,12 +22,10 @@ inputs:
     default: unknown
     required: false
 runs:
-  using: 'docker'
-  image: golang:1.17-bullseye
-  args:
-    - make
-    - ${{ inputs.target }}
-    - OUTPUT_DIR=${{ inputs.output-dir }}
-    - OS=${{ inputs.os }}
-    - ARCH=${{ inputs.arch }}
-    - VERSION=${{ inputs.version }}
+  using: 'composite'
+  steps:
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.17'
+        cache: true
+    - run: make ${{ inputs.target }} OUTPUT_DIR=${{ inputs.output-dir }} OS=${{ inputs.os }} ARCH=${{ inputs.arch }} VERSION=${{ inputs.version }}
