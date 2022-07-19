@@ -59,7 +59,7 @@ create_keychain() {
 	security create-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Setting default keychain
-	security default-keychain -s build.keychain "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
+	security default-keychain -s "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Unlock the keychain
 	echo "Unlocking keychain ${KEYCHAIN_FILE}"
