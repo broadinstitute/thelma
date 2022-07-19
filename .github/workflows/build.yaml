@@ -44,6 +44,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
@@ -119,7 +121,7 @@ jobs:
           path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
-      - name: Sign and notarize macOS release and create tarball
+      - name: Sign and notarize macOS releases and create tarball
         id: san-tarball
         run: |
           ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.build.outputs.version }}_darwin_amd64.tar.gz
