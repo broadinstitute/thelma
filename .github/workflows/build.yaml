@@ -44,8 +44,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
@@ -80,14 +78,15 @@ jobs:
           target: "release"
           os: linux
           arch: amd64
-          version: ${{ needs.build.outputs.version }}
+          version: ${{ steps.tag.outputs.tag }}
+
       - name: Build amd64 darwin binary distribution
         uses: ./.github/actions/make
         with:
           target: "release"
           os: darwin
           arch: amd64
-          version: ${{ needs.build.outputs.version }}
+          version: ${{ steps.tag.outputs.tag }}
 
       - name: Build arm64 M1 darwin binary distribution
         uses: ./.github/actions/make
@@ -95,12 +94,12 @@ jobs:
           target: "release"
           os: darwin
           arch: arm64
-          version: ${{ needs.build.outputs.version }}
+          version: ${{ steps.tag.outputs.tag }}
       - name: Generate checksum file
         uses: ./.github/actions/make
         with:
           target: "checksum"
-          version: ${{ needs.build.outputs.version }}
+          version: ${{ steps.tag.outputs.tag }}
 
   sign-and-notarize:
     runs-on: macos-latest
