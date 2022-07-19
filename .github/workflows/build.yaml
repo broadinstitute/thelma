@@ -73,6 +73,13 @@ jobs:
       #
       # Build binary artifacts for Darwin and Linux
       #
+      - name: Build linux binary distribution
+        uses: ./.github/actions/make
+        with:
+          target: "release"
+          os: linux
+          arch: amd64
+          version: ${{ steps.tag.outputs.tag }}
       - name: Build amd64 darwin binary distribution
         uses: ./.github/actions/make
         with:
@@ -87,15 +94,6 @@ jobs:
           target: "release"
           os: darwin
           arch: arm64
-          version: ${{ steps.tag.outputs.tag }}
-
-      # This build must go last in order to reuse build artifacts for making the docker image
-      - name: Build linux binary distribution
-        uses: ./.github/actions/make
-        with:
-          target: "release"
-          os: linux
-          arch: amd64
           version: ${{ steps.tag.outputs.tag }}
 
   sign-and-notarize:
