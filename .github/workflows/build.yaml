@@ -127,9 +127,9 @@ jobs:
         id: release-cache
         uses: actions/cache@v3
         env:
-          cache-name: release-dir-cache
+          cache-name: release-cache
         with:
-          path: ./output/releases
+          path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
 
       - name: Create temp keychain
@@ -163,9 +163,9 @@ jobs:
         id: release-cache
         uses: actions/cache@v3
         env:
-          cache-name: release-dir-cache
+          cache-name: release-cache
         with:
-          path: ./output/releases
+          path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
 
       #
