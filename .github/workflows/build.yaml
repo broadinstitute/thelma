@@ -132,7 +132,7 @@ jobs:
         env:
           cache-name: release-cache
         with:
-          path: ./output
+          path: ./output/releases
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
 
       - name: Create temp keychain
@@ -167,7 +167,7 @@ jobs:
         env:
           cache-name: release-cache
         with:
-          path: ./output
+          path: ./output/releases
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
 
       #
@@ -186,7 +186,10 @@ jobs:
           echo ::set-output "name=name::${NAME}"
           echo ::set-output "name=tagged::${TAGGED}"
       - name: Build image
-        run: "docker build -t ${{ steps.image-name.outputs.tagged }} ."
+        run: |
+          docker build \
+            --build-arg THELMA_LINUX_RELEASE=thelma_${{ needs.build.outputs.version }}_linux_amd64.tar.gz \
+            -t ${{ steps.image-name.outputs.tagged }} .
       - name: Run Trivy vulnerability scanner
         # From https://github.com/broadinstitute/dsp-appsec-trivy-action
         uses: broadinstitute/dsp-appsec-trivy-action@v1
