@@ -36,7 +36,6 @@ readlinkf(){
 TEMP_DIR=${1}
 RELEASE_TARBALL=${2}
 WORKING_DIR=$(readlinkf "${TEMP_DIR}")/san
-
 KEYCHAIN_FILE="${WORKING_DIR}"/release.keychain
 
 # XCode signing info - doesn't contain secrets
@@ -47,31 +46,31 @@ CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${THELMA_MACOS_APP_PWD} --team
 
 # Create a temporary keychain to hold the cert for signing
 create_keychain() {
+	echo "Creating keychain ${KEYCHAIN_FILE}"
+
 	# Decode the signing cert
 	local _cert_file="${WORKING_DIR}"/certificate.p12
 	echo "${THELMA_MACOS_CERT}" | base64 -d > "${_cert_file}"
 
 	# Create a temp keychain in the working dir
-	local KEYCHAIN_FILE="${WORKING_DIR}"/release.keychain
 	local _temp_keychain_pwd=temp-kc-pwd
 	security create-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Setting default keychain
-	security default-keychain -s "${KEYCHAIN_FILE}" 2>&1 > /dev/null
+	security default-keychain -s "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Unlock the keychain
-	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
+	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Add the cert to the keychain
-	security import "${_cert_file}" -k "${KEYCHAIN_FILE}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign 2>&1 > /dev/null
+	security import "${_cert_file}" -k "${KEYCHAIN_FILE}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign # 2>&1 > /dev/null
 
 	# Allow codesign to use the keychain without a password prompt
-	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
-
-	echo "${KEYCHAIN_FILE}"
+	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 }
 
 delete_keychain() {
+	echo "Removing keychain ${KEYCHAIN_FILE}"
 	security delete-keychain "${KEYCHAIN_FILE}"
 }
 
@@ -208,7 +207,6 @@ mkdir -p "${untar_dir}"
 tar -xf "${RELEASE_TARBALL}" -C "${untar_dir}"
 
 # Create the temp keychain
-echo "Creating keychain ${KEYCHAIN_FILE}"
 create_keychain
 
 # Sign each binary
@@ -244,7 +242,6 @@ tar -C "${untar_dir}" -czf "${RELEASE_TARBALL}" .
 echo "done"
 
 # Delete temp keychain
-echo "Removing keychain ${KEYCHAIN_FILE}"
 delete_keychain
 
 # Remove working dir
