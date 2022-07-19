@@ -24,9 +24,15 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # Cache go deps across builds
     - uses: actions/setup-go@v3
       with:
         go-version: '1.17'
         cache: true
-    - run: make ${{ inputs.target }} OUTPUT_DIR=${{ inputs.output-dir }} OS=${{ inputs.os }} ARCH=${{ inputs.arch }} VERSION=${{ inputs.version }}
+    - run: |
+        make ${{ inputs.target }} \
+          OUTPUT_DIR=${{ inputs.output-dir }} \
+          OS=${{ inputs.os }}
+          ARCH=${{ inputs.arch }} \
+          VERSION=${{ inputs.version }}
       shell: bash

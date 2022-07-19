@@ -73,7 +73,6 @@ jobs:
       #
       # Build binary artifacts for Darwin and Linux
       #
-      # TODO: would save time if we could cache go module dependencies across build steps
       - name: Build amd64 darwin binary distribution
         uses: ./.github/actions/make
         with:
