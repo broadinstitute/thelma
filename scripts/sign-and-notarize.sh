@@ -58,6 +58,9 @@ create_keychain() {
 	echo "Creating keychain ${KEYCHAIN_FILE}"
 	security create-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
+	# Setting default keychain
+	security default-keychain -s build.keychain "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
+
 	# Unlock the keychain
 	echo "Unlocking keychain ${KEYCHAIN_FILE}"
 	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
@@ -75,7 +78,7 @@ create_keychain() {
 
 # Sign one file
 sign() {
-	codesign --keychain "${1}" -f -o runtime,library --timestamp -s "${SECURITY_ID}" "${2}"
+	codesign -f -o runtime,library --timestamp -s "${SECURITY_ID}" "${1}"
 }
 
 # Zip the given directory into the working dir
@@ -207,7 +210,7 @@ create_keychain
 echo -n "Signing binaries..."
 for bin in "${RELEASE_DIR}"/bin/*
 do
-	sign "${KEYCHAIN_FILE}" "${bin}"
+	sign "${bin}"
 done
 echo "done"
 
