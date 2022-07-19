@@ -174,7 +174,7 @@ jobs:
           echo ::set-output "name=name::${NAME}"
           echo ::set-output "name=tagged::${TAGGED}"
       - name: Build image
-        run: "docker build --build-arg THELMA_VERSION=${{ needs.build.outputs.version }} -t ${{ steps.image-name.outputs.tagged }} ."
+        run: "docker build -t ${{ steps.image-name.outputs.tagged }} ."
       - name: Run Trivy vulnerability scanner
         # From https://github.com/broadinstitute/dsp-appsec-trivy-action
         uses: broadinstitute/dsp-appsec-trivy-action@v1
