@@ -127,7 +127,7 @@ jobs:
         id: create-kc
         run: |
           mkdir -p ./output/kc
-          echo ${THELMA_MACOS_CERT} | base64 —decode > ./output/kc/certificate.p12
+          echo ${THELMA_MACOS_CERT} | base64 --decode > ./output/kc/certificate.p12
           security create-keychain -p temp-kc-pwd ./output/kc/certificate.p12
           security default-keychain -s ./output/kc/release.keychain
           security unlock-keychain -p temp-kc-pwd ./output/kc/release.keychain
