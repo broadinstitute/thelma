@@ -45,7 +45,7 @@ jobs:
   bump-and-build1:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ needs.checkout-and-bump.outputs.version }}
+      version: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
@@ -58,7 +58,7 @@ jobs:
         env:
           cache-name: build-dir-cache
         with:
-          path: ./output
+          path: .
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Bump tag to new version
@@ -80,54 +80,44 @@ jobs:
           target: "release"
           os: linux
           arch: amd64
-          version: ${{ needs.checkout-and-bump.outputs.version }}
+          version: ${{ needs.bump-and-build1.outputs.version }}
       - name: Build amd64 darwin binary distribution
         uses: ./.github/actions/make
         with:
           target: "release"
           os: darwin
           arch: amd64
-          version: ${{ needs.checkout-and-bump.outputs.version }}
+          version: ${{ needs.bump-and-build1.outputs.version }}
 
   sign-and-notarize-amd64:
     runs-on: macos-latest
     needs: bump-and-build1
     steps:
-      - name: Checkout current code
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
-
       - name: Pull cache
         id: pull-cache
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache
         with:
-          path: ./output
+          path: .
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Sign and notarize macOS release and create tarball
         id: san-tarball
         run: |
-          ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.checkout-and-bump.outputs.version }}_darwin_amd64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_amd64.tar.gz
 
   build2:
     runs-on: ubuntu-latest
     needs: sign-and-notarize-amd64
     steps:
-      - name: Checkout current code
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
-
       - name: Pull cache
         id: pull-cache
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache
         with:
-          path: ./output
+          path: .
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Build arm64 M1 darwin binary distribution
@@ -136,35 +126,30 @@ jobs:
           target: "release"
           os: darwin
           arch: arm64
-          version: ${{ needs.checkout-and-bump.outputs.version }}
+          version: ${{ needs.bump-and-build1.outputs.version }}
       - name: Generate checksum file
         uses: ./.github/actions/make
         with:
           target: "checksum"
-          version: ${{ needs.checkout-and-bump.outputs.version }}
+          version: ${{ needs.bump-and-build1.outputs.version }}
 
   sign-and-notarize-arm64:
     runs-on: macos-latest
     needs: build2
     steps:
-      - name: Checkout current code
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
-
       - name: Pull cache
         id: pull-cache
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache
         with:
-          path: ./output
+          path: .
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Sign and notarize macOS release and create tarball
         id: san-tarball
         run: |
-          ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.checkout-and-bump.outputs.version }}_darwin_arm64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_arm64.tar.gz
 
   dockerize-and-push:
     runs-on: ubuntu-latest
@@ -176,7 +161,7 @@ jobs:
         env:
           cache-name: build-dir-cache
         with:
-          path: ./output
+          path: .
           key: commit-${{ github.sha }}-job-${{ github.run_id}}
 
       #
@@ -188,14 +173,14 @@ jobs:
         id: image-name
         run: |
           NAME="${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}"
-          DOCKER_TAG="${{ needs.checkout-and-bump.outputs.version }}"
+          DOCKER_TAG="${{ needs.bump-and-build1.outputs.version }}"
           TAGGED="${NAME}:${DOCKER_TAG}"
           echo "NAME: ${NAME}"
           echo "TAGGED: ${TAGGED}"
           echo ::set-output "name=name::${NAME}"
           echo ::set-output "name=tagged::${TAGGED}"
       - name: Build image
-        run: "docker build --build-arg THELMA_VERSION=${{ needs.checkout-and-bump.outputs.version }} -t ${{ steps.image-name.outputs.tagged }} ."
+        run: "docker build --build-arg THELMA_VERSION=${{ needs.bump-and-build1.outputs.version }} -t ${{ steps.image-name.outputs.tagged }} ."
       - name: Run Trivy vulnerability scanner
         # From https://github.com/broadinstitute/dsp-appsec-trivy-action
         uses: broadinstitute/dsp-appsec-trivy-action@v1
@@ -211,14 +196,14 @@ jobs:
           service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
       - name: Upload release files to bucket
         run: |
-          gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ needs.checkout-and-bump.outputs.version }}/
+          gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ needs.bump-and-build1.outputs.version }}/
       - name: Update tags.json
         # TODO: we can make this more sophisticated at some point, but the goal right now
         # is to minimally simulate Docker's "latest" tag for thelma releases, to support auto-update.
         if: github.event_name != 'pull_request'
         run: |
           cat <<EOF > tags.json
-          {"latest":"${{ needs.checkout-and-bump.outputs.version }}"}
+          {"latest":"${{ needs.bump-and-build1.outputs.version }}"}
           EOF
           gsutil cp tags.json gs://${{ env.THELMA_RELEASE_BUCKET }}/tags.json
 
