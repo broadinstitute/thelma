@@ -177,6 +177,9 @@ untar_dir="${WORKING_DIR}"/release-files
 mkdir -p "${untar_dir}"
 tar -xf "${RELEASE_TARBALL}" -C "${untar_dir}"
 
+# Remove current release tarball
+rm "${RELEASE_TARBALL}"
+
 # Sign each binary
 echo -n "Signing binaries..."
 for bin in "${untar_dir}"/bin/*
