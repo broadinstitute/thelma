@@ -21,9 +21,9 @@ jobs:
 
     - name: Set up GCP auth
       run: |
+        echo '${{ secrets.THELMA_CI_KEY }}' > service_account.json
         pwd
         ls
-        echo '${{ secrets.THELMA_CI_KEY }}' > service_account.json
 
     - name: Run tests
       uses: ./.github/actions/make
@@ -32,7 +32,7 @@ jobs:
       env:
         # full path is needed because go tests switch into package directories,
         # and some smoke tests use GCP credentials
-        GOOGLE_APPLICATION_CREDENTIALS: /github/workspace/service_account.json
+        GOOGLE_APPLICATION_CREDENTIALS: service_account.json
 
     - name: Upload Coverage Report
       uses: codecov/codecov-action@v1
