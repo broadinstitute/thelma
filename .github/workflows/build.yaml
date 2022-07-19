@@ -163,11 +163,12 @@ jobs:
         with:
           path: ./output/releases
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
+
       - name: Generate checksum file
         uses: ./.github/actions/make
         with:
           target: "checksum"
-          version: ${{ steps.tag.outputs.tag }}
+          version: ${{ needs.build.outputs.version }}
 
       #
       # Build Docker image
