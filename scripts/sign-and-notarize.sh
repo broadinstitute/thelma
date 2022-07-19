@@ -28,10 +28,14 @@ if [ -z "${THELMA_MACOS_CERT_PWD}" ]; then
 	exit 1
 fi
 
+readlinkf(){
+	perl -MCwd -e 'print Cwd::abs_path shift' "$1"
+}
+
 # Files and dirs
 RELEASE_DIR=${1}
 RELEASE_TARBALL=${2}
-WORKING_DIR=$(dirname "$(readlink -f "${RELEASE_DIR}")")/san
+WORKING_DIR=$(dirname "$(readlinkf "${RELEASE_DIR}")")/san
 
 # XCode signing info - doesn't contain secrets
 APPLE_ID=appledev@broadinstitute.org
@@ -70,7 +74,7 @@ sign() {
 # Zip the given directory into the working dir
 archive() {
 	# Get the absolute path to the input path
-	local _absdir="$(readlink -f "${1}")"
+	local _absdir="$(readlinkf "${1}")"
 
 	# Extract just the name of the directory to zip
 	local _bname="$(basename ${_absdir})"
