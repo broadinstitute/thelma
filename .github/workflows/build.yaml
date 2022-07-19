@@ -58,7 +58,7 @@ jobs:
         env:
           cache-name: build-dir-cache
         with:
-          path: .
+          path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Bump tag to new version
@@ -93,13 +93,18 @@ jobs:
     runs-on: macos-latest
     needs: bump-and-build1
     steps:
+      - name: Checkout current code
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.BROADBOT_TOKEN }}
+
       - name: Pull cache
         id: pull-cache
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache
         with:
-          path: .
+          path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Sign and notarize macOS release and create tarball
@@ -113,13 +118,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: sign-and-notarize-amd64
     steps:
+      - name: Checkout current code
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.BROADBOT_TOKEN }}
+
       - name: Pull cache
         id: pull-cache
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache
         with:
-          path: .
+          path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Build arm64 M1 darwin binary distribution
@@ -139,13 +149,18 @@ jobs:
     runs-on: macos-latest
     needs: build2
     steps:
+      - name: Checkout current code
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.BROADBOT_TOKEN }}
+
       - name: Pull cache
         id: pull-cache
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache
         with:
-          path: .
+          path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id }}
 
       - name: Sign and notarize macOS release and create tarball
@@ -163,7 +178,7 @@ jobs:
         env:
           cache-name: build-dir-cache
         with:
-          path: .
+          path: ./output
           key: commit-${{ github.sha }}-job-${{ github.run_id}}
 
       #
