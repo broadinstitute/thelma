@@ -42,7 +42,7 @@ env:
   # Apple Developer application password
   THELMA_MACOS_APP_PWD: ${{ secrets.THELMA_MACOS_APP_PWD }}
 jobs:
-  bump-and-build1:
+  build:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.tag.outputs.tag }}
@@ -89,49 +89,6 @@ jobs:
           arch: amd64
           version: ${{ needs.bump-and-build1.outputs.version }}
 
-  sign-and-notarize-amd64:
-    runs-on: macos-latest
-    needs: bump-and-build1
-    steps:
-      - name: Checkout current code
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
-
-      - name: Pull cache
-        id: pull-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: build-dir-cache
-        with:
-          path: ./output
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}
-
-      - name: Sign and notarize macOS release and create tarball
-        id: san-tarball
-        run: |
-          pwd
-          ls
-          ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_amd64.tar.gz
-
-  build2:
-    runs-on: ubuntu-latest
-    needs: [bump-and-build1, sign-and-notarize-amd64]
-    steps:
-      - name: Checkout current code
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
-
-      - name: Pull cache
-        id: pull-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: build-dir-cache
-        with:
-          path: ./output
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}
-
       - name: Build arm64 M1 darwin binary distribution
         uses: ./.github/actions/make
         with:
@@ -145,9 +102,9 @@ jobs:
           target: "checksum"
           version: ${{ needs.bump-and-build1.outputs.version }}
 
-  sign-and-notarize-arm64:
+  sign-and-notarize:
     runs-on: macos-latest
-    needs: [bump-and-build1, build2]
+    needs: build
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
@@ -166,14 +123,20 @@ jobs:
       - name: Sign and notarize macOS release and create tarball
         id: san-tarball
         run: |
-          ./scripts/sign-and-notarize.sh ./output/release-assembly ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_arm64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_amd64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.bump-and-build1.outputs.version }}_darwin_arm64.tar.gz
 
   dockerize-and-push:
     runs-on: ubuntu-latest
-    needs: [bump-and-build1, sign-and-notarize-arm64]
+    needs: [build, sign-and-notarize-arm64]
     steps:
-      - name: Cache build directory
-        id: cache-build
+      - name: Checkout current code
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.BROADBOT_TOKEN }}
+
+      - name: Pull cache
+        id: pull-cache
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache

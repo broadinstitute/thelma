@@ -33,9 +33,9 @@ readlinkf(){
 }
 
 # Files and dirs
-RELEASE_DIR=${1}
+TEMP_DIR=${1}
 RELEASE_TARBALL=${2}
-WORKING_DIR=$(dirname "$(readlinkf "${RELEASE_DIR}")")/san
+WORKING_DIR=$(readlinkf "${TEMP_DIR}")/san
 
 KEYCHAIN_FILE="${WORKING_DIR}"/release.keychain
 
@@ -59,21 +59,25 @@ create_keychain() {
 	security create-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
 
 	# Setting default keychain
-	security default-keychain -s "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
+	security default-keychain -s "${KEYCHAIN_FILE}" 2>&1 > /dev/null
 
 	# Unlock the keychain
 	echo "Unlocking keychain ${KEYCHAIN_FILE}"
-	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
+	security unlock-keychain -p ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
 
 	# Add the cert to the keychain
 	echo "Importing cert"
-	security import "${_cert_file}" -k "${KEYCHAIN_FILE}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign # 2>&1 > /dev/null
+	security import "${_cert_file}" -k "${KEYCHAIN_FILE}" -P "${THELMA_MACOS_CERT_PWD}" -T /usr/bin/codesign 2>&1 > /dev/null
 
 	# Allow codesign to use the keychain without a password prompt
 	echo "Setting partition list"
-	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" # 2>&1 > /dev/null
+	security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${_temp_keychain_pwd} "${KEYCHAIN_FILE}" 2>&1 > /dev/null
 
 	echo "${KEYCHAIN_FILE}"
+}
+
+delete_keychain() {
+	security delete-keychain "${KEYCHAIN_FILE}"
 }
 
 # Sign one file
@@ -203,19 +207,24 @@ verify() {
 # Make working dir
 mkdir -p "${WORKING_DIR}"
 
+# Make untar dir
+untar_dir="${WORKING_DIR}"/release-files
+mkdir -p "${untar_dir}"
+tar -xf "${RELEASE_TARBALL}" -C "${untar_dir}"
+
 # Create the temp keychain
 create_keychain
 
 # Sign each binary
 echo -n "Signing binaries..."
-for bin in "${RELEASE_DIR}"/bin/*
+for bin in "${untar_dir}"/bin/*
 do
 	sign "${bin}"
 done
 echo "done"
 
 # Submit the release to Apple for notarization
-notarize "$(archive "${RELEASE_DIR}")"
+notarize "$(archive "${untar_dir}")"
 
 # Verify all files were notarized
 # Note: Oddly, there's no need to check the notarization status of the files
@@ -228,15 +237,18 @@ notarize "$(archive "${RELEASE_DIR}")"
 #       that Apple registers the binaries as "safe" and then lets users computers
 #       do a check later when they're run....or something. This is all very opaque
 #       and the process is unclear.
-for bin in "${RELEASE_DIR}"/bin/*
+for bin in "${untar_dir}"/bin/*
 do
 	verify "${bin}"
 done
 
 # Create SaN release tarball
 echo -n "Creating release tarball ${RELEASE_TARBALL}..."
-tar -C "${RELEASE_DIR}" -czf "${RELEASE_TARBALL}" .
+tar -C "${untar_dir}" -czf "${RELEASE_TARBALL}" .
 echo "done"
+
+# Delete temp keychain
+delete_keychain
 
 # Remove working dir
 rm -rf "${WORKING_DIR}"
