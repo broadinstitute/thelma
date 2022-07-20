@@ -4,6 +4,10 @@ name: Bump, Tag, and Publish
 #  1. Bump the version number and tag the release if not a PR
 #  2. Build docker image and publish to GCR
 #
+# This workflow uses caching and parallel builds for speedup as follows:
+# 1. The `cache-go-deps` job caches ~/go just for this workflow
+# 2. `
+#
 # When run on merge to main, it tags and bumps the patch version by default. You can
 # bump other parts of the version by putting #major, #minor, or #patch in your commit
 # message.
@@ -78,9 +82,7 @@ jobs:
           path: ~/go
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-go-cache
 
-      - run: |
-          go mod download -x
-          echo $GOPATH
+      - run: go mod download -x
         shell: bash
 
   build-linux-amd64:
@@ -102,12 +104,12 @@ jobs:
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-go-cache
 
       - name: Cache Linux amd64 build directories
-        id: cache-build
+        id: cache-build-linux-amd64
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
-          path: ./output
+          path: ./output/releases
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-linux-amd64
 
       #
@@ -225,12 +227,12 @@ jobs:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Linux amd64 build directories
-        id: cache-build
+        id: cache-build-linux-amd64
         uses: actions/cache@v3
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
-          path: ./output
+          path: ./output/releases
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-linux-amd64
 
       - name: Pull Darwin amd64 release directory
