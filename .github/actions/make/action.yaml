@@ -39,5 +39,5 @@ runs:
           OS=${{ inputs.os }} \
           ARCH=${{ inputs.arch }} \
           VERSION=${{ inputs.version }} \
-          RELEASE_STAGING_DIR=${{ inputs.rel-dir }}
+          RELEASE_ARCHIVE_DIR=${{ inputs.rel-dir }}
       shell: bash
