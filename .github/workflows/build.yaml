@@ -65,21 +65,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: bump
     outputs:
-      version: ${{ needs.bump.outputs.version }}
+      rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
-      - name: Cache build directory
-        id: cache-build
+      - name: Set release output directory
+        id: rel-dir-name
+        run: |
+          REL_DIR_PATH=./output/releases/linux-amd64
+          echo ::set-output "rel-dir=rel-dir::${REL_DIR_PATH}"
+
+      - name: Cache release directory
+        id: cache-release
         uses: actions/cache@v3
         env:
-          cache-name: build-dir-cache
+          cache-name: release-dir-cache-linux-amd64
         with:
-          path: ./output
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}
+          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-linux-amd64
 
       #
       # Build binary artifacts for amd64 Linux
@@ -91,26 +97,33 @@ jobs:
           os: linux
           arch: amd64
           version: ${{ needs.bump.outputs.version }}
+          rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
 
   build-darwin-amd64:
     runs-on: ubuntu-latest
     needs: bump
     outputs:
-      version: ${{ needs.bump.outputs.version }}
+      rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
-      - name: Cache build directory
-        id: cache-build
+      - name: Set release output directory
+        id: rel-dir-name
+        run: |
+          REL_DIR_PATH=./output/releases/darwin-amd64
+          echo ::set-output "rel-dir=rel-dir::${REL_DIR_PATH}"
+
+      - name: Cache release directory
+        id: cache-release
         uses: actions/cache@v3
         env:
-          cache-name: build-dir-cache
+          cache-name: release-dir-cache-darwin-amd64
         with:
-          path: ./output
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}
+          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-darwin-amd64
 
       #
       # Build binary artifacts for amd64 Darwin
@@ -122,26 +135,33 @@ jobs:
           os: darwin
           arch: amd64
           version: ${{ needs.bump.outputs.version }}
+          rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
 
   build-darwin-arm64:
     runs-on: ubuntu-latest
     needs: bump
     outputs:
-      version: ${{ needs.bump.outputs.version }}
+      rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
-      - name: Cache build directory
-        id: cache-build
+      - name: Set release output directory
+        id: rel-dir-name
+        run: |
+          REL_DIR_PATH=./output/releases/darwin-arm64
+          echo ::set-output "rel-dir=rel-dir::${REL_DIR_PATH}"
+
+      - name: Cache release directory
+        id: cache-release
         uses: actions/cache@v3
         env:
-          cache-name: build-dir-cache
+          cache-name: release-dir-cache-darwin-arm64
         with:
-          path: ./output
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}
+          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-darwin-arm64
 
       #
       # Build binary artifacts for arm64 Darwin
@@ -153,6 +173,7 @@ jobs:
           os: darwin
           arch: arm64
           version: ${{ needs.bump.outputs.version }}
+          rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
 
   sign-and-notarize:
     runs-on: macos-latest
@@ -199,26 +220,52 @@ jobs:
       - name: Sign and notarize macOS releases and create tarball
         id: san-tarball
         run: |
-          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.bump.outputs.version }}_darwin_amd64.tar.gz
-          ./scripts/sign-and-notarize.sh ./output ./output/releases/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output ./output/${{ needs.build-darwin-amd64.outputs.rel-dir}}/thelma_${{ needs.bump.outputs.version }}_darwin_amd64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output ./output/${{ needs.build-darwin-arm64.outputs.rel-dir}}/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz
 
   dockerize-and-push:
     runs-on: ubuntu-latest
-    needs: [bump, sign-and-notarize]
+    needs: [bump, build-linux-amd64, build-darwin-amd64, build-darwin-arm64, sign-and-notarize]
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
-      - name: Pull release cache
-        id: release-cache
+      - name: Pull Linux amd64 release directory
+        id: cache-release
         uses: actions/cache@v3
         env:
-          cache-name: release-cache
+          cache-name: release-dir-cache-linux-amd64
         with:
-          path: ./output/releases
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
+          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-linux-amd64
+
+      - name: Pull Darwin amd64 release directory
+        id: cache-release
+        uses: actions/cache@v3
+        env:
+          cache-name: release-dir-cache-darwin-amd64
+        with:
+          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-darwin-amd64
+
+      - name: Pull Darwin arm64 release directory
+        id: cache-release
+        uses: actions/cache@v3
+        env:
+          cache-name: release-dir-cache-darwin-arm64
+        with:
+          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-darwin-arm64
+
+      - name: Create unified release dir
+        id: unified-rel-dir
+        run: |
+          mkdir -p ./output/releases
+          mv ${{ needs.build-linux-amd64.outputs.rel-dir }}/* ./output/releases
+          mv ${{ needs.build-darwin-amd64.outputs.rel-dir }}/* ./output/releases
+          mv ${{ needs.build-darwin-arm64.outputs.rel-dir }}/* ./output/releases
 
       - name: Generate checksum file
         uses: ./.github/actions/make
