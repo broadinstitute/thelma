@@ -64,8 +64,6 @@ jobs:
   build-linux-amd64:
     runs-on: ubuntu-latest
     needs: bump
-    outputs:
-      rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
@@ -192,7 +190,7 @@ jobs:
         env:
           cache-name: release-dir-cache-darwin-amd64
         with:
-          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          path: ${{ needs.build-darwin-amd64.outputs.rel-dir }}
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-darwin-amd64
 
       - name: Pull Darwin arm64 release directory
@@ -201,7 +199,7 @@ jobs:
         env:
           cache-name: release-dir-cache-darwin-arm64
         with:
-          path: ${{ steps.rel-dir-name.outputs.rel-dir }}
+          path: ${{ needs.build-darwin-arm64.outputs.rel-dir }}
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-darwin-arm64
 
       # A second cache is needed to force GH to upload the new macOS tarballs,
