@@ -74,7 +74,9 @@ jobs:
           go-version: '1.17'
           cache: true
 
-      - run: go mod download -x
+      - run: |
+          go mod download -x
+          echo $GOPATH
         shell: bash
 
   build-linux-amd64:
