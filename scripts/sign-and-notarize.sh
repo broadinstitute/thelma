@@ -26,7 +26,7 @@ if [ -z "${THELMA_MACOS_CERT}" ]; then
 	exit 1
 fi
 if [ -z "${THELMA_MACOS_CERT_PWD}" ]; then
-	echo "ERROR: Signing cert password env var THELMA_MACOS_CERT unset but required. Exiting."
+	echo "ERROR: Signing cert password env var THELMA_MACOS_CERT_PWD unset but required. Exiting."
 	exit 1
 fi
 
