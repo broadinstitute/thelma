@@ -62,6 +62,7 @@ jobs:
           WITH_V: true
 
   cache-go-deps:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
         with:
