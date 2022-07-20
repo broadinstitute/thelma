@@ -206,6 +206,11 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 	))
 	require.NoError(t, err)
 	assert.Equal(t, "completely-different-pr", paniniRawls[0].TerraHelmfileRef())
+
+	// test build number is loaded correctly
+	swirlyRabbit, err := state.Environments().Get("fiab-swirly-rabbit")
+	require.NoError(t, err)
+	assert.Equal(t, 123, swirlyRabbit.BuildNumber())
 }
 
 func TestUpdateState(t *testing.T) {

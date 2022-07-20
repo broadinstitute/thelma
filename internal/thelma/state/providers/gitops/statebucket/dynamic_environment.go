@@ -12,6 +12,7 @@ type DynamicEnvironment struct {
 	Hybrid           bool                 `json:"hybrid"` // Deprecated / temporary (while we run bees in hybrid mode)
 	Fiab             Fiab                 `json:"fiab"`   // Deprecated / temporary (while we run bees in hybrid mode)
 	TerraHelmfileRef string               `json:"terraHelmfileRef"`
+	BuildNumber      int                  `json:"buildNumber"`
 }
 
 // Fiab (DEPRECATED) is a struct for representing a Fiab in the state file

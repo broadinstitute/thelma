@@ -171,6 +171,7 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 			template.baseDomain,
 			template.namePrefixesDomain,
 			_releases,
+			dynamicEnv.BuildNumber,
 		)
 		env.terraHelmfileRef = dynamicEnv.TerraHelmfileRef
 
@@ -320,6 +321,7 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		envConfig.BaseDomain,
 		envConfig.NamePrefixesDomain,
 		_releases,
+		0,
 	)
 
 	for _, _release := range _releases {
