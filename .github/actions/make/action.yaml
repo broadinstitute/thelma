@@ -21,6 +21,10 @@ inputs:
     description: 'Semantic version string to use when generating artifacts'
     default: unknown
     required: false
+  rel-dir:
+    description: 'Release output directory, used to parallelize builds when using actions/cache'
+    default: ./output/releases
+    required: false
 runs:
   using: 'composite'
   steps:
@@ -33,5 +37,6 @@ runs:
           OUTPUT_DIR=${{ inputs.output-dir }} \
           OS=${{ inputs.os }} \
           ARCH=${{ inputs.arch }} \
-          VERSION=${{ inputs.version }}
+          VERSION=${{ inputs.version }} \
+          RELEASE_ARCHIVE_DIR=${{ inputs.rel-dir }}
       shell: bash

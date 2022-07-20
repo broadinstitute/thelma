@@ -11,8 +11,8 @@ set -eo pipefail
 # * verify that all files were notarized
 # * create the release tarball
 
-if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <release dir> <release tarball>" >&2
+if [[ $# -ne 3 ]]; then
+  echo "Usage: $0 <release dir> <release tarball> <output tarball>" >&2
   exit 1
 fi
 
@@ -37,6 +37,7 @@ readlinkf(){
 # Files and dirs
 TEMP_DIR=${1}
 RELEASE_TARBALL=${2}
+OUTPUT_TARBALL=${3}
 WORKING_DIR=$(readlinkf "${TEMP_DIR}")/san
 
 # XCode signing info - doesn't contain secrets
@@ -179,10 +180,6 @@ echo "Unpacking input tarball to ${untar_dir}"
 mkdir -p "${untar_dir}"
 tar -xf "${RELEASE_TARBALL}" -C "${untar_dir}"
 
-# Remove current release tarball
-echo "Removing input tarball ${RELEASE_TARBALL} so it can be replaced"
-rm "${RELEASE_TARBALL}"
-
 # Sign each binary
 echo -n "Signing binaries..."
 for bin in "${untar_dir}"/bin/*
@@ -211,8 +208,8 @@ do
 done
 
 # Create SaN release tarball
-echo -n "Creating release tarball ${RELEASE_TARBALL}..."
-tar -C "${untar_dir}" -czf "${RELEASE_TARBALL}" .
+echo -n "Creating release tarball ${OUTPUT_TARBALL}..."
+tar -C "${untar_dir}" -czf "${OUTPUT_TARBALL}" .
 echo "done"
 
 # Remove working dir
