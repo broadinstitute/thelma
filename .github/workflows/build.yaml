@@ -107,7 +107,7 @@ jobs:
         id: rel-dir-name
         run: |
           REL_DIR_PATH=./output/releases/darwin-amd64
-          echo ::set-output "rel-dir=rel-dir::${REL_DIR_PATH}"
+          echo ::set-output "name=rel-dir::${REL_DIR_PATH}"
 
       - name: Cache release directory
         id: cache-release-darwin-amd64
@@ -145,7 +145,7 @@ jobs:
         id: rel-dir-name
         run: |
           REL_DIR_PATH=./output/releases/darwin-arm64
-          echo ::set-output "rel-dir=rel-dir::${REL_DIR_PATH}"
+          echo ::set-output "name=rel-dir::${REL_DIR_PATH}"
 
       - name: Cache release directory
         id: cache-release-darwin-arm64
