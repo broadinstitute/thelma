@@ -183,7 +183,7 @@ jobs:
 
   sign-and-notarize:
     runs-on: macos-latest
-    needs: [build-linux-amd64, build-darwin-amd64, build-darwin-arm64]
+    needs: [bump, build-linux-amd64, build-darwin-amd64, build-darwin-arm64]
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
