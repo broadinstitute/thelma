@@ -5,8 +5,22 @@ name: Bump, Tag, and Publish
 #  2. Build docker image and publish to GCR
 #
 # This workflow uses caching and parallel builds for speedup as follows:
-# 1. The `cache-go-deps` job caches ~/go just for this workflow
-# 2. `
+# 1. The `cache-go-deps` job caches ~/go just for this workflow.
+# Then, in parallel:
+# 2a. The `build-linux-amd64` job pulls the Go cache and creates its own cache
+#    for `./output/releases`.
+# 2b. The `build-darwin-amd64` job pulls the Go cache and creates its own cache
+#    for `./output/releases/darwin-amd64`.
+# 2c. The `build-darwin-arm64` job pulls the Go cache and creates its own cache
+#    for `./output/releases/darwin-arm64`.
+# Afterwards:
+# 3. The `sign-and-notarize` job pulls the above release caches, signs and notarizes
+#    the darwin release tarballs, puts the output in `./output/releases`, and creates
+#    a new cache for `./output/releases`. This is necessary because the existing cache
+#    won't be uploaded for that directory as it already exists.
+# 4. The `dockerize-and-push` job pulls the new release cache from the previous job,
+#    builds the docker image, pushes it, and uploads the tarballs in `./output/releases`
+#    to the Thelma release GCS bucket.
 #
 # When run on merge to main, it tags and bumps the patch version by default. You can
 # bump other parts of the version by putting #major, #minor, or #patch in your commit
