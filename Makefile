@@ -39,21 +39,6 @@ else
 	RUNTIME_DEPS_TESTEXEC=true
 endif
 
-# MACOS_SIGN_AND_NOTARIZE: When false, creates a release tarball as part of the make process,
-#                          when true, create it using a separate GHA job using the sign
-#                          and notarize script.
-#                          When a macOS host and target are used, default to sign and
-#                          notarize releases. This value can be manually set to false in
-#                          cases where you want to generate a macOS release tarball from
-#                          a macOS host without performing any signing and notarizing,
-#                          i.e. when locally testing updates to the release process without
-#                          having the certs and other creds on your local machine.
-ifeq ($(LOCAL_OS)-$(TARGET_OS),darwin-darwin)
-	MACOS_SIGN_AND_NOTARIZE=true
-else
-	MACOS_SIGN_AND_NOTARIZE=false
-endif
-
 # OUTPUT_DIR root directory for all build output
 OUTPUT_DIR=./output
 
@@ -90,12 +75,11 @@ echo-vars: # Echo makefile variables for debugging purposes
 	@echo "-----------------------------------------------------------"
 	@echo "Build Parameters"
 	@echo "-----------------------------------------------------------"
-	@echo "Target OS:         ${TARGET_OS}"
-	@echo "Target Arch:       ${TARGET_ARCH}"
-	@echo "Local OS:          ${LOCAL_OS}"
-	@echo "Local Arch:        ${LOCAL_ARCH}"
-	@echo "Cross-platform?    ${CROSSPLATFORM}"
-	@echo "Sign and notarize? ${MACOS_SIGN_AND_NOTARIZE}"
+	@echo "Target OS:      ${TARGET_OS}"
+	@echo "Target Arch:    ${TARGET_ARCH}"
+	@echo "Local OS:       ${LOCAL_OS}"
+	@echo "Local Arch:     ${LOCAL_ARCH}"
+	@echo "Cross-platform? ${CROSSPLATFORM}"
 	@echo
 	@echo "Version:     ${VERSION}"
 	@echo "Git Sha:     ${GIT_SHA}"
@@ -140,10 +124,8 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
     # Generate build.json manifest in staging dir
 	VERSION=${VERSION} GIT_SHA=${GIT_SHA} BUILD_TIMESTAMP=${BUILD_TIMESTAMP} OS=${TARGET_OS} ARCH=${TARGET_ARCH} ./scripts/write-build-manifest.sh ${RELEASE_STAGING_DIR}/build.json
 
-	# Create a release tarball unless signing and notarizing, which take place in a separate GHA job
-	if [ ${MACOS_SIGN_AND_NOTARIZE} = false ]; then \
-		tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .; \
-	fi;
+    # Package all files into tar.gz archive
+	tar -C ${RELEASE_STAGING_DIR} -czf ${RELEASE_ARCHIVE_DIR}/${RELEASE_ARCHIVE_NAME} .
 
 checksum: # Generate sha256sum file for tarball archives in the release archive directory
 	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_ARCHIVE_DIR}
