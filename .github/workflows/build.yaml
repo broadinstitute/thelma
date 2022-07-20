@@ -78,7 +78,7 @@ jobs:
 
   build-linux-amd64:
     runs-on: ubuntu-latest
-    needs: bump
+    needs: [bump, cache-go-deps]
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
@@ -107,7 +107,7 @@ jobs:
 
   build-darwin-amd64:
     runs-on: ubuntu-latest
-    needs: bump
+    needs: [bump, cache-go-deps]
     outputs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
@@ -145,7 +145,7 @@ jobs:
 
   build-darwin-arm64:
     runs-on: ubuntu-latest
-    needs: bump
+    needs: [bump, cache-go-deps]
     outputs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
