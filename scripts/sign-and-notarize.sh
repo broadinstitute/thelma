@@ -37,6 +37,7 @@ readlinkf(){
 # Files and dirs
 TEMP_DIR=${1}
 RELEASE_TARBALL=${2}
+OUTPUT_TARBALL=${3}
 WORKING_DIR=$(readlinkf "${TEMP_DIR}")/san
 
 # XCode signing info - doesn't contain secrets
@@ -211,8 +212,8 @@ do
 done
 
 # Create SaN release tarball
-echo -n "Creating release tarball ${RELEASE_TARBALL}..."
-tar -C "${untar_dir}" -czf "${RELEASE_TARBALL}" .
+echo -n "Creating release tarball ${OUTPUT_TARBALL}..."
+tar -C "${untar_dir}" -czf "${OUTPUT_TARBALL}" .
 echo "done"
 
 # Remove working dir
