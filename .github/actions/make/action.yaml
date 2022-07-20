@@ -23,7 +23,7 @@ inputs:
     required: false
   rel-dir:
     description: 'Release output directory, used to parallelize builds when using actions/cache'
-    default: ./output
+    default: ./output/releases
     required: false
 runs:
   using: 'composite'
