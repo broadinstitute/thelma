@@ -1,30 +1,23 @@
-#
-# Compile Go tools and install to /tools/bin
-#
-ARG GO_IMAGE_VERSION='1.17'
 ARG ALPINE_IMAGE_VERSION='3.14'
-
-FROM golang:${GO_IMAGE_VERSION}-bullseye as build
-
-ARG THELMA_VERSION='development'
-
-WORKDIR /build
-COPY . .
-
-# Compile & install runtime dependencies into output/release-assembly
-RUN make release VERSION=${THELMA_VERSION}
 
 #
 # Copy dist into runtime image
 #
-FROM alpine:${ALPINE_IMAGE_VERSION} as runtime
+FROM alpine:${ALPINE_IMAGE_VERSION}
+
+ARG THELMA_LINUX_RELEASE
+
+COPY output/releases/${THELMA_LINUX_RELEASE} .
 
 # OS updates for security
 RUN apk update
 RUN apk upgrade
 
-# Copy Thelma into runtime image
-COPY --from=build /build/output/release-assembly /thelma
+# Unpack Thelma into runtime image
+RUN mkdir /thelma && tar -xvf ${THELMA_LINUX_RELEASE} -C /thelma
+
+# Remove the copied tarball
+RUN rm ${THELMA_LINUX_RELEASE}
 
 ENV PATH="/thelma/bin:${PATH}"
 
