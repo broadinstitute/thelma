@@ -11,8 +11,8 @@ set -eo pipefail
 # * verify that all files were notarized
 # * create the release tarball
 
-if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <release dir> <release tarball>" >&2
+if [[ $# -ne 3 ]]; then
+  echo "Usage: $0 <release dir> <release tarball> <output tarball>" >&2
   exit 1
 fi
 
