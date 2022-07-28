@@ -90,22 +90,22 @@ func _registerSaProfile(thelma app.ThelmaApp, appRelease terra.AppRelease, orch 
 	return ignore409Conflict(err)
 }
 
-func ignore409Conflict(err error) error {
-	if err == nil {
+func ignore409Conflict(maybe409Err error) error {
+	if maybe409Err == nil {
 		return nil
 	}
 
 	pattern := "409 [Cc]onflict.*[Uu]ser.*already exists"
-	matches, err := regexp.MatchString(pattern, err.Error())
+	matches, err := regexp.MatchString(pattern, maybe409Err.Error())
 
 	if err != nil {
-		panic(fmt.Errorf("invalid regular expression %q: %v", pattern, err))
+		panic(fmt.Errorf("invalid regular expression %q: %v", pattern, maybe409Err))
 	}
 
 	if !matches {
-		return err
+		return maybe409Err
 	}
 
-	log.Warn().Err(err).Msgf("409 conflict encountered while registering user; ignoring")
+	log.Warn().Err(maybe409Err).Msgf("409 conflict encountered while registering user; ignoring")
 	return nil
 }
