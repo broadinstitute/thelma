@@ -99,7 +99,7 @@ func ignore409Conflict(maybe409Err error) error {
 	matches, err := regexp.MatchString(pattern, maybe409Err.Error())
 
 	if err != nil {
-		panic(fmt.Errorf("invalid regular expression %q: %v", pattern, maybe409Err))
+		panic(fmt.Errorf("invalid regular expression %q: %v", pattern, err))
 	}
 
 	if !matches {
