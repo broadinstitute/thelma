@@ -1,10 +1,12 @@
 package seed
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
+	"regexp"
 )
 
 func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
@@ -84,8 +86,26 @@ func _registerSaProfile(thelma app.ThelmaApp, appRelease terra.AppRelease, orch 
 		return err
 	}
 	_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile("None", "None", "None", terraClient.GoogleUserInfo().Email, "None", "None", "None", "None", "None", "None", "None")
-	if err != nil {
-		return err
+
+	return ignore409Conflict(err)
+}
+
+func ignore409Conflict(maybe409Err error) error {
+	if maybe409Err == nil {
+		return nil
 	}
+
+	pattern := "(?s)409 [Cc]onflict.*[Uu]ser.*already exists"
+	matches, err := regexp.MatchString(pattern, maybe409Err.Error())
+
+	if err != nil {
+		panic(fmt.Errorf("invalid regular expression %q: %v", pattern, err))
+	}
+
+	if !matches {
+		return maybe409Err
+	}
+
+	log.Warn().Err(maybe409Err).Msgf("409 conflict encountered while registering user; ignoring")
 	return nil
 }
