@@ -95,7 +95,7 @@ func ignore409Conflict(maybe409Err error) error {
 		return nil
 	}
 
-	pattern := "409 [Cc]onflict.*[Uu]ser.*already exists"
+	pattern := "(?s)409 [Cc]onflict.*[Uu]ser.*already exists"
 	matches, err := regexp.MatchString(pattern, maybe409Err.Error())
 
 	if err != nil {
