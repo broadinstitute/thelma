@@ -133,6 +133,12 @@ func newUnauthenticatedClient(thelmaConfig config.Config, options *ClientOptions
 		optionFn(clientCfg)
 	}
 
+	// wrap default transport in a MaskingRoundTripper, which automatically masks values in Secrets
+	transport := MaskingRoundTripper{
+		inner: clientCfg.HttpClient.Transport,
+	}
+	clientCfg.HttpClient.Transport = transport
+
 	return vaultapi.NewClient(clientCfg)
 }
 
