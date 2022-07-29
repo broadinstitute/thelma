@@ -12,8 +12,8 @@ import (
 
 // MaskingRoundTripper implements the http.RoundTripper interface, automatically masking any secrets returned from the Vault API
 type MaskingRoundTripper struct {
-	inner  http.RoundTripper
-	maskFn func(secrets ...string)
+	inner  http.RoundTripper       // inner round tripper to delegate to (this should actually makes the request)
+	maskFn func(secrets ...string) // maskFn custom masking function (should only be used in unit tests)
 }
 
 func (m MaskingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {

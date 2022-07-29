@@ -55,10 +55,15 @@ type state struct {
 	}
 }
 
-// ConfigureClient can be used to configure a vault client to talk to this fake server instance
+// ConfigureClient can be used to configure a vault client to talk to this fake vault server instance
 func (s *FakeVaultServer) ConfigureClient(clientConfig *vaultapi.Config) {
 	clientConfig.HttpClient = s.server.Client()
 	clientConfig.Address = s.server.URL
+}
+
+// Server returns the underlying httptest.Server associated with this fake vault server instance
+func (s *FakeVaultServer) Server() *httptest.Server {
+	return s.server
 }
 
 // ExpectGithubLogin configures the server to expect a github login with a specific Github token (by default any token is expected)
