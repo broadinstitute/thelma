@@ -4,7 +4,7 @@ package app
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
-	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
+	_ "github.com/broadinstitute/thelma/internal/thelma/app/logging" // import logging for side effects (trigger bootstrapping)
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
@@ -20,7 +20,6 @@ type Options struct {
 }
 
 func init() {
-	logging.Bootstrap()
 	seed.Rand()
 }
 
