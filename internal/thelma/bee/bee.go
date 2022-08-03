@@ -150,7 +150,7 @@ func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOptio
 	if err != nil {
 		return err
 	}
-	return b.argocd.SyncReleases(releases, 15, options...)
+	return b.argocd.SyncReleases(releases, len(releases), options...)
 }
 
 func (b *bees) RefreshBeeGenerator() error {
