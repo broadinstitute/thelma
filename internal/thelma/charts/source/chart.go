@@ -8,7 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 )
@@ -236,7 +236,7 @@ func (c *chart) reloadManifest() error {
 func loadManifest(manifestFile string) (ChartManifest, error) {
 	var manifest ChartManifest
 
-	content, err := ioutil.ReadFile(manifestFile)
+	content, err := os.ReadFile(manifestFile)
 	if err != nil {
 		return manifest, fmt.Errorf("error reading chart manifest %s: %v", manifestFile, err)
 	}

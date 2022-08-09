@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -95,7 +94,7 @@ func (r *ConfigRepo) CleanOutputDirectoryIfEnabled() error {
 	// output directory itself, but in some cases the output directory is a volume
 	// mount in a Docker container, and trying to remove it throws an error.
 	// So we remove all its contents instead.
-	dir, err := ioutil.ReadDir(r.outputDir)
+	dir, err := os.ReadDir(r.outputDir)
 	if err != nil {
 		return err
 	}
