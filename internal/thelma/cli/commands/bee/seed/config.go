@@ -314,6 +314,10 @@ workflow test {
 				User: "sirius.owner@quality.firecloud.org",
 				Role: "OWNER",
 			},
+			{
+				User: "hermione.owner@quality.firecloud.org",
+				Role: "OWNER",
+			},
 		}
 	}
 	return config, nil
