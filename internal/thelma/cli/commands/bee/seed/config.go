@@ -315,7 +315,7 @@ workflow test {
 				Role: "OWNER",
 			},
 			{
-				User: "hermione.owner@quality.firecloud.org",
+				User: "hermione.owner@quality.firecloud.org", // note - rawls and orch tests depend on Hermione being an owner
 				Role: "OWNER",
 			},
 		}
