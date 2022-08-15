@@ -96,6 +96,10 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 	if err = b.RefreshBeeGenerator(); err != nil {
 		return env, err
 	}
+
+	if err = b.argocd.WaitExist(argocd.GeneratorName(env)); err != nil {
+		return nil, err
+	}
 	if err = b.SyncEnvironmentGenerator(env); err != nil {
 		return env, err
 	}
@@ -142,7 +146,8 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 func (b *bees) SyncEnvironmentGenerator(env terra.Environment) error {
 	appName := argocd.GeneratorName(env)
 	log.Info().Msgf("Syncing generator %s for %s", appName, env.Name())
-	return b.argocd.SyncApp(appName)
+	_, err := b.argocd.SyncApp(appName)
+	return err
 }
 
 func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error {
