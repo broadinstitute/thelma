@@ -50,6 +50,16 @@ type SyncOptions struct {
 
 type SyncOption func(options *SyncOptions)
 
+type WaitExistOptions struct {
+	// WaitExistTimeoutSeconds how long to wait for an application to exist before timing out
+	WaitExistTimeoutSeconds int `default:"300"`
+
+	// WaitExistPollIntervalSeconds how long to wait between polling attempts while waiting for an app to exist
+	WaitExistPollIntervalSeconds int `default:"5"`
+}
+
+type WaitExistOption func(options *WaitExistOptions)
+
 type argocdConfig struct {
 	// Host hostname of the ArgoCD server
 	Host string `valid:"hostname" default:"ap-argocd.dsp-devops.broadinstitute.org"`
@@ -87,6 +97,14 @@ type argocdConfig struct {
 
 	// WaitHealthyTimeoutSeconds how long to wait for an application to become healthy after syncing
 	WaitHealthyTimeoutSeconds int `default:"600"`
+
+	*WaitExistOptions
+}
+
+// SyncResult stores information about the outcome of a Sync operation
+type SyncResult struct {
+	// Synced true if the app was actually synced, false if not
+	Synced bool
 }
 
 // ArgoCD is for running `argocd` commands.
@@ -94,11 +112,13 @@ type argocdConfig struct {
 // As a result it is extremely complicated to do things that are trivial via the CLI.
 type ArgoCD interface {
 	// SyncApp will sync an ArgoCD app
-	SyncApp(appName string, options ...SyncOption) error
+	SyncApp(appName string, options ...SyncOption) (SyncResult, error)
 	// HardRefresh will hard refresh an ArgoCD app (force a manifest re-render without a corresponding git change)
 	HardRefresh(appName string) error
-	// WaitHealthy will wait for an ArgoCD app to become healthy
+	// WaitHealthy will wait for an ArgoCD app to become healthy (but not necessarily synced)
 	WaitHealthy(appName string) error
+	// WaitExist will wait for an ArgoCD app to exist
+	WaitExist(appName string, options ...WaitExistOption) error
 	// SyncRelease will sync a Terra release's ArgoCD app(s), including the legacy configs app if there is one
 	SyncRelease(release terra.Release, options ...SyncOption) error
 	// SyncReleases will sync the ArgoCD apps for multiple Terra releases in parallel
@@ -170,49 +190,43 @@ type argocd struct {
 	iapToken string
 }
 
-func (a *argocd) defaultSyncOptions() SyncOptions {
-	return SyncOptions{
-		HardRefresh:  true,
-		SyncIfNoDiff: true,
-		WaitHealthy:  true,
-	}
-}
+func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, error) {
+	opts := a.asSyncOptions(options...)
 
-func (a *argocd) SyncApp(appName string, options ...SyncOption) error {
-	opts := a.defaultSyncOptions()
-	for _, option := range options {
-		option(&opts)
-	}
+	var result SyncResult
 
 	// refresh the app, using hard refresh if needed
 	hasDifferences, err := a.diffWithRetries(appName, opts)
 	if err != nil {
-		return err
+		return result, err
 	}
 	if !hasDifferences {
 		if opts.SyncIfNoDiff {
-			log.Debug().Msgf("%s is in sync, will sync anyway for side-effects", appName)
+			log.Debug().Msgf("%s is in sync, will sync anyway", appName)
 		} else {
 			log.Debug().Msgf("%s is in sync, won't trigger a new sync", appName)
-			return nil
+			return result, err
 		}
 	}
 
 	if err := a.waitForInProgressSyncToComplete(appName); err != nil {
-		return err
+		return result, err
 	}
+
+	// we're about to sync, so update result to indicate we made an attempt
+	result.Synced = true
 	if err := a.sync(appName, opts); err != nil {
-		return err
+		return result, err
 	}
 
 	if opts.WaitHealthy {
 		if err := a.WaitHealthy(appName); err != nil {
-			return err
+			return result, err
 		}
 	}
 
 	log.Debug().Msgf("Successfully synced %s", appName)
-	return nil
+	return result, nil
 }
 
 func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error {
@@ -224,21 +238,35 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	legacyConfigsApp := LegacyConfigsApplicationName(release)
 	primaryApp := ApplicationName(release)
 
+	// Sync the legacy configs app, if one exists
+	legacyConfigsWereSynced := false
 	if hasLegacyConfigsApp {
-		if err := a.SyncApp(legacyConfigsApp, options...); err != nil {
+		syncResult, err := a.SyncApp(legacyConfigsApp, options...)
+		if err != nil {
 			return err
 		}
+		legacyConfigsWereSynced = syncResult.Synced
 	}
 
-	if err := a.SyncApp(primaryApp, options...); err != nil {
+	// Sync primary app without waiting for it to become healthy
+	optionsNoWait := append(options, func(options *SyncOptions) {
+		options.WaitHealthy = false
+	})
+	if _, err := a.SyncApp(primaryApp, optionsNoWait...); err != nil {
 		return err
 	}
 
-	if hasLegacyConfigsApp {
+	// If we had a legacy configs app, and it was synced, then restart deployments in the primary app in order to pick up any changes
+	if hasLegacyConfigsApp && legacyConfigsWereSynced {
 		log.Info().Msgf("Restarting deployments in %s to pick up potential firecloud-develop config changes", primaryApp)
 		return a.restartDeployments(primaryApp)
 	}
 
+	// Now wait for the primary app to become healthy
+	opts := a.asSyncOptions(options...)
+	if opts.WaitHealthy {
+		return a.WaitHealthy(primaryApp)
+	}
 	return nil
 }
 
@@ -276,7 +304,71 @@ func (a *argocd) WaitHealthy(appName string) error {
 		appName,
 		"--timeout",
 		fmt.Sprintf("%d", a.cfg.WaitHealthyTimeoutSeconds),
+		"--health",
 	})
+}
+
+func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
+	var opts WaitExistOptions
+	opts.WaitExistTimeoutSeconds = a.cfg.WaitExistTimeoutSeconds
+	opts.WaitExistPollIntervalSeconds = a.cfg.WaitExistPollIntervalSeconds
+	for _, opt := range options {
+		opt(&opts)
+	}
+
+	logger := log.With().Str("argo-app", appName).Logger()
+
+	timeout := time.Second * (time.Duration(opts.WaitExistTimeoutSeconds))
+	pollInterval := time.Second * (time.Duration(opts.WaitExistPollIntervalSeconds))
+
+	logger.Info().Msgf("Waiting up to %s for %s to exist", timeout, appName)
+
+	doneCh := make(chan bool, 1)
+	timeoutCh := make(chan bool, 1)
+
+	go func() {
+		for {
+			select {
+			case <-timeoutCh:
+				logger.Debug().Msgf("Timeout reached, exiting polling")
+				return
+			default:
+				if err := a.runCommand([]string{
+					"app",
+					"get",
+					appName,
+				}); err != nil {
+					log.Debug().Msgf("%s exists", appName)
+					doneCh <- true
+				}
+				time.Sleep(pollInterval)
+			}
+		}
+	}()
+
+	select {
+	case <-doneCh:
+		return nil
+	case <-time.After(timeout):
+		timeoutCh <- true
+		return fmt.Errorf("timed out after %s waiting for Argo application %s to exist", timeout, appName)
+	}
+}
+
+func (a *argocd) defaultSyncOptions() SyncOptions {
+	return SyncOptions{
+		HardRefresh:  true,
+		SyncIfNoDiff: true,
+		WaitHealthy:  true,
+	}
+}
+
+func (a *argocd) asSyncOptions(options ...SyncOption) SyncOptions {
+	opts := a.defaultSyncOptions()
+	for _, option := range options {
+		option(&opts)
+	}
+	return opts
 }
 
 func (a *argocd) restartDeployments(appName string) error {
