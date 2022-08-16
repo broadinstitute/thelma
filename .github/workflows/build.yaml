@@ -294,8 +294,8 @@ jobs:
       - name: Sign and notarize macOS releases and create tarball
         id: san-tarball
         run: |
-          ./scripts/sign-and-notarize.sh ./output ${{ needs.build-darwin-amd64.outputs.rel-dir}}/thelma_${{ needs.bump.outputs.version }}_darwin_amd64.tar.gz ./output/releases/thelma_${{ needs.bump.outputs.version }}_darwin_amd64.tar.gz
-          ./scripts/sign-and-notarize.sh ./output ${{ needs.build-darwin-arm64.outputs.rel-dir}}/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz ./output/releases/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz
+          ./scripts/sign-and-notarize.sh ./output ${{ needs.build-darwin-amd64.outputs.rel-dir}}/thelma_${{ needs.bump.outputs.version }}_darwin_amd64.tar.gz ./output/releases/thelma_${{ needs.bump.outputs.version }}_darwin_amd64.tar.gz >&2
+          ./scripts/sign-and-notarize.sh ./output ${{ needs.build-darwin-arm64.outputs.rel-dir}}/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz ./output/releases/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz >&2
           rm -rf ${{ needs.build-darwin-amd64.outputs.rel-dir}} ${{ needs.build-darwin-arm64.outputs.rel-dir}}
 
   dockerize-and-push:
