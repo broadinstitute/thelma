@@ -240,6 +240,7 @@ jobs:
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
+      # Pull binaries compiled in previous steps
       - name: Pull Linux amd64 build directories
         id: cache-build-linux-amd64
         uses: actions/cache@v3
@@ -267,19 +268,7 @@ jobs:
           path: ${{ needs.build-darwin-arm64.outputs.rel-dir }}
           key: commit-${{ github.sha }}-job-${{ github.run_id }}-darwin-arm64
 
-      # A second cache is needed to force GH to upload the new macOS tarballs,
-      # since the existing cache already exists and therefore changes made during this step
-      # are not saved for some reason. This new cache will be used during the final job
-      # where the docker image is made and the release artifacts are uploaded.
-      - name: Create release cache
-        id: release-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: release-cache
-        with:
-          path: ./output/releases
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
-
+      # Sign OSX binaries
       - name: Create temp keychain
         id: create-kc
         run: |
@@ -298,35 +287,44 @@ jobs:
           ./scripts/sign-and-notarize.sh ./output ${{ needs.build-darwin-arm64.outputs.rel-dir}}/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz ./output/releases/thelma_${{ needs.bump.outputs.version }}_darwin_arm64.tar.gz >&2
           rm -rf ${{ needs.build-darwin-amd64.outputs.rel-dir}} ${{ needs.build-darwin-arm64.outputs.rel-dir}}
 
+      # Upload binaries to GCS bucket
+      - name: Generate checksum file
+        uses: ./.github/actions/make
+        with:
+          target: "checksum"
+          version: ${{ needs.bump.outputs.version }}
+      - name: Auth to GCP
+        uses: ./.github/actions/setup-gcloud
+        with:
+          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
+      - name: Upload release files to bucket
+        run: |
+          gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ needs.bump.outputs.version }}/
+
   dockerize-and-push:
     runs-on: ubuntu-latest
-    needs: [bump, build-linux-amd64, build-darwin-amd64, build-darwin-arm64, sign-and-notarize]
+    needs: [bump, build-linux-amd64]
+    outputs:
+      image-name: ${{ steps.image-name.outputs.name }}
+      image-name-with-tag: ${{ steps.image-name.outputs.tagged }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
-      - name: Pull release cache
-        id: release-cache
+      - name: Pull Linux amd64 build directories
+        id: cache-build-linux-amd64
         uses: actions/cache@v3
         env:
-          cache-name: release-cache
+          cache-name: build-dir-cache-linux-amd64
         with:
           path: ./output/releases
-          key: commit-${{ github.sha }}-job-${{ github.run_id }}-release
-
-      - name: Generate checksum file
-        uses: ./.github/actions/make
-        with:
-          target: "checksum"
-          version: ${{ needs.bump.outputs.version }}
+          key: commit-${{ github.sha }}-job-${{ github.run_id }}-linux-amd64
 
       #
       # Build Docker image
       #
-      # TODO: the Dockerfile currently rebuilds thelma from scratch, would save time if we could copy the build
-      # artifacts from earlier steps into the Docker image
       - name: Construct docker image name and tag
         id: image-name
         run: |
@@ -347,26 +345,6 @@ jobs:
         uses: broadinstitute/dsp-appsec-trivy-action@v1
         with:
           image: ${{ steps.image-name.outputs.tagged }}
-
-      #
-      # Upload binaries to release bucket
-      #
-      - name: Auth to GCP
-        uses: ./.github/actions/setup-gcloud
-        with:
-          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
-      - name: Upload release files to bucket
-        run: |
-          gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ needs.bump.outputs.version }}/
-      - name: Update tags.json
-        # TODO: we can make this more sophisticated at some point, but the goal right now
-        # is to minimally simulate Docker's "latest" tag for thelma releases, to support auto-update.
-        if: github.event_name != 'pull_request'
-        run: |
-          cat <<EOF > tags.json
-          {"latest":"${{ needs.bump.outputs.version }}"}
-          EOF
-          gsutil cp tags.json gs://${{ env.THELMA_RELEASE_BUCKET }}/tags.json
 
       #
       # Push Docker image
@@ -394,3 +372,38 @@ jobs:
           gcloud artifacts docker tags add \
             "${{ steps.image-name.outputs.tagged }}" \
             "${{ steps.image-name.outputs.name }}:latest"
+
+  update-latest-tag:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [bump, dockerize-and-push, sign-and-notarize]
+    steps:
+      #
+      # Update tags.json
+      #
+      - name: Auth to GCP
+        uses: ./.github/actions/setup-gcloud
+        with:
+          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
+      - name: Update tags.json
+        # TODO: we can make this more sophisticated at some point, but the goal right now
+        # is to minimally simulate Docker's "latest" tag for thelma binary releases, to support auto-update.
+        run: |
+          cat <<EOF > tags.json
+          {"latest":"${{ needs.bump.outputs.version }}"}
+          EOF
+          gsutil cp tags.json gs://${{ env.THELMA_RELEASE_BUCKET }}/tags.json
+
+      #
+      # Update Docker image tag
+      #
+      - name: Auth to GCP
+        uses: ./.github/actions/setup-gcloud
+        with:
+          version: '345.0.0'
+          service-account-key: ${{ secrets.GCP_PUBLISH_KEY_B64 }}
+      - name: Add latest tag to Docker image
+        run: |
+          gcloud artifacts docker tags add \
+            "${{ needs.dockerize-and-push.outputs.image-name-with-tag }}" \
+            "${{ needs.dockerize-and-push.outputs.image-name }}:latest"
