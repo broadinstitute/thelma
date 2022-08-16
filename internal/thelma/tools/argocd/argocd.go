@@ -41,11 +41,18 @@ var flags = struct {
 	outputFormat: "--output",
 }
 
+// SyncOptions options for an ArgoCD sync operation
 type SyncOptions struct {
-	HardRefresh  bool
+	// HardRefresh if true, perform a hard refresh before syncing Argo apps
+	HardRefresh bool
+	// SyncIfNoDiff if true, sync even if the hard refresh indicates there are no config differences
 	SyncIfNoDiff bool
-	WaitHealthy  bool
-	OnlyLabels   map[string]string
+	// WaitHealthy if true, wait for the application to become healhty after syncing
+	WaitHealthy bool
+	// OnlyLabels if not empty, only sync resources with the given labels
+	OnlyLabels map[string]string
+	// SkipLegacyConfigsRestart if true, do not restart deployments to pick up firecloud-develop changes
+	SkipLegacyConfigsRestart bool
 }
 
 type SyncOption func(options *SyncOptions)
@@ -230,6 +237,8 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, err
 }
 
 func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error {
+	syncOpts := a.asSyncOptions(options...)
+
 	hasLegacyConfigsApp, err := a.hasLegacyConfigsApp(release)
 	if err != nil {
 		return err
@@ -249,17 +258,30 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	}
 
 	// Sync primary app without waiting for it to become healthy
-	optionsNoWait := append(options, func(options *SyncOptions) {
+	optionsNoWaitHealthy := append(options, func(options *SyncOptions) {
 		options.WaitHealthy = false
 	})
-	if _, err := a.SyncApp(primaryApp, optionsNoWait...); err != nil {
+	if _, err := a.SyncApp(primaryApp, optionsNoWaitHealthy...); err != nil {
 		return err
 	}
 
-	// If we had a legacy configs app, and it was synced, then restart deployments in the primary app in order to pick up any changes
-	if hasLegacyConfigsApp && legacyConfigsWereSynced {
-		log.Info().Msgf("Restarting deployments in %s to pick up potential firecloud-develop config changes", primaryApp)
-		return a.restartDeployments(primaryApp)
+	if hasLegacyConfigsApp {
+		if syncOpts.SkipLegacyConfigsRestart {
+			log.Debug().Msgf("Won't restart deployments to pick up firecloud-develop changes (legacy config restarts are skipped)")
+		} else {
+			if legacyConfigsWereSynced {
+				log.Info().Msgf("Waiting for %s to become healthy before restarting deployments", primaryApp)
+				if err := a.WaitHealthy(primaryApp); err != nil {
+					return err
+				}
+				log.Info().Msgf("Restarting deployments in %s to pick up potential firecloud-develop config changes", primaryApp)
+				if err := a.restartDeployments(primaryApp); err != nil {
+					return err
+				}
+			} else {
+				log.Debug().Msgf("No firecloud-develop changes detected, won't restart deployments")
+			}
+		}
 	}
 
 	// Now wait for the primary app to become healthy
