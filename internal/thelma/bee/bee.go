@@ -109,6 +109,9 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 	}
 	log.Info().Msgf("Syncing all Argo apps in environment %s", env.Name())
 	err = b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
+		// No need to do a legacy configs restart the first time we create a BEE
+		// (the deployments are being created for the first time, so they'll definitely pick up changes)
+		_options.SkipLegacyConfigsRestart = true
 		_options.WaitHealthy = options.WaitHealthy
 	})
 	return env, err
@@ -162,12 +165,8 @@ func (b *bees) RefreshBeeGenerator() error {
 	log.Info().Msgf("Refreshing %s", generatorArgoApp)
 	// workaround for a bug in ArgoCD:
 	//   https://github.com/argoproj/argo-cd/issues/4505#issuecomment-880271371
-	// hard refresh + wait for the app to become healthy
-	// instead of attempting to sync the app.
-	if err := b.argocd.HardRefresh(generatorArgoApp); err != nil {
-		return err
-	}
-	return b.argocd.WaitHealthy(generatorArgoApp)
+	// We perform a hard refresh with autosync
+	return b.argocd.HardRefresh(generatorArgoApp)
 }
 
 func (b *bees) GetTemplate(name string) (terra.Environment, error) {

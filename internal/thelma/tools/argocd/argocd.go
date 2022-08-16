@@ -285,8 +285,7 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	}
 
 	// Now wait for the primary app to become healthy
-	opts := a.asSyncOptions(options...)
-	if opts.WaitHealthy {
+	if syncOpts.WaitHealthy {
 		return a.WaitHealthy(primaryApp)
 	}
 	return nil
@@ -380,7 +379,7 @@ func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
 func (a *argocd) defaultSyncOptions() SyncOptions {
 	return SyncOptions{
 		HardRefresh:  true,
-		SyncIfNoDiff: true,
+		SyncIfNoDiff: false,
 		WaitHealthy:  true,
 	}
 }
