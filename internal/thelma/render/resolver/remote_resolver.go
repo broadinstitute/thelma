@@ -5,7 +5,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/tools/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -66,14 +65,14 @@ func (r *remoteResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChar
 	// ${tmpDir}/${chart} -> ${cacheDir}/${repo}/${chart}-${version}
 	cachePath := r.cachePath(chartRelease)
 
-	files, err := ioutil.ReadDir(tmpDir)
+	entries, err := os.ReadDir(tmpDir)
 	if err != nil {
 		return nil, err
 	}
-	if len(files) != 1 {
-		return nil, fmt.Errorf("expected exactly one file in %s, got: %v", tmpDir, files)
+	if len(entries) != 1 {
+		return nil, fmt.Errorf("expected exactly one file in %s, got: %v", tmpDir, entries)
 	}
-	tmpChartPath := path.Join(tmpDir, files[0].Name())
+	tmpChartPath := path.Join(tmpDir, entries[0].Name())
 
 	log.Debug().Msgf("Rename %s to %s", tmpChartPath, cachePath)
 	if err = os.MkdirAll(path.Dir(cachePath), 0775); err != nil {

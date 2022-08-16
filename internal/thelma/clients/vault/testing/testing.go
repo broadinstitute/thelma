@@ -6,7 +6,7 @@ import (
 	"fmt"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -194,7 +194,7 @@ func toHttpHandler(handler vaultApiHandler) http.Handler {
 }
 
 func parseJsonRequestBody(r *http.Request, into interface{}) error {
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		panic(fmt.Errorf("error reading request body: %v", err))
 	}

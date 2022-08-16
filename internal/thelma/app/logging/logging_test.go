@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -121,15 +120,20 @@ func Test_newLogger(t *testing.T) {
 			verifyFn: func(t *testing.T, r testResult) {
 				assert.Equal(t, 0, len(r.consoleMessages))
 
-				files, err := ioutil.ReadDir(r.logDir)
+				entries, err := os.ReadDir(r.logDir)
 				if !assert.NoError(t, err) {
 					return
 				}
-				for _, f := range files {
-					log.Debug().Msgf("Generated log file: %v %v", f.Name(), f.Size())
+
+				var files []os.FileInfo
+				for _, entry := range entries {
+					fileInfo, err := entry.Info()
+					assert.NoError(t, err)
+					log.Debug().Msgf("Generated log file: %v %v", fileInfo.Name(), fileInfo.Size())
+					files = append(files, fileInfo)
 				}
 
-				assert.Equal(t, 3, len(files), "Expected 3 log files to be generated")
+				assert.Equal(t, 3, len(entries), "Expected 3 log entries to be generated")
 				assert.FileExists(t, r.logFile)
 				for _, f := range files {
 					if path.Base(f.Name()) != logFile {

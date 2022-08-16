@@ -8,7 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -57,7 +57,7 @@ func _createIndex(client http.Client, protocol string, localElasticsearchPort in
 	if err != nil {
 		return fmt.Errorf("error creating %s: %v", index, err)
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func _setElasticsearchReplicas(client http.Client, protocol string, localElastic
 	if err != nil {
 		return fmt.Errorf("error setting replica count: %v", err)
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
 	if err != nil {
 		return err
