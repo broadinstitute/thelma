@@ -105,7 +105,7 @@ type argocdConfig struct {
 	// WaitHealthyTimeoutSeconds how long to wait for an application to become healthy after syncing
 	WaitHealthyTimeoutSeconds int `default:"600"`
 
-	*WaitExistOptions
+	WaitExistOptions
 }
 
 // SyncResult stores information about the outcome of a Sync operation
