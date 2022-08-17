@@ -358,10 +358,11 @@ func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
 					"app",
 					"get",
 					appName,
-				}); err != nil {
+				}); err == nil {
 					log.Debug().Msgf("%s exists", appName)
 					doneCh <- true
 				}
+				log.Debug().Msgf("%s does not exist, will check again in %s", appName, pollInterval)
 				time.Sleep(pollInterval)
 			}
 		}
