@@ -45,7 +45,7 @@ func (cmd *unpinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Short = "Remove version overrides from a BEE"
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to delete")
+	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to unpin")
 	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 }
 
