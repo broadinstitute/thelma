@@ -94,7 +94,7 @@ notarize() {
 		return 1
 	fi
 
-	echo -n "Checking notarization status for ${_sub_id}"
+	echo "Checking notarization status for ${_sub_id}"
 
 	local _resp=""
 	local _cont=0
@@ -110,10 +110,12 @@ notarize() {
 		#	"id": "<UUID>",
 		#	"message": "Submission log is not yet available or submissionId does not exist"
 		# }
+		echo "Response from Apple (${_wait_total}s)"
+		echo "-------------------------------------------------"
+		echo "${_resp}"
+    echo "-------------------------------------------------"
+
 		if echo "${_resp}" | grep -q 'not yet available\|does not exist'; then
-			if [[ ${_wait_total} > 0 ]]; then
-				echo -n "...${_wait_total}"
-			fi
 			_wait_total=$((_wait_total + _sleep_inc))
 			sleep ${_sleep_inc}
 		# Eventually the job should complete

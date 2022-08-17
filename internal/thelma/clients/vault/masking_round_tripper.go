@@ -6,7 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -40,14 +40,14 @@ func (m MaskingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	}
 
 	// Read response body
-	content, err := ioutil.ReadAll(resp.Body)
+	content, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error reading response from Vault")
 		return resp, err
 	}
 
 	// Copy response body to a fresh io.Reader so the Vault client can still read it when we're done
-	resp.Body = ioutil.NopCloser(bytes.NewReader(content))
+	resp.Body = io.NopCloser(bytes.NewReader(content))
 
 	// Deserialize response body
 	var secret vaultapi.Secret

@@ -6,7 +6,6 @@ import (
 	"golang.org/x/oauth2"
 	googleoauth "google.golang.org/api/oauth2/v2"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -62,7 +61,7 @@ func (c *terraClient) doJsonRequest(method string, url string, body io.Reader) (
 	if err != nil {
 		return response, "", err
 	}
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return response, "", err
 	}
