@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
