@@ -26,7 +26,7 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"login",
+						"browserLogin",
 						"--sso",
 						fakeArgocdHost,
 					},
@@ -53,7 +53,7 @@ func Test_Login(t *testing.T) {
 			},
 		},
 		{
-			name: "login command fails",
+			name: "browserLogin command fails",
 			setupCommands: func(runner *shell.MockRunner) {
 				runner.ExpectCmd(shell.Command{
 					Prog: "argocd",
@@ -61,7 +61,7 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"login",
+						"browserLogin",
 						"--sso",
 						fakeArgocdHost,
 					},
@@ -70,10 +70,10 @@ func Test_Login(t *testing.T) {
 					},
 				}).Exits(2)
 			},
-			expectError: "login.*exited with status 2",
+			expectError: "browserLogin.*exited with status 2",
 		},
 		{
-			name: "login check fails",
+			name: "browserLogin check fails",
 			setupCommands: func(runner *shell.MockRunner) {
 				runner.ExpectCmd(shell.Command{
 					Prog: "argocd",
@@ -81,7 +81,7 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"login",
+						"browserLogin",
 						"--sso",
 						fakeArgocdHost,
 					},
@@ -106,7 +106,7 @@ func Test_Login(t *testing.T) {
 					},
 				}).WithStdout("loggedIn: false\n")
 			},
-			expectError: "login command succeeded but client is not logged in",
+			expectError: "browserLogin command succeeded but client is not logged in",
 		},
 	}
 
@@ -122,7 +122,7 @@ func Test_Login(t *testing.T) {
 				tc.setupCommands(runner)
 			}
 
-			err = Login(thelmaConfig, runner, "my-iap-token")
+			err = BrowserLogin(thelmaConfig, runner, "my-iap-token")
 
 			if tc.expectError == "" {
 				require.NoError(t, err)

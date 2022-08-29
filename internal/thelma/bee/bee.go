@@ -15,7 +15,9 @@ const generatorArgoApp = "terra-bee-generator"
 type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
 	CreateWith(name string, options CreateOptions) (terra.Environment, error)
+	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
+	FilterBees(filter terra.EnvironmentFilter) ([]terra.Environment, error)
 	RefreshBeeGenerator() error
 	SyncEnvironmentGenerator(env terra.Environment) error
 	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error
@@ -182,6 +184,20 @@ func (b *bees) RefreshBeeGenerator() error {
 	return b.argocd.HardRefresh(generatorArgoApp)
 }
 
+func (b *bees) GetBee(name string) (terra.Environment, error) {
+	env, err := b.state.Environments().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	if env == nil {
+		return nil, fmt.Errorf("no BEE by the name %s exists", name)
+	}
+	if env.Lifecycle() != terra.Dynamic {
+		return nil, fmt.Errorf("environment %s is not a BEE (lifecycle is %s)", name, env.Lifecycle())
+	}
+	return env, nil
+}
+
 func (b *bees) GetTemplate(name string) (terra.Environment, error) {
 	template, err := b.state.Environments().Get(name)
 	if err != nil {
@@ -216,6 +232,11 @@ func (b *bees) ResetStatefulSets(env terra.Environment) error {
 	}
 
 	return nil
+}
+
+func (b *bees) FilterBees(_filter terra.EnvironmentFilter) ([]terra.Environment, error) {
+	_filter = filter.Environments().HasLifecycle(terra.Dynamic).And(_filter)
+	return b.state.Environments().Filter(_filter)
 }
 
 func (b *bees) templateNames() ([]string, error) {

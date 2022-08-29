@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 	"github.com/spf13/cobra"
 )
 
@@ -19,14 +19,17 @@ thelma bee list
 `
 
 type options struct {
-	template string
+	template  string
+	matchName string
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	template string
+	template  string
+	matchName string
 }{
-	template: "template",
+	template:  "template",
+	matchName: "match-name",
 }
 
 type listCommand struct {
@@ -43,6 +46,8 @@ func (cmd *listCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.options.template, flagNames.template, "t", "", "Only list BEEs created from the given template")
+	cobraCommand.Flags().StringVarP(&cmd.options.matchName, flagNames.matchName, "m", "", "Only list BEEs with names that include the given substring")
+
 }
 
 func (cmd *listCommand) PreRun(_ app.ThelmaApp, _ cli.RunContext) error {
@@ -56,8 +61,12 @@ func (cmd *listCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	// only show dynamic environments
-	f := filter.Environments().HasLifecycle(terra.Dynamic)
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+
+	var filters []terra.EnvironmentFilter
 
 	if cmd.options.template != "" {
 		template, err := state.Environments().Get(cmd.options.template)
@@ -67,24 +76,19 @@ func (cmd *listCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		if template == nil {
 			return fmt.Errorf("--%s: no template by the name %q exists", flagNames.template, cmd.options.template)
 		}
-		f = f.And(filter.Environments().HasTemplate(template))
+		filters = append(filters, filter.Environments().HasTemplate(template))
 	}
 
-	envs, err := state.Environments().Filter(f)
+	if cmd.options.matchName != "" {
+		filters = append(filters, filter.Environments().NameIncludes(cmd.options.matchName))
+	}
+
+	matchingBees, err := bees.FilterBees(filter.Environments().And(filters...))
 	if err != nil {
 		return err
 	}
 
-	sb, err := statebucket.New(app.Config(), app.Clients().Google())
-	if err != nil {
-		return err
-	}
-	dynEnvs, err := sb.Environments()
-	if err != nil {
-		return err
-	}
-
-	view := views.ForTerraEnvsWithOverrides(envs, dynEnvs)
+	view := views.SummarizeBees(matchingBees)
 	rc.SetOutput(view)
 
 	return nil

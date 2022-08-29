@@ -11,6 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	bee_create "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/create"
 	bee_delete "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/delete"
+	bee_describe "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/describe"
 	bee_list "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/list"
 	bee_pin "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/pin"
 	bee_reset "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/reset"
@@ -51,6 +52,7 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("bee", bee.NewBeeCommand())
 	opts.AddCommand("bee create", bee_create.NewBeeCreateCommand())
 	opts.AddCommand("bee delete", bee_delete.NewBeeDeleteCommand())
+	opts.AddCommand("bee describe", bee_describe.NewBeeDescribeCommand())
 	opts.AddCommand("bee list", bee_list.NewBeeListCommand())
 	opts.AddCommand("bee pin", bee_pin.NewBeePinCommand())
 	opts.AddCommand("bee reset", bee_reset.NewBeeResetCommand())

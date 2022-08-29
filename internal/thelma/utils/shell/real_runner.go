@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-const maxErrorBufLenBytes = 100 * 1024 // 100 kb
-const eol = '\n'
-
 // RealRunner is an implementation of the Runner interface that actually executes shell commands
 type RealRunner struct{}
 
@@ -25,23 +22,23 @@ func NewRunner() Runner {
 
 // Run runs a Command, returning an error if the command exits non-zero
 func (r *RealRunner) Run(cmd Command, options ...RunOption) error {
-	execCmd, logger, errCapture := r.prepareExecCmd(cmd, options...)
+	execCmd, logger, errBuf := r.prepareExecCmd(cmd, options...)
 	err := execCmd.Run()
-	return handleExecCmdError(cmd, err, logger, errCapture)
+	return handleExecCmdError(cmd, err, logger, errBuf)
 }
 
 // PrepareSubprocess sets up a Subprocess to run a Command asynchronously
 func (r *RealRunner) PrepareSubprocess(cmd Command, options ...RunOption) Subprocess {
 	execCmd, logger, errCapture := r.prepareExecCmd(cmd, options...)
 	return &realSubprocess{
-		cmd:        cmd,
-		execCmd:    execCmd,
-		logger:     logger,
-		errCapture: errCapture,
+		cmd:       cmd,
+		execCmd:   execCmd,
+		logger:    logger,
+		errWriter: errCapture,
 	}
 }
 
-func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cmd, zerolog.Logger, *capturingWriter) {
+func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cmd, zerolog.Logger, *bytes.Buffer) {
 	// collate options
 	opts := defaultRunOptions()
 	for _, option := range options {
@@ -61,11 +58,16 @@ func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cm
 	logger = logger.With().Str("cmd", logid.NewId()).Logger()
 
 	// Wrap user-supplied stderr writer in a new io.Writer that records stderr output
-	errCapture := newCapturingWriter(maxErrorBufLenBytes, logger, stderr)
+	errBuffer := &bytes.Buffer{}
+	writers := []io.Writer{errBuffer}
+	if stderr != nil {
+		writers = append(writers, stderr)
+	}
+	errWriter := io.MultiWriter(writers...)
 
 	// Wrap user-supplied stdout and stderr in new io.Writers that log messages at debug level
 	stdout = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stdout").Logger(), "[out] ", stdout)
-	stderr = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errCapture)
+	stderr = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errWriter)
 
 	// Convert our command arguments to exec.Cmd struct
 	execCmd := exec.Command(cmd.Prog, cmd.Args...)
@@ -78,10 +80,10 @@ func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cm
 	execCmd.Stderr = stderr
 
 	logger.WithLevel(level).Str("dir", cmd.Dir).Msgf("Executing: %q", cmd.PrettyFormat())
-	return execCmd, logger, errCapture
+	return execCmd, logger, errBuffer
 }
 
-func handleExecCmdError(cmd Command, err error, logger zerolog.Logger, errCapture *capturingWriter) error {
+func handleExecCmdError(cmd Command, err error, logger zerolog.Logger, errBuf *bytes.Buffer) error {
 	if err != nil {
 		logger.Debug().Msgf("Command failed: %v\n", err)
 
@@ -89,7 +91,7 @@ func handleExecCmdError(cmd Command, err error, logger zerolog.Logger, errCaptur
 			return &ExitError{
 				Command:  cmd,
 				ExitCode: exitErr.ExitCode(),
-				Stderr:   errCapture.String(),
+				Stderr:   errBuf.String(),
 			}
 		} else {
 			return &Error{
@@ -101,74 +103,12 @@ func handleExecCmdError(cmd Command, err error, logger zerolog.Logger, errCaptur
 	return nil
 }
 
-// An io.Writer that captures data it receives with Write() into a buffer and optionally forwards to another writer
-type capturingWriter struct {
-	len    int
-	maxLen int
-	buf    *bytes.Buffer
-	logger zerolog.Logger
-	inner  io.Writer
-}
-
-func newCapturingWriter(rolloverLen int, logger zerolog.Logger, inner io.Writer) *capturingWriter {
-	return &capturingWriter{
-		maxLen: rolloverLen,
-		buf:    bytes.NewBuffer([]byte{}),
-		inner:  inner,
-		logger: logger,
-	}
-}
-
-func (cw *capturingWriter) String() string {
-	return cw.buf.String()
-}
-
-func (cw *capturingWriter) Write(p []byte) (n int, err error) {
-	if len(p) > cw.maxLen {
-		if cw.len > 0 {
-			cw.rollover()
-		}
-
-		cw.logger.Warn().
-			Int("max-len", cw.maxLen).
-			Str("content", string(p)).
-			Msgf("capturing writer: message too long (%d bytes), won't capture", len(p))
-
-		n, err = len(p), nil
-	} else {
-		if cw.len+len(p) > cw.maxLen {
-			cw.rollover()
-		}
-
-		n, err = cw.buf.Write(p)
-		if err != nil {
-			return n, fmt.Errorf("capturing writer: error writing to buffer: %v", err)
-		}
-		cw.len += n
-	}
-
-	if cw.inner == nil {
-		return n, err
-	}
-
-	return cw.inner.Write(p)
-}
-
-func (cw *capturingWriter) rollover() {
-	cw.logger.Warn().
-		Int("current-len", cw.len).
-		Int("max-len", cw.maxLen).
-		Str("content", cw.buf.String()).
-		Msg("capturing writer: buffer rolled over")
-	cw.buf = bytes.NewBuffer([]byte{})
-	cw.len = 0
-}
-
 type realSubprocess struct {
-	cmd        Command
-	execCmd    *exec.Cmd
-	logger     zerolog.Logger
-	errCapture *capturingWriter
+	cmd       Command
+	execCmd   *exec.Cmd
+	logger    zerolog.Logger
+	errWriter io.Writer
+	errBuf    *bytes.Buffer
 }
 
 func (s *realSubprocess) Start() error {
@@ -176,7 +116,7 @@ func (s *realSubprocess) Start() error {
 }
 
 func (s *realSubprocess) Wait() error {
-	return handleExecCmdError(s.cmd, s.execCmd.Wait(), s.logger, s.errCapture)
+	return handleExecCmdError(s.cmd, s.execCmd.Wait(), s.logger, s.errBuf)
 }
 
 func (s *realSubprocess) Stop() error {
@@ -202,7 +142,7 @@ func (s *realSubprocess) Stop() error {
 		}()
 		select {
 		case err := <-done:
-			return handleExecCmdError(s.cmd, err, s.logger, s.errCapture)
+			return handleExecCmdError(s.cmd, err, s.logger, s.errBuf)
 		case <-time.After(3 * time.Second):
 			_ = s.execCmd.Process.Kill()
 			return fmt.Errorf("process did not exit after 3 seconds")
