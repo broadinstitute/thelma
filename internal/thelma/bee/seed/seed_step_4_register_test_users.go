@@ -2,21 +2,19 @@ package seed
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 )
 
-func (cmd *seedCommand) step4RegisterTestUsers(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
+func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRelease, opts SeedOptions) error {
 	log.Info().Msg("registering test users with Orch and Sam...")
-	seedConfig, err := seed.ConfigWithTestUsers(thelma)
+	seedConfig, err := s.configWithTestUsers()
 	if err != nil {
 		return err
 	}
 	if orch, orchPresent := appReleases["firecloudorch"]; orchPresent {
 		if sam, samPresent := appReleases["sam"]; samPresent {
-			var users []seed.TestUser
+			var users []TestUser
 			if sam.Cluster().ProjectSuffix() == "dev" {
 				users = seedConfig.TestUsers.Dev
 			} else if sam.Cluster().ProjectSuffix() == "qa" {
@@ -25,7 +23,7 @@ func (cmd *seedCommand) step4RegisterTestUsers(thelma app.ThelmaApp, appReleases
 				return fmt.Errorf("suffix %s of project %s maps to no test users", sam.Cluster().ProjectSuffix(), sam.Cluster().Project())
 			}
 
-			googleClient, err := seed.GoogleAuthAs(thelma, orch)
+			googleClient, err := s.googleAuthAs(orch)
 			if err != nil {
 				return err
 			}
@@ -34,7 +32,7 @@ func (cmd *seedCommand) step4RegisterTestUsers(thelma app.ThelmaApp, appReleases
 				log.Info().Msgf("User %d - %s - registering", index+1, user.Email)
 				terraClient, err := googleClient.SetSubject(user.Email).Terra()
 				if err != nil {
-					if cmd.handleErrorWithForce(err) != nil {
+					if opts.handleErrorWithForce(err) != nil {
 						return err
 					}
 					continue
@@ -44,12 +42,12 @@ func (cmd *seedCommand) step4RegisterTestUsers(thelma app.ThelmaApp, appReleases
 					"Hogwarts", "dsde",
 					"Cambridge", "MA", "USA",
 					"Remus Lupin", "Non-Profit")
-				if err = cmd.handleErrorWithForce(err); err != nil {
+				if err = opts.handleErrorWithForce(err); err != nil {
 					return err
 				}
 				log.Info().Msgf("User %d - %s - approving Terms of Service", index+1, user.Email)
 				_, _, err = terraClient.Sam(sam).AcceptToS()
-				if err = cmd.handleErrorWithForce(err); err != nil {
+				if err = opts.handleErrorWithForce(err); err != nil {
 					return err
 				}
 			}

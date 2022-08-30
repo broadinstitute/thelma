@@ -3,19 +3,17 @@ package unseed
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
 )
 
 type options struct {
-	name                    string
-	force                   bool
-	step1UnregisterAllUsers bool
-	noSteps                 bool
-	ifExists                bool
+	name     string
+	ifExists bool
 }
 
 var flagNames = struct {
@@ -33,7 +31,8 @@ var flagNames = struct {
 }
 
 type unseedCommand struct {
-	options options
+	options       options
+	unseedOptions seed.UnseedOptions
 }
 
 func NewBeeUnseedCommand() cli.ThelmaCommand {
@@ -68,9 +67,9 @@ Examples (you'd need to set the --name of your environment):
 `
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "required; name of the BEE to seed")
-	cobraCommand.Flags().BoolVarP(&cmd.options.force, flagNames.force, "f", false, "attempt to ignore errors during seeding")
-	cobraCommand.Flags().BoolVar(&cmd.options.step1UnregisterAllUsers, flagNames.step1UnregisterAllUsers, true, "unregister all user accounts with Sam")
-	cobraCommand.Flags().BoolVar(&cmd.options.noSteps, flagNames.noSteps, false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
+	cobraCommand.Flags().BoolVarP(&cmd.unseedOptions.Force, flagNames.force, "f", false, "attempt to ignore errors during seeding")
+	cobraCommand.Flags().BoolVar(&cmd.unseedOptions.Step1UnregisterAllUsers, flagNames.step1UnregisterAllUsers, true, "unregister all user accounts with Sam")
+	cobraCommand.Flags().BoolVar(&cmd.unseedOptions.NoSteps, flagNames.noSteps, false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
 	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "do not return an error if the BEE does not exist")
 
 }
@@ -88,58 +87,39 @@ func (cmd *unseedCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	}
 
 	// handle --no-steps
-	if cmd.options.noSteps {
+	if cmd.unseedOptions.NoSteps {
 		if !flags.Changed(flagNames.step1UnregisterAllUsers) {
-			cmd.options.step1UnregisterAllUsers = false
+			cmd.unseedOptions.Step1UnregisterAllUsers = false
 		}
 	}
 	return nil
 }
 
 func (cmd *unseedCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
-	state, err := app.State()
+	seeder, err := builders.NewSeeder(app)
 	if err != nil {
 		return err
 	}
-	env, err := state.Environments().Get(cmd.options.name)
+
+	bees, err := builders.NewBees(app)
+	if err != nil {
+		return err
+	}
+
+	env, err := bees.GetBee(cmd.options.name)
 	if err != nil {
 		return err
 	}
 	if env == nil {
 		if cmd.options.ifExists {
 			log.Warn().Msgf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
-			log.Info().Msgf("Cannot seed, exiting normally to due --%s", flagNames.ifExists)
+			log.Info().Msgf("Cannot unseed, exiting normally to due --%s", flagNames.ifExists)
 			return nil
 		}
 		return fmt.Errorf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
 	}
-	if !env.Lifecycle().IsDynamic() {
-		err = cmd.handleErrorWithForce(
-			fmt.Errorf("environment %s has a lifecycle of %s, instead of %s", env.Name(), env.Lifecycle().String(), terra.Dynamic.String()),
-		)
-		if err != nil {
-			return err
-		}
-	}
-	appReleases := make(map[string]terra.AppRelease)
-	for _, release := range env.Releases() {
-		if release.IsAppRelease() {
-			appRelease, wasAppRelease := release.(terra.AppRelease)
-			if wasAppRelease {
-				appReleases[appRelease.Name()] = appRelease
-			} else {
-				log.Warn().Msgf("%s was an App Release but failed to type-assert", release.Name())
-			}
-		}
-	}
 
-	if cmd.options.step1UnregisterAllUsers {
-		if err := cmd.handleErrorWithForce(cmd.step1UnregisterAllUsers(app, appReleases)); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return seeder.Unseed(env, cmd.unseedOptions)
 }
 
 func (cmd *unseedCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
@@ -148,7 +128,7 @@ func (cmd *unseedCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 }
 
 func (cmd *unseedCommand) handleErrorWithForce(err error) error {
-	if err != nil && cmd.options.force {
+	if err != nil && cmd.unseedOptions.Force {
 		log.Warn().Msgf("%v", err.Error())
 		log.Warn().Msgf("Continuing despite above error due to --%s", flagNames.force)
 		return nil

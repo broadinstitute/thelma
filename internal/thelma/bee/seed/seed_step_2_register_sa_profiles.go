@@ -2,26 +2,24 @@ package seed
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 	"regexp"
 )
 
-func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
+func (s *seeder) seedStep2RegisterSaProfiles(appReleases map[string]terra.AppRelease, opts SeedOptions) error {
 	log.Info().Msg("registering app SA profiles with Orch...")
 	if orch, orchPresent := appReleases["firecloudorch"]; orchPresent {
 
 		log.Info().Msgf("registering Orch SA profile with %s", orch.Host())
-		err := cmd.handleErrorWithForce(_registerSaProfile(thelma, orch, orch))
+		err := opts.handleErrorWithForce(s._registerSaProfile(orch, orch))
 		if err != nil {
 			return err
 		}
 
 		if rawls, rawlsPresent := appReleases["rawls"]; rawlsPresent {
 			log.Info().Msgf("registering Rawls SA profile with %s", orch.Host())
-			err = cmd.handleErrorWithForce(_registerSaProfile(thelma, rawls, orch))
+			err = opts.handleErrorWithForce(s._registerSaProfile(rawls, orch))
 			if err != nil {
 				return err
 			}
@@ -31,7 +29,7 @@ func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appRelease
 
 		if sam, samPresent := appReleases["sam"]; samPresent {
 			log.Info().Msgf("registering Sam SA profile with %s", orch.Host())
-			err = cmd.handleErrorWithForce(_registerSaProfile(thelma, sam, orch))
+			err = opts.handleErrorWithForce(s._registerSaProfile(sam, orch))
 			if err != nil {
 				return err
 			}
@@ -41,7 +39,7 @@ func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appRelease
 
 		if leo, leoPresent := appReleases["leonardo"]; leoPresent {
 			log.Info().Msgf("registering Leo SA profile with %s", orch.Host())
-			err = cmd.handleErrorWithForce(_registerSaProfile(thelma, leo, orch))
+			err = opts.handleErrorWithForce(s._registerSaProfile(leo, orch))
 			if err != nil {
 				return err
 			}
@@ -51,7 +49,7 @@ func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appRelease
 
 		if importService, importServicePresent := appReleases["importservice"]; importServicePresent {
 			log.Info().Msgf("registering Import Service SA profile with %s", orch.Host())
-			err = cmd.handleErrorWithForce(_registerSaProfile(thelma, importService, orch))
+			err = opts.handleErrorWithForce(s._registerSaProfile(importService, orch))
 			if err != nil {
 				return err
 			}
@@ -61,7 +59,7 @@ func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appRelease
 
 		if workspaceManager, workspaceManagerPresent := appReleases["workspacemanager"]; workspaceManagerPresent {
 			log.Info().Msgf("registering Workspace Manager SA profile with %s", orch.Host())
-			err = cmd.handleErrorWithForce(_registerSaProfile(thelma, workspaceManager, orch))
+			err = opts.handleErrorWithForce(s._registerSaProfile(workspaceManager, orch))
 			if err != nil {
 				return err
 			}
@@ -76,8 +74,8 @@ func (cmd *seedCommand) step2RegisterSaProfiles(thelma app.ThelmaApp, appRelease
 	return nil
 }
 
-func _registerSaProfile(thelma app.ThelmaApp, appRelease terra.AppRelease, orch terra.AppRelease) error {
-	googleClient, err := seed.GoogleAuthAs(thelma, appRelease)
+func (s *seeder) _registerSaProfile(appRelease terra.AppRelease, orch terra.AppRelease) error {
+	googleClient, err := s.googleAuthAs(appRelease)
 	if err != nil {
 		return err
 	}
@@ -87,10 +85,10 @@ func _registerSaProfile(thelma app.ThelmaApp, appRelease terra.AppRelease, orch 
 	}
 	_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile("None", "None", "None", terraClient.GoogleUserInfo().Email, "None", "None", "None", "None", "None", "None", "None")
 
-	return ignore409Conflict(err)
+	return _ignore409Conflict(err)
 }
 
-func ignore409Conflict(maybe409Err error) error {
+func _ignore409Conflict(maybe409Err error) error {
 	if maybe409Err == nil {
 		return nil
 	}

@@ -4,29 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 )
 
-func (cmd *seedCommand) step1CreateElasticsearch(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
+func (s *seeder) seedStep1CreateElasticsearch(appReleases map[string]terra.AppRelease, opts SeedOptions) error {
 	log.Info().Msg("creating healthy Ontology index with Elasticsearch...")
 	if elasticsearch, elasticsearchPresent := appReleases["elasticsearch"]; elasticsearchPresent {
-
-		kubectl, err := thelma.Clients().Google().Kubectl()
-		if err != nil {
-			return fmt.Errorf("error getting kubectl client: %v", err)
-		}
-
-		config, err := seed.ConfigWithBasicDefaults(thelma)
-		if err != nil {
-			return fmt.Errorf("error getting Elasticsearch's info: %v", err)
-		}
-
-		localPort, stopFunc, err := kubectl.PortForward(elasticsearch, fmt.Sprintf("service/%s", config.Elasticsearch.Service), elasticsearch.Port())
+		config, err := s.configWithBasicDefaults()
+		localPort, stopFunc, err := s.kubectl.PortForward(elasticsearch, fmt.Sprintf("service/%s", config.Elasticsearch.Service), elasticsearch.Port())
 		if err != nil {
 			return fmt.Errorf("error port-forwarding to Elasticsearch: %v", err)
 		}
@@ -34,11 +22,11 @@ func (cmd *seedCommand) step1CreateElasticsearch(thelma app.ThelmaApp, appReleas
 
 		httpClient := http.Client{}
 		err = _createIndex(httpClient, elasticsearch.Protocol(), localPort, "ontology")
-		if err = cmd.handleErrorWithForce(err); err != nil {
+		if err = opts.handleErrorWithForce(err); err != nil {
 			return err
 		}
 		err = _setElasticsearchReplicas(httpClient, elasticsearch.Protocol(), localPort, 0)
-		if err = cmd.handleErrorWithForce(err); err != nil {
+		if err = opts.handleErrorWithForce(err); err != nil {
 			return err
 		}
 	} else {

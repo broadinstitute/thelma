@@ -6,7 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pin"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pinflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
@@ -52,12 +52,12 @@ var flagNames = struct {
 type createCommand struct {
 	name       string
 	options    bee.CreateOptions
-	pinOptions pin.OptionsBuilder
+	pinOptions pinflags.PinFlags
 }
 
 func NewBeeCreateCommand() cli.ThelmaCommand {
 	return &createCommand{
-		pinOptions: pin.NewPinOptionsBuilder(),
+		pinOptions: pinflags.NewPinFlags(),
 	}
 }
 
@@ -122,7 +122,7 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	pinOptions, err := cmd.pinOptions.LoadPinOptions(ctx)
+	pinOptions, err := cmd.pinOptions.GetPinOptions(ctx)
 	if err != nil {
 		return err
 	}

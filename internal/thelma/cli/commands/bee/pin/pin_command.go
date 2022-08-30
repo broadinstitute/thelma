@@ -5,7 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pin"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pinflags"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -71,12 +71,12 @@ var flagNames = struct {
 
 type pinCommand struct {
 	options    options
-	pinOptions pin.OptionsBuilder
+	pinOptions pinflags.PinFlags
 }
 
 func NewBeePinCommand() cli.ThelmaCommand {
 	return &pinCommand{
-		pinOptions: pin.NewPinOptionsBuilder(),
+		pinOptions: pinflags.NewPinFlags(),
 	}
 }
 
@@ -133,7 +133,7 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
 	}
 
-	pinOptions, err := cmd.pinOptions.LoadPinOptions(ctx)
+	pinOptions, err := cmd.pinOptions.GetPinOptions(ctx)
 	if err != nil {
 		return err
 	}
