@@ -44,6 +44,7 @@ func NewWithOptions(options *Options) ThelmaCLI {
 	preOrderTraverse(root, func(n *node) {
 		// set useful defaults on the Cobra command
 		n.cobraCommand.Use = fmt.Sprintf("%s [options]", n.key.shortName())
+		n.cobraCommand.Flags().SortFlags = false
 
 		// add RunE function for leaf Cobra commands (intermediate/non-leaf commands just print out help messages)
 		if n.isLeaf() {

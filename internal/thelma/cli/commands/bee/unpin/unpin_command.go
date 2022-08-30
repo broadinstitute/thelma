@@ -85,17 +85,9 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
 	}
 
-	removed, err := state.Environments().UnpinVersions(cmd.options.name)
-	if err != nil {
+	if err = bees.UnpinVersions(env); err != nil {
 		return err
 	}
-	log.Info().Msgf("Removed all version overrides for %s", cmd.options.name)
-
-	buildNumber, err := state.Environments().UnsetBuildNumber(cmd.options.name)
-	if err != nil {
-		return err
-	}
-	log.Info().Msgf("Unset build number for %s (was %d)", cmd.options.name, buildNumber)
 
 	if err = bees.RefreshBeeGenerator(); err != nil {
 		return err
@@ -104,8 +96,6 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	log.Info().Msgf("The following overrides were removed:")
-	rc.SetOutput(removed)
 	return nil
 }
 

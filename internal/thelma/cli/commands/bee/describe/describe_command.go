@@ -69,7 +69,7 @@ func (cmd *describeCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	view := views.DescribeBee(bee, dynEnv)
+	view := views.DescribeBeeWithReleaseOverrides(bee, dynEnv)
 
 	rc.SetOutput(view)
 

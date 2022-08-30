@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pin"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
@@ -49,12 +50,15 @@ var flagNames = struct {
 }
 
 type createCommand struct {
-	name    string
-	options bee.CreateOptions
+	name       string
+	options    bee.CreateOptions
+	pinOptions pin.OptionsBuilder
 }
 
 func NewBeeCreateCommand() cli.ThelmaCommand {
-	return &createCommand{}
+	return &createCommand{
+		pinOptions: pin.NewPinOptionsBuilder(),
+	}
 }
 
 func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
@@ -68,8 +72,9 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.Fiab.Name, flagNames.fiabName, "FIAB", "Name of the Fiab this hybrid environment should be connected to")
 	cobraCommand.Flags().StringVar(&cmd.options.Fiab.IP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
-	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, false, "Wait for BEE's Argo apps to become healthy after syncing")
-	cobraCommand.Flags().StringVar(&cmd.options.TerraHelmfileRef, flagNames.terraHelmfileRef, "", "Custom terra-helmfile branch/ref")
+	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
+
+	cmd.pinOptions.AddFlags(cobraCommand)
 }
 
 func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
@@ -116,9 +121,16 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	if err != nil {
 		return err
 	}
+
+	pinOptions, err := cmd.pinOptions.LoadPinOptions(ctx)
+	if err != nil {
+		return err
+	}
+	cmd.options.PinOptions = pinOptions
+
 	env, err := bees.CreateWith(cmd.name, cmd.options)
 	if env != nil {
-		ctx.SetOutput(views.ForTerraEnv(env))
+		ctx.SetOutput(views.DescribeBee(env))
 	}
 	return err
 }

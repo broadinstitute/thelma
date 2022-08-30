@@ -1,6 +1,7 @@
 package bee
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
@@ -19,6 +20,8 @@ type Bees interface {
 	GetTemplate(templateName string) (terra.Environment, error)
 	FilterBees(filter terra.EnvironmentFilter) ([]terra.Environment, error)
 	RefreshBeeGenerator() error
+	PinVersions(bee terra.Environment, overrides PinOptions) error
+	UnpinVersions(bee terra.Environment) error
 	SyncEnvironmentGenerator(env terra.Environment) error
 	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error
 	ResetStatefulSets(env terra.Environment) error
@@ -37,7 +40,21 @@ type CreateOptions struct {
 	}
 	SyncGeneratorOnly bool
 	WaitHealthy       bool
-	TerraHelmfileRef  string
+	PinOptions        PinOptions
+}
+
+type PinOptions struct {
+	// Flags holds global-to-the-environment overrides like --terra-helmfile-ref, firecloud-develop-ref, --build-number
+	Flags struct {
+		// TerraHelmfileRef the ref the environments Argo app generator should use
+		TerraHelmfileRef string
+		// FirecloudDevelopRef the ref the environments Argo app generator should use
+		FirecloudDevelopRef string
+		// BuildNumber build number to set in terra-helmfile Environment context during template rendering
+		BuildNumber int
+	}
+	// FileOverrides holds overrides for individual releases, loaded from a YAML or JSON file
+	FileOverrides map[string]terra.VersionOverride
 }
 
 func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, kubectl kubectl.Kubectl) (Bees, error) {
@@ -80,13 +97,7 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 
 	log.Info().Msgf("Created new environment %s", name)
 
-	if options.TerraHelmfileRef != "" {
-		log.Info().Msgf("Pinning %s to terra-helmfile ref: %s", name, options.TerraHelmfileRef)
-		if err = b.state.Environments().PinEnvironmentToTerraHelmfileRef(name, options.TerraHelmfileRef); err != nil {
-			return nil, err
-		}
-	}
-
+	// Load environment from state file
 	if err = b.reloadState(); err != nil {
 		return nil, err
 	}
@@ -101,6 +112,10 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 
 	err = b.kubectl.CreateNamespace(env)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = b.PinVersions(env, options.PinOptions); err != nil {
 		return nil, err
 	}
 
@@ -122,7 +137,7 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 	log.Info().Msgf("Syncing all Argo apps in environment %s", env.Name())
 	err = b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
 		// No need to do a legacy configs restart the first time we create a BEE
-		// (the deployments are being created for the first time, so they'll definitely pick up changes)
+		// (the deployments are being created for the first time)
 		_options.SkipLegacyConfigsRestart = true
 		_options.WaitHealthy = options.WaitHealthy
 	})
@@ -182,6 +197,87 @@ func (b *bees) RefreshBeeGenerator() error {
 	//   https://github.com/argoproj/argo-cd/issues/4505#issuecomment-880271371
 	// We perform a hard refresh with autosync
 	return b.argocd.HardRefresh(generatorArgoApp)
+}
+
+func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) error {
+	// pin global terra-helmfile ref, if one is specified
+	if pinOptions.Flags.TerraHelmfileRef != "" {
+		was := bee.TerraHelmfileRef()
+		if err := b.state.Environments().PinEnvironmentToTerraHelmfileRef(bee.Name(), pinOptions.Flags.TerraHelmfileRef); err != nil {
+			return err
+		}
+		log.Info().Msgf("Set terra-helmfile ref to %s for %s (was: %s)", bee.Name(), pinOptions.Flags.TerraHelmfileRef, was)
+	}
+
+	// pin build number, if one was specified
+	if pinOptions.Flags.BuildNumber != 0 {
+		was := bee.BuildNumber()
+		_, err := b.state.Environments().SetBuildNumber(bee.Name(), pinOptions.Flags.BuildNumber)
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("Set build number to %d for %s (was: %d)", pinOptions.Flags.BuildNumber, bee.Name(), was)
+	}
+
+	// now, pin version overrides for individual releases.
+	releaseOverrides := make(map[string]terra.VersionOverride)
+	for _, r := range bee.Releases() {
+		// start with an empty override
+		var override terra.VersionOverride
+
+		// if an override was set in the file using `--versions-file` flag, use that
+		if fromFile, exists := pinOptions.FileOverrides[r.Name()]; exists {
+			override = fromFile
+		}
+
+		// if global --terra-helmfile-ref was set, add it to our release override
+		if pinOptions.Flags.TerraHelmfileRef != "" {
+			override.TerraHelmfileRef = pinOptions.Flags.TerraHelmfileRef
+		}
+
+		// if global --firecloud-develop-ref was set, add it to our release override
+		if pinOptions.Flags.FirecloudDevelopRef != "" {
+			override.FirecloudDevelopRef = pinOptions.Flags.FirecloudDevelopRef
+		}
+
+		releaseOverrides[r.Name()] = override
+	}
+	releaseOverridesJson, err := json.Marshal(releaseOverrides)
+	if err != nil {
+		return err
+	}
+
+	log.Debug().Bytes("overrides", releaseOverridesJson).Msgf("Updating release version overrides for %s", bee.Name())
+
+	_, err = b.state.Environments().PinVersions(bee.Name(), releaseOverrides)
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("Updated version overrides for %s", bee.Name())
+	return nil
+}
+
+func (b *bees) UnpinVersions(bee terra.Environment) error {
+	wasTerraHelmfileRef := bee.TerraHelmfileRef()
+	removed, err := b.state.Environments().UnpinVersions(bee.Name())
+	if err != nil {
+		return err
+	}
+	asJson, err := json.Marshal(removed)
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("Removed terra-helmfile version overrides for %s (was: %s)", bee.Name(), wasTerraHelmfileRef)
+	log.Info().Bytes("was", asJson).Msgf("Removed all release version overrides for %s", bee.Name())
+
+	buildNumber, err := b.state.Environments().UnsetBuildNumber(bee.Name())
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("Unset build number for %s (was %d)", bee.Name(), buildNumber)
+
+	return nil
 }
 
 func (b *bees) GetBee(name string) (terra.Environment, error) {

@@ -25,18 +25,18 @@ type BeeDetail struct {
 	Overrides        map[string]*statebucket.Override `json:"overrides,omitempty" yaml:",omitempty"`
 }
 
-func ForTerraEnv(environment terra.Environment) BeeDetail {
+func DescribeBee(bee terra.Environment) BeeDetail {
 	e := BeeDetail{
-		Name:             environment.Name(),
-		TerraHelmfileRef: environment.TerraHelmfileRef(),
-		Template:         environment.Template(),
-		Hybrid:           environment.IsHybrid(),
+		Name:             bee.Name(),
+		TerraHelmfileRef: bee.TerraHelmfileRef(),
+		Template:         bee.Template(),
+		Hybrid:           bee.IsHybrid(),
 	}
 
-	if environment.IsHybrid() {
+	if bee.IsHybrid() {
 		e.Fiab = Fiab{
-			Name: environment.Fiab().Name(),
-			IP:   environment.Fiab().IP(),
+			Name: bee.Fiab().Name(),
+			IP:   bee.Fiab().IP(),
 		}
 	}
 
@@ -64,17 +64,17 @@ func DescribeBees(bees []terra.Environment, dynamicEnvs []statebucket.DynamicEnv
 	for i, e := range bees {
 		dynEnv, exists := dynEnvMap[e.Name()]
 		if exists {
-			result[i] = DescribeBee(e, dynEnv)
+			result[i] = DescribeBeeWithReleaseOverrides(e, dynEnv)
 		} else {
-			result[i] = ForTerraEnv(e)
+			result[i] = DescribeBee(e)
 		}
 	}
 
 	return result
 }
 
-func DescribeBee(bee terra.Environment, dynamicEnv statebucket.DynamicEnvironment) BeeDetail {
-	view := ForTerraEnv(bee)
+func DescribeBeeWithReleaseOverrides(bee terra.Environment, dynamicEnv statebucket.DynamicEnvironment) BeeDetail {
+	view := DescribeBee(bee)
 	view.Overrides = dynamicEnv.Overrides
 	return view
 }
