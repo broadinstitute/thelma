@@ -54,7 +54,7 @@ func NewPinFlags() PinFlags {
 func (p *pinFlags) AddFlags(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&p.options.terraHelmfileRef, flagNames.terraHelmfileRef, "", "Pin BEE to specific terra-helmfile branch (instead of master)")
 	cobraCommand.Flags().StringVar(&p.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin BEE to specific firecloud-develop branch (instead of dev)")
-	cobraCommand.Flags().StringVar(&p.options.versionsFile, flagNames.versionsFile, "", "Path to file containing application version overrides (see `thelma bee pin --help` for more info)")
+	cobraCommand.Flags().StringVar(&p.options.versionsFile, flagNames.versionsFile, "", `Path to file containing application version overrides (see "thelma bee pin --help" for more info)`)
 	cobraCommand.Flags().StringVar(&p.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
 	cobraCommand.Flags().IntVar(&p.options.buildNumber, flagNames.buildNumber, 0, "Configure environment's currently running build number (for use in CI/CD pipelines)")
 }
