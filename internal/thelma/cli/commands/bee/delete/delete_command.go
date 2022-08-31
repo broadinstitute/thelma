@@ -23,9 +23,11 @@ thelma bee delete --name=swat-grungy-puma
 var flagNames = struct {
 	name     string
 	ifExists string
+	unseed   string
 }{
 	name:     "name",
 	ifExists: "if-exists",
+	unseed:   "unseed",
 }
 
 type deleteCommand struct {
@@ -44,6 +46,7 @@ func (cmd *deleteCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "", "Required. Name of the BEE to delete")
 	cobraCommand.Flags().BoolVar(&cmd.options.IgnoreMissing, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
+	cobraCommand.Flags().BoolVar(&cmd.options.Unseed, flagNames.unseed, true, "Attempt to unseed BEE before deleting")
 }
 
 func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -55,7 +58,6 @@ func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
 		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
-
 	return nil
 }
 

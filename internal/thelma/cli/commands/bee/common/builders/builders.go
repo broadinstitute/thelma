@@ -13,14 +13,20 @@ func NewBees(thelmaApp app.ThelmaApp) (bee.Bees, error) {
 		return nil, err
 	}
 
+	seeder, err := newSeeder(thelmaApp)
+	if err != nil {
+		return nil, err
+	}
+
 	kubectl, err := thelmaApp.Clients().Google().Kubectl()
 	if err != nil {
 		return nil, err
 	}
-	return bee.NewBees(_argocd, thelmaApp.StateLoader(), kubectl)
+
+	return bee.NewBees(_argocd, thelmaApp.StateLoader(), seeder, kubectl)
 }
 
-func NewSeeder(thelma app.ThelmaApp) (seed.Seeder, error) {
+func newSeeder(thelma app.ThelmaApp) (seed.Seeder, error) {
 	_kubectl, err := thelma.Clients().Google().Kubectl()
 	if err != nil {
 		return nil, fmt.Errorf("error getting kubectl client: %v", err)

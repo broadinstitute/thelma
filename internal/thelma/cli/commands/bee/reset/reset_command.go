@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -59,12 +59,12 @@ func (cmd *resetCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
-	state, err := app.State()
+	bees, err := builders.NewBees(app)
 	if err != nil {
 		return err
 	}
 
-	env, err := state.Environments().Get(cmd.options.name)
+	env, err := bees.GetBee(cmd.options.name)
 	if err != nil {
 		return err
 	}
@@ -73,13 +73,9 @@ func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 			log.Warn().Msgf("Could not reset %s, no BEE by that name exists", cmd.options.name)
 			return nil
 		}
-		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
+		return fmt.Errorf("--%s: unknown BEE %q", flagNames.name, cmd.options.name)
 	}
 
-	bees, err := builders.NewBees(app)
-	if err != nil {
-		return err
-	}
 	return bees.ResetStatefulSets(env)
 }
 

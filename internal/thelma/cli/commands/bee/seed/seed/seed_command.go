@@ -99,11 +99,6 @@ func (cmd *seedCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	seeder, err := builders.NewSeeder(app)
-	if err != nil {
-		return err
-	}
-
 	bees, err := builders.NewBees(app)
 	if err != nil {
 		return err
@@ -122,7 +117,7 @@ func (cmd *seedCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return fmt.Errorf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
 	}
 
-	return seeder.Seed(env, seedOptions)
+	return bees.Seeder().Seed(env, seedOptions)
 }
 
 func (cmd *seedCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

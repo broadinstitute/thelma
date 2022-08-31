@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pinflags"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/seedflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
@@ -38,6 +39,7 @@ var flagNames = struct {
 	generatorOnly    string
 	waitHealthy      string
 	terraHelmfileRef string
+	seed             string
 }{
 	name:             "name",
 	template:         "template",
@@ -47,17 +49,24 @@ var flagNames = struct {
 	generatorOnly:    "generator-only",
 	waitHealthy:      "wait-healthy",
 	terraHelmfileRef: "terra-helmfile-ref",
+	seed:             "seed",
 }
 
 type createCommand struct {
-	name       string
-	options    bee.CreateOptions
-	pinOptions pinflags.PinFlags
+	name      string
+	options   bee.CreateOptions
+	pinFlags  pinflags.PinFlags
+	seedFlags seedflags.SeedFlags
 }
 
 func NewBeeCreateCommand() cli.ThelmaCommand {
 	return &createCommand{
-		pinOptions: pinflags.NewPinFlags(),
+		pinFlags: pinflags.NewPinFlags(),
+		seedFlags: seedflags.NewSeedFlags(func(options *seedflags.Options) {
+			options.Prefix = "seed-"
+			options.NoShortHand = true // default short-hand flags could conflict with others in create command
+			options.Hidden = true      // too many CLI flags, hide them in `thelma bee create` output
+		}),
 	}
 }
 
@@ -73,8 +82,10 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.Fiab.IP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
+	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
 
-	cmd.pinOptions.AddFlags(cobraCommand)
+	cmd.pinFlags.AddFlags(cobraCommand)
+	cmd.seedFlags.AddFlags(cobraCommand)
 }
 
 func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
@@ -113,6 +124,19 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 		}
 	}
 
+	// validate/load pin and seed options
+	pinOptions, err := cmd.pinFlags.GetPinOptions(ctx)
+	if err != nil {
+		return err
+	}
+	cmd.options.PinOptions = pinOptions
+
+	seedOptions, err := cmd.seedFlags.GetOptions(ctx.CobraCommand())
+	if err != nil {
+		return err
+	}
+	cmd.options.SeedOptions = seedOptions
+
 	return nil
 }
 
@@ -122,17 +146,14 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	pinOptions, err := cmd.pinOptions.GetPinOptions(ctx)
-	if err != nil {
-		return err
-	}
-	cmd.options.PinOptions = pinOptions
-
 	env, err := bees.CreateWith(cmd.name, cmd.options)
 	if env != nil {
 		ctx.SetOutput(views.DescribeBee(env))
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (cmd *createCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

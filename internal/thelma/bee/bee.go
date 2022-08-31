@@ -3,6 +3,7 @@ package bee
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
@@ -18,17 +19,19 @@ type Bees interface {
 	CreateWith(name string, options CreateOptions) (terra.Environment, error)
 	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
+	Seeder() seed.Seeder
 	FilterBees(filter terra.EnvironmentFilter) ([]terra.Environment, error)
-	RefreshBeeGenerator() error
 	PinVersions(bee terra.Environment, overrides PinOptions) error
 	UnpinVersions(bee terra.Environment) error
 	SyncEnvironmentGenerator(env terra.Environment) error
 	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error
 	ResetStatefulSets(env terra.Environment) error
+	RefreshBeeGenerator() error
 }
 
 type DeleteOptions struct {
 	IgnoreMissing bool
+	Unseed        bool
 }
 
 type CreateOptions struct {
@@ -41,6 +44,8 @@ type CreateOptions struct {
 	SyncGeneratorOnly bool
 	WaitHealthy       bool
 	PinOptions        PinOptions
+	Seed              bool
+	SeedOptions       seed.SeedOptions
 }
 
 type PinOptions struct {
@@ -57,7 +62,7 @@ type PinOptions struct {
 	FileOverrides map[string]terra.VersionOverride
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, kubectl kubectl.Kubectl) (Bees, error) {
+func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, kubectl kubectl.Kubectl) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -67,6 +72,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, kubectl kubect
 		argocd:      argocd,
 		state:       state,
 		stateLoader: stateLoader,
+		seeder:      seeder,
 		kubectl:     kubectl,
 	}, nil
 }
@@ -76,6 +82,7 @@ type bees struct {
 	argocd      argocd.ArgoCD
 	state       terra.State
 	stateLoader terra.StateLoader
+	seeder      seed.Seeder
 	kubectl     kubectl.Kubectl
 }
 
@@ -141,6 +148,17 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		_options.SkipLegacyConfigsRestart = true
 		_options.WaitHealthy = options.WaitHealthy
 	})
+	if err != nil {
+		return env, err
+	}
+
+	if options.Seed {
+		log.Info().Msgf("Seeding BEE with test data")
+		if err = b.seeder.Seed(env, options.SeedOptions); err != nil {
+			return env, err
+		}
+	}
+
 	return env, err
 }
 
@@ -159,7 +177,20 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 		}
 	}
 
+	if options.Unseed {
+		log.Info().Msgf("Unseeding BEE before deletion")
+		if err = b.seeder.Unseed(env, seed.UnseedOptions{
+			Step1UnregisterAllUsers: true,
+		}); err != nil {
+			log.Warn().Err(err).Msgf("Failed to unseed %s; will proceed with deletion", name)
+		}
+	}
+
 	if err = b.kubectl.DeleteNamespace(env); err != nil {
+		return nil, err
+	}
+
+	if err = b.state.Environments().Delete(env.Name()); err != nil {
 		return nil, err
 	}
 
@@ -328,6 +359,10 @@ func (b *bees) ResetStatefulSets(env terra.Environment) error {
 	}
 
 	return nil
+}
+
+func (b *bees) Seeder() seed.Seeder {
+	return b.seeder
 }
 
 func (b *bees) FilterBees(_filter terra.EnvironmentFilter) ([]terra.Environment, error) {
