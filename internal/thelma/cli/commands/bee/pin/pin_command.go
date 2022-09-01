@@ -51,7 +51,6 @@ thelma bee pin -n swat-grungy-puma sam --versions-file=/tmp/version.json --versi
 
 type options struct {
 	name        string
-	ifExists    bool
 	sync        bool
 	waitHealthy bool
 }
@@ -59,12 +58,10 @@ type options struct {
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
 	name        string
-	ifExists    string
 	sync        string
 	waitHealthy string
 }{
 	name:        "name",
-	ifExists:    "if-exists",
 	sync:        "sync",
 	waitHealthy: "wait-healthy",
 }
@@ -89,7 +86,6 @@ func (cmd *pinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 	cmd.pinOptions.AddFlags(cobraCommand)
 
-	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 	cobraCommand.Flags().BoolVar(&cmd.options.sync, flagNames.sync, true, "Sync all services in BEE after updating versions")
 	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
 }
@@ -123,14 +119,6 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	env, err := state.Environments().Get(cmd.options.name)
 	if err != nil {
 		return err
-	}
-
-	if env == nil {
-		if cmd.options.ifExists {
-			log.Warn().Msgf("Could not pin %s, no BEE by that name exists", cmd.options.name)
-			return nil
-		}
-		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
 	}
 
 	pinOptions, err := cmd.pinOptions.GetPinOptions(ctx)

@@ -21,13 +21,11 @@ thelma bee delete --name=swat-grungy-puma
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name     string
-	ifExists string
-	unseed   string
+	name   string
+	unseed string
 }{
-	name:     "name",
-	ifExists: "if-exists",
-	unseed:   "unseed",
+	name:   "name",
+	unseed: "unseed",
 }
 
 type deleteCommand struct {
@@ -45,7 +43,6 @@ func (cmd *deleteCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "", "Required. Name of the BEE to delete")
-	cobraCommand.Flags().BoolVar(&cmd.options.IgnoreMissing, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 	cobraCommand.Flags().BoolVar(&cmd.options.Unseed, flagNames.unseed, true, "Attempt to unseed BEE before deleting")
 }
 

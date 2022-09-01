@@ -34,8 +34,7 @@ var flagNames = struct {
 }
 
 type pinFlags struct {
-	options    flagValues
-	flagPrefix string
+	options flagValues
 }
 
 // PinFlags adds version pinning CLI flags to a cobra command and supports converting those flags to a bee.PinOptions struct

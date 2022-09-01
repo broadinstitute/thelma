@@ -14,6 +14,9 @@ func (s *seeder) seedStep1CreateElasticsearch(appReleases map[string]terra.AppRe
 	log.Info().Msg("creating healthy Ontology index with Elasticsearch...")
 	if elasticsearch, elasticsearchPresent := appReleases["elasticsearch"]; elasticsearchPresent {
 		config, err := s.configWithBasicDefaults()
+		if err != nil {
+			return err
+		}
 		localPort, stopFunc, err := s.kubectl.PortForward(elasticsearch, fmt.Sprintf("service/%s", config.Elasticsearch.Service), elasticsearch.Port())
 		if err != nil {
 			return fmt.Errorf("error port-forwarding to Elasticsearch: %v", err)

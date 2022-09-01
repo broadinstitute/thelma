@@ -13,17 +13,14 @@ import (
 const helpMessage = `Wipe the data from a Bee's persistent volumes (for, eg. MySQL and Postgres)`
 
 type options struct {
-	name     string
-	ifExists bool
+	name string
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name     string
-	ifExists string
+	name string
 }{
-	name:     "name",
-	ifExists: "if-exists",
+	name: "name",
 }
 
 type resetCommand struct {
@@ -40,7 +37,6 @@ func (cmd *resetCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to reset statefulsets for")
-	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 }
 
 func (cmd *resetCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -69,10 +65,6 @@ func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 		return err
 	}
 	if env == nil {
-		if cmd.options.ifExists {
-			log.Warn().Msgf("Could not reset %s, no BEE by that name exists", cmd.options.name)
-			return nil
-		}
 		return fmt.Errorf("--%s: unknown BEE %q", flagNames.name, cmd.options.name)
 	}
 

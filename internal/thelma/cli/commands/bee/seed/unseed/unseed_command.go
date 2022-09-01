@@ -12,8 +12,7 @@ import (
 )
 
 type options struct {
-	name     string
-	ifExists bool
+	name string
 }
 
 var flagNames = struct {
@@ -21,13 +20,11 @@ var flagNames = struct {
 	force                   string
 	step1UnregisterAllUsers string
 	noSteps                 string
-	ifExists                string
 }{
 	name:                    "name",
 	force:                   "force",
 	step1UnregisterAllUsers: "step-1-unregister-all-users",
 	noSteps:                 "no-steps",
-	ifExists:                "if-exists",
 }
 
 type unseedCommand struct {
@@ -69,7 +66,6 @@ Examples (you'd need to set the --name of your environment):
 `
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "required; name of the BEE to seed")
-	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "do not return an error if the BEE does not exist")
 
 	cmd.unseedFlags.AddFlags(cobraCommand)
 }
@@ -103,14 +99,6 @@ func (cmd *unseedCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	env, err := bees.GetBee(cmd.options.name)
 	if err != nil {
 		return err
-	}
-	if env == nil {
-		if cmd.options.ifExists {
-			log.Warn().Msgf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
-			log.Info().Msgf("Cannot unseed, exiting normally to due --%s", flagNames.ifExists)
-			return nil
-		}
-		return fmt.Errorf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
 	}
 
 	return bees.Seeder().Unseed(env, unseedOptions)

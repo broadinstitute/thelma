@@ -26,7 +26,7 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"browserLogin",
+						"login",
 						"--sso",
 						fakeArgocdHost,
 					},
@@ -53,7 +53,7 @@ func Test_Login(t *testing.T) {
 			},
 		},
 		{
-			name: "browserLogin command fails",
+			name: "login command fails",
 			setupCommands: func(runner *shell.MockRunner) {
 				runner.ExpectCmd(shell.Command{
 					Prog: "argocd",
@@ -61,7 +61,7 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"browserLogin",
+						"login",
 						"--sso",
 						fakeArgocdHost,
 					},
@@ -70,7 +70,7 @@ func Test_Login(t *testing.T) {
 					},
 				}).Exits(2)
 			},
-			expectError: "browserLogin.*exited with status 2",
+			expectError: "login.*exited with status 2",
 		},
 		{
 			name: "browserLogin check fails",
@@ -81,7 +81,7 @@ func Test_Login(t *testing.T) {
 						"--header",
 						"Proxy-Authorization: Bearer my-iap-token",
 						"--grpc-web",
-						"browserLogin",
+						"login",
 						"--sso",
 						fakeArgocdHost,
 					},
@@ -106,7 +106,7 @@ func Test_Login(t *testing.T) {
 					},
 				}).WithStdout("loggedIn: false\n")
 			},
-			expectError: "browserLogin command succeeded but client is not logged in",
+			expectError: "login command succeeded but client is not logged in",
 		},
 	}
 

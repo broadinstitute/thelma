@@ -54,6 +54,8 @@ func (s *unseedFlags) AddFlags(cobraCommand *cobra.Command) {
 
 	cobraCommand.Flags().BoolVar(&s.unseedOptions.NoSteps, s.withPrefix(flagNames.noSteps), false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
 	s.maybeHide(cobraCommand, flagNames.noSteps)
+
+	s.addShorthand(cobraCommand, flagNames.force, "f")
 }
 
 func (s *unseedFlags) GetOptions(cobraCommand *cobra.Command) (seed.UnseedOptions, error) {

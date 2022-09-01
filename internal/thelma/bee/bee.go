@@ -30,8 +30,7 @@ type Bees interface {
 }
 
 type DeleteOptions struct {
-	IgnoreMissing bool
-	Unseed        bool
+	Unseed bool
 }
 
 type CreateOptions struct {
@@ -163,18 +162,9 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 }
 
 func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment, error) {
-	env, err := b.state.Environments().Get(name)
+	env, err := b.GetBee(name)
 	if err != nil {
 		return nil, err
-	}
-
-	if env == nil {
-		if options.IgnoreMissing {
-			log.Warn().Msgf("Could not delete %s, no BEE by that name exists", name)
-			return nil, nil
-		} else {
-			return nil, fmt.Errorf("delete %s failed: no BEE by that name exists", name)
-		}
 	}
 
 	if options.Unseed {
@@ -317,7 +307,7 @@ func (b *bees) GetBee(name string) (terra.Environment, error) {
 		return nil, err
 	}
 	if env == nil {
-		return nil, fmt.Errorf("no BEE by the name %s exists", name)
+		return nil, fmt.Errorf("no BEE by the name %q exists", name)
 	}
 	if env.Lifecycle() != terra.Dynamic {
 		return nil, fmt.Errorf("environment %s is not a BEE (lifecycle is %s)", name, env.Lifecycle())

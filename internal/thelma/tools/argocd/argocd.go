@@ -135,10 +135,6 @@ type ArgoCD interface {
 // * uses those SSO credentials to generate a new ArgoCD authentication token for the user's identity
 // * stores the generated token in ~/.argocd/config
 func BrowserLogin(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) error {
-	if !utils.Interactive() {
-		return fmt.Errorf("ArgoCD client is not authenticated and shell is not interactive; please supply an ArgoCD token via THELMA_ARGOCD_TOKEN or run `thelma auth argocd` in an interactive shell")
-	}
-
 	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
 	if err != nil {
 		return err
@@ -170,6 +166,10 @@ func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, 
 		}
 	} else if err := a.ensureLoggedIn(); err != nil {
 		log.Debug().Err(err).Msgf("argocd cli is not authenticated; will attempt browser login")
+
+		if !utils.Interactive() {
+			return nil, fmt.Errorf("ArgoCD client is not authenticated and shell is not interactive; please supply an ArgoCD token via THELMA_ARGOCD_TOKEN or run `thelma auth argocd` in an interactive shell")
+		}
 		if err := BrowserLogin(thelmaConfig, shellRunner, iapToken); err != nil {
 			return nil, err
 		}
@@ -553,20 +553,8 @@ func (a *argocd) ensureLoggedIn() error {
 
 // run `argocd login` to put up an SSO prompt in the browser
 func (a *argocd) browserLogin() error {
+	log.Info().Msgf("Launching browser to authenticate Thelma to ArgoCD")
 	return a.runCommand([]string{"login", "--sso", a.cfg.Host})
-}
-
-// run `argocd account generate-token` to generate a new ArgoCD token
-func (a *argocd) generateToken(expiresIn time.Duration) (string, error) {
-	cmd := []string{"account", "generate-token", "--expires-in", fmt.Sprintf("%s", expiresIn)}
-	var stdout bytes.Buffer
-	err := a.runCommand(cmd, func(opts *shell.RunOptions) {
-		opts.Stdout = &stdout
-	})
-	if err != nil {
-		return "", err
-	}
-	return stdout.String(), nil
 }
 
 func (a *argocd) runCommandAndParseYamlOutput(args []string, out interface{}) error {
