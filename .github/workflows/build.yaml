@@ -374,8 +374,7 @@ jobs:
             "${{ steps.image-name.outputs.name }}:latest"
 
   update-latest-tag:
-    # TODO uncomment before merging
-    # if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     needs: [bump, dockerize-and-push, sign-and-notarize]
     steps:
