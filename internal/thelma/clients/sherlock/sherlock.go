@@ -11,7 +11,7 @@ const configKey = "sherlock"
 
 // Client contains an API client for a remote sherlock server
 type Client struct {
-	client client.Sherlock
+	client *client.Sherlock
 }
 
 type sherlockConfig struct {
@@ -27,12 +27,13 @@ func New(config config.Config, iapToken string) (*Client, error) {
 		return nil, err
 	}
 
+	// setup runtime for openapi client
 	transport := httptransport.New(sherlockConfig.Addr, "", []string{sherlockConfig.Scheme})
 	transport.DefaultAuthentication = httptransport.BearerToken(iapToken)
 
 	sherlockClient := client.New(transport, strfmt.Default)
 
-	sherlock := &Client{client: *sherlockClient}
+	sherlock := &Client{client: sherlockClient}
 	return sherlock, nil
 }
 
