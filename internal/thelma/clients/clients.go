@@ -30,7 +30,7 @@ type Clients interface {
 	// GoogleUsingADC is like Google but forces usage of the environment's Application Default Credentials,
 	// optionally allowing non-Broad email addresses
 	GoogleUsingADC(bool) google.Clients
-
+	// Sherlock returns a swagger API client for a sherlock server instance
 	Sherlock() (*sherlock.Client, error)
 }
 
