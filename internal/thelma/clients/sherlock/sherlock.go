@@ -1,6 +1,8 @@
 package sherlock
 
 import (
+	"net/url"
+
 	"github.com/broadinstitute/sherlock/clients/go/client"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -15,8 +17,7 @@ type Client struct {
 }
 
 type sherlockConfig struct {
-	Addr   string `default:"sherlock.dsp-devops.broadinstitute.org"`
-	Scheme string `default:"https"`
+	Addr string `default:"https://sherlock.dsp-devops.broadinstitute.org"`
 }
 
 // New configures a new Client instance which confers the ability to issue requests against the API of a sherlock server
@@ -27,8 +28,13 @@ func New(config config.Config, iapToken string) (*Client, error) {
 		return nil, err
 	}
 
+	hostname, scheme, err := extractSchemeAndHost(sherlockConfig.Addr)
+	if err != nil {
+		return nil, err
+	}
+
 	// setup runtime for openapi client
-	transport := httptransport.New(sherlockConfig.Addr, "", []string{sherlockConfig.Scheme})
+	transport := httptransport.New(hostname, "", []string{scheme})
 	transport.DefaultAuthentication = httptransport.BearerToken(iapToken)
 
 	sherlockClient := client.New(transport, strfmt.Default)
@@ -43,4 +49,16 @@ func loadConfig(thelmaConfig config.Config) (sherlockConfig, error) {
 		return cfg, err
 	}
 	return cfg, nil
+}
+
+// sherlock client lib expects host and scheme as separate input values but
+// specifying an fqdn in config makes more sense so this helper exists to extract the
+// component parts
+func extractSchemeAndHost(addr string) (string, string, error) {
+	sherlockURL, err := url.Parse(addr)
+	if err != nil {
+		return "", "", err
+	}
+
+	return sherlockURL.Hostname(), sherlockURL.Scheme, nil
 }
