@@ -2,8 +2,10 @@ package sherlock
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/broadinstitute/sherlock/clients/go/client"
+	"github.com/broadinstitute/sherlock/clients/go/client/misc"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
@@ -48,7 +50,14 @@ func extractSchemeAndHost(addr string) (string, string, error) {
 		return "", "", err
 	}
 
-	return sherlockURL.Hostname(), sherlockURL.Scheme, nil
+	var sherlockHost string
+	sherlockHost = sherlockURL.Hostname()
+
+	if sherlockURL.Port() != "" {
+		sherlockHost = strings.Join([]string{sherlockHost, sherlockURL.Port()}, ":")
+	}
+
+	return sherlockHost, sherlockURL.Scheme, nil
 }
 
 func configureClientRuntime(addr, token string) (*Client, error) {
@@ -64,4 +73,10 @@ func configureClientRuntime(addr, token string) (*Client, error) {
 	sherlockClient := client.New(transport, strfmt.Default)
 	client := &Client{client: sherlockClient}
 	return client, nil
+}
+
+func (c Client) getStatus() error {
+	params := misc.NewGetStatusParams()
+	_, err := c.client.Misc.GetStatus(params)
+	return err
 }
