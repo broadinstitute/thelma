@@ -28,19 +28,7 @@ func New(config config.Config, iapToken string) (*Client, error) {
 		return nil, err
 	}
 
-	hostname, scheme, err := extractSchemeAndHost(sherlockConfig.Addr)
-	if err != nil {
-		return nil, err
-	}
-
-	// setup runtime for openapi client
-	transport := httptransport.New(hostname, "", []string{scheme})
-	transport.DefaultAuthentication = httptransport.BearerToken(iapToken)
-
-	sherlockClient := client.New(transport, strfmt.Default)
-
-	sherlock := &Client{client: sherlockClient}
-	return sherlock, nil
+	return configureClientRuntime(sherlockConfig.Addr, iapToken)
 }
 
 func loadConfig(thelmaConfig config.Config) (sherlockConfig, error) {
@@ -61,4 +49,19 @@ func extractSchemeAndHost(addr string) (string, string, error) {
 	}
 
 	return sherlockURL.Hostname(), sherlockURL.Scheme, nil
+}
+
+func configureClientRuntime(addr, token string) (*Client, error) {
+	hostname, scheme, err := extractSchemeAndHost(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	// setup runtime for openapi client
+	transport := httptransport.New(hostname, "", []string{scheme})
+	transport.DefaultAuthentication = httptransport.BearerToken(token)
+
+	sherlockClient := client.New(transport, strfmt.Default)
+	client := &Client{client: sherlockClient}
+	return client, nil
 }
