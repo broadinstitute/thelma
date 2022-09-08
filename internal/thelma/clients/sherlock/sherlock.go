@@ -53,6 +53,7 @@ func extractSchemeAndHost(addr string) (string, string, error) {
 	var sherlockHost string
 	sherlockHost = sherlockURL.Hostname()
 
+	// account for mock servers via httptest which are assigned a random port on localhost
 	if sherlockURL.Port() != "" {
 		sherlockHost = strings.Join([]string{sherlockHost, sherlockURL.Port()}, ":")
 	}
@@ -75,6 +76,8 @@ func configureClientRuntime(addr, token string) (*Client, error) {
 	return client, nil
 }
 
+// getStatus is used in tests to verify that an initialzied sherlock client
+// can successfully issue a request against a remote sherlock backend
 func (c Client) getStatus() error {
 	params := misc.NewGetStatusParams()
 	_, err := c.client.Misc.GetStatus(params)
