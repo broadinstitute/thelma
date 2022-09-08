@@ -24,7 +24,6 @@ type sherlockConfig struct {
 
 // New configures a new Client instance which confers the ability to issue requests against the API of a sherlock server
 func New(config config.Config, iapToken string) (*Client, error) {
-
 	sherlockConfig, err := loadConfig(config)
 	if err != nil {
 		return nil, err
