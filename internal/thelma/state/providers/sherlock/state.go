@@ -24,6 +24,6 @@ func (s *state) Clusers() terra.Clusters {
 	return newClusters(s)
 }
 
-// func (s *state) Release() terra.Releases {
-
-// }
+func (s *state) Releases() terra.Releases {
+	return newReleases(s)
+}
