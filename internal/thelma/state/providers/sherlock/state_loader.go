@@ -127,6 +127,7 @@ func (s *stateLoader) Load() (terra.State, error) {
 	}
 
 	return &state{
+		sherlock:     s.sherlock,
 		environments: environments,
 		clusters:     clusters,
 	}, nil
