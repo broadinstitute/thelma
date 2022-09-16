@@ -40,7 +40,7 @@ require (
 	github.com/armon/go-metrics v0.3.9 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
-	github.com/broadinstitute/sherlock v0.0.49 // indirect
+	github.com/broadinstitute/sherlock v0.0.55 // indirect
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/fatih/color v1.7.0 // indirect
