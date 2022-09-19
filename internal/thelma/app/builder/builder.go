@@ -2,6 +2,8 @@ package builder
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
@@ -12,8 +14,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
+	sherlockState "github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"testing"
 )
 
 // ThelmaBuilder is a utility for initializing new ThelmaApp instances
@@ -44,6 +46,19 @@ type thelmaBuilder struct {
 		t       *testing.T
 	}
 	rootDir string
+}
+
+type stateLoaderType int
+
+const (
+	gitopsStateLoader stateLoaderType = iota + 1
+	sherlockStateLoader
+	undefinedStateLoader
+)
+const stateLoaderConfigPrefix string = "stateLoader"
+
+type StateLoaderConfig struct {
+	Source string `default:"gitops"`
 }
 
 func NewBuilder() ThelmaBuilder {
@@ -156,9 +171,40 @@ func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Ru
 		return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, cfg.Home(), shellRunner)
 	}
 
-	sb, err := statebucket.New(cfg, clients.Google())
+	stateLoaderType, err := getStateLoaderType(cfg)
 	if err != nil {
 		return nil, err
 	}
-	return gitops.NewStateLoader(cfg.Home(), shellRunner, sb), nil
+
+	if stateLoaderType == gitopsStateLoader {
+		sb, err := statebucket.New(cfg, clients.Google())
+		if err != nil {
+			return nil, err
+		}
+		return gitops.NewStateLoader(cfg.Home(), shellRunner, sb), nil
+	} else if stateLoaderType == sherlockStateLoader {
+		sherlock, err := clients.Sherlock()
+		if err != nil {
+			return nil, err
+		}
+		sherlockState.NewStateLoader(cfg.Home(), shellRunner, sherlock)
+	}
+
+	return nil, fmt.Errorf("received an undefined state loader source: valid options gitops or sherlock")
+}
+
+func getStateLoaderType(cfg config.Config) (stateLoaderType, error) {
+	var stateLoaderConfig StateLoaderConfig
+	if err := cfg.Unmarshal(stateLoaderConfigPrefix, &stateLoaderConfig); err != nil {
+		return 0, err
+	}
+
+	switch stateLoaderConfig.Source {
+	case "gitops":
+		return gitopsStateLoader, nil
+	case "sherlock":
+		return sherlockStateLoader, nil
+	default:
+		return undefinedStateLoader, nil
+	}
 }
