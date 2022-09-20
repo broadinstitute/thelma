@@ -58,7 +58,7 @@ func (e *environment) Namespace() string {
 }
 
 func (e *environment) IsHybrid() bool {
-	panic("deprecated, implementing for interface compatability")
+	return false
 }
 
 func (e *environment) Fiab() terra.Fiab {

@@ -15,7 +15,7 @@ type release struct {
 }
 
 func (r *release) Name() string {
-	return r.name
+	return r.chartName
 }
 
 func (r *release) Type() terra.ReleaseType {

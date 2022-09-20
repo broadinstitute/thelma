@@ -60,12 +60,7 @@ func (s *stateLoader) Load() (terra.State, error) {
 					repo:         *r.ChartInfo.ChartRepo,
 					namespace:    r.Namespace,
 					cluster:      c,
-					destination: &destination{
-						name:            cl.Name,
-						base:            cl.Base,
-						requireSuitable: *cl.RequiresSuitability,
-						destinationType: terra.ClusterDestination,
-					},
+					destination:  c,
 				},
 			}
 		}
@@ -113,12 +108,7 @@ func (s *stateLoader) Load() (terra.State, error) {
 					repo:         *r.ChartInfo.ChartRepo,
 					namespace:    r.Namespace,
 					cluster:      clusters[env.DefaultCluster],
-					destination: &destination{
-						name:            env.Name,
-						base:            env.Base,
-						requireSuitable: *env.RequiresSuitability,
-						destinationType: terra.EnvironmentDestination,
-					},
+					destination:  e,
 				},
 			}
 		}

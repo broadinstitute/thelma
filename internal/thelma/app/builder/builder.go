@@ -16,6 +16,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	sherlockState "github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/rs/zerolog/log"
 )
 
 // ThelmaBuilder is a utility for initializing new ThelmaApp instances
@@ -55,7 +56,7 @@ const (
 	sherlockStateLoader
 	undefinedStateLoader
 )
-const stateLoaderConfigPrefix string = "stateLoader"
+const stateLoaderConfigPrefix string = "stateloader"
 
 type StateLoaderConfig struct {
 	Source string `default:"gitops"`
@@ -187,7 +188,7 @@ func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Ru
 		if err != nil {
 			return nil, err
 		}
-		sherlockState.NewStateLoader(cfg.Home(), shellRunner, sherlock)
+		return sherlockState.NewStateLoader(cfg.Home(), shellRunner, sherlock), nil
 	}
 
 	return nil, fmt.Errorf("received an undefined state loader source: valid options gitops or sherlock")
@@ -198,6 +199,8 @@ func getStateLoaderType(cfg config.Config) (stateLoaderType, error) {
 	if err := cfg.Unmarshal(stateLoaderConfigPrefix, &stateLoaderConfig); err != nil {
 		return 0, err
 	}
+
+	log.Info().Msgf("State Source: %s", stateLoaderConfig.Source)
 
 	switch stateLoaderConfig.Source {
 	case "gitops":
