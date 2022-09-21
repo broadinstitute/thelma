@@ -18,7 +18,9 @@ type sherlockStateLoaderSuite struct {
 	suite.Suite
 }
 
+//nolint:govet // Ignore checks for unkeyed nested struct literals
 func (suite *sherlockStateLoaderSuite) TestStateLoading() {
+
 	stateSource := mocks.NewStateLoader(suite.T())
 	stateSource.On("Clusters").Return(
 		sherlock.Clusters{
