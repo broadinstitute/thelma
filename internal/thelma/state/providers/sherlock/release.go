@@ -63,7 +63,7 @@ func (r *release) Destination() terra.Destination {
 }
 
 func (r *release) TerraHelmfileRef() string {
-	panic("sherlock state provided should not require terra-helmfile ref")
+	panic("sherlock state provider should not require terra-helmfile ref")
 }
 
 func (r *release) FirecloudDevelopRef() string {
