@@ -202,7 +202,7 @@ func mockChartReleasesHandler() http.HandlerFunc {
 		if r.URL.Query().Has("environment") {
 			environmentParam := r.URL.Query().Get("environment")
 			if environmentParam == "dev" {
-				encoder.Encode([]*models.V2controllersChartRelease{
+				_ = encoder.Encode([]*models.V2controllersChartRelease{
 					{
 						AppVersionExact:   "0.2.1",
 						Chart:             "sam",
@@ -217,7 +217,7 @@ func mockChartReleasesHandler() http.HandlerFunc {
 		if r.URL.Query().Has("cluster") {
 			clusterParam := r.URL.Query().Get("cluster")
 			if clusterParam == "tools" {
-				encoder.Encode([]*models.V2controllersChartRelease{
+				_ = encoder.Encode([]*models.V2controllersChartRelease{
 					{
 						AppVersionExact:   "2.2.1",
 						Chart:             "grafana",
