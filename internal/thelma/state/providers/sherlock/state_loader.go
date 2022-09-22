@@ -31,8 +31,28 @@ func (s *stateLoader) Load() (terra.State, error) {
 		return nil, err
 	}
 
-	clusters := make(map[string]*cluster)
-	for _, cl := range stateClusters {
+	// transforms cluster data returned by sherlock client into thelma's state domain types
+	clusters, err := s.buildClustersState(stateClusters)
+	if err != nil {
+		return nil, err
+	}
+
+	// transforms environment data returned by sherlock client into thelma's state domain types
+	environments, err := s.buildEnvironmentsState(stateEnvironments, clusters)
+	if err != nil {
+		return nil, err
+	}
+
+	return &state{
+		sherlock:     s.sherlock,
+		environments: environments,
+		clusters:     clusters,
+	}, nil
+}
+
+func (s *stateLoader) buildClustersState(clusters sherlock.Clusters) (map[string]*cluster, error) {
+	result := make(map[string]*cluster)
+	for _, cl := range clusters {
 		releases := make(map[string]*clusterRelease)
 		c := &cluster{
 			address:       cl.Address,
@@ -65,11 +85,14 @@ func (s *stateLoader) Load() (terra.State, error) {
 			}
 		}
 		c.releases = releases
-		clusters[c.Name()] = c
+		result[c.Name()] = c
 	}
+	return result, nil
+}
 
-	environments := make(map[string]*environment)
-	for _, env := range stateEnvironments {
+func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments, clusters map[string]*cluster) (map[string]*environment, error) {
+	result := make(map[string]*environment)
+	for _, env := range environments {
 		releases := make(map[string]*appRelease)
 		var lifecycle terra.Lifecycle
 		if err := lifecycle.FromString(*env.Lifecycle); err != nil {
@@ -113,12 +136,8 @@ func (s *stateLoader) Load() (terra.State, error) {
 			}
 		}
 		e.releases = releases
-		environments[e.Name()] = e
+		result[e.Name()] = e
 	}
 
-	return &state{
-		sherlock:     s.sherlock,
-		environments: environments,
-		clusters:     clusters,
-	}, nil
+	return result, nil
 }
