@@ -49,7 +49,6 @@ func (c *Client) Environments() (Environments, error) {
 	}
 
 	environmentsPayload := environmentsResponse.GetPayload()
-
 	environments := newEnvironments(environmentsPayload...)
 
 	return environments, nil
