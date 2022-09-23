@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -29,6 +30,8 @@ type Clients interface {
 	// GoogleUsingADC is like Google but forces usage of the environment's Application Default Credentials,
 	// optionally allowing non-Broad email addresses
 	GoogleUsingADC(bool) google.Clients
+	// Sherlock returns a swagger API client for a sherlock server instance
+	Sherlock() (*sherlock.Client, error)
 }
 
 func New(thelmaConfig config.Config, thelmaRoot root.Root, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
@@ -94,4 +97,12 @@ func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
 	}
 
 	return argocd.New(c.thelmaConfig, c.runner, iapToken, vaultClient)
+}
+
+func (c *clients) Sherlock() (*sherlock.Client, error) {
+	iapToken, err := c.IAPToken()
+	if err != nil {
+		return nil, err
+	}
+	return sherlock.New(c.thelmaConfig, iapToken)
 }

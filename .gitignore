@@ -19,3 +19,6 @@ output/
 
 # Intellij project config
 .idea
+
+# Vscode project config
+.vscode
