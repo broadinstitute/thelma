@@ -53,7 +53,3 @@ func (c *cluster) Name() string {
 func (c *cluster) Base() string {
 	return c.base
 }
-
-func (c *cluster) TerraHelmfileRef() string {
-	panic("sherlock state provider should not use terra-helmfile ref")
-}

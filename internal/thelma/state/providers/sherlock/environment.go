@@ -62,7 +62,7 @@ func (e *environment) IsHybrid() bool {
 }
 
 func (e *environment) Fiab() terra.Fiab {
-	panic("deprecated, implementing for interface compatability")
+	panic("deprecated, implementing for interface compatability, unreachable since sherlock doesn't support hybrid envs")
 }
 
 func (e *environment) BaseDomain() string {

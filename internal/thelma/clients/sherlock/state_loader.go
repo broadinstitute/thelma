@@ -114,3 +114,10 @@ func (c *Client) EnvironmentReleases(environmentName string) (Releases, error) {
 
 	return environmentReleases, nil
 }
+
+func (r *Release) HelmfileRefOrDefault(def string) string {
+	if r.HelmfileRef != nil {
+		return *r.HelmfileRef
+	}
+	return def
+}

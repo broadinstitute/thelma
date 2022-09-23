@@ -3,10 +3,11 @@ package sherlock
 import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 type destination struct {
-	name            string
-	base            string
-	requireSuitable bool
-	destinationType terra.DestinationType
+	name             string
+	base             string
+	requireSuitable  bool
+	destinationType  terra.DestinationType
+	terraHelmfileRef string
 }
 
 func (t *destination) Name() string {
@@ -41,6 +42,7 @@ func (t *destination) RequireSuitable() bool {
 	return t.requireSuitable
 }
 
+// TODO
 func (t *destination) TerraHelmfileRef() string {
-	panic("sherlock state provider does not require terra-helmfile ref")
+	panic("TODO, not yet implemented on Sherlock backend")
 }

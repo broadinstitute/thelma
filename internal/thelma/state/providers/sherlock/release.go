@@ -12,6 +12,7 @@ type release struct {
 	namespace    string
 	cluster      terra.Cluster
 	destination  terra.Destination
+	helmfileRef  string
 }
 
 func (r *release) Name() string {
@@ -63,9 +64,9 @@ func (r *release) Destination() terra.Destination {
 }
 
 func (r *release) TerraHelmfileRef() string {
-	panic("sherlock state provider should not require terra-helmfile ref")
+	return r.helmfileRef
 }
 
 func (r *release) FirecloudDevelopRef() string {
-	panic("sherlock state provider should not require firecloud-develop ref")
+	panic("not implemented on sherlock backend yet")
 }
