@@ -2,6 +2,7 @@ package sherlock
 
 import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
+//nolint:unused // Ignore unused field for now
 type destination struct {
 	name             string
 	base             string
