@@ -119,6 +119,7 @@ func setStateExpectations(mock *mocks.StateLoader) {
 					DefaultNamespace:    "terra-dev",
 					Lifecycle:           nullableString("static"),
 					RequiresSuitability: nullableBool(false),
+					NamePrefixesDomain:  nullableBool(true),
 				},
 			},
 			sherlock.Environment{
@@ -130,6 +131,7 @@ func setStateExpectations(mock *mocks.StateLoader) {
 					DefaultNamespace:    "terra-prod",
 					Lifecycle:           nullableString("static"),
 					RequiresSuitability: nullableBool(true),
+					NamePrefixesDomain:  nullableBool(false),
 				},
 			},
 		}, nil,

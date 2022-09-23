@@ -104,7 +104,7 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 			lifecycle:          lifecycle,
 			template:           env.TemplateEnvironment,
 			baseDomain:         *env.BaseDomain,
-			namePrefixesDomain: lifecycle.IsDynamic() || lifecycle.IsTemplate(),
+			namePrefixesDomain: *env.NamePrefixesDomain,
 			destination: destination{
 				name:            env.Name,
 				base:            env.Base,
