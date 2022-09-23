@@ -70,6 +70,7 @@ func (suite *sherlockClientSuite) SetupSuite() {
 
 func (suite *sherlockClientSuite) TearDownSuite() {
 	suite.server.Close()
+	suite.errServer.Close()
 	suite.server = nil
 }
 
