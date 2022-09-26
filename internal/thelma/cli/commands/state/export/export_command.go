@@ -1,6 +1,9 @@
 package export
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/rs/zerolog/log"
@@ -9,6 +12,9 @@ import (
 
 const helpMessage = `Exports thelmas internal state to a destination`
 const defaultFormat = "sherlock"
+const prodSherlockHostName = "sherlock.dsp-devops.broadinstitute.org"
+
+var ErrExportDestinationForbidden = fmt.Errorf("state export to production sherlock: %s is not allowed", prodSherlockHostName)
 
 type options struct {
 	destinationURL string
@@ -47,6 +53,12 @@ func (cmd *exportCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *exportCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
+	// check to make sure destination is not prod sherlock, this should not be allowed
+	if strings.Contains(cmd.options.destinationURL, prodSherlockHostName) {
+		log.Warn().Msgf("exporting to destination: %s is forbidden", prodSherlockHostName)
+		return ErrExportDestinationForbidden
+	}
+
 	log.Info().Msg("Hello from the new state command")
 	return nil
 }
