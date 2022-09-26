@@ -1,6 +1,6 @@
 module github.com/broadinstitute/thelma
 
-go 1.17
+go 1.19
 
 require (
 	cloud.google.com/go/container v1.2.0
