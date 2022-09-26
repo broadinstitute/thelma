@@ -144,6 +144,7 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 	err = b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
 		// No need to do a legacy configs restart the first time we create a BEE
 		// (the deployments are being created for the first time)
+		_options.SyncIfNoDiff = true
 		_options.SkipLegacyConfigsRestart = true
 		_options.WaitHealthy = options.WaitHealthy
 	})
