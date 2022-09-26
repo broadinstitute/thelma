@@ -1,6 +1,8 @@
 package entrypoint
 
 import (
+	"os"
+
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
@@ -22,9 +24,10 @@ import (
 	charts_import "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/import"
 	charts_publish "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/render"
+	states "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state"
+	state_export "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state/export"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/version"
 	"github.com/rs/zerolog/log"
-	"os"
 )
 
 // Note: this code lives outside the `cli` package in order to avoid a dependency cycle (packages under `cli/commands` depend on the `cli` package)
@@ -64,6 +67,9 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("charts publish", charts_publish.NewChartsPublishCommand())
 
 	opts.AddCommand("render", render.NewRenderCommand())
+
+	opts.AddCommand("state", states.NewStateCommand())
+	opts.AddCommand("state export", state_export.NewStateExportCommand())
 
 	opts.AddCommand("version", version.NewVersionCommand())
 }
