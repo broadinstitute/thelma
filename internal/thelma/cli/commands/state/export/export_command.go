@@ -6,6 +6,7 @@ import (
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -59,7 +60,26 @@ func (cmd *exportCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return ErrExportDestinationForbidden
 	}
 
-	log.Info().Msg("Hello from the new state command")
+	log.Info().Msgf("exporting state to: %s using format: %s", cmd.options.destinationURL, cmd.options.format)
+	sherlockClient, err := app.Clients().Sherlock()
+	if err != nil {
+		return fmt.Errorf("error retrieving sherlock client: %v", err)
+	}
+	state, err := app.State()
+	if err != nil {
+		return fmt.Errorf("error retrieving Thelma state: %v", err)
+	}
+
+	stateExporter := sherlock.NewSherlockStateWriter(state, sherlockClient)
+
+	if err := stateExporter.WriteClusters(); err != nil {
+		return fmt.Errorf("erorr exporting clusters: %v", err)
+	}
+
+	if err := stateExporter.WriteEnvironments(); err != nil {
+		return fmt.Errorf("erorr exporting environments: %v", err)
+	}
+
 	return nil
 }
 
