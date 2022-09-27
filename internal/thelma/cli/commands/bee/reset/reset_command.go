@@ -3,8 +3,8 @@ package reset
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -76,31 +76,11 @@ func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
 	}
 
-	kubectl, err := app.Clients().Google().Kubectl()
+	bees, err := builders.NewBees(app)
 	if err != nil {
 		return err
 	}
-	argocd, err := app.Clients().ArgoCD()
-	if err != nil {
-		return err
-	}
-	bees, err := bee.NewBees(argocd, app.StateLoader())
-	if err != nil {
-		return err
-	}
-
-	if err = kubectl.ShutDown(env); err != nil {
-		return err
-	}
-	if err = kubectl.DeletePVCs(env); err != nil {
-		return err
-	}
-
-	log.Info().Msgf("Syncing ArgoCD to provision new disks and bring services back up")
-	if err = bees.SyncArgoAppsIn(env); err != nil {
-		return err
-	}
-	return nil
+	return bees.ResetStatefulSets(env)
 }
 
 func (cmd *resetCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

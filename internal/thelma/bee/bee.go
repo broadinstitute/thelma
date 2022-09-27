@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
 	"github.com/rs/zerolog/log"
 	"strings"
 )
@@ -18,6 +19,7 @@ type Bees interface {
 	RefreshBeeGenerator() error
 	SyncEnvironmentGenerator(env terra.Environment) error
 	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error
+	ResetStatefulSets(env terra.Environment) error
 }
 
 type DeleteOptions struct {
@@ -36,7 +38,7 @@ type CreateOptions struct {
 	TerraHelmfileRef  string
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader) (Bees, error) {
+func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, kubectl kubectl.Kubectl) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -46,6 +48,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader) (Bees, error) 
 		argocd:      argocd,
 		state:       state,
 		stateLoader: stateLoader,
+		kubectl:     kubectl,
 	}, nil
 }
 
@@ -54,6 +57,7 @@ type bees struct {
 	argocd      argocd.ArgoCD
 	state       terra.State
 	stateLoader terra.StateLoader
+	kubectl     kubectl.Kubectl
 }
 
 func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment, error) {
@@ -93,6 +97,12 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", name)
 	}
 
+	log.Info().Msgf("Creating environment namespace for %s", env.Name())
+	err = b.kubectl.CreateNamespace(env)
+	if err != nil {
+		return nil, err
+	}
+
 	if err = b.RefreshBeeGenerator(); err != nil {
 		return env, err
 	}
@@ -107,6 +117,7 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		log.Warn().Msgf("Won't sync Argo apps for %s", env.Name())
 		return env, nil
 	}
+
 	log.Info().Msgf("Syncing all Argo apps in environment %s", env.Name())
 	err = b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
 		// No need to do a legacy configs restart the first time we create a BEE
@@ -132,10 +143,14 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 		}
 	}
 
-	if err = b.state.Environments().Delete(env.Name()); err != nil {
+	log.Info().Msgf("Deleting environment namespace")
+	if err = b.kubectl.DeleteNamespace(env); err != nil {
 		return nil, err
 	}
 
+	if err = b.state.Environments().Delete(env.Name()); err != nil {
+		return nil, err
+	}
 	log.Info().Msgf("Deleted environment %s from state", name)
 
 	log.Info().Msgf("Deleting Argo apps for %s", name)
@@ -183,6 +198,26 @@ func (b *bees) GetTemplate(name string) (terra.Environment, error) {
 		return nil, err
 	}
 	return nil, fmt.Errorf("no template by the name %q exists, valid templates are: %s", name, strings.Join(names, ", "))
+}
+
+func (b *bees) ResetStatefulSets(env terra.Environment) error {
+	var err error
+
+	if err = b.kubectl.ShutDown(env); err != nil {
+		return err
+	}
+	if err = b.kubectl.DeletePVCs(env); err != nil {
+		return err
+	}
+
+	log.Info().Msgf("Syncing ArgoCD to provision new disks and bring services back up")
+	if err = b.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
+		options.SyncIfNoDiff = true
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *bees) templateNames() ([]string, error) {
