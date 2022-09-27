@@ -64,9 +64,6 @@ func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	if env == nil {
-		return fmt.Errorf("--%s: unknown BEE %q", flagNames.name, cmd.options.name)
-	}
 
 	return bees.ResetStatefulSets(env)
 }
