@@ -11,5 +11,9 @@ func NewBees(thelmaApp app.ThelmaApp) (bee.Bees, error) {
 		return nil, err
 	}
 
-	return bee.NewBees(_argocd, thelmaApp.StateLoader())
+	kubectl, err := thelmaApp.Clients().Google().Kubectl()
+	if err != nil {
+		return nil, err
+	}
+	return bee.NewBees(_argocd, thelmaApp.StateLoader(), kubectl)
 }
