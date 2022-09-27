@@ -85,7 +85,7 @@ func (k *kubectl) DeletePVCs(env terra.Environment) error {
 }
 
 func (k *kubectl) CreateNamespace(env terra.Environment) error {
-	log.Info().Msgf("Creating environment namespace for %s", env.Namespace())
+	log.Info().Msgf("Creating environment namespace: %s", env.Namespace())
 	return k.runForEnv(env, []string{"create", "namespace", env.Namespace()})
 }
 
@@ -94,7 +94,7 @@ func (k *kubectl) DeleteNamespace(env terra.Environment) error {
 		// Guard against kabooming data in long-lived static environments (such as, for example, prod)
 		return fmt.Errorf("DeleteNamespace can only be called for dynamic environments")
 	}
-	log.Info().Msgf("Deleting environment namespace for %s", env.Namespace())
+	log.Info().Msgf("Deleting environment namespace: %s", env.Namespace())
 	return k.runForEnv(env, []string{"delete", "namespace", env.Namespace()})
 }
 

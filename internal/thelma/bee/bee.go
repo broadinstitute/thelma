@@ -97,7 +97,6 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", name)
 	}
 
-	log.Info().Msgf("Creating environment namespace for %s", env.Name())
 	err = b.kubectl.CreateNamespace(env)
 	if err != nil {
 		return nil, err
@@ -143,7 +142,6 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 		}
 	}
 
-	log.Info().Msgf("Deleting environment namespace")
 	if err = b.kubectl.DeleteNamespace(env); err != nil {
 		return nil, err
 	}
