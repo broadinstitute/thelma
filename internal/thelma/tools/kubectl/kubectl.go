@@ -36,6 +36,10 @@ type Kubectl interface {
 	ShutDown(env terra.Environment) error
 	// DeletePVCs will delete all persistent volume claims in the environment
 	DeletePVCs(env terra.Environment) error
+	// DeleteNamespace will delete the environment's namespace
+	DeleteNamespace(env terra.Environment) error
+	// CreateNamespace will create the environment's namespace
+	CreateNamespace(env terra.Environment) error
 	// PortForward runs `kubectl port-forward` and returns the forwarding local port, a callback to stop forwarding, and
 	// a possible error if the command failed.
 	// The targetResource should be of the form `[pods|deployment|replicaset|service]/<name>`, like `service/sam-postgres-service`.
@@ -78,6 +82,20 @@ func (k *kubectl) DeletePVCs(env terra.Environment) error {
 	}
 	log.Info().Msgf("Deleting all PVCs in %s", env.Name())
 	return k.runForEnv(env, []string{"delete", "persistentvolumeclaims", "--all", "--wait=true"})
+}
+
+func (k *kubectl) CreateNamespace(env terra.Environment) error {
+	log.Info().Msgf("Creating environment namespace: %s", env.Namespace())
+	return k.runForEnv(env, []string{"create", "namespace", env.Namespace()})
+}
+
+func (k *kubectl) DeleteNamespace(env terra.Environment) error {
+	if env.Lifecycle() != terra.Dynamic {
+		// Guard against kabooming data in long-lived static environments (such as, for example, prod)
+		return fmt.Errorf("DeleteNamespace can only be called for dynamic environments")
+	}
+	log.Info().Msgf("Deleting environment namespace: %s", env.Namespace())
+	return k.runForEnv(env, []string{"delete", "namespace", env.Namespace()})
 }
 
 func (k *kubectl) PortForward(targetRelease terra.Release, targetResource string, targetPort int) (int, func() error, error) {
