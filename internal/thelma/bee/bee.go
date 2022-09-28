@@ -185,9 +185,6 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 		return nil, err
 	}
 
-	if err = b.state.Environments().Delete(env.Name()); err != nil {
-		return nil, err
-	}
 	log.Info().Msgf("Deleted environment %s from state", name)
 
 	log.Info().Msgf("Deleting Argo apps for %s", name)
