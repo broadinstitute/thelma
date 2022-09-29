@@ -10,9 +10,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/seedflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 const helpMessage = `Create a new BEE (Branch Engineering Environment) from a template
@@ -48,7 +46,6 @@ var flagNames = struct {
 }
 
 type createCommand struct {
-	name      string
 	options   bee.CreateOptions
 	pinFlags  pinflags.PinFlags
 	seedFlags seedflags.SeedFlags
@@ -83,16 +80,16 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
 	// if --name not specified, generate a name for this BEE
-	if !ctx.CobraCommand().Flags().Changed(flagNames.name) {
+	if ctx.CobraCommand().Flags().Changed(flagNames.name) {
+		if err := validate.EnvironmentName(cmd.options.Name); err != nil {
+			return fmt.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.options.Name, err)
+		}
+		cmd.options.GenerateName = false
+	} else {
+		if err := validate.EnvironmentNamePrefix(cmd.options.NamePrefix); err != nil {
+			return fmt.Errorf("--%s: %q is not a valid environment name prefix: %v", flagNames.namePrefix, cmd.options.NamePrefix, err)
+		}
 		cmd.options.GenerateName = true
-	}
-
-	if strings.TrimSpace(cmd.name) == "" {
-		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
-		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
-	}
-	if err := validate.EnvironmentName(cmd.name); err != nil {
-		return fmt.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.name, err)
 	}
 
 	// validate --template
