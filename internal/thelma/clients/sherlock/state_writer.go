@@ -46,6 +46,10 @@ func (s *Client) WriteClusters(cls []terra.Cluster) error {
 		if err != nil {
 			return err
 		}
+
+		if err := s.writeReleases(cluster.Releases()); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -92,25 +96,30 @@ func (s *Client) writeReleases(releases []terra.Release) error {
 		// attempt to convert to app release
 		if release.IsAppRelease() {
 			appRelease := release.(terra.AppRelease)
-			s.writeAppRelease(appRelease)
+			if err := s.writeAppRelease(appRelease); err != nil {
+				return err
+			}
+		} else if release.IsClusterRelease() {
+			clusterRelease := release.(terra.ClusterRelease)
+			if err := s.writeClusterRelease(clusterRelease); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 func (s *Client) writeAppRelease(release terra.AppRelease) error {
-	chartRepo := release.Repo()
-	port := int64(release.Port())
-	protocol := release.Protocol()
 	modelChart := models.V2controllersCreatableChart{
 		Name:            release.ChartName(),
-		ChartRepo:       &chartRepo,
-		DefaultPort:     &port,
-		DefaultProtocol: &protocol,
+		ChartRepo:       utils.Nullable(release.Repo()),
+		DefaultPort:     utils.Nullable(int64(release.Port())),
+		DefaultProtocol: utils.Nullable(release.Protocol()),
 	}
 	// first try to create the chart
 	newChartRequestParams := charts.NewPostAPIV2ChartsParams().
 		WithChart(&modelChart)
+
 	_, _, err := s.client.Charts.PostAPIV2Charts(newChartRequestParams)
 	if err != nil {
 		// Don't error if creating the chart results in 409 conflict
@@ -135,6 +144,50 @@ func (s *Client) writeAppRelease(release terra.AppRelease) error {
 
 	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
 		WithChartRelease(&modelChartRelease)
+
+	_, _, err = s.client.ChartReleases.PostAPIV2ChartReleases(newChartReleaseRequestParams)
+	if err != nil {
+		if _, ok := err.(*chart_releases.PostAPIV2ChartReleasesConflict); !ok {
+			return fmt.Errorf("error creating chart release: %v", err)
+		}
+	}
+	return nil
+}
+
+func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
+	modelChart := models.V2controllersCreatableChart{
+		Name:            release.ChartName(),
+		ChartRepo:       utils.Nullable(release.Repo()),
+		DefaultPort:     nil,
+		DefaultProtocol: nil,
+	}
+
+	// first try to create the chart
+	newChartRequestParams := charts.NewPostAPIV2ChartsParams().
+		WithChart(&modelChart)
+
+	_, _, err := s.client.Charts.PostAPIV2Charts(newChartRequestParams)
+	if err != nil {
+		// Don't error if creating the chart results in 409 conflict
+		if _, ok := err.(*charts.PostAPIV2ChartsConflict); !ok {
+			return fmt.Errorf("error creating chart: %v", err)
+		}
+	}
+
+	// then the chart release
+	releaseName := strings.Join([]string{release.ChartName(), release.Cluster().Name()}, "-")
+	modelChartRelease := models.V2controllersCreatableChartRelease{
+		Chart:             release.ChartName(),
+		ChartVersionExact: release.ChartVersion(),
+		Cluster:           release.ClusterName(),
+		HelmfileRef:       utils.Nullable("master"),
+		Name:              releaseName,
+		Namespace:         release.Namespace(),
+	}
+
+	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
+		WithChartRelease(&modelChartRelease)
+
 	_, _, err = s.client.ChartReleases.PostAPIV2ChartReleases(newChartReleaseRequestParams)
 	if err != nil {
 		if _, ok := err.(*chart_releases.PostAPIV2ChartReleasesConflict); !ok {
