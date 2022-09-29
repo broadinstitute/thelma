@@ -32,6 +32,12 @@ func New(config config.Config, iapToken string) (*Client, error) {
 	return configureClientRuntime(sherlockConfig.Addr, iapToken)
 }
 
+// NewWithHostNameOverride enables thelma commands to utilize a sherlock client that targets
+// a different sherlock instance from the one used for state loading
+func NewWithHostnameOverride(addr, iapToken string) (*Client, error) {
+	return configureClientRuntime(addr, iapToken)
+}
+
 func loadConfig(thelmaConfig config.Config) (sherlockConfig, error) {
 	var cfg sherlockConfig
 	if err := thelmaConfig.Unmarshal(configKey, &cfg); err != nil {

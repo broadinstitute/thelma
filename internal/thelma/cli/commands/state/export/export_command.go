@@ -6,6 +6,7 @@ import (
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	sherlock_client "github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -31,7 +32,8 @@ var flagNames = struct {
 }
 
 type exportCommand struct {
-	options *options
+	options        *options
+	sherlockClient *sherlock_client.Client
 }
 
 func NewStateExportCommand() cli.ThelmaCommand {
@@ -50,6 +52,18 @@ func (cmd *exportCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (cmd *exportCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
+	// construct a sherlock client to export state to, this is different than the app level
+	// sherlock client to support use cases such as exporting state from prod to a local sherlock for debugging
+
+	iapToken, err := app.Clients().IAPToken()
+	if err != nil {
+		return fmt.Errorf("error retrieving iap token for exporter client: %v", err)
+	}
+	client, err := sherlock_client.NewWithHostnameOverride(cmd.options.destinationURL, iapToken)
+	if err != nil {
+		return fmt.Errorf("error building exporter sherlock client")
+	}
+	cmd.sherlockClient = client
 	return nil
 }
 
@@ -61,16 +75,12 @@ func (cmd *exportCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	}
 
 	log.Info().Msgf("exporting state to: %s using format: %s", cmd.options.destinationURL, cmd.options.format)
-	sherlockClient, err := app.Clients().Sherlock()
-	if err != nil {
-		return fmt.Errorf("error retrieving sherlock client: %v", err)
-	}
 	state, err := app.State()
 	if err != nil {
 		return fmt.Errorf("error retrieving Thelma state: %v", err)
 	}
 
-	stateExporter := sherlock.NewSherlockStateWriter(state, sherlockClient)
+	stateExporter := sherlock.NewSherlockStateWriter(state, cmd.sherlockClient)
 
 	if err := stateExporter.WriteClusters(); err != nil {
 		return fmt.Errorf("erorr exporting clusters: %v", err)
