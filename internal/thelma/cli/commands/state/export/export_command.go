@@ -13,7 +13,6 @@ import (
 )
 
 const helpMessage = `Exports thelmas internal state to a destination`
-const defaultFormat = "sherlock"
 const prodSherlockHostName = "sherlock.dsp-devops.broadinstitute.org"
 
 var ErrExportDestinationForbidden = fmt.Errorf("state export to production sherlock: %s is not allowed", prodSherlockHostName)
@@ -48,7 +47,6 @@ func (cmd *exportCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVar(&cmd.options.destinationURL, flagNames.destinationURL, "http://localhost:8080", "destination to export state to")
-	cobraCommand.Flags().StringVar(&cmd.options.format, flagNames.format, "sherlock", "format in which to output state, currently only sherlock is supported")
 }
 
 func (cmd *exportCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
