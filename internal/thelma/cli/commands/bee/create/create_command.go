@@ -10,7 +10,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/seedflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
-	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -32,20 +31,16 @@ thelma bee create \
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
 	name             string
+	namePrefix       string
 	template         string
-	hybrid           string
-	fiabName         string
-	fiabIP           string
 	generatorOnly    string
 	waitHealthy      string
 	terraHelmfileRef string
 	seed             string
 }{
 	name:             "name",
+	namePrefix:       "name-prefix",
 	template:         "template",
-	hybrid:           "hybrid",
-	fiabName:         "fiab-name",
-	fiabIP:           "fiab-ip",
 	generatorOnly:    "generator-only",
 	waitHealthy:      "wait-healthy",
 	terraHelmfileRef: "terra-helmfile-ref",
@@ -65,7 +60,7 @@ func NewBeeCreateCommand() cli.ThelmaCommand {
 		seedFlags: seedflags.NewSeedFlags(func(options *seedflags.Options) {
 			options.Prefix = "seed-"
 			options.NoShortHand = true // default short-hand flags could conflict with others in create command
-			options.Hidden = true      // too many CLI flags, hide them in `thelma bee create` output
+			options.Hidden = false     // we could set to true to hide seed flags in `thelma bee create` output
 		}),
 	}
 }
@@ -75,11 +70,9 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Short = "Create a new BEE from a template"
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "NAME", "Required. Name for this BEE")
+	cobraCommand.Flags().StringVarP(&cmd.options.Name, flagNames.name, "n", "NAME", "Name for this BEE. If not given, a name will be generated")
+	cobraCommand.Flags().StringVarP(&cmd.options.NamePrefix, flagNames.namePrefix, "p", "bee", "Prefix to use when generating a name for this BEE")
 	cobraCommand.Flags().StringVarP(&cmd.options.Template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
-	cobraCommand.Flags().BoolVar(&cmd.options.Hybrid, flagNames.hybrid, false, "Set to true to create a hybrid (connected to a Fiab) environment")
-	cobraCommand.Flags().StringVar(&cmd.options.Fiab.Name, flagNames.fiabName, "FIAB", "Name of the Fiab this hybrid environment should be connected to")
-	cobraCommand.Flags().StringVar(&cmd.options.Fiab.IP, flagNames.fiabIP, "IP", "Public IP address of the Fiab this hybrid environment should be connected to")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
@@ -89,10 +82,11 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
-	// validate --name
+	// if --name not specified, generate a name for this BEE
 	if !ctx.CobraCommand().Flags().Changed(flagNames.name) {
-		return fmt.Errorf("no environment name specified; --%s is required", flagNames.name)
+		cmd.options.GenerateName = true
 	}
+
 	if strings.TrimSpace(cmd.name) == "" {
 		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
 		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
@@ -109,19 +103,6 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 	_, err = bees.GetTemplate(cmd.options.Template)
 	if err != nil {
 		return fmt.Errorf("--%s: %v", flagNames.template, err)
-	}
-
-	// validate --hybrid arguments
-	if cmd.options.Hybrid {
-		if !ctx.CobraCommand().Flags().Changed(flagNames.fiabName) || cmd.options.Fiab.Name == "" {
-			return fmt.Errorf("--%s is required for hybrid environments", flagNames.fiabName)
-		}
-		if !ctx.CobraCommand().Flags().Changed(flagNames.fiabIP) {
-			return fmt.Errorf("--%s is required for hybrid environments", flagNames.fiabIP)
-		}
-		if !utils.IsIPV4Address(cmd.options.Fiab.IP) {
-			return fmt.Errorf("--%s: %q is not a valid ipv4 address", flagNames.fiabIP, cmd.options.Fiab.IP)
-		}
 	}
 
 	// validate/load pin and seed options
@@ -146,7 +127,7 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	env, err := bees.CreateWith(cmd.name, cmd.options)
+	env, err := bees.CreateWith(cmd.options)
 	if env != nil {
 		ctx.SetOutput(views.DescribeBee(env))
 	}

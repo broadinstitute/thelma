@@ -15,7 +15,6 @@ type flagValues struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
-	buildNumber         int
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
@@ -24,13 +23,11 @@ var flagNames = struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
-	buildNumber         string
 }{
 	terraHelmfileRef:    "terra-helmfile-ref",
 	firecloudDevelopRef: "firecloud-develop-ref",
 	versionsFile:        "versions-file",
 	versionsFormat:      "versions-format",
-	buildNumber:         "build-number",
 }
 
 type pinFlags struct {
@@ -55,13 +52,11 @@ func (p *pinFlags) AddFlags(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&p.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin BEE to specific firecloud-develop branch (instead of dev)")
 	cobraCommand.Flags().StringVar(&p.options.versionsFile, flagNames.versionsFile, "", `Path to file containing application version overrides (see "thelma bee pin --help" for more info)`)
 	cobraCommand.Flags().StringVar(&p.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
-	cobraCommand.Flags().IntVar(&p.options.buildNumber, flagNames.buildNumber, 0, "Configure environment's currently running build number (for use in CI/CD pipelines)")
 }
 
 func (p *pinFlags) GetPinOptions(rc cli.RunContext) (bee.PinOptions, error) {
 	var overrides bee.PinOptions
 
-	overrides.Flags.BuildNumber = p.options.buildNumber
 	overrides.Flags.TerraHelmfileRef = p.options.terraHelmfileRef
 	overrides.Flags.FirecloudDevelopRef = p.options.firecloudDevelopRef
 

@@ -16,7 +16,7 @@ const generatorArgoApp = "terra-bee-generator"
 
 type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
-	CreateWith(name string, options CreateOptions) (terra.Environment, error)
+	CreateWith(options CreateOptions) (terra.Environment, error)
 	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
 	Seeder() seed.Seeder
@@ -34,12 +34,10 @@ type DeleteOptions struct {
 }
 
 type CreateOptions struct {
-	Template string
-	Hybrid   bool
-	Fiab     struct {
-		Name string
-		IP   string
-	}
+	Name              string
+	NamePrefix        string
+	GenerateName      bool
+	Template          string
 	SyncGeneratorOnly bool
 	WaitHealthy       bool
 	PinOptions        PinOptions
@@ -54,8 +52,6 @@ type PinOptions struct {
 		TerraHelmfileRef string
 		// FirecloudDevelopRef the ref the environments Argo app generator should use
 		FirecloudDevelopRef string
-		// BuildNumber build number to set in terra-helmfile Environment context during template rendering
-		BuildNumber int
 	}
 	// FileOverrides holds overrides for individual releases, loaded from a YAML or JSON file
 	FileOverrides map[string]terra.VersionOverride
@@ -85,35 +81,36 @@ type bees struct {
 	kubectl     kubectl.Kubectl
 }
 
-func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment, error) {
+func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 	template, err := b.GetTemplate(options.Template)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if options.Hybrid {
-		err = b.state.Environments().CreateHybridFromTemplate(name, template, terra.NewFiab(options.Fiab.Name, options.Fiab.IP))
+	var env terra.Environment
+	if options.GenerateName {
+		env, err = b.state.Environments().CreateFromTemplateGenerateName(options.NamePrefix, template)
 	} else {
-		err = b.state.Environments().CreateFromTemplate(name, template)
+		env, err = b.state.Environments().CreateFromTemplate(options.Name, template)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info().Msgf("Created new environment %s", name)
+	log.Info().Msgf("Created new environment %s", env.Name())
 
 	// Load environment from state file
 	if err = b.reloadState(); err != nil {
 		return nil, err
 	}
-	env, err := b.state.Environments().Get(name)
+	env, err = b.state.Environments().Get(env.Name())
 	if err != nil {
 		return nil, err
 	}
 	if env == nil {
 		// don't think this could ever happen, but let's provide a useful error anyway
-		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", name)
+		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", env.Name())
 	}
 
 	err = b.kubectl.CreateNamespace(env)
@@ -228,16 +225,6 @@ func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) error {
 		log.Info().Msgf("Set terra-helmfile ref to %s for %s (was: %s)", bee.Name(), pinOptions.Flags.TerraHelmfileRef, was)
 	}
 
-	// pin build number, if one was specified
-	if pinOptions.Flags.BuildNumber != 0 {
-		was := bee.BuildNumber()
-		_, err := b.state.Environments().SetBuildNumber(bee.Name(), pinOptions.Flags.BuildNumber)
-		if err != nil {
-			return err
-		}
-		log.Info().Msgf("Set build number to %d for %s (was: %d)", pinOptions.Flags.BuildNumber, bee.Name(), was)
-	}
-
 	// now, pin version overrides for individual releases.
 	releaseOverrides := make(map[string]terra.VersionOverride)
 	for _, r := range bee.Releases() {
@@ -289,12 +276,6 @@ func (b *bees) UnpinVersions(bee terra.Environment) error {
 	}
 	log.Info().Msgf("Removed terra-helmfile version overrides for %s (was: %s)", bee.Name(), wasTerraHelmfileRef)
 	log.Info().Bytes("was", asJson).Msgf("Removed all release version overrides for %s", bee.Name())
-
-	buildNumber, err := b.state.Environments().UnsetBuildNumber(bee.Name())
-	if err != nil {
-		return err
-	}
-	log.Info().Msgf("Unset build number for %s (was %d)", bee.Name(), buildNumber)
 
 	return nil
 }

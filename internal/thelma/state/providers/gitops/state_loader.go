@@ -101,87 +101,88 @@ func loadDynamicEnvironments(yamlEnvironments map[string]*environment, sb stateb
 	result := make(map[string]*environment)
 	for _, dynamicEnv := range dynamicEnvironments {
 		if _, exists := yamlEnvironments[dynamicEnv.Name]; exists {
-			return nil, fmt.Errorf("error laoding dynamic environment %q: an environment by that name is already declared in YAML", dynamicEnv.Name)
+			return nil, fmt.Errorf("error loading dynamic environment %q: an environment by that name is already declared in YAML", dynamicEnv.Name)
 		}
 		template, exists := yamlEnvironments[dynamicEnv.Template]
 		if !exists {
 			return nil, fmt.Errorf("error loading dynamic environment %q: template %q is not declared in YAML", dynamicEnv.Name, dynamicEnv.Template)
 		}
 
-		var _fiab terra.Fiab
-		if dynamicEnv.Hybrid {
-			_fiab = terra.NewFiab(dynamicEnv.Fiab.Name, dynamicEnv.Fiab.IP)
-		}
-
-		_releases := make(map[string]*appRelease)
-
-		for _, r := range template.Releases() {
-			templateRelease := r.(*appRelease)
-
-			_release := &appRelease{
-				release: release{
-					name:             templateRelease.Name(),
-					enabled:          templateRelease.enabled,
-					releaseType:      templateRelease.Type(),
-					chartVersion:     templateRelease.ChartVersion(),
-					chartName:        templateRelease.ChartName(),
-					repo:             templateRelease.Repo(),
-					namespace:        environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
-					cluster:          templateRelease.Cluster(),
-					destination:      nil,                         // replaced after env is constructed
-					terraHelmfileRef: dynamicEnv.TerraHelmfileRef, // might be overridden, but default to env-wide setting
-				},
-				appVersion: templateRelease.AppVersion(),
-				subdomain:  templateRelease.Subdomain(),
-				protocol:   templateRelease.Protocol(),
-				port:       templateRelease.Port(),
-			}
-
-			// apply dynamic overrides
-			override, hasOverride := dynamicEnv.Overrides[_release.name]
-			if hasOverride {
-				if override.HasEnableOverride() {
-					_release.enabled = override.IsEnabled()
-				}
-				if override.Versions.AppVersion != "" {
-					_release.appVersion = override.Versions.AppVersion
-				}
-				if override.Versions.ChartVersion != "" {
-					_release.chartVersion = override.Versions.ChartVersion
-				}
-				if override.Versions.FirecloudDevelopRef != "" {
-					_release.firecloudDevelopRef = override.Versions.FirecloudDevelopRef
-				}
-				if override.Versions.TerraHelmfileRef != "" {
-					_release.terraHelmfileRef = override.Versions.TerraHelmfileRef
-				}
-			}
-
-			_releases[templateRelease.Name()] = _release
-		}
-
-		env := newEnvironment(
-			dynamicEnv.Name,
-			template.Base(),
-			template.DefaultCluster(),
-			terra.Dynamic,
-			template.Name(),
-			_fiab,
-			template.requireSuitable,
-			template.baseDomain,
-			template.namePrefixesDomain,
-			_releases,
-			dynamicEnv.BuildNumber,
-		)
-		env.terraHelmfileRef = dynamicEnv.TerraHelmfileRef
+		env := buildDynamicEnvironment(template, dynamicEnv)
 
 		result[dynamicEnv.Name] = env
-		for _, r := range env.Releases() {
-			r.(*appRelease).destination = env
-		}
 	}
 
 	return result, nil
+}
+
+func buildDynamicEnvironment(template terra.Environment, dynamicEnv statebucket.DynamicEnvironment) *environment {
+	_releases := make(map[string]*appRelease)
+
+	for _, r := range template.Releases() {
+		templateRelease := r.(*appRelease)
+
+		_release := &appRelease{
+			release: release{
+				name:             templateRelease.Name(),
+				enabled:          templateRelease.enabled,
+				releaseType:      templateRelease.Type(),
+				chartVersion:     templateRelease.ChartVersion(),
+				chartName:        templateRelease.ChartName(),
+				repo:             templateRelease.Repo(),
+				namespace:        environmentNamespace(dynamicEnv.Name), // make sure we use _this_ environment name to create the namespace, not the template name
+				cluster:          templateRelease.Cluster(),
+				destination:      nil,                         // replaced after env is constructed
+				terraHelmfileRef: dynamicEnv.TerraHelmfileRef, // might be overridden, but default to env-wide setting
+			},
+			appVersion: templateRelease.AppVersion(),
+			subdomain:  templateRelease.Subdomain(),
+			protocol:   templateRelease.Protocol(),
+			port:       templateRelease.Port(),
+		}
+
+		// apply dynamic overrides
+		override, hasOverride := dynamicEnv.Overrides[_release.name]
+		if hasOverride {
+			if override.HasEnableOverride() {
+				_release.enabled = override.IsEnabled()
+			}
+			if override.Versions.AppVersion != "" {
+				_release.appVersion = override.Versions.AppVersion
+			}
+			if override.Versions.ChartVersion != "" {
+				_release.chartVersion = override.Versions.ChartVersion
+			}
+			if override.Versions.FirecloudDevelopRef != "" {
+				_release.firecloudDevelopRef = override.Versions.FirecloudDevelopRef
+			}
+			if override.Versions.TerraHelmfileRef != "" {
+				_release.terraHelmfileRef = override.Versions.TerraHelmfileRef
+			}
+		}
+
+		_releases[templateRelease.Name()] = _release
+	}
+
+	env := newEnvironment(
+		dynamicEnv.Name,
+		template.Base(),
+		template.DefaultCluster(),
+		terra.Dynamic,
+		template.Name(),
+		template.RequireSuitable(),
+		template.BaseDomain(),
+		template.NamePrefixesDomain(),
+		_releases,
+		dynamicEnv.UniqueResourcePrefix,
+	)
+	env.terraHelmfileRef = dynamicEnv.TerraHelmfileRef
+
+	for _, r := range env.Releases() {
+		r.(*appRelease).destination = env
+	}
+
+	return env
 }
 
 // loadYamlEnvironments scans through the environments/ subdirectory and build a slice of defined environments
@@ -316,12 +317,11 @@ func loadEnvironment(destConfig destinationConfig, _versions Versions, clusters 
 		defaultCluster,
 		lifecycle,
 		"",
-		nil,
 		envConfig.RequireSuitable,
 		envConfig.BaseDomain,
 		envConfig.NamePrefixesDomain,
 		_releases,
-		0,
+		"",
 	)
 
 	for _, _release := range _releases {

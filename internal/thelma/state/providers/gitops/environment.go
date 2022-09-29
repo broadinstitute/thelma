@@ -9,14 +9,13 @@ const envNamespacePrefix = "terra-"
 
 // implements the terra.Environment interface
 type environment struct {
-	defaultCluster     terra.Cluster          // Default cluster for this environment.
-	releases           map[string]*appRelease // Set of releases configured in this environment
-	lifecycle          terra.Lifecycle        // Lifecycle for this environment
-	template           string                 // Template for this environment, if it has one
-	fiab               terra.Fiab             // DEPRECATED fiab associated with this environment, if there is one
-	baseDomain         string                 // the stable domain part for this environment
-	namePrefixesDomain bool                   // if baseDomain should be prefixed with destination.name
-	buildNumber        int                    // buildNumber number of a CI build running against the environment, if there is one
+	defaultCluster       terra.Cluster          // Default cluster for this environment.
+	releases             map[string]*appRelease // Set of releases configured in this environment
+	lifecycle            terra.Lifecycle        // Lifecycle for this environment
+	template             string                 // Template for this environment, if it has one
+	baseDomain           string                 // the stable domain part for this environment
+	namePrefixesDomain   bool                   // if baseDomain should be prefixed with destination.name
+	uniqueResourcePrefix string                 // uniqueResourcePrefix a unique-this-environment prefix that can be referenced in Helm configuration (applies to dynamic environments only)
 	destination
 }
 
@@ -27,22 +26,20 @@ func newEnvironment(
 	defaultCluster terra.Cluster,
 	lifecycle terra.Lifecycle,
 	template string,
-	fiab terra.Fiab,
 	requireSuitable bool,
 	baseDomain string,
 	namePrefixesDomain bool,
 	releases map[string]*appRelease,
-	buildNumber int,
+	uniqueResourcePrefix string,
 ) *environment {
 	return &environment{
-		defaultCluster:     defaultCluster,
-		releases:           releases,
-		lifecycle:          lifecycle,
-		template:           template,
-		fiab:               fiab,
-		baseDomain:         baseDomain,
-		namePrefixesDomain: namePrefixesDomain,
-		buildNumber:        buildNumber,
+		defaultCluster:       defaultCluster,
+		releases:             releases,
+		lifecycle:            lifecycle,
+		template:             template,
+		baseDomain:           baseDomain,
+		namePrefixesDomain:   namePrefixesDomain,
+		uniqueResourcePrefix: uniqueResourcePrefix,
 		destination: destination{
 			name:            name,
 			base:            base,
@@ -93,14 +90,6 @@ func (e *environment) Namespace() string {
 	return environmentNamespace(e.Name())
 }
 
-func (e *environment) IsHybrid() bool {
-	return e.fiab != nil
-}
-
-func (e *environment) Fiab() terra.Fiab {
-	return e.fiab
-}
-
 func (e *environment) BaseDomain() string {
 	return e.baseDomain
 }
@@ -109,8 +98,8 @@ func (e *environment) NamePrefixesDomain() bool {
 	return e.namePrefixesDomain
 }
 
-func (e *environment) BuildNumber() int {
-	return e.buildNumber
+func (e *environment) UniqueResourcePrefix() string {
+	return e.uniqueResourcePrefix
 }
 
 // environmentNamespace return environment namespace for a given environment name

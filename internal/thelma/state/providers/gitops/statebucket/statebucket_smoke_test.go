@@ -51,10 +51,16 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Equal(t, 0, len(envs))
 
 			// add fake-env-1 to state
-			require.NoError(t, sb.Add(DynamicEnvironment{
+			e1, err := sb.Add(DynamicEnvironment{
 				Name:     "fake-env-1",
 				Template: "fake-template",
-			}))
+			})
+			assert.Empty(t, e1.TerraHelmfileRef, "should have no overrides")
+			assert.Empty(t, e1.Overrides, "should have no overrides")
+			assert.Equal(t, "fake-env-1", e1.Name, "should have correct name")
+			assert.Equal(t, "fake-template", e1.Template, "should have correct template")
+			assert.Equal(t, "eb5a", e1.UniqueResourcePrefix, "should have correct URP")
+			require.NoError(t, err)
 
 			// verify it was added
 			envs, err = sb.Environments()
@@ -67,6 +73,10 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Equal(t, 1, len(envs))
 			assert.Empty(t, envs[0].TerraHelmfileRef, "should have no overrides")
 			assert.Empty(t, envs[0].Overrides, "should have no overrides")
+			assert.Equal(t, "fake-env-1", envs[0].Name, "should have correct name")
+			assert.Equal(t, "fake-template", envs[0].Template, "should have correct template")
+			assert.Equal(t, "eb5a", envs[0].UniqueResourcePrefix, "should have correct URP")
+			assert.Equal(t, e1, envs[0], "environment returned from write should be identical to one returned via read-after-write")
 
 			// set a terraHelmfileRef override
 			err = sb.PinEnvironmentToTerraHelmfileRef("fake-env-1", "my-pr-branch")
@@ -177,18 +187,6 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Equal(t, "", versions["sam"].TerraHelmfileRef)
 			assert.Equal(t, "my-fc-branch", versions["sam"].FirecloudDevelopRef)
 
-			// set build number
-			assert.Equal(t, 0, envs[0].BuildNumber)
-			oldNumber, err := sb.SetBuildNumber(envs[0].Name, 123)
-			require.NoError(t, err)
-			assert.Equal(t, 0, oldNumber)
-			oldNumber, err = sb.SetBuildNumber(envs[0].Name, 456)
-			require.NoError(t, err)
-			assert.Equal(t, 123, oldNumber)
-			oldNumber, err = sb.UnsetBuildNumber(envs[0].Name)
-			require.NoError(t, err)
-			assert.Equal(t, 456, oldNumber)
-
 			// reload environments
 			envs, err = sb.Environments()
 			require.NoError(t, err)
@@ -204,9 +202,6 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.True(t, envs[0].Overrides["sam"].IsEnabled())
 			assert.True(t, envs[0].Overrides["leonardo"].HasEnableOverride())
 			assert.False(t, envs[0].Overrides["leonardo"].IsEnabled())
-
-			// make sure build number is 0
-			assert.Equal(t, 0, envs[0].BuildNumber)
 		})
 	}
 }
@@ -249,10 +244,11 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, 0, len(envs))
 
 			// add fake-env-1 to state
-			require.NoError(t, sb.Add(DynamicEnvironment{
+			e1, err := sb.Add(DynamicEnvironment{
 				Name:     "fake-env-1",
 				Template: "fake-template",
-			}))
+			})
+			require.NoError(t, err)
 
 			// verify it was added
 			envs, err = sb.Environments()
@@ -260,7 +256,7 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, 1, len(envs))
 
 			// add fake-env-2 to state
-			require.NoError(t, sb.Add(DynamicEnvironment{
+			e2, err := sb.Add(DynamicEnvironment{
 				Name:     "fake-env-2",
 				Template: "fake-template",
 				Overrides: map[string]*Override{
@@ -270,7 +266,8 @@ func TestStateBucket_AddRemove(t *testing.T) {
 						},
 					},
 				},
-			}))
+			})
+			require.NoError(t, err)
 
 			// verify it was added
 			envs, err = sb.Environments()
@@ -282,9 +279,8 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, "fake-env-1", envs[0].Name)
 			assert.Equal(t, "fake-template", envs[0].Template)
 			assert.Empty(t, envs[0].Overrides)
-			assert.False(t, envs[0].Hybrid)
-			assert.Equal(t, "", envs[0].Fiab.Name)
-			assert.Equal(t, "", envs[0].Fiab.IP)
+			assert.Equal(t, "eb5a", envs[0].UniqueResourcePrefix)
+			assert.Equal(t, e1, envs[0])
 
 			// verify fake-env-2 attributes
 			assert.NotNil(t, envs[1].Overrides)
@@ -292,26 +288,22 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, "fake-template", envs[1].Template)
 			assert.Equal(t, 1, len(envs[1].Overrides))
 			assert.Equal(t, "1.2.3", envs[1].Overrides["sam"].Versions.AppVersion)
-			assert.False(t, envs[1].Hybrid)
-			assert.Equal(t, "", envs[1].Fiab.Name)
-			assert.Equal(t, "", envs[1].Fiab.IP)
+			assert.Equal(t, "ed2a", envs[1].UniqueResourcePrefix)
+			assert.Equal(t, e2, envs[1])
 
 			// make sure dupe env name raises error
-			require.Error(t, sb.Add(DynamicEnvironment{
+			_, err = sb.Add(DynamicEnvironment{
 				Name:     "fake-env-2",
 				Template: "fake-template",
-			}), "duplicate env name should raise error")
+			})
+			require.Error(t, err, "duplicate env name should raise error")
 
 			// add fake-env-3
-			require.NoError(t, sb.Add(DynamicEnvironment{
+			e3, err := sb.Add(DynamicEnvironment{
 				Name:     "fake-env-3",
 				Template: "other-fake-template",
-				Hybrid:   true,
-				Fiab: Fiab{
-					Name: "fake-fiab-name",
-					IP:   "10.11.12.13",
-				},
-			}))
+			})
+			require.NoError(t, err)
 
 			envs, err = sb.Environments()
 
@@ -321,9 +313,8 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, "fake-env-3", envs[2].Name)
 			assert.Equal(t, "other-fake-template", envs[2].Template)
 			assert.Empty(t, envs[2].Overrides)
-			assert.True(t, envs[2].Hybrid)
-			assert.Equal(t, "fake-fiab-name", envs[2].Fiab.Name)
-			assert.Equal(t, "10.11.12.13", envs[2].Fiab.IP)
+			assert.Equal(t, "ee8a", envs[2].UniqueResourcePrefix)
+			assert.Equal(t, e3, envs[2])
 
 			// test overrides on fake-env-1 match what was in bucket
 			envs, err = sb.Environments()

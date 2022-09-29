@@ -10,10 +10,6 @@ type Environment interface {
 	// Template returns the name of this environment's configuration template, if it has one.
 	// Returns the empty string if the environment has no configuration template.
 	Template() string
-	// IsHybrid DEPRECATED returns true if this is a hybrid environment (connected to a FiaB)
-	IsHybrid() bool
-	// Fiab DEPRECATED returns the Fiab associated with this hybrid environment (nil if this is not a hybrid environment)
-	Fiab() Fiab
 	// BaseDomain returns static domain name part for this environment or environment type.
 	// E.g. "bee.envs-terra.bio", "dsde-prod.broadinstitute.org"
 	BaseDomain() string
@@ -21,8 +17,9 @@ type Environment interface {
 	// deriving full hostnames/URLs in this environment.
 	// E.g. 'true' for dynamic/template environments, 'false' for static
 	NamePrefixesDomain() bool
-	// BuildNumber returns the current build number for any CI builds actively running against the environment.
-	// Returns 0 if no build number has been set.
-	BuildNumber() int
+	// UniqueResourcePrefix (dynamic environments only) unique-to-this-environment 4-character prefix that can be referenced in configuration.
+	// Format: [a-z][a-z0-9]{3}
+	// Returns empty string for static / template environments
+	UniqueResourcePrefix() string
 	Destination
 }

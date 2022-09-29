@@ -5,11 +5,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 )
 
-type Fiab struct {
-	Name string `json:"name,omitempty" yaml:",omitempty"`
-	IP   string `json:"ip,omitempty" yaml:",omitempty"`
-}
-
 // BeeSummary struct used for presenting BEEs in yaml & json output
 type BeeSummary struct {
 	Name string
@@ -20,8 +15,6 @@ type BeeDetail struct {
 	Name             string                           `json:"name"`
 	Template         string                           `json:"template"`
 	TerraHelmfileRef string                           `json:"terraHelmfileRef,omitempty" yaml:"terraHelmfileRef,omitempty"`
-	Hybrid           bool                             `json:"hybrid"`
-	Fiab             Fiab                             `json:"fiab,omitempty" yaml:",omitempty"`
 	Overrides        map[string]*statebucket.Override `json:"overrides,omitempty" yaml:",omitempty"`
 }
 
@@ -30,14 +23,6 @@ func DescribeBee(bee terra.Environment) BeeDetail {
 		Name:             bee.Name(),
 		TerraHelmfileRef: bee.TerraHelmfileRef(),
 		Template:         bee.Template(),
-		Hybrid:           bee.IsHybrid(),
-	}
-
-	if bee.IsHybrid() {
-		e.Fiab = Fiab{
-			Name: bee.Fiab().Name(),
-			IP:   bee.Fiab().IP(),
-		}
 	}
 
 	return e
