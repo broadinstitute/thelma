@@ -4,11 +4,12 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/mattn/go-isatty"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/mattn/go-isatty"
 )
 
 // Interactive returns true if Thelma is running in an interactive shell, false otherwise. Useful for detecting
@@ -65,4 +66,9 @@ func FileExists(file string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// Nullable is a utility to turn a value into a pointer to that value
+func Nullable[T any](val T) *T {
+	return &val
 }
