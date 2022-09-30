@@ -21,7 +21,10 @@ func (s *Client) WriteEnvironments(envs []terra.Environment) error {
 			WithEnvironment(newEnv)
 		_, _, err := s.client.Environments.PostAPIV2Environments(newEnvRequestParams)
 		if err != nil {
-			return err
+			// Don't error if creating the chart results in 409 conflict
+			if _, ok := err.(*environments.PostAPIV2EnvironmentsConflict); !ok {
+				return fmt.Errorf("error creating cluster: %v", err)
+			}
 		}
 
 		if err := s.writeReleases(environment.Releases()); err != nil {
@@ -39,7 +42,10 @@ func (s *Client) WriteClusters(cls []terra.Cluster) error {
 			WithCluster(newCluster)
 		_, _, err := s.client.Clusters.PostAPIV2Clusters(newClusterRequestParams)
 		if err != nil {
-			return err
+			// Don't error if creating the chart results in 409 conflict
+			if _, ok := err.(*clusters.PostAPIV2ClustersConflict); !ok {
+				return fmt.Errorf("error creating cluster: %v", err)
+			}
 		}
 
 		if err := s.writeReleases(cluster.Releases()); err != nil {
