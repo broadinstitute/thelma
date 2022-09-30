@@ -61,17 +61,18 @@ func (cmd *exportCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	if err != nil {
 		return fmt.Errorf("error building exporter sherlock client")
 	}
-	cmd.sherlockClient = client
-	return nil
-}
 
-func (cmd *exportCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	// check to make sure destination is not prod sherlock, this should not be allowed
 	if strings.Contains(cmd.options.destinationURL, prodSherlockHostName) {
 		log.Warn().Msgf("exporting to destination: %s is forbidden", prodSherlockHostName)
 		return ErrExportDestinationForbidden
 	}
 
+	cmd.sherlockClient = client
+	return nil
+}
+
+func (cmd *exportCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	log.Info().Msgf("exporting state to: %s using format: %s", cmd.options.destinationURL, cmd.options.format)
 	state, err := app.State()
 	if err != nil {
