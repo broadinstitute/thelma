@@ -14,8 +14,10 @@ import (
 
 type sherlockStateWriterClientSuite struct {
 	suite.Suite
-	state          terra.State
-	conflictServer *httptest.Server
+	state                  terra.State
+	conflictServer         *httptest.Server
+	errServer              *httptest.Server
+	successfulCreateServer *httptest.Server
 }
 
 func Test_SherlockStateWriterClient(t *testing.T) {
@@ -25,14 +27,48 @@ func Test_SherlockStateWriterClient(t *testing.T) {
 func (suite *sherlockStateWriterClientSuite) SetupSuite() {
 	suite.state = constructFakeState(suite.T())
 	suite.conflictServer = newMockConflictServer()
+	suite.errServer = newMockErroringSherlockServer()
+	suite.successfulCreateServer = newMockSuccessfulCreateServer()
 }
 
 func (suite *sherlockStateWriterClientSuite) TearDownSuite() {
 	suite.conflictServer.Close()
+	suite.errServer.Close()
+	suite.successfulCreateServer.Close()
 }
 
 func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
 	client, err := sherlock.NewWithHostnameOverride(suite.conflictServer.URL, "")
+	suite.Assert().NoError(err)
+
+	stateClusters, err := suite.state.Clusters().All()
+	suite.Assert().NoError(err)
+	err = client.WriteClusters(stateClusters)
+	suite.Assert().NoError(err)
+
+	stateEnvironments, err := suite.state.Environments().All()
+	suite.Assert().NoError(err)
+	err = client.WriteEnvironments(stateEnvironments)
+	suite.Assert().NoError(err)
+}
+
+func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
+	client, err := sherlock.NewWithHostnameOverride(suite.errServer.URL, "")
+	suite.Assert().NoError(err)
+
+	stateClusters, err := suite.state.Clusters().All()
+	suite.Assert().NoError(err)
+	err = client.WriteClusters(stateClusters)
+	suite.Assert().Error(err)
+
+	stateEnvironments, err := suite.state.Environments().All()
+	suite.Assert().NoError(err)
+	err = client.WriteEnvironments(stateEnvironments)
+	suite.Assert().Error(err)
+}
+
+func (suite *sherlockStateWriterClientSuite) TestSuccessfulStateExport() {
+	client, err := sherlock.NewWithHostnameOverride(suite.successfulCreateServer.URL, "")
 	suite.Assert().NoError(err)
 
 	stateClusters, err := suite.state.Clusters().All()
@@ -65,8 +101,38 @@ func newMockConflictServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
+func newMockErroringSherlockServer() *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/environments", mockErroringHandler())
+	mux.HandleFunc("/api/v2/clusters", mockErroringHandler())
+	mux.HandleFunc("/api/v2/chart-releases", mockErroringHandler())
+	mux.HandleFunc("/api/v2/charts", mockErroringHandler())
+	return httptest.NewServer(mux)
+}
+
+func newMockSuccessfulCreateServer() *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/environments", mockSuccessfulCreateHandler())
+	mux.HandleFunc("/api/v2/clusters", mockSuccessfulCreateHandler())
+	mux.HandleFunc("/api/v2/chart-releases", mockSuccessfulCreateHandler())
+	mux.HandleFunc("/api/v2/charts", mockSuccessfulCreateHandler())
+	return httptest.NewServer(mux)
+}
+
 func mock409ConflictHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
+	}
+}
+
+func mockErroringHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func mockSuccessfulCreateHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
 	}
 }

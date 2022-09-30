@@ -154,6 +154,7 @@ func newMockErroringSherlockServer() *httptest.Server {
 	mux.HandleFunc("/api/v2/environments", mockErroringHandler())
 	mux.HandleFunc("/api/v2/clusters", mockErroringHandler())
 	mux.HandleFunc("/api/v2/chart-releases", mockErroringHandler())
+	mux.HandleFunc("/api/v2/charts", mockErroringHandler())
 	return httptest.NewServer(mux)
 }
 
