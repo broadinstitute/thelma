@@ -48,36 +48,42 @@ func (e *environments) Exists(name string) (bool, error) {
 	return exists, nil
 }
 
-func (e *environments) CreateFromTemplate(name string, template terra.Environment) error {
-	return e.CreateHybridFromTemplate(name, template, nil)
-}
-
-func (e *environments) CreateHybridFromTemplate(name string, template terra.Environment, fiab terra.Fiab) error {
+func (e *environments) CreateFromTemplate(name string, template terra.Environment) (terra.Environment, error) {
 	exists, err := e.Exists(name)
 	if err != nil {
-		return fmt.Errorf("error checking for environment name conflict: %v", err)
+		return nil, fmt.Errorf("error checking for environment name conflict: %v", err)
 	}
 	if exists {
-		return fmt.Errorf("can't create environment %s: an environment by that name already exists", name)
+		return nil, fmt.Errorf("can't create environment %s: an environment by that name already exists", name)
 	}
 
 	if !template.Lifecycle().IsTemplate() {
-		return fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
+		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
 	}
 
 	var env statebucket.DynamicEnvironment
 	env.Name = name
 	env.Template = template.Name()
 
-	if fiab != nil {
-		env.Hybrid = true
-		env.Fiab = statebucket.Fiab{
-			Name: fiab.Name(),
-			IP:   fiab.IP(),
-		}
+	env, err = e.state.statebucket.Add(env)
+	if err != nil {
+		return nil, err
 	}
 
-	return e.state.statebucket.Add(env)
+	return buildDynamicEnvironment(template, env), nil
+}
+
+func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment) (terra.Environment, error) {
+	if !template.Lifecycle().IsTemplate() {
+		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
+	}
+	var env statebucket.DynamicEnvironment
+	env.Template = template.Name()
+	env, err := e.state.statebucket.AddGenerateName(namePrefix, env)
+	if err != nil {
+		return nil, err
+	}
+	return buildDynamicEnvironment(template, env), nil
 }
 
 func (e *environments) EnableRelease(environmentName string, releaseName string) error {
@@ -98,14 +104,6 @@ func (e *environments) PinEnvironmentToTerraHelmfileRef(environmentName string, 
 
 func (e *environments) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {
 	return e.state.statebucket.UnpinVersions(environmentName)
-}
-
-func (e *environments) SetBuildNumber(environmentName string, buildNumber int) (int, error) {
-	return e.state.statebucket.SetBuildNumber(environmentName, buildNumber)
-}
-
-func (e *environments) UnsetBuildNumber(environmentName string) (int, error) {
-	return e.state.statebucket.UnsetBuildNumber(environmentName)
 }
 
 func (e *environments) Delete(name string) error {

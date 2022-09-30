@@ -1,11 +1,9 @@
-package unseed
+package seed
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 	"time"
@@ -13,7 +11,7 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-func (cmd *unseedCommand) step1UnregisterAllUsers(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
+func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppRelease, opts UnseedOptions) error {
 	log.Info().Msg("unregistering all users with Sam...")
 	if sam, samPresent := appReleases["sam"]; samPresent {
 		if !sam.Environment().Lifecycle().IsDynamic() {
@@ -21,17 +19,17 @@ func (cmd *unseedCommand) step1UnregisterAllUsers(thelma app.ThelmaApp, appRelea
 			panic("THIS SAM IS NOT IN A DYNAMIC ENVIRONMENT, REFUSING TO UNREGISTER ALL USERS")
 		}
 
-		kubectl, err := thelma.Clients().Google().Kubectl()
+		kubectl, err := s.clientFactory.Google().Kubectl()
 		if err != nil {
 			return fmt.Errorf("error getting kubectl client: %v", err)
 		}
 
-		vault, err := thelma.Clients().Vault()
+		vault, err := s.clientFactory.Vault()
 		if err != nil {
 			return fmt.Errorf("error getting vault client: %v", err)
 		}
 
-		config, err := seed.ConfigWithBasicDefaults(thelma)
+		config, err := s.configWithBasicDefaults()
 		if err != nil {
 			return fmt.Errorf("error getting Sam's database info: %v", err)
 		}
@@ -81,20 +79,20 @@ func (cmd *unseedCommand) step1UnregisterAllUsers(thelma app.ThelmaApp, appRelea
 		for rows.Next() {
 			var email, id string
 			if err := rows.Scan(&email, &id); err != nil {
-				if err = cmd.handleErrorWithForce(fmt.Errorf("error reading email/id for user: %v", err)); err != nil {
+				if err = opts.handleErrorWithForce(fmt.Errorf("error reading email/id for user: %v", err)); err != nil {
 					return err
 				}
 			}
 			userEmailToID[email] = id
 		}
-		if err := cmd.handleErrorWithForce(rows.Err()); err != nil {
+		if err := opts.handleErrorWithForce(rows.Err()); err != nil {
 			return err
 		}
 
 		log.Info().Msgf("found %d users to remove", len(userEmailToID))
 
 		if len(userEmailToID) > 0 {
-			googleClient, err := seed.GoogleAuthAs(thelma, sam)
+			googleClient, err := s.googleAuthAs(sam)
 			if err != nil {
 				return fmt.Errorf("couldn't prepare Google authentication as Sam's SA: %v", err)
 			}
@@ -105,7 +103,7 @@ func (cmd *unseedCommand) step1UnregisterAllUsers(thelma app.ThelmaApp, appRelea
 
 			samEmail := terraClient.GoogleUserInfo().Email
 			if _, exists := userEmailToID[samEmail]; !exists {
-				if err := cmd.handleErrorWithForce(fmt.Errorf("%s (Sam's SA) is not a Sam user and cannot unregister users", samEmail)); err != nil {
+				if err := opts.handleErrorWithForce(fmt.Errorf("%s (Sam's SA) is not a Sam user and cannot unregister users", samEmail)); err != nil {
 					return err
 				}
 			}
@@ -114,7 +112,7 @@ func (cmd *unseedCommand) step1UnregisterAllUsers(thelma app.ThelmaApp, appRelea
 				if email != samEmail {
 					log.Info().Msgf("unregistering %s", email)
 					_, _, err = terraClient.Sam(sam).UnregisterUser(id)
-					if err := cmd.handleErrorWithForce(err); err != nil {
+					if err := opts.handleErrorWithForce(err); err != nil {
 						return fmt.Errorf("error unregistering %s (%s): %v", email, id, err)
 					}
 				} else {
@@ -125,7 +123,7 @@ func (cmd *unseedCommand) step1UnregisterAllUsers(thelma app.ThelmaApp, appRelea
 			if samId, exists := userEmailToID[samEmail]; exists {
 				log.Info().Msgf("unregistering Sam's own %s user", samEmail)
 				_, _, err = terraClient.Sam(sam).UnregisterUser(samId)
-				if err := cmd.handleErrorWithForce(err); err != nil {
+				if err := opts.handleErrorWithForce(err); err != nil {
 					return fmt.Errorf("error unregistering %s (%s): %v", samEmail, samId, err)
 				}
 			}

@@ -2,7 +2,6 @@ package seed
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
@@ -18,7 +17,7 @@ type TestUser struct {
 	Email     string
 }
 
-type agoraPayload struct {
+type AgoraPayload struct {
 	Namespace     string `json:"namespace"`
 	Name          string `json:"name"`
 	Synopsis      string `json:"synopsis"`
@@ -32,7 +31,7 @@ type AgoraPermission struct {
 	Role string `json:"role"`
 }
 
-type Config struct {
+type seedConfig struct {
 	Auth struct {
 		Rawls struct {
 			VaultPath string `default:"secret/dsde/firecloud/%s/rawls/rawls-account.json"`
@@ -65,8 +64,8 @@ type Config struct {
 		QA  []TestUser
 	}
 	Agora struct {
-		Methods        []agoraPayload
-		Configurations []agoraPayload
+		Methods        []AgoraPayload
+		Configurations []AgoraPayload
 		Permissions    struct {
 			Dev []AgoraPermission
 			QA  []AgoraPermission
@@ -90,17 +89,8 @@ type Config struct {
 	}
 }
 
-func ConfigWithBasicDefaults(thelma app.ThelmaApp) (Config, error) {
-	var config Config
-	err := thelma.Config().Unmarshal(configKey, &config)
-	if err != nil {
-		return Config{}, fmt.Errorf("error reading seed config: %v", err)
-	}
-	return config, nil
-}
-
-func GoogleAuthAs(thelma app.ThelmaApp, appRelease terra.AppRelease) (google.Clients, error) {
-	config, err := ConfigWithBasicDefaults(thelma)
+func (s *seeder) googleAuthAs(appRelease terra.AppRelease) (google.Clients, error) {
+	config, err := s.configWithBasicDefaults()
 	if err != nil {
 		return nil, err
 	}
@@ -130,14 +120,23 @@ func GoogleAuthAs(thelma app.ThelmaApp, appRelease terra.AppRelease) (google.Cli
 	if strings.ContainsRune(vaultPath, '%') {
 		vaultPath = fmt.Sprintf(vaultPath, appRelease.Cluster().ProjectSuffix())
 	}
-	return thelma.Clients().GoogleUsingVaultSA(
+	return s.clientFactory.GoogleUsingVaultSA(
 		vaultPath,
 		vaultKey,
 	), nil
 }
 
-func ConfigWithTestUsers(thelma app.ThelmaApp) (Config, error) {
-	config, err := ConfigWithBasicDefaults(thelma)
+func (s *seeder) configWithBasicDefaults() (seedConfig, error) {
+	var config seedConfig
+	err := s.config.Unmarshal(configKey, &config)
+	if err != nil {
+		return config, fmt.Errorf("error reading seed config: %v", err)
+	}
+	return config, nil
+}
+
+func (s *seeder) configWithTestUsers() (seedConfig, error) {
+	config, err := s.configWithBasicDefaults()
 	if err != nil {
 		return config, err
 	}
@@ -207,15 +206,15 @@ func ConfigWithTestUsers(thelma app.ThelmaApp) (Config, error) {
 	return config, nil
 }
 
-func ConfigWithAgoraData(thelma app.ThelmaApp) (Config, error) {
-	config, err := ConfigWithBasicDefaults(thelma)
+func (s *seeder) configWithAgoraData() (seedConfig, error) {
+	config, err := s.configWithBasicDefaults()
 	if err != nil {
 		return config, err
 	}
 	if len(config.Agora.Methods) > 0 {
 		log.Info().Msg("agora methods already present in config, skipping defaults")
 	} else {
-		config.Agora.Methods = []agoraPayload{
+		config.Agora.Methods = []AgoraPayload{
 			{
 				Namespace:     "automationmethods",
 				Name:          "DO_NOT_CHANGE_test_method",
@@ -273,7 +272,7 @@ workflow test {
 	if len(config.Agora.Configurations) > 0 {
 		log.Info().Msg("agora configurations already present in config, skipping defaults")
 	} else {
-		config.Agora.Configurations = []agoraPayload{
+		config.Agora.Configurations = []AgoraPayload{
 			{
 				Namespace:     "automationmethods",
 				Name:          "DO_NOT_CHANGE_test1_config",

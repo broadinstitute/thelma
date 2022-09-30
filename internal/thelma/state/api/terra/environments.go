@@ -12,9 +12,11 @@ type Environments interface {
 	Exists(name string) (bool, error)
 	// CreateFromTemplate creates a new environment with the given name from the given template.
 	// Should panic if the template environment's lifecycle is not "template".
-	CreateFromTemplate(name string, template Environment) error
-	// CreateHybridFromTemplate creates a new hybrid environment with the given name from the given template.
-	CreateHybridFromTemplate(name string, template Environment, fiab Fiab) error
+	CreateFromTemplate(name string, template Environment) (Environment, error)
+	// CreateFromTemplateGenerateName creates a new environment from the given template, generating
+	// a unique, fiab-style name.
+	// Should panic if the template environment's lifecycle is not "template".
+	CreateFromTemplateGenerateName(namePrefix string, template Environment) (Environment, error)
 	// EnableRelease enables a release in an environment
 	// TODO this should move to Environment at some point
 	EnableRelease(environmentName string, releaseName string) error
@@ -30,10 +32,6 @@ type Environments interface {
 	// PinEnvironmentToTerraHelmfileRef pins an environment to a specific terra-helmfile ref
 	// Note this can be overridden by individual service version overrides
 	PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error
-	// SetBuildNumber sets the number for the currently-running build, returning the previous value
-	SetBuildNumber(environmentName string, buildNumber int) (int, error)
-	// UnsetBuildNumber unsets the build number in an environment (i.e. sets it to zero)
-	UnsetBuildNumber(environmentName string) (int, error)
 	// Delete deletes the environment with the given name
 	Delete(name string) error
 }

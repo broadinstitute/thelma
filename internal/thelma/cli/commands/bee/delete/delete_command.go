@@ -5,8 +5,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/views"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -21,11 +21,11 @@ thelma bee delete --name=swat-grungy-puma
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name     string
-	ifExists string
+	name   string
+	unseed string
 }{
-	name:     "name",
-	ifExists: "if-exists",
+	name:   "name",
+	unseed: "unseed",
 }
 
 type deleteCommand struct {
@@ -43,7 +43,7 @@ func (cmd *deleteCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "", "Required. Name of the BEE to delete")
-	cobraCommand.Flags().BoolVar(&cmd.options.IgnoreMissing, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
+	cobraCommand.Flags().BoolVar(&cmd.options.Unseed, flagNames.unseed, true, "Attempt to unseed BEE before deleting")
 }
 
 func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -55,7 +55,6 @@ func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
 		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
-
 	return nil
 }
 
@@ -66,7 +65,7 @@ func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 	env, err := bees.DeleteWith(cmd.name, cmd.options)
 	if env != nil {
-		rc.SetOutput(views.ForTerraEnv(env))
+		rc.SetOutput(views.DescribeBee(env))
 	}
 	return err
 }

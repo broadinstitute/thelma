@@ -9,13 +9,13 @@ import (
 const envNamespacePrefix = "terra-"
 
 type environment struct {
-	defaultCluster     terra.Cluster
-	releases           map[string]*appRelease
-	lifecycle          terra.Lifecycle
-	template           string
-	baseDomain         string
-	namePrefixesDomain bool
-	buildNumber        int
+	defaultCluster       terra.Cluster
+	releases             map[string]*appRelease
+	lifecycle            terra.Lifecycle
+	template             string
+	baseDomain           string
+	namePrefixesDomain   bool
+	uniqueResourcePrefix string
 	destination
 }
 
@@ -57,14 +57,6 @@ func (e *environment) Namespace() string {
 	return environmentNamespace(e.Name())
 }
 
-func (e *environment) IsHybrid() bool {
-	return false
-}
-
-func (e *environment) Fiab() terra.Fiab {
-	panic("deprecated, implementing for interface compatability, unreachable since sherlock doesn't support hybrid envs")
-}
-
 func (e *environment) BaseDomain() string {
 	return e.baseDomain
 }
@@ -73,8 +65,8 @@ func (e *environment) NamePrefixesDomain() bool {
 	return e.namePrefixesDomain
 }
 
-func (e *environment) BuildNumber() int {
-	return e.buildNumber
+func (e *environment) UniqueResourcePrefix() string {
+	return e.uniqueResourcePrefix
 }
 
 // environmentNamespace return environment namespace for a given environment name

@@ -14,7 +14,7 @@ const configKey = "statebucket"
 
 // bump this whenever backwards-incompatible schema changes are made. This way any clients that attempt to update
 // the state with the old schema will return an error.
-const schemaVersion = 1
+const schemaVersion = 2
 
 // StateFile represents the structure of the statefile
 type StateFile struct {
@@ -40,7 +40,9 @@ type StateBucket interface {
 	// Environments returns the list of all environments in the state file
 	Environments() ([]DynamicEnvironment, error)
 	// Add adds a new environment to the state file
-	Add(environment DynamicEnvironment) error
+	Add(environment DynamicEnvironment) (DynamicEnvironment, error)
+	// AddGenerateName adds a new environment to the state file, generating a unique name from an optional prefix
+	AddGenerateName(namePrefix string, environment DynamicEnvironment) (DynamicEnvironment, error)
 	// EnableRelease enables the given release in the target environment
 	EnableRelease(environmentName string, releaseName string) error
 	// DisableRelease disables the given release in the target environment
@@ -51,10 +53,6 @@ type StateBucket interface {
 	UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error)
 	// PinEnvironmentToTerraHelmfileRef pins an entire environment to a specific terra-helmfile ref
 	PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error
-	// SetBuildNumber sets the number for the currently-running build, returning the previous value
-	SetBuildNumber(environmentName string, buildNumber int) (int, error)
-	// UnsetBuildNumber unsets the build number in an environment (i.e. sets it to zero)
-	UnsetBuildNumber(environmentName string) (int, error)
 	// Delete will delete an environment from the state file
 	Delete(environmentName string) error
 	// initialize will overwrite existing state with a new empty state file
@@ -123,8 +121,36 @@ func (s *statebucket) Environments() ([]DynamicEnvironment, error) {
 	return result, nil
 }
 
-func (s *statebucket) Add(environment DynamicEnvironment) error {
-	return s.writer.update(func(state StateFile) (StateFile, error) {
+func (s *statebucket) AddGenerateName(namePrefix string, environment DynamicEnvironment) (DynamicEnvironment, error) {
+	return s.add(environment, func(e *DynamicEnvironment, stateFile StateFile) error {
+		name, err := generateUniqueEnvironmentName(namePrefix, stateFile)
+		if err != nil {
+			return err
+		}
+		e.Name = name
+		return nil
+	})
+}
+
+func (s *statebucket) Add(environment DynamicEnvironment) (DynamicEnvironment, error) {
+	return s.add(environment)
+}
+
+func (s *statebucket) add(environment DynamicEnvironment, hookFns ...func(e *DynamicEnvironment, stateFile StateFile) error) (DynamicEnvironment, error) {
+	err := s.writer.update(func(state StateFile) (StateFile, error) {
+		for _, hookFn := range hookFns {
+			if err := hookFn(&environment, state); err != nil {
+				return state, err
+			}
+		}
+
+		if environment.Overrides == nil {
+			environment.Overrides = make(map[string]*Override)
+		}
+		if environment.UniqueResourcePrefix == "" {
+			environment.UniqueResourcePrefix = backwardsCompatibleResourcePrefix(environment.Name)
+		}
+
 		if state.Environments == nil {
 			state.Environments = make(map[string]DynamicEnvironment)
 		}
@@ -136,6 +162,11 @@ func (s *statebucket) Add(environment DynamicEnvironment) error {
 		state.Environments[environment.Name] = environment
 		return state, nil
 	})
+
+	if err != nil {
+		return DynamicEnvironment{}, err
+	}
+	return environment, nil
 }
 
 func (s *statebucket) EnableRelease(environmentName string, releaseName string) error {
@@ -181,15 +212,6 @@ func (s *statebucket) PinEnvironmentToTerraHelmfileRef(environmentName string, t
 	})
 }
 
-func (s *statebucket) SetBuildNumber(environmentName string, buildNumber int) (int, error) {
-	var oldNumber int
-	err := s.updateEnvironment(environmentName, func(environment *DynamicEnvironment) {
-		oldNumber = environment.BuildNumber
-		environment.BuildNumber = buildNumber
-	})
-	return oldNumber, err
-}
-
 func (s *statebucket) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {
 	result := make(map[string]terra.VersionOverride)
 
@@ -216,15 +238,6 @@ func (s *statebucket) UnpinVersions(environmentName string) (map[string]terra.Ve
 		return nil, err
 	}
 	return result, nil
-}
-
-func (s *statebucket) UnsetBuildNumber(environmentName string) (int, error) {
-	var oldBuildNumber int
-	err := s.updateEnvironment(environmentName, func(environment *DynamicEnvironment) {
-		oldBuildNumber = environment.BuildNumber
-		environment.BuildNumber = 0
-	})
-	return oldBuildNumber, err
 }
 
 func (s *statebucket) Delete(environmentName string) error {

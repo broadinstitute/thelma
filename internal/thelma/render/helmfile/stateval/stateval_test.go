@@ -38,9 +38,8 @@ func Test_BuildStateValues(t *testing.T) {
 					RequireSuitable: false,
 				},
 				Environment: Environment{
-					Name:        "dev",
-					IsHybrid:    false,
-					BuildNumber: 0,
+					Name:                 "dev",
+					UniqueResourcePrefix: "",
 				},
 				Cluster: Cluster{
 					Name:                "terra-dev",
@@ -80,9 +79,8 @@ func Test_BuildStateValues(t *testing.T) {
 					RequireSuitable: true,
 				},
 				Environment: Environment{
-					Name:        "prod",
-					BuildNumber: 0,
-					IsHybrid:    false,
+					Name:                 "prod",
+					UniqueResourcePrefix: "",
 				},
 				Cluster: Cluster{
 					Name:                "terra-prod",
@@ -122,9 +120,8 @@ func Test_BuildStateValues(t *testing.T) {
 					RequireSuitable: false,
 				},
 				Environment: Environment{
-					Name:        "swatomation",
-					BuildNumber: 0,
-					IsHybrid:    false,
+					Name:                 "swatomation",
+					UniqueResourcePrefix: "",
 				},
 				Cluster: Cluster{
 					Name:                "terra-qa",
@@ -164,16 +161,8 @@ func Test_BuildStateValues(t *testing.T) {
 					RequireSuitable: false,
 				},
 				Environment: Environment{
-					Name:        "fiab-funky-chipmunk",
-					BuildNumber: 456,
-					IsHybrid:    true,
-					Fiab: struct {
-						Name string `yaml:"Name,omitempty"`
-						IP   string `yaml:"IP,omitempty"`
-					}{
-						Name: "fiab-automation-funky-chipmunk",
-						IP:   "10.0.0.2",
-					},
+					Name:                 "fiab-funky-chipmunk",
+					UniqueResourcePrefix: "e9a1",
 				},
 				Cluster: Cluster{
 					Name:                "terra-qa",

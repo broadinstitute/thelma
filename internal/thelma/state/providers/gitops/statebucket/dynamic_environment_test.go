@@ -18,19 +18,15 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
 			name: "empty",
 			inputData: func(d *DynamicEnvironment) {
 				d.Overrides = make(map[string]*Override)
+				d.UniqueResourcePrefix = "ee3b"
 			},
 			outputJSON: `
 {
   "name": "",
   "template": "",
   "overrides": {},
-  "hybrid": false,
-  "fiab": {
-    "ip": "",
-    "name": ""
-  },
   "terraHelmfileRef": "",
-  "buildNumber": 0
+  "uniqueResourcePrefix": "ee3b"
 }`,
 		},
 		{
@@ -39,10 +35,7 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
 				d.Name = "e1"
 				d.Template = "t1"
 				d.TerraHelmfileRef = "deadbeef"
-				d.BuildNumber = 12
-				d.Hybrid = true
-				d.Fiab.Name = "fiab1"
-				d.Fiab.IP = "0.0.0.0"
+				d.UniqueResourcePrefix = "fakeurp"
 
 				var override Override
 				enabled := false
@@ -70,13 +63,8 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
       }
     }
   },
-  "hybrid": true,
-  "fiab": {
-    "ip": "0.0.0.0",
-    "name": "fiab1"
-  },
   "terraHelmfileRef": "deadbeef",
-  "buildNumber": 12
+  "uniqueResourcePrefix": "fakeurp"
 }`,
 		},
 	}
@@ -114,7 +102,7 @@ func Test_DynamicEnvironment_JSON_Marshaller_ReplacesNilOverrides(t *testing.T) 
 
 	assert.Nil(t, d.Overrides)
 
-	expected := `{"name":"","template":"","overrides":{},"hybrid":false,"fiab":{"ip":"","name":""},"terraHelmfileRef":"","buildNumber":0}`
+	expected := `{"name":"","template":"","overrides":{},"terraHelmfileRef":"","uniqueResourcePrefix":"ee3b"}`
 
 	data, err := json.Marshal(d)
 	require.NoError(t, err)
@@ -129,9 +117,10 @@ func Test_DynamicEnvironment_JSON_Marshaller_ReplacesNilOverrides(t *testing.T) 
 func Test_DynamicEnvironment_JSON_Unmarshaller_ReplacesNilOverrides(t *testing.T) {
 	var d DynamicEnvironment
 
-	input := `{"name":"","template":"","overrides":null,"hybrid":false,"fiab":{"ip":"","name":""},"terraHelmfileRef":"","buildNumber":0}`
+	input := `{"name":"","template":"","overrides":null,"terraHelmfileRef":"","uniqueResourcePrefix":""}`
 	err := json.Unmarshal([]byte(input), &d)
 	require.NoError(t, err)
 
 	assert.NotNil(t, d.Overrides, "overrides should not be null even if it is in the JSON")
+	assert.Equal(t, "ee3b", d.UniqueResourcePrefix, "URP should be populated even if empty in the JSON")
 }

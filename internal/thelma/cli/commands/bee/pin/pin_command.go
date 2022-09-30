@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pinflags"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
-	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"os"
 	"strings"
 )
 
@@ -36,70 +34,47 @@ thelma bee pin -n swat-grungy-puma ALL --terra-helmfile-ref=my-pr-1
 # Pin all services in a BEE to the firecloud-develop PR branch my-pr-1
 thelma bee pin -n swat-grungy-puma ALL --firecloud-develop-ref=my-pr-1
 
-# Pin all services in a BEE to versions described in the given file, with a format like:
+# Pin services in a BEE to specific versions described in the given file, with a format like:
 #   {
 #      "sam": {
 #        "appVersion": "my-image-tag",
-#        "firecloudDevelopRef": "my-image-tag",
+#        "firecloudDevelopRef": "my-firecloud-develop-branch",
+#        "terraHelmfileRef": "my-terra-helmfile-branch"
 #      },
 #      "leonardo": {
-#        "firecloud"
+#        ...
 #      },
 #      ...
 #   }
-thelma bee pin -n swat-grungy-puma sam --app-version=v100
-
+thelma bee pin -n swat-grungy-puma sam --versions-file=/tmp/version.json --versions-format=json
 `
 
 type options struct {
-	name                string
-	appVersion          string
-	chartVersion        string
-	terraHelmfileRef    string
-	firecloudDevelopRef string
-	versionsFile        string
-	versionsFormat      string
-	buildNumber         int
-	ifExists            bool
-	sync                bool
-	waitHealthy         bool
+	name        string
+	sync        bool
+	waitHealthy bool
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name                string
-	appVersion          string
-	chartVersion        string
-	terraHelmfileRef    string
-	firecloudDevelopRef string
-	versionsFile        string
-	versionsFormat      string
-	buildNumber         string
-	ifExists            string
-	sync                string
-	waitHealthy         string
+	name        string
+	sync        string
+	waitHealthy string
 }{
-	name:                "name",
-	appVersion:          "app-version",
-	chartVersion:        "chart-version",
-	terraHelmfileRef:    "terra-helmfile-ref",
-	firecloudDevelopRef: "firecloud-develop-ref",
-	versionsFile:        "versions-file",
-	versionsFormat:      "versions-format",
-	buildNumber:         "build-number",
-	ifExists:            "if-exists",
-	sync:                "sync",
-	waitHealthy:         "wait-healthy",
+	name:        "name",
+	sync:        "sync",
+	waitHealthy: "wait-healthy",
 }
 
 type pinCommand struct {
-	options       options
-	serviceScoped bool
-	versions      map[string]terra.VersionOverride
+	options    options
+	pinOptions pinflags.PinFlags
 }
 
 func NewBeePinCommand() cli.ThelmaCommand {
-	return &pinCommand{}
+	return &pinCommand{
+		pinOptions: pinflags.NewPinFlags(),
+	}
 }
 
 func (cmd *pinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
@@ -108,14 +83,9 @@ func (cmd *pinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to pin")
-	cobraCommand.Flags().StringVar(&cmd.options.appVersion, flagNames.appVersion, "", "Pin to specific image tag")
-	cobraCommand.Flags().StringVar(&cmd.options.chartVersion, flagNames.chartVersion, "", "Pin to specific Helm chart version")
-	cobraCommand.Flags().StringVar(&cmd.options.terraHelmfileRef, flagNames.terraHelmfileRef, "", "Pin to specific terra-helmfile ref")
-	cobraCommand.Flags().StringVar(&cmd.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin to specific firecloud-develop ref")
-	cobraCommand.Flags().StringVar(&cmd.options.versionsFile, flagNames.versionsFile, "", "Path to versions file")
-	cobraCommand.Flags().StringVar(&cmd.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
-	cobraCommand.Flags().IntVar(&cmd.options.buildNumber, flagNames.buildNumber, 0, "Configure environment's currently running build number (for use in CI/CD pipelines)")
-	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
+
+	cmd.pinOptions.AddFlags(cobraCommand)
+
 	cobraCommand.Flags().BoolVar(&cmd.options.sync, flagNames.sync, true, "Sync all services in BEE after updating versions")
 	cobraCommand.Flags().BoolVar(&cmd.options.waitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
 }
@@ -151,184 +121,29 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	if env == nil {
-		if cmd.options.ifExists {
-			log.Warn().Msgf("Could not pin %s, no BEE by that name exists", cmd.options.name)
-			return nil
-		}
-		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
-	}
-
-	if err = cmd.loadVersionOverrides(ctx, env); err != nil {
-		return err
-	}
-
-	// pin environment to specific terra-helmfile ref
-	if !cmd.serviceScoped && ctx.CobraCommand().Flags().Changed(flagNames.terraHelmfileRef) {
-		log.Info().Msgf("Pinning environment %s to terra-helmfile ref: %s", cmd.options.name, cmd.options.terraHelmfileRef)
-		if err = state.Environments().PinEnvironmentToTerraHelmfileRef(cmd.options.name, cmd.options.terraHelmfileRef); err != nil {
-			return err
-		}
-	}
-
-	// pin version overrides for individual releases
-	versions, err := state.Environments().PinVersions(cmd.options.name, cmd.versions)
+	pinOptions, err := cmd.pinOptions.GetPinOptions(ctx)
 	if err != nil {
 		return err
 	}
-	log.Info().Msgf("Updated version overrides for %s", cmd.options.name)
 
-	if ctx.CobraCommand().Flags().Changed(flagNames.buildNumber) {
-		oldBuildNumber, err := state.Environments().SetBuildNumber(cmd.options.name, cmd.options.buildNumber)
-		if err != nil {
-			return err
-		}
-		log.Info().Msgf("Set build number to %d for %s (was: %d)", cmd.options.buildNumber, cmd.options.name, oldBuildNumber)
+	if err = bees.PinVersions(env, pinOptions); err != nil {
+		return err
 	}
-
 	if err = bees.RefreshBeeGenerator(); err != nil {
 		return err
 	}
 	if err = bees.SyncEnvironmentGenerator(env); err != nil {
 		return err
 	}
-
-	if cmd.options.sync {
-		if err = bees.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
-			options.WaitHealthy = cmd.options.waitHealthy
-		}); err != nil {
-			return err
-		}
+	if !cmd.options.sync {
+		return nil
 	}
-
-	log.Info().Msgf("Full set of overrides for %s:", cmd.options.name)
-	ctx.SetOutput(versions)
-	return nil
+	return bees.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
+		options.WaitHealthy = cmd.options.waitHealthy
+	})
 }
 
 func (cmd *pinCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do here
-	return nil
-}
-
-func (cmd *pinCommand) loadVersionOverrides(ctx cli.RunContext, env terra.Environment) error {
-	if err := cmd.determineScope(ctx, env); err != nil {
-		return err
-	}
-
-	if cmd.serviceScoped {
-		serviceName := ctx.Args()[0]
-		return cmd.buildVersionOverridesForOneService(env, serviceName)
-	}
-
-	flags := ctx.CobraCommand().Flags()
-
-	// not service-scoped, so handle different cases
-	if flags.Changed(flagNames.versionsFile) {
-		return cmd.loadVersionsFromFile()
-	} else if flags.Changed(flagNames.terraHelmfileRef) || flags.Changed(flagNames.firecloudDevelopRef) {
-		return cmd.buildVersionOverridesForAllServices(env)
-	} else if flags.Changed(flagNames.buildNumber) {
-		cmd.versions = nil // this is just a build number update, no version overrides added
-		return nil
-	} else {
-		return fmt.Errorf("please specify one of: --%s, --%s,--%s, or --%s", flagNames.versionsFile, flagNames.buildNumber, flagNames.terraHelmfileRef, flagNames.firecloudDevelopRef)
-	}
-}
-
-// determine whether the command applies to a specific service or the entire environment
-func (cmd *pinCommand) determineScope(ctx cli.RunContext, env terra.Environment) error {
-	if len(ctx.Args()) == 0 ||
-		(len(ctx.Args()) == 1 && ctx.Args()[0] == "ALL") {
-		cmd.serviceScoped = false
-	} else if len(ctx.Args()) == 1 {
-		cmd.serviceScoped = true
-	} else {
-		return fmt.Errorf("0-1 positional arguments may be specified, got: %d", len(ctx.Args()))
-	}
-
-	flags := ctx.CobraCommand().Flags()
-
-	if cmd.serviceScoped {
-		// check for incompatible flags
-		if flags.Changed(flagNames.versionsFile) {
-			return fmt.Errorf("--%s cannot be used with a positional argument", flagNames.versionsFile)
-		}
-		if flags.Changed(flagNames.buildNumber) {
-			return fmt.Errorf("--%s cannot be used with a positional argument", flagNames.buildNumber)
-		}
-
-		return nil
-	}
-
-	// not service-scoped, check for more incompatible flags
-	if flags.Changed(flagNames.appVersion) || flags.Changed(flagNames.chartVersion) {
-		return fmt.Errorf("--%s and --%s can only be used with a positional argument", flagNames.appVersion, flagNames.chartVersion)
-	}
-
-	return nil
-}
-
-func (cmd *pinCommand) loadVersionsFromFile() error {
-	content, err := os.ReadFile(cmd.options.versionsFile)
-	if err != nil {
-		return err
-	}
-	versions, err := parseVersions(cmd.options.versionsFormat, content)
-	if err != nil {
-		return err
-	}
-
-	cmd.versions = cmd.applyGitRefOverrides(versions)
-	return nil
-}
-
-func (cmd *pinCommand) applyGitRefOverrides(versions map[string]terra.VersionOverride) map[string]terra.VersionOverride {
-	result := make(map[string]terra.VersionOverride)
-	for releaseName, override := range versions {
-		if cmd.options.terraHelmfileRef != "" {
-			override.TerraHelmfileRef = cmd.options.terraHelmfileRef
-		}
-		if cmd.options.firecloudDevelopRef != "" {
-			override.FirecloudDevelopRef = cmd.options.firecloudDevelopRef
-		}
-		result[releaseName] = override
-	}
-	return result
-}
-
-func (cmd *pinCommand) buildVersionOverridesForAllServices(env terra.Environment) error {
-	versions := make(map[string]terra.VersionOverride)
-	for _, release := range env.Releases() {
-		versions[release.Name()] = terra.VersionOverride{
-			// app and chart version omitted because it makes no sense to use them for multiple services
-			TerraHelmfileRef:    cmd.options.terraHelmfileRef,
-			FirecloudDevelopRef: cmd.options.firecloudDevelopRef,
-		}
-	}
-	cmd.versions = versions
-	return nil
-}
-
-func (cmd *pinCommand) buildVersionOverridesForOneService(env terra.Environment, serviceName string) error {
-	var release terra.Release
-	for _, r := range env.Releases() {
-		if r.Name() == serviceName {
-			release = r
-		}
-	}
-
-	if release == nil {
-		return fmt.Errorf("error setting version overrides: service %s does not exist in BEE %s", serviceName, env.Name())
-	}
-
-	versions := make(map[string]terra.VersionOverride)
-	versions[release.Name()] = terra.VersionOverride{
-		AppVersion:          cmd.options.appVersion,
-		ChartVersion:        cmd.options.chartVersion,
-		TerraHelmfileRef:    cmd.options.terraHelmfileRef,
-		FirecloudDevelopRef: cmd.options.firecloudDevelopRef,
-	}
-	cmd.versions = versions
 	return nil
 }

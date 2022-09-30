@@ -73,7 +73,7 @@ func Test_Login(t *testing.T) {
 			expectError: "login.*exited with status 2",
 		},
 		{
-			name: "login check fails",
+			name: "browserLogin check fails",
 			setupCommands: func(runner *shell.MockRunner) {
 				runner.ExpectCmd(shell.Command{
 					Prog: "argocd",
@@ -122,7 +122,7 @@ func Test_Login(t *testing.T) {
 				tc.setupCommands(runner)
 			}
 
-			err = Login(thelmaConfig, runner, "my-iap-token")
+			err = BrowserLogin(thelmaConfig, runner, "my-iap-token")
 
 			if tc.expectError == "" {
 				require.NoError(t, err)

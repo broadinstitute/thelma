@@ -4,58 +4,32 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/seedflags"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
 )
 
 type options struct {
-	name                     string
-	force                    bool
-	step1CreateElasticsearch bool
-	step2RegisterSaProfiles  bool
-	step3AddSaSamPermissions bool
-	step4RegisterTestUsers   bool
-	step5CreateAgora         bool
-	step6ExtraUser           []string
-	noSteps                  bool
-	ifExists                 bool
-	registerSelfShortcut     bool
+	name string
 }
 
 var flagNames = struct {
-	name                     string
-	force                    string
-	step1CreateElasticsearch string
-	step2RegisterSaProfiles  string
-	step3AddSaSamPermissions string
-	step4RegisterTestUsers   string
-	step5CreateAgora         string
-	step6ExtraUser           string
-	noSteps                  string
-	ifExists                 string
-	registerSelfShortcut     string
+	name string
 }{
-	name:                     "name",
-	force:                    "force",
-	step1CreateElasticsearch: "step-1-create-elasticsearch",
-	step2RegisterSaProfiles:  "step-2-register-sa-profiles",
-	step3AddSaSamPermissions: "step-3-add-sa-sam-permissions",
-	step4RegisterTestUsers:   "step-4-register-test-users",
-	step5CreateAgora:         "step-5-create-agora",
-	step6ExtraUser:           "step-6-extra-user",
-	noSteps:                  "no-steps",
-	ifExists:                 "if-exists",
-	registerSelfShortcut:     "me",
+	name: "name",
 }
 
 type seedCommand struct {
-	options options
+	options   options
+	seedflags seedflags.SeedFlags
 }
 
 func NewBeeSeedCommand() cli.ThelmaCommand {
-	return &seedCommand{}
+	return &seedCommand{
+		seedflags: seedflags.NewSeedFlags(),
+	}
 }
 
 func (cmd *seedCommand) ConfigureCobra(cobraCommand *cobra.Command) {
@@ -96,17 +70,8 @@ Examples (you'd need to set the --name of your environment):
 `
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "required; name of the BEE to seed")
-	cobraCommand.Flags().BoolVarP(&cmd.options.force, flagNames.force, "f", false, "attempt to ignore errors during seeding")
-	cobraCommand.Flags().BoolVar(&cmd.options.step1CreateElasticsearch, flagNames.step1CreateElasticsearch, true, "create healthy Ontology index with Elasticsearch")
-	cobraCommand.Flags().BoolVar(&cmd.options.step2RegisterSaProfiles, flagNames.step2RegisterSaProfiles, true, "register service account profiles with Orch")
-	cobraCommand.Flags().BoolVar(&cmd.options.step3AddSaSamPermissions, flagNames.step3AddSaSamPermissions, true, "add permissions for app service accounts in Sam")
-	cobraCommand.Flags().BoolVar(&cmd.options.step4RegisterTestUsers, flagNames.step4RegisterTestUsers, true, "register test user accounts with Orch and accept TOS with Sam")
-	cobraCommand.Flags().BoolVar(&cmd.options.step5CreateAgora, flagNames.step5CreateAgora, true, "create Agora's methods repository with Orch")
-	cobraCommand.Flags().StringSliceVarP(&cmd.options.step6ExtraUser, flagNames.step6ExtraUser, "u", []string{}, "optionally register extra users for log-in (skipped by default; can specify multiple times; provide `email` address, \"set-adc\", or \"use-adc\")")
-	cobraCommand.Flags().BoolVar(&cmd.options.noSteps, flagNames.noSteps, false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
-	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "do not return an error if the BEE does not exist")
-	cobraCommand.Flags().BoolVar(&cmd.options.registerSelfShortcut, flagNames.registerSelfShortcut, false, "shorthand for --step-6-extra-user use-adc")
 
+	cmd.seedflags.AddFlags(cobraCommand)
 }
 
 func (cmd *seedCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -121,116 +86,29 @@ func (cmd *seedCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
 
-	// handle --no-steps
-	if cmd.options.noSteps {
-		if !flags.Changed(flagNames.step1CreateElasticsearch) {
-			cmd.options.step1CreateElasticsearch = false
-		}
-		if !flags.Changed(flagNames.step2RegisterSaProfiles) {
-			cmd.options.step2RegisterSaProfiles = false
-		}
-		if !flags.Changed(flagNames.step3AddSaSamPermissions) {
-			cmd.options.step3AddSaSamPermissions = false
-		}
-		if !flags.Changed(flagNames.step4RegisterTestUsers) {
-			cmd.options.step4RegisterTestUsers = false
-		}
-		if !flags.Changed(flagNames.step5CreateAgora) {
-			cmd.options.step5CreateAgora = false
-		}
-		// No need to handle step6ExtraUser; it is empty and does nothing by default
-	}
-
-	// handle --me
-	if cmd.options.registerSelfShortcut {
-		cmd.options.step6ExtraUser = append(cmd.options.step6ExtraUser, "use-adc")
-	}
-
 	return nil
 }
 
-func (cmd *seedCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
-	state, err := app.State()
+func (cmd *seedCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
+	seedOptions, err := cmd.seedflags.GetOptions(rc.CobraCommand())
 	if err != nil {
 		return err
 	}
-	env, err := state.Environments().Get(cmd.options.name)
+
+	bees, err := builders.NewBees(app)
 	if err != nil {
 		return err
 	}
-	if env == nil {
-		if cmd.options.ifExists {
-			log.Warn().Msgf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
-			log.Info().Msgf("Cannot seed, exiting normally to due --%s", flagNames.ifExists)
-			return nil
-		}
-		return fmt.Errorf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
-	}
-	if !env.Lifecycle().IsDynamic() {
-		err = cmd.handleErrorWithForce(
-			fmt.Errorf("environment %s has a lifecycle of %s, instead of %s", env.Name(), env.Lifecycle().String(), terra.Dynamic.String()),
-		)
-		if err != nil {
-			return err
-		}
-	}
-	appReleases := make(map[string]terra.AppRelease)
-	for _, release := range env.Releases() {
-		if release.IsAppRelease() {
-			appRelease, wasAppRelease := release.(terra.AppRelease)
-			if wasAppRelease {
-				appReleases[appRelease.Name()] = appRelease
-			} else {
-				log.Warn().Msgf("%s was an App Release but failed to type-assert", release.Name())
-			}
-		}
+
+	env, err := bees.GetBee(cmd.options.name)
+	if err != nil {
+		return err
 	}
 
-	if cmd.options.step1CreateElasticsearch {
-		if err := cmd.handleErrorWithForce(cmd.step1CreateElasticsearch(app, appReleases)); err != nil {
-			return err
-		}
-	}
-	if cmd.options.step2RegisterSaProfiles {
-		if err := cmd.handleErrorWithForce(cmd.step2RegisterSaProfiles(app, appReleases)); err != nil {
-			return err
-		}
-	}
-	if cmd.options.step3AddSaSamPermissions {
-		if err := cmd.handleErrorWithForce(cmd.step3AddSaSamPermissions(app, appReleases)); err != nil {
-			return err
-		}
-	}
-	if cmd.options.step4RegisterTestUsers {
-		if err := cmd.handleErrorWithForce(cmd.step4RegisterTestUsers(app, appReleases)); err != nil {
-			return err
-		}
-	}
-	if cmd.options.step5CreateAgora {
-		if err := cmd.handleErrorWithForce(cmd.step5CreateAgora(app, appReleases)); err != nil {
-			return err
-		}
-	}
-	if len(cmd.options.step6ExtraUser) > 0 {
-		if err := cmd.handleErrorWithForce(cmd.step6ExtraUser(app, appReleases)); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return bees.Seeder().Seed(env, seedOptions)
 }
 
 func (cmd *seedCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do here
 	return nil
-}
-
-func (cmd *seedCommand) handleErrorWithForce(err error) error {
-	if err != nil && cmd.options.force {
-		log.Warn().Msgf("%v", err.Error())
-		log.Warn().Msgf("Continuing despite above error due to --%s", flagNames.force)
-		return nil
-	} else {
-		return err
-	}
 }

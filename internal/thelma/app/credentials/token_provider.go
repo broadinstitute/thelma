@@ -67,7 +67,7 @@ func (c credentials) NewTokenProvider(key string, options ...TokenOption) TokenP
 		opts.CredentialStore = c.defaultStore
 	}
 
-	return WithMasking(tokenProvider{
+	return withMasking(tokenProvider{
 		key:     key,
 		options: opts,
 	})
