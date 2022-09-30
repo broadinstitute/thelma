@@ -210,7 +210,7 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 	// test urp is loaded correctly
 	swirlyRabbit, err := state.Environments().Get("fiab-swirly-rabbit")
 	require.NoError(t, err)
-	assert.Equal(t, "e991", swirlyRabbit.UniqueResourcePrefix())
+	assert.Equal(t, "e100", swirlyRabbit.UniqueResourcePrefix())
 }
 
 func TestUpdateState(t *testing.T) {
@@ -245,20 +245,20 @@ func Test_EnvironmentAttributes(t *testing.T) {
 	f := statefixtures.LoadFixture(statefixtures.Default, t)
 
 	devEnv := f.Environment("dev")
-	swatEnv := f.Environment("swatomation")
-	hybridEnv := f.Environment("fiab-funky-chipmunk")
+	templateEnv := f.Environment("swatomation")
+	beeEnv := f.Environment("fiab-funky-chipmunk")
 
 	assert.Equal(t, 8, len(devEnv.Releases()))
 	assert.Equal(t, terra.Static, devEnv.Lifecycle())
 	assert.Equal(t, "", devEnv.UniqueResourcePrefix())
 
-	assert.Equal(t, 6, len(swatEnv.Releases()))
-	assert.Equal(t, terra.Template, swatEnv.Lifecycle())
-	assert.Equal(t, "", swatEnv.UniqueResourcePrefix())
+	assert.Equal(t, 6, len(templateEnv.Releases()))
+	assert.Equal(t, terra.Template, templateEnv.Lifecycle())
+	assert.Equal(t, "", templateEnv.UniqueResourcePrefix())
 
-	assert.Equal(t, 6, len(hybridEnv.Releases()))
-	assert.Equal(t, terra.Dynamic, hybridEnv.Lifecycle())
-	assert.Equal(t, "e9a1", hybridEnv.UniqueResourcePrefix())
+	assert.Equal(t, 6, len(beeEnv.Releases()))
+	assert.Equal(t, terra.Dynamic, beeEnv.Lifecycle())
+	assert.Equal(t, "e101", beeEnv.UniqueResourcePrefix())
 }
 
 func Test_ReleaseURLs(t *testing.T) {

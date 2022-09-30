@@ -162,7 +162,7 @@ func Test_BuildStateValues(t *testing.T) {
 				},
 				Environment: Environment{
 					Name:                 "fiab-funky-chipmunk",
-					UniqueResourcePrefix: "e9a1",
+					UniqueResourcePrefix: "e101",
 				},
 				Cluster: Cluster{
 					Name:                "terra-qa",

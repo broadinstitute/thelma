@@ -37,11 +37,6 @@ func (e DynamicEnvironment) MarshalJSON() ([]byte, error) {
 		aux.Overrides = make(map[string]*Override)
 	}
 
-	// Temporary hack to populate URP on all environments
-	if aux.UniqueResourcePrefix == "" {
-		aux.UniqueResourcePrefix = backwardsCompatibleResourcePrefix(e.Name)
-	}
-
 	return json.Marshal(aux)
 }
 
@@ -59,11 +54,6 @@ func (e *DynamicEnvironment) UnmarshalJSON(data []byte) error {
 	// initialize Overrides with empty map if nil
 	if e.Overrides == nil {
 		e.Overrides = make(map[string]*Override)
-	}
-
-	// Temporary hack to populate URP on all environments
-	if e.UniqueResourcePrefix == "" {
-		e.UniqueResourcePrefix = backwardsCompatibleResourcePrefix(e.Name)
 	}
 
 	return nil
