@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const helpMessage = `Exports thelmas internal state to a destination`
+const helpMessage = `Exports thelma's internal state to a destination`
 const prodSherlockHostName = "sherlock.dsp-devops.broadinstitute.org"
 
 var ErrExportDestinationForbidden = fmt.Errorf("state export to production sherlock: %s is not allowed", prodSherlockHostName)
