@@ -2,8 +2,8 @@ package credentials
 
 import "github.com/broadinstitute/thelma/internal/thelma/app/logging"
 
-// WithMasking decorates TokenProvider by configuring Thelma's logger to mask any secrets it returns
-func WithMasking(p TokenProvider) TokenProvider {
+// withMasking decorates TokenProvider by configuring Thelma's logger to mask any secrets it returns
+func withMasking(p TokenProvider) TokenProvider {
 	return &maskingProvider{
 		inner: p,
 	}

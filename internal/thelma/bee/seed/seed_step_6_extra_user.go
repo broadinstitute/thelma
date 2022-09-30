@@ -3,8 +3,6 @@ package seed
 import (
 	"bytes"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -12,11 +10,11 @@ import (
 	"strings"
 )
 
-func (cmd *seedCommand) step6ExtraUser(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
+func (s *seeder) seedStep6ExtraUser(appReleases map[string]terra.AppRelease, opts SeedOptions) error {
 	log.Info().Msg("registering extra users with Orch and Sam...")
 	if orch, orchPresent := appReleases["firecloudorch"]; orchPresent {
 		if sam, samPresent := appReleases["sam"]; samPresent {
-			for index, extraUser := range cmd.options.step6ExtraUser {
+			for index, extraUser := range opts.Step6ExtraUser {
 				log.Info().Msgf("Extra user %d - %s - registering", index+1, extraUser)
 
 				if strings.ToLower(extraUser) == "set-adc" {
@@ -29,7 +27,7 @@ func (cmd *seedCommand) step6ExtraUser(thelma app.ThelmaApp, appReleases map[str
 						"https://www.googleapis.com/auth/userinfo.profile",
 						"openid",
 					}
-					err := thelma.ShellRunner().Run(shell.Command{
+					err := s.shellRunner.Run(shell.Command{
 						Prog: "gcloud",
 						Args: []string{
 							"auth",
@@ -38,7 +36,7 @@ func (cmd *seedCommand) step6ExtraUser(thelma app.ThelmaApp, appReleases map[str
 							fmt.Sprintf("--scopes=%s", strings.Join(scopes, ",")),
 						}})
 					if err != nil {
-						if err = cmd.handleErrorWithForce(err); err != nil {
+						if err = opts.handleErrorWithForce(err); err != nil {
 							return err
 						}
 						continue
@@ -48,11 +46,11 @@ func (cmd *seedCommand) step6ExtraUser(thelma app.ThelmaApp, appReleases map[str
 
 				var googleClient google.Clients
 				if strings.ToLower(extraUser) == "use-adc" || strings.ToLower(extraUser) == "set-adc" {
-					googleClient = thelma.Clients().GoogleUsingADC(true)
+					googleClient = s.clientFactory.GoogleUsingADC(true)
 				} else {
-					g, err := seed.GoogleAuthAs(thelma, orch)
+					g, err := s.googleAuthAs(orch)
 					if err != nil {
-						if err = cmd.handleErrorWithForce(err); err != nil {
+						if err = opts.handleErrorWithForce(err); err != nil {
 							return err
 						}
 						continue
@@ -63,7 +61,7 @@ func (cmd *seedCommand) step6ExtraUser(thelma app.ThelmaApp, appReleases map[str
 
 				terraClient, err := googleClient.Terra()
 				if err != nil {
-					if err = cmd.handleErrorWithForce(err); err != nil {
+					if err = opts.handleErrorWithForce(err); err != nil {
 						return err
 					}
 					continue
@@ -74,7 +72,7 @@ func (cmd *seedCommand) step6ExtraUser(thelma app.ThelmaApp, appReleases map[str
 				if firstName == "" || lastName == "" {
 					log.Warn().Msg("Name missing from GoogleUserInfo with current credentials (probably ADC with default scopes)")
 					var buffer bytes.Buffer
-					err = thelma.ShellRunner().Run(
+					err = s.shellRunner.Run(
 						shell.Command{
 							Prog: "bash",
 							Args: []string{"-c", "id -P $(stat -f%Su /dev/console) | awk -F '[:]' '{print $8}'"}},
@@ -109,12 +107,12 @@ func (cmd *seedCommand) step6ExtraUser(thelma app.ThelmaApp, appReleases map[str
 					"None", "None",
 					"None", "None", "None",
 					"None", "None")
-				if err = cmd.handleErrorWithForce(err); err != nil {
+				if err = opts.handleErrorWithForce(err); err != nil {
 					return err
 				}
 				log.Info().Msgf("Extra user %d - %s - approving Terms of Service", index+1, extraUser)
 				_, _, err = terraClient.Sam(sam).AcceptToS()
-				if err = cmd.handleErrorWithForce(err); err != nil {
+				if err = opts.handleErrorWithForce(err); err != nil {
 					return err
 				}
 			}

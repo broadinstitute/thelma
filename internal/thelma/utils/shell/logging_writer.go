@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const eol = '\n'
+
 // LoggingWriter an io.Writer that logs messages that are sent to it with Write() and optionally forwards to another io.Writer
 type LoggingWriter struct {
 	level  zerolog.Level

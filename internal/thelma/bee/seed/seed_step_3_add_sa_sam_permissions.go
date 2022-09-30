@@ -1,26 +1,23 @@
 package seed
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 )
 
-func (cmd *seedCommand) step3AddSaSamPermissions(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
+func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRelease, opts SeedOptions) error {
 	log.Info().Msg("adding SAs of other apps to Sam permissions...")
 	if sam, samPresent := appReleases["sam"]; samPresent {
 
 		var emails []string
-
 		if rawls, rawlsPresent := appReleases["rawls"]; rawlsPresent {
 			log.Info().Msgf("will add Rawls SA permissions to %s", sam.Host())
-			googleClient, err := seed.GoogleAuthAs(thelma, rawls)
-			if err := cmd.handleErrorWithForce(err); err != nil {
+			googleClient, err := s.googleAuthAs(rawls)
+			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
 			terraClient, err := googleClient.Terra()
-			if err := cmd.handleErrorWithForce(err); err != nil {
+			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
 			emails = append(emails, terraClient.GoogleUserInfo().Email)
@@ -30,12 +27,12 @@ func (cmd *seedCommand) step3AddSaSamPermissions(thelma app.ThelmaApp, appReleas
 
 		if leo, leoPresent := appReleases["leonardo"]; leoPresent {
 			log.Info().Msgf("will add Leo SA permissions to %s", sam.Host())
-			googleClient, err := seed.GoogleAuthAs(thelma, leo)
-			if err := cmd.handleErrorWithForce(err); err != nil {
+			googleClient, err := s.googleAuthAs(leo)
+			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
 			terraClient, err := googleClient.Terra()
-			if err := cmd.handleErrorWithForce(err); err != nil {
+			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
 			emails = append(emails, terraClient.GoogleUserInfo().Email)
@@ -45,12 +42,12 @@ func (cmd *seedCommand) step3AddSaSamPermissions(thelma app.ThelmaApp, appReleas
 
 		if importService, importServicePresent := appReleases["importservice"]; importServicePresent {
 			log.Info().Msgf("will add Import Service SA permissions to %s", sam.Host())
-			googleClient, err := seed.GoogleAuthAs(thelma, importService)
-			if err := cmd.handleErrorWithForce(err); err != nil {
+			googleClient, err := s.googleAuthAs(importService)
+			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
 			terraClient, err := googleClient.Terra()
-			if err := cmd.handleErrorWithForce(err); err != nil {
+			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
 			emails = append(emails, terraClient.GoogleUserInfo().Email)
@@ -58,12 +55,12 @@ func (cmd *seedCommand) step3AddSaSamPermissions(thelma app.ThelmaApp, appReleas
 			log.Info().Msg("Import Service not present in environment, skipping")
 		}
 
-		googleClient, err := seed.GoogleAuthAs(thelma, sam)
+		googleClient, err := s.googleAuthAs(sam)
 		if err != nil {
 			return err
 		}
 		terraClient, err := googleClient.Terra()
-		if err := cmd.handleErrorWithForce(err); err != nil {
+		if err := opts.handleErrorWithForce(err); err != nil {
 			return err
 		}
 		emails = append(emails, terraClient.GoogleUserInfo().Email)

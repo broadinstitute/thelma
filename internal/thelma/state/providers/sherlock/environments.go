@@ -47,25 +47,25 @@ func (e *environments) Exists(name string) (bool, error) {
 	return exists, nil
 }
 
-func (e *environments) CreateFromTemplate(name string, template terra.Environment) error {
-	return e.CreateHybridFromTemplate(name, template, nil)
-}
-
-func (e *environments) CreateHybridFromTemplate(name string, template terra.Environment, fiab terra.Fiab) error {
+func (e *environments) CreateFromTemplate(name string, template terra.Environment) (terra.Environment, error) {
 	exists, err := e.Exists(name)
 	if err != nil {
-		return fmt.Errorf("error checking for environment name conflict: %v", err)
+		return nil, fmt.Errorf("error checking for environment name conflict: %v", err)
 	}
 	if exists {
-		return fmt.Errorf("can't create environment: %s: an environment of the same name already exists", template.Name())
+		return nil, fmt.Errorf("can't create environment: %s: an environment of the same name already exists", template.Name())
 	}
 
 	if !template.Lifecycle().IsTemplate() {
-		return fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
+		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
 	}
 
 	panic("TODO")
 
+}
+
+func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment) (terra.Environment, error) {
+	panic("TODO")
 }
 
 func (e *environments) EnableRelease(environmentName string, releaseName string) error {

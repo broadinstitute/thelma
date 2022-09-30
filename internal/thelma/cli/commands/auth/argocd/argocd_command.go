@@ -33,7 +33,7 @@ func (cmd *argocdCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve IAP token: %v", err)
 	}
-	if err = argocd.Login(app.Config(), app.ShellRunner(), iapToken); err != nil {
+	if err = argocd.BrowserLogin(app.Config(), app.ShellRunner(), iapToken); err != nil {
 		return err
 	}
 	log.Info().Msgf("Successfully authenticated to ArgoCD")

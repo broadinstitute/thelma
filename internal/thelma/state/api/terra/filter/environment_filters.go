@@ -3,6 +3,7 @@ package filter
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"strings"
 )
 
 func Environments() EnvironmentFilters {
@@ -23,6 +24,8 @@ type EnvironmentFilters interface {
 	HasTemplate(template terra.Environment) terra.EnvironmentFilter
 	// HasTemplateName matches environments with the given template name(s)
 	HasTemplateName(templateNames ...string) terra.EnvironmentFilter
+	// NameIncludes returns environments with names that include the given substring
+	NameIncludes(substring string) terra.EnvironmentFilter
 	// Or returns a filter that matches environments that match _any_ of the given filters
 	Or(filters ...terra.EnvironmentFilter) terra.EnvironmentFilter
 	//And returns a filter that matches environments that match _all_ of the given filters
@@ -101,6 +104,15 @@ func (e environmentFilters) HasTemplateName(templateNames ...string) terra.Envir
 				}
 			}
 			return false
+		},
+	}
+}
+
+func (e environmentFilters) NameIncludes(substring string) terra.EnvironmentFilter {
+	return environmentFilter{
+		string: fmt.Sprintf("nameIncludes(%q)", substring),
+		matcher: func(environment terra.Environment) bool {
+			return strings.Contains(environment.Name(), substring)
 		},
 	}
 }

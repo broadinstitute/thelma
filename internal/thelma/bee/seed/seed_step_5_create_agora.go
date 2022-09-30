@@ -2,33 +2,31 @@ package seed
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 )
 
-func (cmd *seedCommand) step5CreateAgora(thelma app.ThelmaApp, appReleases map[string]terra.AppRelease) error {
+func (s *seeder) seedStep5CreateAgora(appReleases map[string]terra.AppRelease, opts SeedOptions) error {
 	log.Info().Msg("creating Agora methods repository with Orch...")
-	seedConfig, err := seed.ConfigWithAgoraData(thelma)
+	seedConfig, err := s.configWithAgoraData()
 	if err != nil {
 		return err
 	}
 	if orch, orchPresent := appReleases["firecloudorch"]; orchPresent {
 		if _, agoraPresent := appReleases["agora"]; agoraPresent {
-			var acls []seed.AgoraPermission
+			var acls []AgoraPermission
 			if orch.Cluster().ProjectSuffix() == "dev" {
 				acls = seedConfig.Agora.Permissions.Dev
 			} else if orch.Cluster().ProjectSuffix() == "qa" {
 				acls = seedConfig.Agora.Permissions.QA
 			} else {
 				err = fmt.Errorf("suffix %s of project %s maps to not Agora ACLs", orch.Cluster().ProjectSuffix(), orch.Cluster().Project())
-				if err = cmd.handleErrorWithForce(err); err != nil {
+				if err = opts.handleErrorWithForce(err); err != nil {
 					return err
 				}
 			}
 
-			googleClient, err := seed.GoogleAuthAs(thelma, orch)
+			googleClient, err := s.googleAuthAs(orch)
 			if err != nil {
 				return err
 			}
@@ -46,7 +44,7 @@ func (cmd *seedCommand) step5CreateAgora(thelma app.ThelmaApp, appReleases map[s
 				observedNamespaces[method.Namespace] = struct{}{}
 				_, _, err = orchClient.AgoraMakeMethod(method)
 				if err != nil {
-					if err = cmd.handleErrorWithForce(err); err != nil {
+					if err = opts.handleErrorWithForce(err); err != nil {
 						return err
 					}
 					continue
@@ -54,7 +52,7 @@ func (cmd *seedCommand) step5CreateAgora(thelma app.ThelmaApp, appReleases map[s
 				if len(acls) > 0 {
 					log.Info().Msgf("Method %d - %s - setting ACLs", index+1, method.Name)
 					_, _, err = orchClient.AgoraSetMethodACLs(method.Name, method.Namespace, acls)
-					if err = cmd.handleErrorWithForce(err); err != nil {
+					if err = opts.handleErrorWithForce(err); err != nil {
 						return err
 					}
 				} else {
@@ -67,7 +65,7 @@ func (cmd *seedCommand) step5CreateAgora(thelma app.ThelmaApp, appReleases map[s
 				observedNamespaces[config.Namespace] = struct{}{}
 				_, _, err = orchClient.AgoraMakeConfig(config)
 				if err != nil {
-					if err = cmd.handleErrorWithForce(err); err != nil {
+					if err = opts.handleErrorWithForce(err); err != nil {
 						return err
 					}
 					continue
@@ -75,7 +73,7 @@ func (cmd *seedCommand) step5CreateAgora(thelma app.ThelmaApp, appReleases map[s
 				if len(acls) > 0 {
 					log.Info().Msgf("Configuration %d - %s - setting ACLs", index+1, config.Name)
 					_, _, err = orchClient.AgoraSetConfigACLs(config.Name, config.Namespace, acls)
-					if err = cmd.handleErrorWithForce(err); err != nil {
+					if err = opts.handleErrorWithForce(err); err != nil {
 						return err
 					}
 				} else {
@@ -87,7 +85,7 @@ func (cmd *seedCommand) step5CreateAgora(thelma app.ThelmaApp, appReleases map[s
 				for namespace := range observedNamespaces {
 					log.Info().Msgf("Namespace %s - setting ACLs", namespace)
 					_, _, err = orchClient.AgoraSetNamespaceACLs(namespace, acls)
-					if err = cmd.handleErrorWithForce(err); err != nil {
+					if err = opts.handleErrorWithForce(err); err != nil {
 						return err
 					}
 				}

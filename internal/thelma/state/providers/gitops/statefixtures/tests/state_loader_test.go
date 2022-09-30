@@ -207,10 +207,10 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "completely-different-pr", paniniRawls[0].TerraHelmfileRef())
 
-	// test build number is loaded correctly
+	// test urp is loaded correctly
 	swirlyRabbit, err := state.Environments().Get("fiab-swirly-rabbit")
 	require.NoError(t, err)
-	assert.Equal(t, 123, swirlyRabbit.BuildNumber())
+	assert.Equal(t, "e991", swirlyRabbit.UniqueResourcePrefix())
 }
 
 func TestUpdateState(t *testing.T) {
@@ -228,7 +228,7 @@ func TestUpdateState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, missingEnv)
 
-	err = state.Environments().CreateFromTemplate("sam-ci-003", template)
+	_, err = state.Environments().CreateFromTemplate("sam-ci-003", template)
 	require.NoError(t, err)
 
 	state, err = app.State() // reload state
@@ -250,15 +250,15 @@ func Test_EnvironmentAttributes(t *testing.T) {
 
 	assert.Equal(t, 8, len(devEnv.Releases()))
 	assert.Equal(t, terra.Static, devEnv.Lifecycle())
-	assert.False(t, devEnv.IsHybrid())
+	assert.Equal(t, "", devEnv.UniqueResourcePrefix())
 
 	assert.Equal(t, 6, len(swatEnv.Releases()))
 	assert.Equal(t, terra.Template, swatEnv.Lifecycle())
-	assert.False(t, swatEnv.IsHybrid())
+	assert.Equal(t, "", swatEnv.UniqueResourcePrefix())
 
 	assert.Equal(t, 6, len(hybridEnv.Releases()))
 	assert.Equal(t, terra.Dynamic, hybridEnv.Lifecycle())
-	assert.True(t, hybridEnv.IsHybrid())
+	assert.Equal(t, "e9a1", hybridEnv.UniqueResourcePrefix())
 }
 
 func Test_ReleaseURLs(t *testing.T) {

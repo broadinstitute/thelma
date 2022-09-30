@@ -1,9 +1,13 @@
 package cli
 
 import (
+	"bytes"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/printing/format"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // commandKey key of the thelma tool
@@ -36,6 +40,7 @@ func (r *rootCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (r *rootCommand) PreRun(_ app.ThelmaApp, _ RunContext) error {
+	log.Debug().Strs("argv", os.Args).Msgf("Starting new thelma run")
 	// check that output format flags were used correctly
 	if err := r.printer.VerifyFlags(); err != nil {
 		return err
@@ -48,8 +53,15 @@ func (r *rootCommand) Run(_ app.ThelmaApp, _ RunContext) error {
 }
 
 func (r *rootCommand) PostRun(_ app.ThelmaApp, ctx RunContext) error {
-	// write output to stdout
 	if ctx.HasOutput() {
+		// write YAML-formatted output to debug log
+		buf := &bytes.Buffer{}
+		if err := format.Yaml.Format(ctx.Output(), buf); err != nil {
+			log.Warn().Err(err).Msgf("error writing output to debug log")
+		}
+		log.Debug().Str("output", buf.String()).Msgf("Writing thelma output")
+
+		// write user-formatted output to stdout (or file, as configured)
 		if err := r.printer.PrintOutput(ctx.Output(), ctx.CobraCommand().OutOrStdout()); err != nil {
 			return err
 		}

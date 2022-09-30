@@ -4,18 +4,15 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/unseedflags"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
 )
 
 type options struct {
-	name                    string
-	force                   bool
-	step1UnregisterAllUsers bool
-	noSteps                 bool
-	ifExists                bool
+	name string
 }
 
 var flagNames = struct {
@@ -23,21 +20,22 @@ var flagNames = struct {
 	force                   string
 	step1UnregisterAllUsers string
 	noSteps                 string
-	ifExists                string
 }{
 	name:                    "name",
 	force:                   "force",
 	step1UnregisterAllUsers: "step-1-unregister-all-users",
 	noSteps:                 "no-steps",
-	ifExists:                "if-exists",
 }
 
 type unseedCommand struct {
-	options options
+	options     options
+	unseedFlags unseedflags.UnseedFlags
 }
 
 func NewBeeUnseedCommand() cli.ThelmaCommand {
-	return &unseedCommand{}
+	return &unseedCommand{
+		unseedFlags: unseedflags.NewUnseedFlags(),
+	}
 }
 
 func (cmd *unseedCommand) ConfigureCobra(cobraCommand *cobra.Command) {
@@ -68,11 +66,8 @@ Examples (you'd need to set the --name of your environment):
 `
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "required; name of the BEE to seed")
-	cobraCommand.Flags().BoolVarP(&cmd.options.force, flagNames.force, "f", false, "attempt to ignore errors during seeding")
-	cobraCommand.Flags().BoolVar(&cmd.options.step1UnregisterAllUsers, flagNames.step1UnregisterAllUsers, true, "unregister all user accounts with Sam")
-	cobraCommand.Flags().BoolVar(&cmd.options.noSteps, flagNames.noSteps, false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
-	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "do not return an error if the BEE does not exist")
 
+	cmd.unseedFlags.AddFlags(cobraCommand)
 }
 
 func (cmd *unseedCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -87,72 +82,29 @@ func (cmd *unseedCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
 
-	// handle --no-steps
-	if cmd.options.noSteps {
-		if !flags.Changed(flagNames.step1UnregisterAllUsers) {
-			cmd.options.step1UnregisterAllUsers = false
-		}
-	}
 	return nil
 }
 
-func (cmd *unseedCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
-	state, err := app.State()
+func (cmd *unseedCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
+	bees, err := builders.NewBees(app)
 	if err != nil {
 		return err
 	}
-	env, err := state.Environments().Get(cmd.options.name)
+
+	unseedOptions, err := cmd.unseedFlags.GetOptions(rc.CobraCommand())
 	if err != nil {
 		return err
 	}
-	if env == nil {
-		if cmd.options.ifExists {
-			log.Warn().Msgf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
-			log.Info().Msgf("Cannot seed, exiting normally to due --%s", flagNames.ifExists)
-			return nil
-		}
-		return fmt.Errorf("BEE %s not found, it could be a vanilla FiaB or not might exist at all", cmd.options.name)
-	}
-	if !env.Lifecycle().IsDynamic() {
-		err = cmd.handleErrorWithForce(
-			fmt.Errorf("environment %s has a lifecycle of %s, instead of %s", env.Name(), env.Lifecycle().String(), terra.Dynamic.String()),
-		)
-		if err != nil {
-			return err
-		}
-	}
-	appReleases := make(map[string]terra.AppRelease)
-	for _, release := range env.Releases() {
-		if release.IsAppRelease() {
-			appRelease, wasAppRelease := release.(terra.AppRelease)
-			if wasAppRelease {
-				appReleases[appRelease.Name()] = appRelease
-			} else {
-				log.Warn().Msgf("%s was an App Release but failed to type-assert", release.Name())
-			}
-		}
+
+	env, err := bees.GetBee(cmd.options.name)
+	if err != nil {
+		return err
 	}
 
-	if cmd.options.step1UnregisterAllUsers {
-		if err := cmd.handleErrorWithForce(cmd.step1UnregisterAllUsers(app, appReleases)); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return bees.Seeder().Unseed(env, unseedOptions)
 }
 
 func (cmd *unseedCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	// nothing to do here
 	return nil
-}
-
-func (cmd *unseedCommand) handleErrorWithForce(err error) error {
-	if err != nil && cmd.options.force {
-		log.Warn().Msgf("%v", err.Error())
-		log.Warn().Msgf("Continuing despite above error due to --%s", flagNames.force)
-		return nil
-	} else {
-		return err
-	}
 }

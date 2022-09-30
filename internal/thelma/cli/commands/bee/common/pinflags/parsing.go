@@ -1,4 +1,4 @@
-package pin
+package pinflags
 
 import (
 	"bufio"

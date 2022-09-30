@@ -1,7 +1,9 @@
 package bee
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
@@ -14,31 +16,48 @@ const generatorArgoApp = "terra-bee-generator"
 
 type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
-	CreateWith(name string, options CreateOptions) (terra.Environment, error)
+	CreateWith(options CreateOptions) (terra.Environment, error)
+	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
-	RefreshBeeGenerator() error
+	Seeder() seed.Seeder
+	FilterBees(filter terra.EnvironmentFilter) ([]terra.Environment, error)
+	PinVersions(bee terra.Environment, overrides PinOptions) error
+	UnpinVersions(bee terra.Environment) error
 	SyncEnvironmentGenerator(env terra.Environment) error
 	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error
 	ResetStatefulSets(env terra.Environment) error
+	RefreshBeeGenerator() error
 }
 
 type DeleteOptions struct {
-	IgnoreMissing bool
+	Unseed bool
 }
 
 type CreateOptions struct {
-	Template string
-	Hybrid   bool
-	Fiab     struct {
-		Name string
-		IP   string
-	}
+	Name              string
+	NamePrefix        string
+	GenerateName      bool
+	Template          string
 	SyncGeneratorOnly bool
 	WaitHealthy       bool
-	TerraHelmfileRef  string
+	PinOptions        PinOptions
+	Seed              bool
+	SeedOptions       seed.SeedOptions
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, kubectl kubectl.Kubectl) (Bees, error) {
+type PinOptions struct {
+	// Flags holds global-to-the-environment overrides like --terra-helmfile-ref, firecloud-develop-ref, --build-number
+	Flags struct {
+		// TerraHelmfileRef the ref the environments Argo app generator should use
+		TerraHelmfileRef string
+		// FirecloudDevelopRef the ref the environments Argo app generator should use
+		FirecloudDevelopRef string
+	}
+	// FileOverrides holds overrides for individual releases, loaded from a YAML or JSON file
+	FileOverrides map[string]terra.VersionOverride
+}
+
+func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, kubectl kubectl.Kubectl) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -48,6 +67,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, kubectl kubect
 		argocd:      argocd,
 		state:       state,
 		stateLoader: stateLoader,
+		seeder:      seeder,
 		kubectl:     kubectl,
 	}, nil
 }
@@ -57,48 +77,48 @@ type bees struct {
 	argocd      argocd.ArgoCD
 	state       terra.State
 	stateLoader terra.StateLoader
+	seeder      seed.Seeder
 	kubectl     kubectl.Kubectl
 }
 
-func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment, error) {
+func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 	template, err := b.GetTemplate(options.Template)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if options.Hybrid {
-		err = b.state.Environments().CreateHybridFromTemplate(name, template, terra.NewFiab(options.Fiab.Name, options.Fiab.IP))
+	var env terra.Environment
+	if options.GenerateName {
+		env, err = b.state.Environments().CreateFromTemplateGenerateName(options.NamePrefix, template)
 	} else {
-		err = b.state.Environments().CreateFromTemplate(name, template)
+		env, err = b.state.Environments().CreateFromTemplate(options.Name, template)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info().Msgf("Created new environment %s", name)
+	log.Info().Msgf("Created new environment %s", env.Name())
 
-	if options.TerraHelmfileRef != "" {
-		log.Info().Msgf("Pinning %s to terra-helmfile ref: %s", name, options.TerraHelmfileRef)
-		if err = b.state.Environments().PinEnvironmentToTerraHelmfileRef(name, options.TerraHelmfileRef); err != nil {
-			return nil, err
-		}
-	}
-
+	// Load environment from state file
 	if err = b.reloadState(); err != nil {
 		return nil, err
 	}
-	env, err := b.state.Environments().Get(name)
+	env, err = b.state.Environments().Get(env.Name())
 	if err != nil {
 		return nil, err
 	}
 	if env == nil {
 		// don't think this could ever happen, but let's provide a useful error anyway
-		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", name)
+		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", env.Name())
 	}
 
 	err = b.kubectl.CreateNamespace(env)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = b.PinVersions(env, options.PinOptions); err != nil {
 		return nil, err
 	}
 
@@ -120,25 +140,37 @@ func (b *bees) CreateWith(name string, options CreateOptions) (terra.Environment
 	log.Info().Msgf("Syncing all Argo apps in environment %s", env.Name())
 	err = b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
 		// No need to do a legacy configs restart the first time we create a BEE
-		// (the deployments are being created for the first time, so they'll definitely pick up changes)
+		// (the deployments are being created for the first time)
+		_options.SyncIfNoDiff = true
 		_options.SkipLegacyConfigsRestart = true
 		_options.WaitHealthy = options.WaitHealthy
 	})
+	if err != nil {
+		return env, err
+	}
+
+	if options.Seed {
+		log.Info().Msgf("Seeding BEE with test data")
+		if err = b.seeder.Seed(env, options.SeedOptions); err != nil {
+			return env, err
+		}
+	}
+
 	return env, err
 }
 
 func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment, error) {
-	env, err := b.state.Environments().Get(name)
+	env, err := b.GetBee(name)
 	if err != nil {
 		return nil, err
 	}
 
-	if env == nil {
-		if options.IgnoreMissing {
-			log.Warn().Msgf("Could not delete %s, no BEE by that name exists", name)
-			return nil, nil
-		} else {
-			return nil, fmt.Errorf("delete %s failed: no BEE by that name exists", name)
+	if options.Unseed {
+		log.Info().Msgf("Unseeding BEE before deletion")
+		if err = b.seeder.Unseed(env, seed.UnseedOptions{
+			Step1UnregisterAllUsers: true,
+		}); err != nil {
+			log.Warn().Err(err).Msgf("Failed to unseed %s; will proceed with deletion", name)
 		}
 	}
 
@@ -149,6 +181,7 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 	if err = b.state.Environments().Delete(env.Name()); err != nil {
 		return nil, err
 	}
+
 	log.Info().Msgf("Deleted environment %s from state", name)
 
 	log.Info().Msgf("Deleting Argo apps for %s", name)
@@ -180,6 +213,85 @@ func (b *bees) RefreshBeeGenerator() error {
 	//   https://github.com/argoproj/argo-cd/issues/4505#issuecomment-880271371
 	// We perform a hard refresh with autosync
 	return b.argocd.HardRefresh(generatorArgoApp)
+}
+
+func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) error {
+	// pin global terra-helmfile ref, if one is specified
+	if pinOptions.Flags.TerraHelmfileRef != "" {
+		was := bee.TerraHelmfileRef()
+		if err := b.state.Environments().PinEnvironmentToTerraHelmfileRef(bee.Name(), pinOptions.Flags.TerraHelmfileRef); err != nil {
+			return err
+		}
+		log.Info().Msgf("Set terra-helmfile ref to %s for %s (was: %s)", bee.Name(), pinOptions.Flags.TerraHelmfileRef, was)
+	}
+
+	// now, pin version overrides for individual releases.
+	releaseOverrides := make(map[string]terra.VersionOverride)
+	for _, r := range bee.Releases() {
+		// start with an empty override
+		var override terra.VersionOverride
+
+		// if an override was set in the file using `--versions-file` flag, use that
+		if fromFile, exists := pinOptions.FileOverrides[r.Name()]; exists {
+			override = fromFile
+		}
+
+		// if global --terra-helmfile-ref was set, add it to our release override
+		if pinOptions.Flags.TerraHelmfileRef != "" {
+			override.TerraHelmfileRef = pinOptions.Flags.TerraHelmfileRef
+		}
+
+		// if global --firecloud-develop-ref was set, add it to our release override
+		if pinOptions.Flags.FirecloudDevelopRef != "" {
+			override.FirecloudDevelopRef = pinOptions.Flags.FirecloudDevelopRef
+		}
+
+		releaseOverrides[r.Name()] = override
+	}
+	releaseOverridesJson, err := json.Marshal(releaseOverrides)
+	if err != nil {
+		return err
+	}
+
+	log.Debug().Bytes("overrides", releaseOverridesJson).Msgf("Updating release version overrides for %s", bee.Name())
+
+	_, err = b.state.Environments().PinVersions(bee.Name(), releaseOverrides)
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("Updated version overrides for %s", bee.Name())
+	return nil
+}
+
+func (b *bees) UnpinVersions(bee terra.Environment) error {
+	wasTerraHelmfileRef := bee.TerraHelmfileRef()
+	removed, err := b.state.Environments().UnpinVersions(bee.Name())
+	if err != nil {
+		return err
+	}
+	asJson, err := json.Marshal(removed)
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("Removed terra-helmfile version overrides for %s (was: %s)", bee.Name(), wasTerraHelmfileRef)
+	log.Info().Bytes("was", asJson).Msgf("Removed all release version overrides for %s", bee.Name())
+
+	return nil
+}
+
+func (b *bees) GetBee(name string) (terra.Environment, error) {
+	env, err := b.state.Environments().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	if env == nil {
+		return nil, fmt.Errorf("no BEE by the name %q exists", name)
+	}
+	if env.Lifecycle() != terra.Dynamic {
+		return nil, fmt.Errorf("environment %s is not a BEE (lifecycle is %s)", name, env.Lifecycle())
+	}
+	return env, nil
 }
 
 func (b *bees) GetTemplate(name string) (terra.Environment, error) {
@@ -216,6 +328,15 @@ func (b *bees) ResetStatefulSets(env terra.Environment) error {
 	}
 
 	return nil
+}
+
+func (b *bees) Seeder() seed.Seeder {
+	return b.seeder
+}
+
+func (b *bees) FilterBees(_filter terra.EnvironmentFilter) ([]terra.Environment, error) {
+	_filter = filter.Environments().HasLifecycle(terra.Dynamic).And(_filter)
+	return b.state.Environments().Filter(_filter)
 }
 
 func (b *bees) templateNames() ([]string, error) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -19,17 +19,14 @@ thelma bee unpin --name=swat-grungy-puma
 `
 
 type options struct {
-	name     string
-	ifExists bool
+	name string
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name     string
-	ifExists string
+	name string
 }{
-	name:     "name",
-	ifExists: "if-exists",
+	name: "name",
 }
 
 type unpinCommand struct {
@@ -46,7 +43,6 @@ func (cmd *unpinCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.options.name, flagNames.name, "n", "", "Required. Name of the BEE to unpin")
-	cobraCommand.Flags().BoolVar(&cmd.options.ifExists, flagNames.ifExists, false, "Do not return an error if the BEE does not exist")
 }
 
 func (cmd *unpinCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -77,25 +73,10 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	if env == nil {
-		if cmd.options.ifExists {
-			log.Warn().Msgf("Could not unpin %s, no BEE by that name exists", cmd.options.name)
-			return nil
-		}
-		return fmt.Errorf("--%s: unknown bee %q", flagNames.name, cmd.options.name)
-	}
 
-	removed, err := state.Environments().UnpinVersions(cmd.options.name)
-	if err != nil {
+	if err = bees.UnpinVersions(env); err != nil {
 		return err
 	}
-	log.Info().Msgf("Removed all version overrides for %s", cmd.options.name)
-
-	buildNumber, err := state.Environments().UnsetBuildNumber(cmd.options.name)
-	if err != nil {
-		return err
-	}
-	log.Info().Msgf("Unset build number for %s (was %d)", cmd.options.name, buildNumber)
 
 	if err = bees.RefreshBeeGenerator(); err != nil {
 		return err
@@ -104,8 +85,6 @@ func (cmd *unpinCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	log.Info().Msgf("The following overrides were removed:")
-	rc.SetOutput(removed)
 	return nil
 }
 

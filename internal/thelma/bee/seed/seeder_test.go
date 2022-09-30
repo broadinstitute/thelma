@@ -25,8 +25,8 @@ func Test_ignore409Conflict(t *testing.T) {
   "statusCode": 409
 })`)
 
-	assert.Nil(t, ignore409Conflict(err), "should suppress 409 Conflict errors")
+	assert.Nil(t, _ignore409Conflict(err), "should suppress 409 Conflict errors")
 
 	err = errors.New("a completely unexpected error")
-	assert.Error(t, ignore409Conflict(err), "should not ignore other errors")
+	assert.Error(t, _ignore409Conflict(err), "should not ignore other errors")
 }
