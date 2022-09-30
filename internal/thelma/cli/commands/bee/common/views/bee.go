@@ -15,7 +15,7 @@ type BeeDetail struct {
 	Name                 string                           `json:"name"`
 	Template             string                           `json:"template"`
 	TerraHelmfileRef     string                           `json:"terraHelmfileRef,omitempty" yaml:"terraHelmfileRef,omitempty"`
-	UniqueResourcePrefix string                           `json:"uniqueResourcePrefix"`
+	UniqueResourcePrefix string                           `json:"uniqueResourcePrefix" yaml:"uniqueResourcePrefix"`
 	Overrides            map[string]*statebucket.Override `json:"overrides,omitempty" yaml:",omitempty"`
 }
 
