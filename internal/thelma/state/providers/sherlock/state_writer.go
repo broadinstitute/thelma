@@ -1,17 +1,16 @@
 package sherlock
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 )
 
 type stateWriter struct {
-	stateWriter sherlock.StateWriter
+	stateWriter terra.StateWriter
 	state       terra.State
 }
 
-func NewSherlockStateWriter(state terra.State, writer sherlock.StateWriter) *stateWriter {
+func NewSherlockStateWriter(state terra.State, writer terra.StateWriter) *stateWriter {
 	return &stateWriter{
 		stateWriter: writer,
 		state:       state,

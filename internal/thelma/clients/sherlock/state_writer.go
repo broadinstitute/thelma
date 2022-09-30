@@ -13,11 +13,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 )
 
-type StateWriter interface {
-	WriteEnvironments([]terra.Environment) error
-	WriteClusters([]terra.Cluster) error
-}
-
 func (s *Client) WriteEnvironments(envs []terra.Environment) error {
 	for _, environment := range envs {
 		newEnv := toModelCreatableEnvironment(environment)
