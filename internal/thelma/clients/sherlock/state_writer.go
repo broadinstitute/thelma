@@ -62,23 +62,15 @@ func (s *Client) WriteClusters(cls []terra.Cluster) error {
 }
 
 func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
-	// set function *T optional values since function returns are not directly
-	// addressable via pointers
-	baseDomain := env.BaseDomain()
-	lifecycle := env.Lifecycle().String()
-	namePrefixesDomain := env.NamePrefixesDomain()
-	requireSuitability := env.RequireSuitable()
-
 	return &models.V2controllersCreatableEnvironment{
-		Base:       env.Base(),
-		BaseDomain: &baseDomain,
-		// ChartReleasesFromTemplate: environment,
+		Base:                env.Base(),
+		BaseDomain:          utils.Nullable(env.BaseDomain()),
 		DefaultCluster:      env.DefaultCluster().Name(),
 		DefaultNamespace:    env.Namespace(),
-		Lifecycle:           &lifecycle,
+		Lifecycle:           utils.Nullable(env.Lifecycle().String()),
 		Name:                env.Name(),
-		NamePrefixesDomain:  &namePrefixesDomain,
-		RequiresSuitability: &requireSuitability,
+		NamePrefixesDomain:  utils.Nullable(env.NamePrefixesDomain()),
+		RequiresSuitability: utils.Nullable(env.RequireSuitable()),
 		TemplateEnvironment: env.Template(),
 	}
 }
@@ -86,14 +78,13 @@ func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCre
 func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatableCluster {
 	// Hard coding to google for now since we don't have azure clusters
 	provider := "google"
-	requireSuitability := cluster.RequireSuitable()
 	return &models.V2controllersCreatableCluster{
 		Address:             cluster.Address(),
 		Base:                cluster.Base(),
 		Name:                cluster.Name(),
 		Provider:            &provider,
 		GoogleProject:       cluster.Project(),
-		RequiresSuitability: &requireSuitability,
+		RequiresSuitability: utils.Nullable(cluster.RequireSuitable()),
 	}
 }
 
