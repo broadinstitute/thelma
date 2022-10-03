@@ -71,7 +71,6 @@ func (suite *sherlockClientSuite) SetupSuite() {
 func (suite *sherlockClientSuite) TearDownSuite() {
 	suite.server.Close()
 	suite.errServer.Close()
-	suite.server = nil
 }
 
 func (suite *sherlockClientSuite) TestFetchEnvironments() {
@@ -155,6 +154,7 @@ func newMockErroringSherlockServer() *httptest.Server {
 	mux.HandleFunc("/api/v2/environments", mockErroringHandler())
 	mux.HandleFunc("/api/v2/clusters", mockErroringHandler())
 	mux.HandleFunc("/api/v2/chart-releases", mockErroringHandler())
+	mux.HandleFunc("/api/v2/charts", mockErroringHandler())
 	return httptest.NewServer(mux)
 }
 

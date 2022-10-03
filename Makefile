@@ -152,4 +152,5 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/clients/google/bucket --name Locker --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename locker.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Bucket --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename bucket.go
 	mockery --dir ./internal/thelma/state/api/terra --name Release --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename release.go
+	mockery --dir ./internal/thelma/state/api/terra --name StateWriter --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_writer.go
 	mockery --dir ./internal/thelma/clients/sherlock --name StateLoader --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename sherlock.go

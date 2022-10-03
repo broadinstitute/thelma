@@ -2,15 +2,16 @@ package shell
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/rs/zerolog/log"
-	"github.com/stretchr/testify/mock"
 	"io"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/mock"
 )
 
 //
@@ -85,12 +86,13 @@ func NewMockRunner(options MockOptions) *MockRunner {
 //
 // Eg. CmdFromFmt("HOME=%s FOO=BAR ls -al %s", "/tmp", "Documents")
 // ->
-// Command{
-//   Env: []string{"HOME=/tmp", "FOO=BAR"},
-//   Prog: "ls",
-//   Args: []string{"-al", "Documents},
-//   Dir: ""
-// }
+//
+//	Command{
+//	  Env: []string{"HOME=/tmp", "FOO=BAR"},
+//	  Prog: "ls",
+//	  Args: []string{"-al", "Documents},
+//	  Dir: ""
+//	}
 func CmdFromFmt(fmt string, args ...interface{}) Command {
 	tokens := testutils.Args(fmt, args...)
 
@@ -101,12 +103,13 @@ func CmdFromFmt(fmt string, args ...interface{}) Command {
 //
 // Eg. CmdFromArgs("FOO=BAR", "ls", "-al", ".")
 // ->
-// Command{
-//   Env: []string{"FOO=BAR"},
-//   Prog: "ls",
-//   Args: []string{"-al", "."},
-//   Dir: ""
-// }
+//
+//	Command{
+//	  Env: []string{"FOO=BAR"},
+//	  Prog: "ls",
+//	  Args: []string{"-al", "."},
+//	  Dir: ""
+//	}
 func CmdFromArgs(args ...string) Command {
 	// count number of leading NAME=VALUE environment var pairs preceding command
 	var i int
@@ -236,8 +239,8 @@ func (m *MockRunner) addOrderingCheck(cmd Command, mockCall *mock.Call) *Call {
 // that dumps the set of expected command matchers to stderr in the event of a test failure.
 // This is useful because most command matchers are functions and so Testify can't generate
 // a pretty diff for them; you end up with:
-//   (shell.Command={...}) not matched by func(Command) bool
 //
+//	(shell.Command={...}) not matched by func(Command) bool
 func (m *MockRunner) Test(t *testing.T) {
 	m.t = t
 	t.Cleanup(func() {
