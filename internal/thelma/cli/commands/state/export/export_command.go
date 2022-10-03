@@ -19,15 +19,12 @@ var ErrExportDestinationForbidden = fmt.Errorf("state export to production sherl
 
 type options struct {
 	destinationURL string
-	format         string
 }
 
 var flagNames = struct {
 	destinationURL string
-	format         string
 }{
 	destinationURL: "destination",
-	format:         "format",
 }
 
 type exportCommand struct {
@@ -73,7 +70,7 @@ func (cmd *exportCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *exportCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
-	log.Info().Msgf("exporting state to: %s using format: %s", cmd.options.destinationURL, cmd.options.format)
+	log.Info().Msgf("exporting state to: %s", cmd.options.destinationURL)
 	state, err := app.State()
 	if err != nil {
 		return fmt.Errorf("error retrieving Thelma state: %v", err)
