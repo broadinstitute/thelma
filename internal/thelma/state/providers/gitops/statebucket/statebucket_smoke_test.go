@@ -59,7 +59,7 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Empty(t, e1.Overrides, "should have no overrides")
 			assert.Equal(t, "fake-env-1", e1.Name, "should have correct name")
 			assert.Equal(t, "fake-template", e1.Template, "should have correct template")
-			assert.Equal(t, "eb5a", e1.UniqueResourcePrefix, "should have correct URP")
+			assert.Equal(t, "ab5a", e1.UniqueResourcePrefix, "should have correct URP")
 			require.NoError(t, err)
 
 			// verify it was added
@@ -75,7 +75,7 @@ func TestStateBucket_Overrides(t *testing.T) {
 			assert.Empty(t, envs[0].Overrides, "should have no overrides")
 			assert.Equal(t, "fake-env-1", envs[0].Name, "should have correct name")
 			assert.Equal(t, "fake-template", envs[0].Template, "should have correct template")
-			assert.Equal(t, "eb5a", envs[0].UniqueResourcePrefix, "should have correct URP")
+			assert.Equal(t, "ab5a", envs[0].UniqueResourcePrefix, "should have correct URP")
 			assert.Equal(t, e1, envs[0], "environment returned from write should be identical to one returned via read-after-write")
 
 			// set a terraHelmfileRef override
@@ -279,7 +279,7 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, "fake-env-1", envs[0].Name)
 			assert.Equal(t, "fake-template", envs[0].Template)
 			assert.Empty(t, envs[0].Overrides)
-			assert.Equal(t, "eb5a", envs[0].UniqueResourcePrefix)
+			assert.Equal(t, "ab5a", envs[0].UniqueResourcePrefix)
 			assert.Equal(t, e1, envs[0])
 
 			// verify fake-env-2 attributes
@@ -288,7 +288,7 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, "fake-template", envs[1].Template)
 			assert.Equal(t, 1, len(envs[1].Overrides))
 			assert.Equal(t, "1.2.3", envs[1].Overrides["sam"].Versions.AppVersion)
-			assert.Equal(t, "ed2a", envs[1].UniqueResourcePrefix)
+			assert.Equal(t, "ad2a", envs[1].UniqueResourcePrefix)
 			assert.Equal(t, e2, envs[1])
 
 			// make sure dupe env name raises error
@@ -313,7 +313,7 @@ func TestStateBucket_AddRemove(t *testing.T) {
 			assert.Equal(t, "fake-env-3", envs[2].Name)
 			assert.Equal(t, "other-fake-template", envs[2].Template)
 			assert.Empty(t, envs[2].Overrides)
-			assert.Equal(t, "ee8a", envs[2].UniqueResourcePrefix)
+			assert.Equal(t, "ae8a", envs[2].UniqueResourcePrefix)
 			assert.Equal(t, e3, envs[2])
 
 			// test overrides on fake-env-1 match what was in bucket

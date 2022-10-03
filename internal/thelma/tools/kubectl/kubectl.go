@@ -95,7 +95,9 @@ func (k *kubectl) DeleteNamespace(env terra.Environment) error {
 		return fmt.Errorf("DeleteNamespace can only be called for dynamic environments")
 	}
 	log.Info().Msgf("Deleting environment namespace: %s", env.Namespace())
-	return k.runForEnv(env, []string{"delete", "namespace", env.Namespace()})
+	// Note: We supply --ignore-not-found because sometimes BEE creation fails before the namespace is created.
+	// This allows `thelma bee delete` to run successfully even when that happens.
+	return k.runForEnv(env, []string{"delete", "namespace", "--ignore-not-found", env.Namespace()})
 }
 
 func (k *kubectl) PortForward(targetRelease terra.Release, targetResource string, targetPort int) (int, func() error, error) {

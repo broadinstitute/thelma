@@ -7,11 +7,6 @@ import (
 	"k8s.io/utils/strings"
 )
 
-// backwardsCompatibleResourcePrefix generate a probably-unique 4-character resource prefix for the BEE of the form [a-z][a-z0-9]{3}.
-func backwardsCompatibleResourcePrefix(environmentName string) string {
-	return fmt.Sprintf("e%s", urpSuffix(environmentName))
-}
-
 // generateUniqueResourcePrefix generate a unique 4-character resource prefix for the BEE of the form [a-z][a-z0-9]{3}.
 // We do this by:
 // * taking first 3 chars of sha256sum of the environment name -- these become the last 3 chars of the URP

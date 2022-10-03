@@ -18,7 +18,6 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
 			name: "empty",
 			inputData: func(d *DynamicEnvironment) {
 				d.Overrides = make(map[string]*Override)
-				d.UniqueResourcePrefix = "ee3b"
 			},
 			outputJSON: `
 {
@@ -26,7 +25,7 @@ func Test_DynamicEnvironment_JSON_Marshaller(t *testing.T) {
   "template": "",
   "overrides": {},
   "terraHelmfileRef": "",
-  "uniqueResourcePrefix": "ee3b"
+  "uniqueResourcePrefix": ""
 }`,
 		},
 		{
@@ -102,7 +101,7 @@ func Test_DynamicEnvironment_JSON_Marshaller_ReplacesNilOverrides(t *testing.T) 
 
 	assert.Nil(t, d.Overrides)
 
-	expected := `{"name":"","template":"","overrides":{},"terraHelmfileRef":"","uniqueResourcePrefix":"ee3b"}`
+	expected := `{"name":"","template":"","overrides":{},"terraHelmfileRef":"","uniqueResourcePrefix":""}`
 
 	data, err := json.Marshal(d)
 	require.NoError(t, err)
@@ -122,5 +121,4 @@ func Test_DynamicEnvironment_JSON_Unmarshaller_ReplacesNilOverrides(t *testing.T
 	require.NoError(t, err)
 
 	assert.NotNil(t, d.Overrides, "overrides should not be null even if it is in the JSON")
-	assert.Equal(t, "ee3b", d.UniqueResourcePrefix, "URP should be populated even if empty in the JSON")
 }

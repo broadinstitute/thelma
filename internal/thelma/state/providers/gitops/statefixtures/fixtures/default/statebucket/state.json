@@ -1,15 +1,10 @@
 {
-  "schemaVersion": 0,
+  "schemaVersion": 2,
   "environments": {
     "fiab-swirly-rabbit": {
       "name": "fiab-swirly-rabbit",
       "template": "swatomation",
-      "hybrid": true,
-      "fiab": {
-        "name": "fiab-automation-swirly-rabbit",
-        "ip": "10.0.0.1"
-      },
-      "buildNumber": 123
+      "uniqueResourcePrefix": "e100"
     },
     "fiab-funky-chipmunk": {
       "name": "fiab-funky-chipmunk",
@@ -27,12 +22,7 @@
           }
         }
       },
-      "buildNumber": 456,
-      "hybrid": true,
-      "fiab": {
-        "name": "fiab-automation-funky-chipmunk",
-        "ip": "10.0.0.2"
-      }
+      "uniqueResourcePrefix": "e101"
     },
     "fiab-nerdy-walrus": {
       "name": "fiab-nerdy-walrus",
@@ -44,11 +34,7 @@
           }
         }
       },
-      "hybrid": true,
-      "fiab": {
-        "name": "fiab-automation-nerdy-walrus",
-        "ip": "10.0.0.3"
-      }
+      "uniqueResourcePrefix": "e102"
     },
     "fiab-special-snowflake": {
       "name": "fiab-special-snowflake",
@@ -64,11 +50,7 @@
           }
         }
       },
-      "hybrid": true,
-      "fiab": {
-        "name": "fiab-automation-special-snowflake",
-        "ip": "10.0.0.4"
-      }
+      "uniqueResourcePrefix": "e103"
     },
     "fiab-snarky-panini": {
       "name": "fiab-snarky-panini",
@@ -81,21 +63,17 @@
           }
         }
       },
-      "hybrid": true,
-      "fiab": {
-        "name": "fiab-automation-snarky-panini",
-        "ip": "10.0.0.5"
-      }
+      "uniqueResourcePrefix": "e104"
     },
     "sam-ci-001": {
       "name": "sam-ci-001",
       "template": "sam-ci",
-      "hybrid": false
+      "uniqueResourcePrefix": "e105"
     },
     "sam-ci-002": {
       "name": "sam-ci-002",
       "template": "sam-ci",
-      "hybrid": false
+      "uniqueResourcePrefix": "e105"
     }
   }
 }

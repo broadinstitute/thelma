@@ -144,11 +144,20 @@ func (s *statebucket) add(environment DynamicEnvironment, hookFns ...func(e *Dyn
 			}
 		}
 
+		if environment.Name == "" {
+			return state, fmt.Errorf("can't create an environment with an empty name; this is likely a bug in thelma")
+		}
 		if environment.Overrides == nil {
 			environment.Overrides = make(map[string]*Override)
 		}
+
+		// Generate a guaranteed-unique resource prefix for this environment
 		if environment.UniqueResourcePrefix == "" {
-			environment.UniqueResourcePrefix = backwardsCompatibleResourcePrefix(environment.Name)
+			urp, err := generateUniqueResourcePrefix(environment.Name, state)
+			if err != nil {
+				return state, err
+			}
+			environment.UniqueResourcePrefix = urp
 		}
 
 		if state.Environments == nil {

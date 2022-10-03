@@ -26,9 +26,5 @@ func Test_GenerateUnique_NoReuse(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "dac1", urp)
-}
-
-func Test_BackwardsCompatible(t *testing.T) {
-	assert.Equal(t, "eac1", backwardsCompatibleResourcePrefix("fiab-choover-funky-sapien"))
+	assert.Equal(t, "dac1", urp, "Should skip letter `b` and proceed to `d`")
 }
