@@ -11,10 +11,14 @@ import (
 	"github.com/broadinstitute/sherlock/clients/go/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/rs/zerolog/log"
 )
 
+// WriteEnvironments will take a list of terra.Environment interfaces them and issue POST requests
+// to write both the environment and any releases within that environment. 409 Conflict responses are ignored
 func (s *Client) WriteEnvironments(envs []terra.Environment) error {
 	for _, environment := range envs {
+		log.Info().Msgf("exporting state for environment: %s", environment.Name())
 		newEnv := toModelCreatableEnvironment(environment)
 
 		newEnvRequestParams := environments.NewPostAPIV2EnvironmentsParams().
@@ -34,10 +38,12 @@ func (s *Client) WriteEnvironments(envs []terra.Environment) error {
 	return nil
 }
 
+// WriteClusters will take a list of terra.Cluster interfaces them and issue POST requests
+// to create both the cluster and any releases within that cluster. 409 Conflict responses are ignored
 func (s *Client) WriteClusters(cls []terra.Cluster) error {
 	for _, cluster := range cls {
+		log.Info().Msgf("exporting state for cluster: %s", cluster.Name())
 		newCluster := toModelCreatableCluster(cluster)
-
 		newClusterRequestParams := clusters.NewPostAPIV2ClustersParams().
 			WithCluster(newCluster)
 		_, _, err := s.client.Clusters.PostAPIV2Clusters(newClusterRequestParams)
@@ -94,6 +100,7 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatab
 func (s *Client) writeReleases(releases []terra.Release) error {
 	// for each release attempt to create a chart
 	for _, release := range releases {
+		log.Info().Msgf("exporting release: %v", release.Name())
 		// attempt to convert to app release
 		if release.IsAppRelease() {
 			appRelease := release.(terra.AppRelease)
