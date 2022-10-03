@@ -10,6 +10,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/seedflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +31,7 @@ thelma bee create \
 var flagNames = struct {
 	name             string
 	namePrefix       string
+	owner            string
 	template         string
 	generatorOnly    string
 	waitHealthy      string
@@ -38,6 +40,7 @@ var flagNames = struct {
 }{
 	name:             "name",
 	namePrefix:       "name-prefix",
+	owner:            "owner",
 	template:         "template",
 	generatorOnly:    "generator-only",
 	waitHealthy:      "wait-healthy",
@@ -69,6 +72,7 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 	cobraCommand.Flags().StringVarP(&cmd.options.Name, flagNames.name, "n", "NAME", "Name for this BEE. If not given, a name will be generated")
 	cobraCommand.Flags().StringVarP(&cmd.options.NamePrefix, flagNames.namePrefix, "p", "bee", "Prefix to use when generating a name for this BEE")
+	cobraCommand.Flags().StringVarP(&cmd.options.Owner, flagNames.owner, "o", "OWNER", "Required. Owner of this BEE")
 	cobraCommand.Flags().StringVarP(&cmd.options.Template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
@@ -91,6 +95,15 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 		}
 		cmd.options.GenerateName = true
 	}
+
+	// validate --owner
+	if cmd.options.Owner == "" {
+		log.Log().Msg("No owner given. Bee will be created but user will not receive Slack message")
+	}
+	// GitHub username is owners email before the @ symbol
+	/*if strings.Contains(cmd.options.Owner, "@") {
+		cmd.options.Owner = strings.Split(cmd.options.Owner, "@")[0]
+	}*/
 
 	// validate --template
 	bees, err := builders.NewBees(thelmaApp)

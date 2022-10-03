@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
+	slackapi "github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
@@ -34,10 +35,16 @@ type DeleteOptions struct {
 }
 
 type CreateOptions struct {
-	Name              string
-	NamePrefix        string
-	GenerateName      bool
-	Template          string
+	Name         string
+	NamePrefix   string
+	GenerateName bool
+	Template     string
+	Owner        string
+	Hybrid       bool
+	Fiab         struct {
+		Name string
+		IP   string
+	}
 	SyncGeneratorOnly bool
 	WaitHealthy       bool
 	PinOptions        PinOptions
@@ -57,7 +64,7 @@ type PinOptions struct {
 	FileOverrides map[string]terra.VersionOverride
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, kubectl kubectl.Kubectl) (Bees, error) {
+func NewBees(argocd argocd.ArgoCD, slack slackapi.SlackAPI, stateLoader terra.StateLoader, seeder seed.Seeder, kubectl kubectl.Kubectl) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -65,6 +72,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Se
 
 	return &bees{
 		argocd:      argocd,
+		slack:       slack,
 		state:       state,
 		stateLoader: stateLoader,
 		seeder:      seeder,
@@ -75,6 +83,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Se
 // implements Bees interface
 type bees struct {
 	argocd      argocd.ArgoCD
+	slack       slackapi.SlackAPI
 	state       terra.State
 	stateLoader terra.StateLoader
 	seeder      seed.Seeder
@@ -154,6 +163,35 @@ func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 		if err = b.seeder.Seed(env, options.SeedOptions); err != nil {
 			return env, err
 		}
+	}
+
+	// Three cases:
+	// - Create when user specifies --owner (ALWAYS from Jenkins, b/c user will specify their own email in the Jenkins
+	// job options when they create a BEE) --owner is the full email, you care about everything before the @
+	// https://fc-jenkins.dsp-techops.broadinstitute.org/view/BEEs/job/fiab-host-create-bee/configure
+	// 		Easy! You have the email right here as options.owner
+	//		Start here, because you need to be able to handle "what if the email is garbage or doesn't exist?!?"
+	// - Create when user doesn't specify --owner (always from local)
+	//      User probably won't provide their email
+	//		Where to get it from?
+	//			- Thelma's understanding of Google authentication--Clients.Google.Terra.GoogleUserInfo() has the email in it
+	//				Why not here? Because Sherlock auto-fills the environment owner!!!
+	//				In other words, if --owner wasn't provided on command line... and then wasn't sent in the create environment request...
+	//				then Sherlock would have done logic to come up with the right owner. If we *also* try to come up with default email...
+	//				we are duplicating Sherlock's logic.
+	//			- The Environment that comes back from Sherlock when Thelma creates it--it'll ALWAYS have an owner field on it
+	//				Current problems:
+	//					- Thelma's Environment type doesn't have an Owner field
+	//					- Thelma's `err = b.state.Environments().CreateFromTemplate(name, template)` doesn't actually return an Environment :/
+	//					  ...but it will once someone gets BEE creation working in this exact function
+	//				When you get here... actually just always pay attention to Sherlock, because someone will have wired
+	//				--owner into the request to Sherlock in the first place
+	// - Delete
+	//		Oops, same as above! Because even in Jenkins, we will *always* need to get the email from the owner field
+	//		on the existing environment, because user doesn't specify their username when they destroy a BEE, only upon create.
+	//		Basically the exact same case as the "Create when user doesn't specify --owner"
+	if err = b.sendSlackMsg(options.Owner); err != nil {
+		log.Warn().Msgf("Unable to send slack message: %v", err)
 	}
 
 	return env, err
@@ -359,4 +397,9 @@ func (b *bees) reloadState() error {
 	}
 	b.state = state
 	return nil
+}
+
+func (b *bees) sendSlackMsg(owner string) error {
+	return b.slack.SendDMMessage(owner)
+	//ToDO Handle error messages
 }

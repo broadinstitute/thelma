@@ -11,7 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 	"strings"
 	"time"
 )
