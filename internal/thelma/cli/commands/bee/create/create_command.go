@@ -2,6 +2,7 @@ package create
 
 import (
 	"fmt"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -21,9 +22,6 @@ Examples:
 thelma bee create \
   --name=swat-grungy-puma \
   --template=swatomation \
-  --hybrid \
-  --fiab-name=fiab-automation-grungy-puma \
-  --fiab-ip=35.36.37.38
 `
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
