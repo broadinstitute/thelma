@@ -60,6 +60,9 @@ func (e *environments) CreateFromTemplate(name string, template terra.Environmen
 		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
 	}
 
+	// check that the sherlock client provided in state struct can also be used to write
+	// back to state
+
 	panic("TODO")
 
 }

@@ -1,12 +1,18 @@
 package sherlock
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
+// StateReadWriter is an interface representing the ability to both read and
+// create/update thelma's internal state using a sherlock client
+type StateReadWriter interface {
+	StateLoader
+	terra.StateWriter
+}
+
 type state struct {
-	sherlock     sherlock.StateLoader
+	sherlock     StateReadWriter
 	environments map[string]*environment
 	clusters     map[string]*cluster
 }

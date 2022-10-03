@@ -6,7 +6,7 @@ import (
 
 	"github.com/broadinstitute/sherlock/clients/go/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/suite"
 )
@@ -21,7 +21,7 @@ type sherlockStateLoaderSuite struct {
 
 func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 
-	stateSource := mocks.NewStateLoader(suite.T())
+	stateSource := mocks.NewStateReadWriter(suite.T())
 	setStateExpectations(stateSource)
 
 	thelmaHome := suite.T().TempDir()
@@ -62,7 +62,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 }
 
 func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
-	stateSource := mocks.NewStateLoader(suite.T())
+	stateSource := mocks.NewStateReadWriter(suite.T())
 	errMsg := "this is an error from sherlock"
 	stateSource.On("Clusters").Return(nil, fmt.Errorf(errMsg))
 
@@ -84,7 +84,7 @@ func nullableString(s string) *string {
 }
 
 //nolint:govet // Ignore checks for unkeyed nested struct literals
-func setStateExpectations(mock *mocks.StateLoader) {
+func setStateExpectations(mock *mocks.StateReadWriter) {
 	mock.On("Clusters").Return(
 		sherlock.Clusters{
 			sherlock.Cluster{
