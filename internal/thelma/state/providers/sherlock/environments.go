@@ -79,8 +79,10 @@ func (e *environments) DisableRelease(environmentName string, releaseName string
 	panic("TODO")
 }
 
+// TODO use a real implmentation of this
 func (e *environments) PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error) {
-	panic("TODO")
+	// panic("TODO")
+	return nil, nil
 }
 
 func (e *environments) PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error {

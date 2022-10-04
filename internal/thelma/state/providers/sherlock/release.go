@@ -67,6 +67,8 @@ func (r *release) TerraHelmfileRef() string {
 	return r.helmfileRef
 }
 
+// TODO implement this for real once sherlock backend changes are merged
 func (r *release) FirecloudDevelopRef() string {
-	panic("not implemented on sherlock backend yet")
+	// panic("not implemented on sherlock backend yet")
+	return "dev"
 }
