@@ -16,16 +16,20 @@ type SlackAPI struct {
 
 func New(token string) (*SlackAPI, error) {
 	return &SlackAPI{
-		c:     slack.New(token, slack.OptionDebug(true)),
-		token: token,
+		client: *slack.New(token, slack.OptionDebug(true)),
+		token:  token,
 	}, nil
 }
 
 func (s SlackAPI) SendDMMessage(owner string) error {
 	usr, err := s.client.GetUserByEmail(owner)
-	//add error
+	if err != nil {
+		return err
+	}
 	bot, err := s.client.GetBotInfo("beebot")
-	//add error
+	if err != nil {
+		return err
+	}
 
 	attachment := slack.Attachment{
 		Pretext: "Your Bee has finished creating",
@@ -42,11 +46,14 @@ func (s SlackAPI) SendDMMessage(owner string) error {
 	}
 	// PostMessage will send the message away.
 	// First parameter is just the user ID, makes no sense to accept it
-	_, timestamp, err := s.client.PostMessage(
+	_, _, err = s.client.PostMessage(
 		usr.ID,
 		slack.MsgOptionAttachments(attachment),
 		slack.MsgOptionUser(bot.ID),
 	)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

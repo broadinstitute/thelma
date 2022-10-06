@@ -29,11 +29,13 @@ require (
 	golang.org/x/mod v0.5.0
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
 	golang.org/x/term v0.0.0-20220411215600-e5f449aeb171
-	google.golang.org/api v0.70.0
-	google.golang.org/genproto v0.0.0-20220314164441-57ef72a4c106
+	google.golang.org/api v0.96.0
+	google.golang.org/genproto v0.0.0-20220920201722-2b89144ce006
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/client-go v0.24.0
+	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 )
 
 require (
@@ -122,20 +124,18 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
-	golang.org/x/net v0.0.0-20220907135653-1e95f45603a7 // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
 	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/grpc v1.45.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	google.golang.org/grpc v1.49.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apimachinery v0.24.0 // indirect
 	k8s.io/klog/v2 v2.60.1 // indirect
-	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
