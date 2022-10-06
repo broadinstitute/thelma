@@ -144,6 +144,6 @@ func mockSuccessfulCreateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(&response)
+		_ = json.NewEncoder(w).Encode(&response)
 	}
 }
