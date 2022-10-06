@@ -152,10 +152,15 @@ func buildDynamicEnvironment(template terra.Environment, name string, writer ter
 
 	newEnvs := make([]terra.Environment, 0)
 	newEnvs = append(newEnvs, env)
-	err := writer.WriteEnvironments(newEnvs)
+	envNames, err := writer.WriteEnvironments(newEnvs)
 	if err != nil {
 		return nil, err
 	}
 
+	if len(envNames) != 1 {
+		return nil, fmt.Errorf("expected only 1 environment to be created but received multiple: %v", envNames)
+	}
+
+	env.name = envNames[0]
 	return env, nil
 }

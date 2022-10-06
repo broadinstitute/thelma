@@ -51,7 +51,7 @@ func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
 
 	stateEnvironments, err := suite.state.Environments().All()
 	suite.Assert().NoError(err)
-	err = client.WriteEnvironments(stateEnvironments)
+	_, err = client.WriteEnvironments(stateEnvironments)
 	suite.Assert().NoError(err)
 }
 
@@ -66,7 +66,7 @@ func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
 
 	stateEnvironments, err := suite.state.Environments().All()
 	suite.Assert().NoError(err)
-	err = client.WriteEnvironments(stateEnvironments)
+	_, err = client.WriteEnvironments(stateEnvironments)
 	suite.Assert().Error(err)
 }
 
@@ -81,7 +81,7 @@ func (suite *sherlockStateWriterClientSuite) TestSuccessfulStateExport() {
 
 	stateEnvironments, err := suite.state.Environments().All()
 	suite.Assert().NoError(err)
-	err = client.WriteEnvironments(stateEnvironments)
+	_, err = client.WriteEnvironments(stateEnvironments)
 	suite.Assert().NoError(err)
 }
 

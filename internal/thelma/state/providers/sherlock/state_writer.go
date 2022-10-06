@@ -24,7 +24,7 @@ func (s *stateWriter) WriteEnvironments() error {
 	if err != nil {
 		return err
 	}
-	if err := s.stateWriter.WriteEnvironments(templateEnvs); err != nil {
+	if _, err := s.stateWriter.WriteEnvironments(templateEnvs); err != nil {
 		return err
 	}
 
@@ -39,7 +39,8 @@ func (s *stateWriter) WriteEnvironments() error {
 	if err != nil {
 		return err
 	}
-	return s.stateWriter.WriteEnvironments(allOtherEnvs)
+	_, err = s.stateWriter.WriteEnvironments(allOtherEnvs)
+	return err
 }
 
 func (s *stateWriter) WriteClusters() error {

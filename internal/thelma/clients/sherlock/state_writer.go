@@ -16,7 +16,8 @@ import (
 
 // WriteEnvironments will take a list of terra.Environment interfaces them and issue POST requests
 // to write both the environment and any releases within that environment. 409 Conflict responses are ignored
-func (s *Client) WriteEnvironments(envs []terra.Environment) error {
+func (s *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
+	createdEnvNames := make([]string, 0)
 	for _, environment := range envs {
 		log.Info().Msgf("exporting state for environment: %s", environment.Name())
 		newEnv := toModelCreatableEnvironment(environment)
@@ -28,7 +29,7 @@ func (s *Client) WriteEnvironments(envs []terra.Environment) error {
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
 			if _, ok := err.(*environments.PostAPIV2EnvironmentsConflict); !ok {
-				return fmt.Errorf("error creating cluster: %v", err)
+				return nil, fmt.Errorf("error creating cluster: %v", err)
 			}
 			envAlreadyExists = true
 		}
@@ -43,10 +44,11 @@ func (s *Client) WriteEnvironments(envs []terra.Environment) error {
 
 		log.Debug().Msgf("environment name: %s", envName)
 		if err := s.writeReleases(envName, environment.Releases()); err != nil {
-			return err
+			return nil, err
 		}
+		createdEnvNames = append(createdEnvNames, envName)
 	}
-	return nil
+	return createdEnvNames, nil
 }
 
 // WriteClusters will take a list of terra.Cluster interfaces them and issue POST requests
