@@ -23,15 +23,26 @@ func (s *Client) WriteEnvironments(envs []terra.Environment) error {
 
 		newEnvRequestParams := environments.NewPostAPIV2EnvironmentsParams().
 			WithEnvironment(newEnv)
-		_, _, err := s.client.Environments.PostAPIV2Environments(newEnvRequestParams)
+		_, createdEnv, err := s.client.Environments.PostAPIV2Environments(newEnvRequestParams)
+		var envAlreadyExists bool
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
 			if _, ok := err.(*environments.PostAPIV2EnvironmentsConflict); !ok {
 				return fmt.Errorf("error creating cluster: %v", err)
 			}
+			envAlreadyExists = true
 		}
 
-		if err := s.writeReleases(environment.Releases()); err != nil {
+		// extract the generated name from a new dynamic environment
+		var envName string
+		if environment.Lifecycle().IsDynamic() && !envAlreadyExists {
+			envName = createdEnv.Payload.Name
+		} else {
+			envName = environment.Name()
+		}
+
+		log.Debug().Msgf("environment name: %s", envName)
+		if err := s.writeReleases(envName, environment.Releases()); err != nil {
 			return err
 		}
 	}
@@ -54,7 +65,7 @@ func (s *Client) WriteClusters(cls []terra.Cluster) error {
 			}
 		}
 
-		if err := s.writeReleases(cluster.Releases()); err != nil {
+		if err := s.writeReleases(cluster.Name(), cluster.Releases()); err != nil {
 			return err
 		}
 	}
@@ -88,14 +99,14 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatab
 	}
 }
 
-func (s *Client) writeReleases(releases []terra.Release) error {
+func (s *Client) writeReleases(destinationName string, releases []terra.Release) error {
 	// for each release attempt to create a chart
 	for _, release := range releases {
 		log.Info().Msgf("exporting release: %v", release.Name())
 		// attempt to convert to app release
 		if release.IsAppRelease() {
 			appRelease := release.(terra.AppRelease)
-			if err := s.writeAppRelease(appRelease); err != nil {
+			if err := s.writeAppRelease(destinationName, appRelease); err != nil {
 				return err
 			}
 		} else if release.IsClusterRelease() {
@@ -108,7 +119,7 @@ func (s *Client) writeReleases(releases []terra.Release) error {
 	return nil
 }
 
-func (s *Client) writeAppRelease(release terra.AppRelease) error {
+func (s *Client) writeAppRelease(environmentName string, release terra.AppRelease) error {
 	modelChart := models.V2controllersCreatableChart{
 		Name:            release.ChartName(),
 		ChartRepo:       utils.Nullable(release.Repo()),
@@ -127,15 +138,21 @@ func (s *Client) writeAppRelease(release terra.AppRelease) error {
 		}
 	}
 	// then the chart release
-	releaseName := strings.Join([]string{release.ChartName(), release.Environment().Name()}, "-")
+	releaseName := strings.Join([]string{release.ChartName(), environmentName}, "-")
+	var releaseNamespace string
+	if release.Environment().Lifecycle().IsDynamic() {
+		releaseNamespace = environmentName
+	} else {
+		releaseNamespace = release.Namespace()
+	}
 	modelChartRelease := models.V2controllersCreatableChartRelease{
 		AppVersionExact:   release.AppVersion(),
 		Chart:             release.ChartName(),
 		ChartVersionExact: release.ChartVersion(),
-		Environment:       release.Environment().Name(),
+		Environment:       environmentName,
 		HelmfileRef:       utils.Nullable("master"),
 		Name:              releaseName,
-		Namespace:         release.Namespace(),
+		Namespace:         releaseNamespace,
 		Port:              int64(release.Port()),
 		Protocol:          release.Protocol(),
 		Subdomain:         release.Subdomain(),

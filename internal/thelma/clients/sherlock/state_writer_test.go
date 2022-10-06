@@ -1,10 +1,13 @@
 package sherlock_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/broadinstitute/sherlock/clients/go/client/environments"
+	"github.com/broadinstitute/sherlock/clients/go/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -132,7 +135,15 @@ func mockErroringHandler() http.HandlerFunc {
 }
 
 func mockSuccessfulCreateHandler() http.HandlerFunc {
+	response := environments.NewPostAPIV2EnvironmentsCreated()
+	payload := &models.V2controllersEnvironment{
+		Name: "test-env",
+	}
+	response.Payload = payload
+
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(&response)
 	}
 }
