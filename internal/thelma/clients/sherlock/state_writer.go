@@ -240,7 +240,7 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 
 func (s *Client) deleteRelease(release terra.Release) error {
 	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().
-		WithSelector(strings.Join([]string{release.Name(), release.Destination().Name()}, "-"))
+		WithSelector(strings.Join([]string{release.ChartName(), release.Destination().Name()}, "-"))
 	_, err := s.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
 	return err
 }
