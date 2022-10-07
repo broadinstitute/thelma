@@ -95,6 +95,7 @@ func (suite *sherlockStateWriterClientSuite) TestSuccessfulStateExport() {
 func (suite *sherlockStateWriterClientSuite) TestSuccessfulDelete() {
 	mockEnv := mocks.NewEnvironment(suite.T())
 	mockEnv.On("Name").Return("deleted-env")
+	mockEnv.On("Releases").Return(nil)
 	client, err := sherlock.NewWithHostnameOverride(suite.successfulDeleteServer.URL, "")
 
 	suite.Assert().NoError(err)
@@ -105,6 +106,7 @@ func (suite *sherlockStateWriterClientSuite) TestSuccessfulDelete() {
 func (suite *sherlockStateWriterClientSuite) TestErrorOnDelete() {
 	mockEnv := mocks.NewEnvironment(suite.T())
 	mockEnv.On("Name").Return("deleted-env")
+	mockEnv.On("Releases").Return(nil)
 	client, err := sherlock.NewWithHostnameOverride(suite.errDeleteServer.URL, "")
 
 	suite.Assert().NoError(err)
