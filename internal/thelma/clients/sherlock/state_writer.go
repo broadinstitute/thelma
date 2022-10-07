@@ -77,6 +77,13 @@ func (s *Client) WriteClusters(cls []terra.Cluster) error {
 func (s *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) {
 	deletedEnvs := make([]string, 0)
 	for _, env := range envs {
+		// delete chart releases associated with environment
+		releases := env.Releases()
+		for _, release := range releases {
+			if err := s.deleteRelease(release); err != nil {
+				log.Warn().Msgf("error deleting chart release %s in environment %s: %v", release.Name(), env.Name(), err)
+			}
+		}
 		params := environments.NewDeleteAPIV2EnvironmentsSelectorParams().
 			WithSelector(env.Name())
 
@@ -229,4 +236,11 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 		}
 	}
 	return nil
+}
+
+func (s *Client) deleteRelease(release terra.Release) error {
+	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().
+		WithSelector(strings.Join([]string{release.Name(), release.Destination().Name()}, "-"))
+	_, err := s.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
+	return err
 }
