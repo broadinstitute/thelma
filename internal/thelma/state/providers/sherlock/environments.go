@@ -102,7 +102,12 @@ func (e *environments) UnsetBuildNumber(environmentName string) (int, error) {
 }
 
 func (e *environments) Delete(name string) error {
-	panic("TODO")
+	env, err := e.Get(name)
+	if err != nil {
+		return err
+	}
+	_, err = e.state.sherlock.DeleteEnvironments([]terra.Environment{env})
+	return err
 }
 
 func buildDynamicEnvironment(template terra.Environment, name string, writer terra.StateWriter) (*environment, error) {

@@ -11,6 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -21,6 +22,8 @@ type sherlockStateWriterClientSuite struct {
 	conflictServer         *httptest.Server
 	errServer              *httptest.Server
 	successfulCreateServer *httptest.Server
+	successfulDeleteServer *httptest.Server
+	errDeleteServer        *httptest.Server
 }
 
 func Test_SherlockStateWriterClient(t *testing.T) {
@@ -32,12 +35,16 @@ func (suite *sherlockStateWriterClientSuite) SetupSuite() {
 	suite.conflictServer = newMockConflictServer()
 	suite.errServer = newMockErroringSherlockServer()
 	suite.successfulCreateServer = newMockSuccessfulCreateServer()
+	suite.successfulDeleteServer = newMockSuccessfulDeleteServer()
+	suite.errDeleteServer = newMockErroringDeleteServer()
 }
 
 func (suite *sherlockStateWriterClientSuite) TearDownSuite() {
 	suite.conflictServer.Close()
 	suite.errServer.Close()
 	suite.successfulCreateServer.Close()
+	suite.successfulDeleteServer.Close()
+	suite.errDeleteServer.Close()
 }
 
 func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
@@ -85,6 +92,26 @@ func (suite *sherlockStateWriterClientSuite) TestSuccessfulStateExport() {
 	suite.Assert().NoError(err)
 }
 
+func (suite *sherlockStateWriterClientSuite) TestSuccessfulDelete() {
+	mockEnv := mocks.NewEnvironment(suite.T())
+	mockEnv.On("Name").Return("deleted-env")
+	client, err := sherlock.NewWithHostnameOverride(suite.successfulDeleteServer.URL, "")
+
+	suite.Assert().NoError(err)
+	_, err = client.DeleteEnvironments([]terra.Environment{mockEnv})
+	suite.Assert().NoError(err)
+}
+
+func (suite *sherlockStateWriterClientSuite) TestErrorOnDelete() {
+	mockEnv := mocks.NewEnvironment(suite.T())
+	mockEnv.On("Name").Return("deleted-env")
+	client, err := sherlock.NewWithHostnameOverride(suite.errDeleteServer.URL, "")
+
+	suite.Assert().NoError(err)
+	_, err = client.DeleteEnvironments([]terra.Environment{mockEnv})
+	suite.Assert().Error(err)
+}
+
 func constructFakeState(t *testing.T) terra.State {
 	builder := builder.NewBuilder().WithTestDefaults(t)
 	app, err := builder.Build()
@@ -122,6 +149,18 @@ func newMockSuccessfulCreateServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
+func newMockSuccessfulDeleteServer() *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/environments/deleted-env", mockDeleteEnvironmentsHandler())
+	return httptest.NewServer(mux)
+}
+
+func newMockErroringDeleteServer() *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/environments/deleted-env", mockErroringHandler())
+	return httptest.NewServer(mux)
+}
+
 func mock409ConflictHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
@@ -146,4 +185,19 @@ func mockSuccessfulCreateHandler() http.HandlerFunc {
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(&response)
 	}
+}
+
+func mockDeleteEnvironmentsHandler() http.HandlerFunc {
+	response := environments.NewDeleteAPIV2EnvironmentsSelectorOK()
+	payload := &models.V2controllersEnvironment{
+		Name: "deleted-env",
+	}
+	response.Payload = payload
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(&response)
+	}
+
 }

@@ -74,6 +74,22 @@ func (s *Client) WriteClusters(cls []terra.Cluster) error {
 	return nil
 }
 
+func (s *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) {
+	deletedEnvs := make([]string, 0)
+	for _, env := range envs {
+		params := environments.NewDeleteAPIV2EnvironmentsSelectorParams().
+			WithSelector(env.Name())
+
+		deletedEnv, err := s.client.Environments.DeleteAPIV2EnvironmentsSelector(params)
+		if err != nil {
+			return nil, fmt.Errorf("error deleting environment %s: %v", env.Name(), err)
+		}
+		log.Debug().Msgf("%#v", deletedEnv)
+		deletedEnvs = append(deletedEnvs, deletedEnv.Payload.Name)
+	}
+	return deletedEnvs, nil
+}
+
 func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
 	return &models.V2controllersCreatableEnvironment{
 		Base:                env.Base(),

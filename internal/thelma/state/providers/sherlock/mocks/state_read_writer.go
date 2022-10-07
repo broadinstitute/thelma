@@ -61,6 +61,29 @@ func (_m *StateReadWriter) Clusters() (sherlock.Clusters, error) {
 	return r0, r1
 }
 
+// DeleteEnvironments provides a mock function with given fields: _a0
+func (_m *StateReadWriter) DeleteEnvironments(_a0 []terra.Environment) ([]string, error) {
+	ret := _m.Called(_a0)
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func([]terra.Environment) []string); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]terra.Environment) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // EnvironmentReleases provides a mock function with given fields: environmentName
 func (_m *StateReadWriter) EnvironmentReleases(environmentName string) (sherlock.Releases, error) {
 	ret := _m.Called(environmentName)
