@@ -72,11 +72,18 @@ func (e *environments) CreateFromTemplateGenerateName(namePrefix string, templat
 }
 
 func (e *environments) EnableRelease(environmentName string, releaseName string) error {
-	panic("TODO")
+	environment, err := e.Get(environmentName)
+	if err != nil {
+		return err
+	}
+	if environment.Lifecycle() != terra.Dynamic {
+		return fmt.Errorf("enabling releases is only supported for dynamic environments")
+	}
+	return e.state.sherlock.EnableRelease(environment, releaseName)
 }
 
 func (e *environments) DisableRelease(environmentName string, releaseName string) error {
-	panic("TODO")
+	return e.state.sherlock.DisableRelease(environmentName, releaseName)
 }
 
 // TODO use a real implmentation of this

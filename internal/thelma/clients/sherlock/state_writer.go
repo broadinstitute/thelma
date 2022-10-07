@@ -97,6 +97,42 @@ func (s *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) 
 	return deletedEnvs, nil
 }
 
+func (s *Client) EnableRelease(env terra.Environment, releaseName string) error {
+	// need to pull info about the template env in order to set chart and app versions
+	templateEnv, err := s.getEnvironment(env.Template())
+	if err != nil {
+		return fmt.Errorf("unable to fetch template %s: %v", env.Template(), err)
+	}
+	templateEnvName := templateEnv.Name
+	// now look up the chart release to enable in the template
+	templateRelease, err := s.getChartRelease(templateEnvName, releaseName)
+	if err != nil {
+		return fmt.Errorf("unable to enable release, error retrieving from template: %v", err)
+	}
+
+	// enable the chart-release in environment
+	enabledChart := &models.V2controllersCreatableChartRelease{
+		AppVersionExact:   templateRelease.AppVersionExact,
+		Chart:             templateRelease.Chart,
+		ChartVersionExact: templateRelease.ChartVersionExact,
+		Environment:       env.Name(),
+		HelmfileRef:       templateRelease.HelmfileRef,
+		Port:              templateRelease.Port,
+		Protocol:          templateRelease.Protocol,
+		Subdomain:         templateRelease.Subdomain,
+	}
+	log.Info().Msgf("enabling chart-release: %q in environment: %q", releaseName, env.Name())
+	params := chart_releases.NewPostAPIV2ChartReleasesParams().WithChartRelease(enabledChart)
+	_, _, err = s.client.ChartReleases.PostAPIV2ChartReleases(params)
+	return err
+}
+
+func (s *Client) DisableRelease(envName, releaseName string) error {
+	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{envName, releaseName}, "/"))
+	_, err := s.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
+	return err
+}
+
 func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
 	return &models.V2controllersCreatableEnvironment{
 		Base:                env.Base(),
@@ -243,4 +279,23 @@ func (s *Client) deleteRelease(release terra.Release) error {
 		WithSelector(strings.Join([]string{release.ChartName(), release.Destination().Name()}, "-"))
 	_, err := s.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
 	return err
+}
+
+func (s *Client) getEnvironment(name string) (*Environment, error) {
+	params := environments.NewGetAPIV2EnvironmentsSelectorParams().WithSelector(name)
+	environment, err := s.client.Environments.GetAPIV2EnvironmentsSelector(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Environment{environment.Payload}, nil
+}
+
+func (s *Client) getChartRelease(environmentName, releaseName string) (*Release, error) {
+	params := chart_releases.NewGetAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{environmentName, releaseName}, "/"))
+	release, err := s.client.ChartReleases.GetAPIV2ChartReleasesSelector(params)
+	if err != nil {
+		return nil, err
+	}
+	return &Release{release.Payload}, nil
 }

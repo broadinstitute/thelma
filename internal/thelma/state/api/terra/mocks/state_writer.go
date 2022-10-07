@@ -35,6 +35,34 @@ func (_m *StateWriter) DeleteEnvironments(_a0 []terra.Environment) ([]string, er
 	return r0, r1
 }
 
+// DisableRelease provides a mock function with given fields: _a0, _a1
+func (_m *StateWriter) DisableRelease(_a0 string, _a1 string) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// EnableRelease provides a mock function with given fields: _a0, _a1
+func (_m *StateWriter) EnableRelease(_a0 terra.Environment, _a1 string) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(terra.Environment, string) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // WriteClusters provides a mock function with given fields: _a0
 func (_m *StateWriter) WriteClusters(_a0 []terra.Cluster) error {
 	ret := _m.Called(_a0)

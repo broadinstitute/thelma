@@ -10,4 +10,7 @@ type StateWriter interface {
 	// Delete Environments is used to delete dynamic environments from Thelma's state source.
 	// It returns a list of the names of deleted environments
 	DeleteEnvironments([]Environment) ([]string, error)
+
+	EnableRelease(Environment, string) error
+	DisableRelease(string, string) error
 }

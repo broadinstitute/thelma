@@ -84,6 +84,34 @@ func (_m *StateReadWriter) DeleteEnvironments(_a0 []terra.Environment) ([]string
 	return r0, r1
 }
 
+// DisableRelease provides a mock function with given fields: _a0, _a1
+func (_m *StateReadWriter) DisableRelease(_a0 string, _a1 string) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// EnableRelease provides a mock function with given fields: _a0, _a1
+func (_m *StateReadWriter) EnableRelease(_a0 terra.Environment, _a1 string) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(terra.Environment, string) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // EnvironmentReleases provides a mock function with given fields: environmentName
 func (_m *StateReadWriter) EnvironmentReleases(environmentName string) (sherlock.Releases, error) {
 	ret := _m.Called(environmentName)
