@@ -9,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
+	"regexp"
 	"strings"
 )
 
@@ -27,7 +28,11 @@ func parseVersions(format string, input []byte) (map[string]terra.VersionOverrid
 	if !exists {
 		return nil, fmt.Errorf("--%s: invalid format %q (valid formats are: %s)", flagNames.versionsFormat, format, utils.QuoteJoin(versionFormats()))
 	}
-	return parser(input)
+	overrides, err := parser(input)
+	if err != nil {
+		return nil, err
+	}
+	return normalizeImageTags(overrides), nil
 }
 
 func versionFormats() []string {
@@ -36,6 +41,35 @@ func versionFormats() []string {
 		result = append(result, name)
 	}
 	return result
+}
+
+var imageNameIllegalChars = regexp.MustCompile(`[^a-zA-Z0-9_.\-]`)
+var imageNameStartsWithDotOrDash = regexp.MustCompile(`^[.\-]`)
+
+func normalizeImageTags(input map[string]terra.VersionOverride) map[string]terra.VersionOverride {
+	result := make(map[string]terra.VersionOverride)
+	for key, override := range input {
+		override.AppVersion = normalizeImageTag(override.AppVersion)
+		result[key] = override
+	}
+	return result
+}
+
+// this is needed for backwards-compatibility with old/legacy Jenkins pipelines. Original code:
+//
+//    BRANCH_NAME=$(get_image_name $CONFIG)
+//    REGEX_TO_REPLACE_ILLEGAL_CHARACTERS_WITH_DASHES="s/[^a-zA-Z0-9_.\-]/-/g"
+//    REGEX_TO_REMOVE_DASHES_AND_PERIODS_FROM_BEGINNING="s/^[.\-]*//g"
+//    IMAGE=$(echo $BRANCH_NAME | sed -e $REGEX_TO_REPLACE_ILLEGAL_CHARACTERS_WITH_DASHES -e $REGEX_TO_REMOVE_DASHES_AND_PERIODS_FROM_BEGINNING | cut -c 1-127)  # https://docs.docker.com/engine/reference/commandline/tag/#:~:text=A%20tag%20name%20must%20be,a%20maximum%20of%20128%20characters.
+//
+// https://github.com/broadinstitute/firecloud-develop/blob/a8573a38698890031444166320db1a857f8a0834/run-context/fiab/scripts/FiaB_configs.sh#L125
+func normalizeImageTag(imageTag string) string {
+	normalized := imageNameIllegalChars.ReplaceAllString(imageTag, "-")
+	normalized = imageNameStartsWithDotOrDash.ReplaceAllString(normalized, "")
+	if normalized != imageTag {
+		log.Info().Msgf("Rewriting illegal image tag %q to %q", imageTag, normalized)
+	}
+	return normalized
 }
 
 func parseYaml(input []byte) (map[string]terra.VersionOverride, error) {
