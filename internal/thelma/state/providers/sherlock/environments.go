@@ -37,7 +37,7 @@ func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environme
 func (e *environments) Get(name string) (terra.Environment, error) {
 	env, exists := e.state.environments[name]
 	if !exists {
-		return nil, nil
+		return nil, fmt.Errorf("environment %q does not exist", name)
 	}
 	return env, nil
 }
