@@ -64,9 +64,12 @@ func normalizeImageTags(input map[string]terra.VersionOverride) map[string]terra
 //
 // https://github.com/broadinstitute/firecloud-develop/blob/a8573a38698890031444166320db1a857f8a0834/run-context/fiab/scripts/FiaB_configs.sh#L125
 func normalizeImageTag(imageTag string) string {
-	imageTag = imageNameIllegalChars.ReplaceAllString(imageTag, "-")
-	imageTag = imageNameStartsWithDotOrDash.ReplaceAllString(imageTag, "")
-	return imageTag
+	normalized := imageNameIllegalChars.ReplaceAllString(imageTag, "-")
+	normalized = imageNameStartsWithDotOrDash.ReplaceAllString(normalized, "")
+	if normalized != imageTag {
+		log.Info().Msgf("Rewriting illegal image tag %q to %q", imageTag, normalized)
+	}
+	return normalized
 }
 
 func parseYaml(input []byte) (map[string]terra.VersionOverride, error) {
