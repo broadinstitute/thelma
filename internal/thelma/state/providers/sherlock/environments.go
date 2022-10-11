@@ -83,6 +83,13 @@ func (e *environments) EnableRelease(environmentName string, releaseName string)
 }
 
 func (e *environments) DisableRelease(environmentName string, releaseName string) error {
+	environment, err := e.Get(environmentName)
+	if err != nil {
+		return err
+	}
+	if environment.Lifecycle() != terra.Dynamic {
+		return fmt.Errorf("disabling releases is only supported in dynamic environments")
+	}
 	return e.state.sherlock.DisableRelease(environmentName, releaseName)
 }
 
