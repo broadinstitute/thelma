@@ -12,6 +12,57 @@ type StateWriter struct {
 	mock.Mock
 }
 
+// DeleteEnvironments provides a mock function with given fields: _a0
+func (_m *StateWriter) DeleteEnvironments(_a0 []terra.Environment) ([]string, error) {
+	ret := _m.Called(_a0)
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func([]terra.Environment) []string); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]terra.Environment) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DisableRelease provides a mock function with given fields: _a0, _a1
+func (_m *StateWriter) DisableRelease(_a0 string, _a1 string) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// EnableRelease provides a mock function with given fields: _a0, _a1
+func (_m *StateWriter) EnableRelease(_a0 terra.Environment, _a1 string) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(terra.Environment, string) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // WriteClusters provides a mock function with given fields: _a0
 func (_m *StateWriter) WriteClusters(_a0 []terra.Cluster) error {
 	ret := _m.Called(_a0)
@@ -27,17 +78,26 @@ func (_m *StateWriter) WriteClusters(_a0 []terra.Cluster) error {
 }
 
 // WriteEnvironments provides a mock function with given fields: _a0
-func (_m *StateWriter) WriteEnvironments(_a0 []terra.Environment) error {
+func (_m *StateWriter) WriteEnvironments(_a0 []terra.Environment) ([]string, error) {
 	ret := _m.Called(_a0)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func([]terra.Environment) error); ok {
+	var r0 []string
+	if rf, ok := ret.Get(0).(func([]terra.Environment) []string); ok {
 		r0 = rf(_a0)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]terra.Environment) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 type mockConstructorTestingTNewStateWriter interface {

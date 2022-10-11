@@ -6,13 +6,20 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 
+type StateLoader interface {
+	Environments() (sherlock.Environments, error)
+	Clusters() (sherlock.Clusters, error)
+	ClusterReleases(clusterName string) (sherlock.Releases, error)
+	EnvironmentReleases(environmentName string) (sherlock.Releases, error)
+}
+
 type stateLoader struct {
-	sherlock    sherlock.StateLoader
+	sherlock    StateReadWriter
 	shellRunner shell.Runner
 	thelmaHome  string
 }
 
-func NewStateLoader(thelmaHome string, shellRunner shell.Runner, sherlock sherlock.StateLoader) terra.StateLoader {
+func NewStateLoader(thelmaHome string, shellRunner shell.Runner, sherlock StateReadWriter) terra.StateLoader {
 	return &stateLoader{
 		thelmaHome:  thelmaHome,
 		shellRunner: shellRunner,

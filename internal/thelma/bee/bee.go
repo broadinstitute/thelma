@@ -3,13 +3,14 @@ package bee
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
 	"github.com/rs/zerolog/log"
-	"strings"
 )
 
 const generatorArgoApp = "terra-bee-generator"

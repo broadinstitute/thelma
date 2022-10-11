@@ -29,7 +29,7 @@ func (s *sherlockStateWriterSuite) SetupSuite() {
 func (suite *sherlockStateWriterSuite) TestSuccessfulStateWriter() {
 	mockStateWriter := mocks.NewStateWriter(suite.T())
 	mockStateWriter.On("WriteClusters", mock.AnythingOfType("[]terra.Cluster")).Return(nil)
-	mockStateWriter.On("WriteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(nil)
+	mockStateWriter.On("WriteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return([]string{"environment-a"}, nil)
 
 	stateWriter := sherlock.NewSherlockStateWriter(suite.state, mockStateWriter)
 	err := stateWriter.WriteClusters()
@@ -43,7 +43,7 @@ func (suite *sherlockStateWriterSuite) TestSuccessfulStateWriter() {
 
 func (suite *sherlockStateWriterSuite) TestErrorWriteEnvironments() {
 	mockStateWriter := mocks.NewStateWriter(suite.T())
-	mockStateWriter.On("WriteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(fmt.Errorf("some error"))
+	mockStateWriter.On("WriteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(nil, fmt.Errorf("some error"))
 
 	stateWriter := sherlock.NewSherlockStateWriter(suite.state, mockStateWriter)
 	err := stateWriter.WriteEnvironments()

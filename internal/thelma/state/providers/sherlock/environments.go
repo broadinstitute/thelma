@@ -37,7 +37,7 @@ func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environme
 func (e *environments) Get(name string) (terra.Environment, error) {
 	env, exists := e.state.environments[name]
 	if !exists {
-		return nil, nil
+		return nil, fmt.Errorf("environment %q does not exist", name)
 	}
 	return env, nil
 }
@@ -60,24 +60,43 @@ func (e *environments) CreateFromTemplate(name string, template terra.Environmen
 		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
 	}
 
-	panic("TODO")
-
+	return buildDynamicEnvironment(template, name, e.state.sherlock)
 }
 
 func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment) (terra.Environment, error) {
-	panic("TODO")
+	if !template.Lifecycle().IsTemplate() {
+		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
+	}
+	// sherlock will autogenerate names for dynamic envs so we don't need to specify one
+	return buildDynamicEnvironment(template, "", e.state.sherlock)
 }
 
 func (e *environments) EnableRelease(environmentName string, releaseName string) error {
-	panic("TODO")
+	environment, err := e.Get(environmentName)
+	if err != nil {
+		return err
+	}
+	if environment.Lifecycle() != terra.Dynamic {
+		return fmt.Errorf("enabling releases is only supported for dynamic environments")
+	}
+	return e.state.sherlock.EnableRelease(environment, releaseName)
 }
 
 func (e *environments) DisableRelease(environmentName string, releaseName string) error {
-	panic("TODO")
+	environment, err := e.Get(environmentName)
+	if err != nil {
+		return err
+	}
+	if environment.Lifecycle() != terra.Dynamic {
+		return fmt.Errorf("disabling releases is only supported in dynamic environments")
+	}
+	return e.state.sherlock.DisableRelease(environmentName, releaseName)
 }
 
+// TODO use a real implmentation of this
 func (e *environments) PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error) {
-	panic("TODO")
+	// panic("TODO")
+	return nil, nil
 }
 
 func (e *environments) PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error {
@@ -97,5 +116,70 @@ func (e *environments) UnsetBuildNumber(environmentName string) (int, error) {
 }
 
 func (e *environments) Delete(name string) error {
-	panic("TODO")
+	env, err := e.Get(name)
+	if err != nil {
+		return err
+	}
+	_, err = e.state.sherlock.DeleteEnvironments([]terra.Environment{env})
+	return err
+}
+
+func buildDynamicEnvironment(template terra.Environment, name string, writer terra.StateWriter) (*environment, error) {
+	dynamicEnvReleases := make(map[string]*appRelease)
+
+	for _, r := range template.Releases() {
+		templateRelease := r.(*appRelease)
+		newRelease := &appRelease{
+			appVersion: templateRelease.AppVersion(),
+			subdomain:  templateRelease.Subdomain(),
+			protocol:   templateRelease.Protocol(),
+			port:       templateRelease.Port(),
+			release: release{
+				name:         templateRelease.Name(),
+				enabled:      templateRelease.enabled,
+				releaseType:  templateRelease.Type(),
+				chartVersion: templateRelease.ChartVersion(),
+				chartName:    templateRelease.ChartName(),
+				repo:         templateRelease.Repo(),
+				namespace:    templateRelease.Namespace(),
+				cluster:      templateRelease.Cluster(),
+				destination:  nil,
+				helmfileRef:  template.TerraHelmfileRef(),
+			},
+		}
+		dynamicEnvReleases[newRelease.Name()] = newRelease
+	}
+
+	env := &environment{
+		defaultCluster:     template.DefaultCluster(),
+		releases:           dynamicEnvReleases,
+		lifecycle:          terra.Dynamic,
+		template:           template.Name(),
+		baseDomain:         template.BaseDomain(),
+		namePrefixesDomain: template.NamePrefixesDomain(),
+		// TODO use a real unique prefix
+		uniqueResourcePrefix: "blah",
+		destination: destination{
+			base:            template.Base(),
+			requireSuitable: template.RequireSuitable(),
+			destinationType: terra.EnvironmentDestination,
+		},
+	}
+	for _, r := range env.Releases() {
+		r.(*appRelease).destination = env
+	}
+
+	newEnvs := make([]terra.Environment, 0)
+	newEnvs = append(newEnvs, env)
+	envNames, err := writer.WriteEnvironments(newEnvs)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(envNames) != 1 {
+		return nil, fmt.Errorf("expected only 1 environment to be created but received multiple: %v", envNames)
+	}
+
+	env.name = envNames[0]
+	return env, nil
 }

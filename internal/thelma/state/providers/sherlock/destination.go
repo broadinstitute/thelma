@@ -45,5 +45,5 @@ func (t *destination) RequireSuitable() bool {
 
 // TODO
 func (t *destination) TerraHelmfileRef() string {
-	panic("TODO, not yet implemented on Sherlock backend")
+	return t.terraHelmfileRef
 }

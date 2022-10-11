@@ -6,6 +6,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
+const clusterDefaultLocation = "us-central1-a"
+
 type cluster struct {
 	address       string
 	googleProject string
@@ -39,6 +41,9 @@ func (c *cluster) ProjectSuffix() string {
 }
 
 func (c *cluster) Location() string {
+	if c.location == "" {
+		return clusterDefaultLocation
+	}
 	return c.location
 }
 

@@ -1,12 +1,8 @@
 package sherlock
 
 import (
-	"fmt"
-
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
-
-const envNamespacePrefix = "terra-"
 
 type environment struct {
 	defaultCluster       terra.Cluster
@@ -54,7 +50,7 @@ func (e *environment) Base() string {
 }
 
 func (e *environment) Namespace() string {
-	return environmentNamespace(e.Name())
+	return e.Name()
 }
 
 func (e *environment) BaseDomain() string {
@@ -67,9 +63,4 @@ func (e *environment) NamePrefixesDomain() bool {
 
 func (e *environment) UniqueResourcePrefix() string {
 	return e.uniqueResourcePrefix
-}
-
-// environmentNamespace return environment namespace for a given environment name
-func environmentNamespace(envName string) string {
-	return fmt.Sprintf("%s%s", envNamespacePrefix, envName)
 }

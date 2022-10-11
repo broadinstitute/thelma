@@ -7,13 +7,6 @@ import (
 	"github.com/broadinstitute/sherlock/clients/go/client/models"
 )
 
-type StateLoader interface {
-	Environments() (Environments, error)
-	Clusters() (Clusters, error)
-	ClusterReleases(clusterName string) (Releases, error)
-	EnvironmentReleases(environmentName string) (Releases, error)
-}
-
 type Cluster struct {
 	*models.V2controllersCluster
 }

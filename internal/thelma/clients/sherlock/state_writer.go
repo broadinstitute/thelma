@@ -16,26 +16,39 @@ import (
 
 // WriteEnvironments will take a list of terra.Environment interfaces them and issue POST requests
 // to write both the environment and any releases within that environment. 409 Conflict responses are ignored
-func (s *Client) WriteEnvironments(envs []terra.Environment) error {
+func (s *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
+	createdEnvNames := make([]string, 0)
 	for _, environment := range envs {
 		log.Info().Msgf("exporting state for environment: %s", environment.Name())
 		newEnv := toModelCreatableEnvironment(environment)
 
 		newEnvRequestParams := environments.NewPostAPIV2EnvironmentsParams().
 			WithEnvironment(newEnv)
-		_, _, err := s.client.Environments.PostAPIV2Environments(newEnvRequestParams)
+		_, createdEnv, err := s.client.Environments.PostAPIV2Environments(newEnvRequestParams)
+		var envAlreadyExists bool
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
 			if _, ok := err.(*environments.PostAPIV2EnvironmentsConflict); !ok {
-				return fmt.Errorf("error creating cluster: %v", err)
+				return nil, fmt.Errorf("error creating cluster: %v", err)
 			}
+			envAlreadyExists = true
 		}
 
-		if err := s.writeReleases(environment.Releases()); err != nil {
-			return err
+		// extract the generated name from a new dynamic environment
+		var envName string
+		if environment.Lifecycle().IsDynamic() && !envAlreadyExists {
+			envName = createdEnv.Payload.Name
+		} else {
+			envName = environment.Name()
 		}
+
+		log.Debug().Msgf("environment name: %s", envName)
+		if err := s.writeReleases(envName, environment.Releases()); err != nil {
+			return nil, err
+		}
+		createdEnvNames = append(createdEnvNames, envName)
 	}
-	return nil
+	return createdEnvNames, nil
 }
 
 // WriteClusters will take a list of terra.Cluster interfaces them and issue POST requests
@@ -54,11 +67,70 @@ func (s *Client) WriteClusters(cls []terra.Cluster) error {
 			}
 		}
 
-		if err := s.writeReleases(cluster.Releases()); err != nil {
+		if err := s.writeReleases(cluster.Name(), cluster.Releases()); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) {
+	deletedEnvs := make([]string, 0)
+	for _, env := range envs {
+		// delete chart releases associated with environment
+		releases := env.Releases()
+		for _, release := range releases {
+			if err := s.deleteRelease(release); err != nil {
+				log.Warn().Msgf("error deleting chart release %s in environment %s: %v", release.Name(), env.Name(), err)
+			}
+		}
+		params := environments.NewDeleteAPIV2EnvironmentsSelectorParams().
+			WithSelector(env.Name())
+
+		deletedEnv, err := s.client.Environments.DeleteAPIV2EnvironmentsSelector(params)
+		if err != nil {
+			return nil, fmt.Errorf("error deleting environment %s: %v", env.Name(), err)
+		}
+		log.Debug().Msgf("%#v", deletedEnv)
+		deletedEnvs = append(deletedEnvs, deletedEnv.Payload.Name)
+	}
+	return deletedEnvs, nil
+}
+
+func (s *Client) EnableRelease(env terra.Environment, releaseName string) error {
+	// need to pull info about the template env in order to set chart and app versions
+	templateEnv, err := s.getEnvironment(env.Template())
+	if err != nil {
+		return fmt.Errorf("unable to fetch template %s: %v", env.Template(), err)
+	}
+	templateEnvName := templateEnv.Name
+	// now look up the chart release to enable in the template
+	templateRelease, err := s.getChartRelease(templateEnvName, releaseName)
+	if err != nil {
+		return fmt.Errorf("unable to enable release, error retrieving from template: %v", err)
+	}
+
+	// enable the chart-release in environment
+	enabledChart := &models.V2controllersCreatableChartRelease{
+		AppVersionExact:   templateRelease.AppVersionExact,
+		Chart:             templateRelease.Chart,
+		ChartVersionExact: templateRelease.ChartVersionExact,
+		Environment:       env.Name(),
+		HelmfileRef:       templateRelease.HelmfileRef,
+		Port:              templateRelease.Port,
+		Protocol:          templateRelease.Protocol,
+		Subdomain:         templateRelease.Subdomain,
+	}
+	log.Info().Msgf("enabling chart-release: %q in environment: %q", releaseName, env.Name())
+	params := chart_releases.NewPostAPIV2ChartReleasesParams().WithChartRelease(enabledChart)
+	_, _, err = s.client.ChartReleases.PostAPIV2ChartReleases(params)
+	return err
+}
+
+func (s *Client) DisableRelease(envName, releaseName string) error {
+	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{envName, releaseName}, "/"))
+	_, err := s.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
+	return err
 }
 
 func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
@@ -88,14 +160,14 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatab
 	}
 }
 
-func (s *Client) writeReleases(releases []terra.Release) error {
+func (s *Client) writeReleases(destinationName string, releases []terra.Release) error {
 	// for each release attempt to create a chart
 	for _, release := range releases {
 		log.Info().Msgf("exporting release: %v", release.Name())
 		// attempt to convert to app release
 		if release.IsAppRelease() {
 			appRelease := release.(terra.AppRelease)
-			if err := s.writeAppRelease(appRelease); err != nil {
+			if err := s.writeAppRelease(destinationName, appRelease); err != nil {
 				return err
 			}
 		} else if release.IsClusterRelease() {
@@ -108,7 +180,7 @@ func (s *Client) writeReleases(releases []terra.Release) error {
 	return nil
 }
 
-func (s *Client) writeAppRelease(release terra.AppRelease) error {
+func (s *Client) writeAppRelease(environmentName string, release terra.AppRelease) error {
 	modelChart := models.V2controllersCreatableChart{
 		Name:            release.ChartName(),
 		ChartRepo:       utils.Nullable(release.Repo()),
@@ -127,15 +199,21 @@ func (s *Client) writeAppRelease(release terra.AppRelease) error {
 		}
 	}
 	// then the chart release
-	releaseName := strings.Join([]string{release.ChartName(), release.Environment().Name()}, "-")
+	releaseName := strings.Join([]string{release.ChartName(), environmentName}, "-")
+	var releaseNamespace string
+	if release.Environment().Lifecycle().IsDynamic() {
+		releaseNamespace = environmentName
+	} else {
+		releaseNamespace = release.Namespace()
+	}
 	modelChartRelease := models.V2controllersCreatableChartRelease{
 		AppVersionExact:   release.AppVersion(),
 		Chart:             release.ChartName(),
 		ChartVersionExact: release.ChartVersion(),
-		Environment:       release.Environment().Name(),
+		Environment:       environmentName,
 		HelmfileRef:       utils.Nullable("master"),
 		Name:              releaseName,
-		Namespace:         release.Namespace(),
+		Namespace:         releaseNamespace,
 		Port:              int64(release.Port()),
 		Protocol:          release.Protocol(),
 		Subdomain:         release.Subdomain(),
@@ -194,4 +272,30 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 		}
 	}
 	return nil
+}
+
+func (s *Client) deleteRelease(release terra.Release) error {
+	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().
+		WithSelector(strings.Join([]string{release.ChartName(), release.Destination().Name()}, "-"))
+	_, err := s.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
+	return err
+}
+
+func (s *Client) getEnvironment(name string) (*Environment, error) {
+	params := environments.NewGetAPIV2EnvironmentsSelectorParams().WithSelector(name)
+	environment, err := s.client.Environments.GetAPIV2EnvironmentsSelector(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Environment{environment.Payload}, nil
+}
+
+func (s *Client) getChartRelease(environmentName, releaseName string) (*Release, error) {
+	params := chart_releases.NewGetAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{environmentName, releaseName}, "/"))
+	release, err := s.client.ChartReleases.GetAPIV2ChartReleasesSelector(params)
+	if err != nil {
+		return nil, err
+	}
+	return &Release{release.Payload}, nil
 }
