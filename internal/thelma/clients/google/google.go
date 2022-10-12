@@ -2,6 +2,7 @@ package google
 
 import (
 	container "cloud.google.com/go/container/apiv1"
+	"cloud.google.com/go/pubsub"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -43,6 +44,8 @@ type Clients interface {
 	// SetSubject allows usage of domain-wide delegation privileges, to authenticate as a user via
 	// a different account.
 	SetSubject(subject string) Clients
+	// PubSub returns a new google pubsub client
+	PubSub(projectId string) (*pubsub.Client, error)
 }
 
 type googleConfig struct {
@@ -170,6 +173,14 @@ func (g *google) Terra() (terraapi.TerraClient, error) {
 func (g *google) SetSubject(subject string) Clients {
 	g.subject = subject
 	return g
+}
+
+func (g *google) PubSub(projectId string) (*pubsub.Client, error) {
+	clientOpts, err := g.clientOptions()
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewClient(context.Background(), projectId, clientOpts...)
 }
 
 func (g *google) clientOptions() ([]option.ClientOption, error) {
