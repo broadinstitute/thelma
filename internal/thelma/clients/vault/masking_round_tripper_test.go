@@ -2,6 +2,7 @@ package vault
 
 import (
 	vaulthelper "github.com/broadinstitute/thelma/internal/thelma/clients/vault/testing"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -11,18 +12,24 @@ func Test_MaskingRoundTripper(t *testing.T) {
 	// Set up a fake Vault http server
 	fakeVaultServer := vaulthelper.NewFakeVaultServer(t)
 	// Add a fake secret to the vault server -- our test will retrieve it
-	fakeVaultServer.SetSecret("secret/foo/bar", map[string]interface{}{"abc": "xyz"})
+	fakeVaultServer.SetSecret("secret/foo/bar",
+		map[string]interface{}{
+			"field1":     "mask-me-1",
+			"field2":     "mask-me-2",
+			"project_id": "should-not-be-masked-1",
+			"user":       "should-not-be-masked-2",
+		},
+	)
 
 	// Get an HTTP client configured to talk to the fake Vault http server
 	client := fakeVaultServer.Server().Client()
 
 	// By default, the round tripper calls logging.MaskSeret to mask secrets.
 	// We supply a custom fake masking function here, so we can verify we're calling with the right parameters.
-	maskFnCalled := false
+	maskedValues := set.NewStringSet()
 	maskFn := func(secrets ...string) {
 		assert.Len(t, secrets, 1)
-		assert.Equal(t, "xyz", secrets[0])
-		maskFnCalled = true
+		maskedValues.Add(secrets...)
 	}
 
 	// create a new MaskingRoundTripper that wraps the client's default transport
@@ -38,6 +45,7 @@ func Test_MaskingRoundTripper(t *testing.T) {
 	// Make sure there were no errors
 	require.NoError(t, err)
 
-	// Make sure our fake masking function was called
-	assert.True(t, maskFnCalled)
+	// Make sure the expected values were masked
+	assert.Equal(t, 2, maskedValues.Size())
+	assert.ElementsMatch(t, []string{"mask-me-1", "mask-me-2"}, maskedValues.Elements())
 }

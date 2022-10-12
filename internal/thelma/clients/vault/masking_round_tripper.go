@@ -4,22 +4,45 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
+	"regexp"
 )
+
+// safeFieldNames a list of field names in Vault secrets to exclude from automatic masking (these
+// fields almost always contain non-secret data and lead to useful information being
+// masked in Thelma logs)
+var safeFieldNames = []string{
+	// usually-safe fields in service account key secrets
+	"auth_provider_x509_cert_url",
+	"auth_uri",
+	"client_email",
+	"client_x509_cert_url",
+	"project_id",
+	"type",
+	// usually-safe fields in database credential secrets
+	"app_sql_user",
+	"user",
+	"username",
+}
+
+const secretsEngineEndpoint = `^/v\d/secret/`
 
 // MaskingRoundTripper implements the http.RoundTripper interface, automatically masking any secrets returned from the Vault API
 type MaskingRoundTripper struct {
-	inner  http.RoundTripper       // inner round tripper this one delegates to (this is what actually makes the request)
-	maskFn func(secrets ...string) // maskFn custom masking function (should only be used in unit tests -- by default we use logging.MaskSecret)
+	inner          http.RoundTripper       // inner round tripper this one delegates to (this is what actually makes the request)
+	maskFn         func(secrets ...string) // maskFn custom masking function (should only be used in unit tests -- by default we use logging.MaskSecret)
+	safeFieldNames set.StringSet           // safeFieldNames set of field names in secrets for which values should not automatically be masked
 }
 
 func newMaskingRoundTripper(inner http.RoundTripper) MaskingRoundTripper {
 	return MaskingRoundTripper{
-		inner:  inner,
-		maskFn: logging.MaskSecret,
+		inner:          inner,
+		maskFn:         logging.MaskSecret,
+		safeFieldNames: set.NewStringSet(safeFieldNames...),
 	}
 }
 
@@ -60,20 +83,24 @@ func (m MaskingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	// If the response includes a client token, mask it
 	if secret.Auth != nil && len(secret.Auth.ClientToken) > 0 {
 		m.maskFn(secret.Auth.ClientToken)
-		log.Debug().Msgf("automatically masked Vault token")
+		logger.Debug().Msgf("automatically masked Vault token")
 	}
 
-	// If the response included data, mask every string value
-	if len(secret.Data) > 0 {
+	// If this request was to the secrets engine API and the response included data,
+	// mask every string value in the response.
+	if regexp.MustCompile(secretsEngineEndpoint).MatchString(req.URL.Path) && len(secret.Data) > 0 {
 		count := 0
-		for _, value := range secret.Data {
+		for field, value := range secret.Data {
+			if m.safeFieldNames.Exists(field) {
+				continue
+			}
 			asString, ok := value.(string)
 			if ok {
+				logger.Debug().Str("field", field).Msgf("masked value in Vault secret")
 				m.maskFn(asString)
 				count++
 			}
 		}
-		log.Debug().Msgf("automatically masked %d fields in Vault response", count)
 	}
 
 	return resp, nil

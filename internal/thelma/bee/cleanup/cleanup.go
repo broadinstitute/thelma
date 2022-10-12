@@ -65,9 +65,9 @@ func (c *cleanup) cleanupPubsubTopicsInProject(env terra.Environment, projectId 
 	for _, topicId := range pubsubTopicIds(env) {
 		if err = client.Topic(topicId).Delete(context.Background()); err != nil {
 			// If the environment was never created successfully, the pubsub topic might not exist, so just log a warning and exit
-			log.Warn().Err(err).Msgf("Failed to delete pubsub topic %s in project %s", topicId, projectId)
+			log.Warn().Err(err).Msgf("Failed to delete pubsub topic %s/%s", projectId, topicId)
 		} else {
-			log.Info().Msgf("Deleted pubsub topic %s in project %s", topicId, projectId)
+			log.Info().Msgf("Deleted pubsub topic %s/%s", projectId, topicId)
 		}
 	}
 
