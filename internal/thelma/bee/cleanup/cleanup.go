@@ -104,7 +104,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 		if err := sub.Delete(context.Background()); err != nil {
 			return fmt.Errorf("error deleting subscription %s for pubsub topic %s/%s: %v", sub.ID(), projectId, topicId, err)
 		}
-		log.Debug().Msgf("Deleted %s", sub.ID())
+		log.Info().Msgf("Deleted subscription: %s", sub.ID())
 	}
 
 	// delete the topic
@@ -113,7 +113,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 		return fmt.Errorf("error deleting pubsub topic %s/%s: %v", projectId, topicId, err)
 	}
 
-	log.Info().Msgf("Deleted %s", topicId)
+	log.Info().Msgf("Deleted topic: %s", topicId)
 
 	return nil
 }
