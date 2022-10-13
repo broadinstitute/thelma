@@ -2,12 +2,14 @@
 package cleanup
 
 import (
+	"cloud.google.com/go/pubsub"
 	"context"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/iterator"
 )
 
 // topicIdFormats list of pubsub topics created by services running in BEEs that should be deleted
@@ -57,18 +59,56 @@ func (c *cleanup) cleanupPubsubTopics(env terra.Environment) error {
 
 // clean up pubsub topics in the project
 func (c *cleanup) cleanupPubsubTopicsInProject(env terra.Environment, projectId string) error {
+	for _, topicId := range pubsubTopicIds(env) {
+		if err := c.deleteTopicAndSubscriptions(projectId, topicId); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) error {
 	client, err := c.googleClients.PubSub(projectId)
 	if err != nil {
 		return err
 	}
 
-	for _, topicId := range pubsubTopicIds(env) {
-		if err = client.Topic(topicId).Delete(context.Background()); err != nil {
-			// If the environment was never created successfully, the pubsub topic might not exist, so just log a warning and exit
-			log.Warn().Err(err).Msgf("Failed to delete pubsub topic %s/%s", projectId, topicId)
-		} else {
-			log.Info().Msgf("Deleted pubsub topic %s/%s", projectId, topicId)
+	topic := client.Topic(topicId)
+	exists, err := topic.Exists(context.Background())
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+
+	// get a list of subscriptions associated with the topic
+	var subs []*pubsub.Subscription
+	it := topic.Subscriptions(context.Background())
+	for {
+		sub, err := it.Next()
+		if err == iterator.Done {
+			break
 		}
+		if err != nil {
+			return fmt.Errorf("error listing subscriptions for pubsub topic %s/%s: %v", projectId, topicId, err)
+		}
+		subs = append(subs, sub)
+	}
+
+	// delete subscriptions
+	for _, sub := range subs {
+		if err := sub.Delete(context.Background()); err != nil {
+			return fmt.Errorf("error deleting subscription %s for pubsub topic %s/%s: %v", sub.ID(), projectId, topicId, err)
+		}
+		log.Info().Msgf("Deleted pubsub subscription %s", sub.ID())
+	}
+
+	// delete the topic
+	err = topic.Delete(context.Background())
+	if err != nil {
+		return fmt.Errorf("error deleting pubsub topic %s/%s: %v", projectId, topicId, err)
 	}
 
 	return nil
