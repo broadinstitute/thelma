@@ -59,8 +59,9 @@ func (c *cleanup) cleanupPubsubTopics(env terra.Environment) error {
 
 // clean up pubsub topics in the project
 func (c *cleanup) cleanupPubsubTopicsInProject(env terra.Environment, projectId string) error {
+	log.Info().Msgf("Deleting PubSub topics and subscriptions in %s", projectId)
+
 	for _, topicId := range pubsubTopicIds(env) {
-		log.Info().Msgf("Deleting BEE's pubsub topics and subscriptions in project %s", projectId)
 		if err := c.deleteTopicAndSubscriptions(projectId, topicId); err != nil {
 			return err
 		}
@@ -103,7 +104,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 		if err := sub.Delete(context.Background()); err != nil {
 			return fmt.Errorf("error deleting subscription %s for pubsub topic %s/%s: %v", sub.ID(), projectId, topicId, err)
 		}
-		log.Info().Str("topic", topicId).Msgf("Deleted subscription: %s", sub.ID())
+		log.Debug().Msgf("Deleted %s", sub.ID())
 	}
 
 	// delete the topic
@@ -112,7 +113,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 		return fmt.Errorf("error deleting pubsub topic %s/%s: %v", projectId, topicId, err)
 	}
 
-	log.Info().Msgf("Deleted topic: %s", topicId)
+	log.Info().Msgf("Deleted %s", topicId)
 
 	return nil
 }
