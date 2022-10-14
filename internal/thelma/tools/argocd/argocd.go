@@ -50,6 +50,8 @@ type SyncOptions struct {
 	SyncIfNoDiff bool
 	// WaitHealthy if true, wait for the application to become healhty after syncing
 	WaitHealthy bool
+	// WaitHealthyTimeoutSeconds set to non-zero value to override default WaitHealthy timeout
+	WaitHealthyTimeoutSeconds int
 	// OnlyLabels if not empty, only sync resources with the given labels
 	OnlyLabels map[string]string
 	// SkipLegacyConfigsRestart if true, do not restart deployments to pick up firecloud-develop changes

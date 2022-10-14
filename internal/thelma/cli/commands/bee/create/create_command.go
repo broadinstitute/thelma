@@ -26,21 +26,23 @@ thelma bee create \
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name             string
-	namePrefix       string
-	template         string
-	generatorOnly    string
-	waitHealthy      string
-	terraHelmfileRef string
-	seed             string
+	name                      string
+	namePrefix                string
+	template                  string
+	generatorOnly             string
+	waitHealthy               string
+	waitHealthyTimeoutSeconds string
+	terraHelmfileRef          string
+	seed                      string
 }{
-	name:             "name",
-	namePrefix:       "name-prefix",
-	template:         "template",
-	generatorOnly:    "generator-only",
-	waitHealthy:      "wait-healthy",
-	terraHelmfileRef: "terra-helmfile-ref",
-	seed:             "seed",
+	name:                      "name",
+	namePrefix:                "name-prefix",
+	template:                  "template",
+	generatorOnly:             "generator-only",
+	waitHealthy:               "wait-healthy",
+	waitHealthyTimeoutSeconds: "wait-healthy-timeout-seconds",
+	terraHelmfileRef:          "terra-helmfile-ref",
+	seed:                      "seed",
 }
 
 type createCommand struct {
@@ -70,6 +72,7 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVarP(&cmd.options.Template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
+	cobraCommand.Flags().IntVar(&cmd.options.WaitHealthyTimeoutSeconds, flagNames.waitHealthyTimeoutSeconds, 1800, "How long to wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
 
 	cmd.pinFlags.AddFlags(cobraCommand)

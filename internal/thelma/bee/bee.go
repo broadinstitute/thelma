@@ -36,15 +36,16 @@ type DeleteOptions struct {
 }
 
 type CreateOptions struct {
-	Name              string
-	NamePrefix        string
-	GenerateName      bool
-	Template          string
-	SyncGeneratorOnly bool
-	WaitHealthy       bool
-	PinOptions        PinOptions
-	Seed              bool
-	SeedOptions       seed.SeedOptions
+	Name                      string
+	NamePrefix                string
+	GenerateName              bool
+	Template                  string
+	SyncGeneratorOnly         bool
+	WaitHealthy               bool
+	WaitHealthyTimeoutSeconds int
+	PinOptions                PinOptions
+	Seed                      bool
+	SeedOptions               seed.SeedOptions
 }
 
 type PinOptions struct {
@@ -148,6 +149,7 @@ func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 		_options.SyncIfNoDiff = true
 		_options.SkipLegacyConfigsRestart = true
 		_options.WaitHealthy = options.WaitHealthy
+		_options.WaitHealthyTimeoutSeconds = options.WaitHealthyTimeoutSeconds
 	})
 	if err != nil {
 		return env, err
