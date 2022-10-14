@@ -79,8 +79,10 @@ func newReleases(rs ...*models.V2controllersChartRelease) Releases {
 }
 
 func (c *Client) ClusterReleases(clusterName string) (Releases, error) {
+	desiredDestinationType := "cluster"
 	params := chart_releases.NewGetAPIV2ChartReleasesParams()
 	params.Cluster = &clusterName
+	params.DestinationType = &desiredDestinationType
 
 	clusterReleasesResponse, err := c.client.ChartReleases.GetAPIV2ChartReleases(params)
 	if err != nil {
