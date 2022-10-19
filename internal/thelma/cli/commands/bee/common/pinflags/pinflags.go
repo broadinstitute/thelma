@@ -117,12 +117,6 @@ func (p *pinFlags) loadReleaseOverridesFromEnv(thelmaApp app.ThelmaApp) (map[str
 		return nil, fmt.Errorf("--%s: no such environment %q", flagNames.fromEnv, p.options.fromEnv)
 	}
 
-	defaultTerraHelmfileRef := "master"
-	defaultFirecloudDevelopRef := "dev"
-	if env.Name() == "alpha" || env.Name() == "staging" || env.Name() == "prod" {
-		defaultFirecloudDevelopRef = env.Name()
-	}
-
 	result := make(map[string]terra.VersionOverride)
 	for _, release := range env.Releases() {
 		var appVersion string
@@ -134,12 +128,6 @@ func (p *pinFlags) loadReleaseOverridesFromEnv(thelmaApp app.ThelmaApp) (map[str
 			ChartVersion:        release.ChartVersion(),
 			TerraHelmfileRef:    release.TerraHelmfileRef(),
 			FirecloudDevelopRef: release.FirecloudDevelopRef(),
-		}
-		if override.TerraHelmfileRef == "" {
-			override.TerraHelmfileRef = defaultTerraHelmfileRef
-		}
-		if override.FirecloudDevelopRef == "" {
-			override.FirecloudDevelopRef = defaultFirecloudDevelopRef
 		}
 		result[release.Name()] = override
 	}
