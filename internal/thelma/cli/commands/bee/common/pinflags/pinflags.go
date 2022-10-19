@@ -56,7 +56,7 @@ func (p *pinFlags) AddFlags(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&p.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin BEE to specific firecloud-develop branch (instead of dev)")
 	cobraCommand.Flags().StringVar(&p.options.versionsFile, flagNames.versionsFile, "", `Path to file containing application version overrides (see "thelma bee pin --help" for more info)`)
 	cobraCommand.Flags().StringVar(&p.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
-	cobraCommand.Flags().StringVar(&p.options.fromEnv, flagNames.fromEnv, "", fmt.Sprintf("Name of an environment to pull versions from"))
+	cobraCommand.Flags().StringVar(&p.options.fromEnv, flagNames.fromEnv, "", "Name of an environment to pull versions from")
 }
 
 func (p *pinFlags) GetPinOptions(thelmaApp app.ThelmaApp, rc cli.RunContext) (bee.PinOptions, error) {
