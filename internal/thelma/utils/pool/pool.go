@@ -20,6 +20,8 @@ type Options struct {
 	NumWorkers int
 	// StopProcessingOnError whether to stop processing work items in the event a job returns an error
 	StopProcessingOnError bool
+	// Summarize options for printing periodict processing summaries to the log
+	Summarize SummarizerOptions
 }
 
 type Job struct {
@@ -27,15 +29,8 @@ type Job struct {
 	Description string
 	// Run function that performs work
 	Run func() error
-}
-
-// workItem internal wrapper for Job that includes id & other metadata
-type workItem struct {
-	job         Job
-	description string
-	id          int
-	err         error
-	mutex       sync.Mutex
+	// StatusReporter optional reporter for sending job status updates
+	StatusReporter StatusReporter
 }
 
 // Pool implements the worker pool pattern for concurrent processing
@@ -50,57 +45,60 @@ func New(jobs []Job, options ...Option) Pool {
 	opts := Options{
 		NumWorkers:            runtime.NumCPU(),
 		StopProcessingOnError: true,
+		Summarize: SummarizerOptions{
+			Enabled:         false,
+			Interval:        30 * time.Second,
+			LogLevel:        zerolog.InfoLevel,
+			WorkDescription: "items processed",
+			Footer:          "",
+		},
 	}
+
 	for _, option := range options {
 		option(&opts)
 	}
 
 	var items []*workItem
 	for i, job := range jobs {
-		// set a default description of job-<id>
-		description := job.Description
-		if description == "" {
-			description = fmt.Sprintf("job-%d", i)
-		}
-		items = append(items, &workItem{
-			id:          i,
-			description: description,
-			job:         job,
-		})
+		items = append(items, newWorkItem(job, i))
 	}
 
 	cancelCtx, cancelFn := context.WithCancel(context.Background())
 
 	return &pool{
-		items:     items,
-		options:   opts,
-		waitGroup: sync.WaitGroup{},
-		queue:     make(chan *workItem, len(items)),
-		cancelCtx: cancelCtx,
-		cancelFn:  cancelFn,
+		items:      items,
+		options:    opts,
+		waitGroup:  sync.WaitGroup{},
+		queue:      make(chan *workItem, len(items)),
+		cancelCtx:  cancelCtx,
+		cancelFn:   cancelFn,
+		summarizer: newSummarizer(items, opts.Summarize),
 	}
 }
 
 type pool struct {
-	items     []*workItem
-	options   Options
-	waitGroup sync.WaitGroup
-	queue     chan *workItem
-	cancelCtx context.Context
-	cancelFn  context.CancelFunc
+	options    Options
+	items      []*workItem
+	waitGroup  sync.WaitGroup
+	queue      chan *workItem
+	cancelCtx  context.Context
+	cancelFn   context.CancelFunc
+	summarizer *summarizer
 }
 
 func (p *pool) Execute() error {
 	log.Debug().Msgf("executing %d job(s) with %d worker(s)", len(p.items), p.NumWorkers())
 
 	p.addJobsToQueue()
+	p.summarizer.start()
 
 	for i := 0; i < p.NumWorkers(); i++ {
 		p.spawnWorker(i)
 	}
 
-	// wait for exuection to finish
+	// wait for execution to finish
 	p.waitGroup.Wait()
+	p.summarizer.stop()
 
 	return p.aggregateErrors()
 }
@@ -118,24 +116,6 @@ func (p *pool) addJobsToQueue() {
 		p.queue <- _item
 	}
 	close(p.queue)
-}
-
-func (p *pool) executeJob(item *workItem, logger zerolog.Logger) {
-	item.mutex.Lock()
-	defer item.mutex.Unlock()
-
-	logger = logger.With().Str("item", item.description).Logger()
-
-	logger.Debug().Msgf("starting job execution")
-
-	startTime := time.Now()
-
-	item.err = item.job.Run()
-	if item.err != nil {
-		logger.Err(item.err).Msgf("error executing job")
-	}
-
-	logger.Debug().Msgf("job execution finished in %s", time.Since(startTime))
 }
 
 func (p *pool) spawnWorker(id int) {
@@ -158,7 +138,10 @@ func (p *pool) spawnWorker(id int) {
 					return
 				}
 
-				p.executeJob(item, logger)
+				itemLogger := logger.With().Str("job", item.name).Int("id", item.id).Logger()
+				itemLogger.Debug().Msg("starting job")
+				item.execute()
+				itemLogger.Debug().Dur("duration", item.duration()).Str("result", item.phase.String()).Err(item.err).Msgf("finished job")
 
 				if item.err != nil {
 					if p.options.StopProcessingOnError {
@@ -180,7 +163,7 @@ func (p *pool) aggregateErrors() error {
 	for _, item := range p.items {
 		if item.err != nil {
 			count++
-			sb.WriteString(fmt.Sprintf("%s: %v\n", item.description, item.err))
+			sb.WriteString(fmt.Sprintf("%s: %v\n", item.name, item.err))
 		}
 	}
 

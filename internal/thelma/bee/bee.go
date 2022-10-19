@@ -148,8 +148,8 @@ func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 		// (the deployments are being created for the first time)
 		_options.SyncIfNoDiff = true
 		_options.SkipLegacyConfigsRestart = true
-		_options.WaitHealthy = options.WaitHealthy
-		_options.WaitHealthyTimeoutSeconds = options.WaitHealthyTimeoutSeconds
+		_options.WaitHealthy.Enabled = options.WaitHealthy
+		_options.WaitHealthy.TimeoutSeconds = options.WaitHealthyTimeoutSeconds
 	})
 	if err != nil {
 		return env, err

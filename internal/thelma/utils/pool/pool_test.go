@@ -2,6 +2,8 @@ package pool
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -10,8 +12,44 @@ import (
 	"time"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixMilli())
+}
+
 func Test_EmptyWorkloadSucceeds(t *testing.T) {
 	require.NoError(t, New([]Job{}).Execute())
+}
+
+func Test_Status(t *testing.T) {
+	s := NewStatusReporter()
+	job := Job{
+		Description:    "sam",
+		StatusReporter: s,
+		Run: func() error {
+			for i := 0; i < 10; i++ {
+				log.Debug().Msgf("sending status: %d", i)
+				s.Update(Status{
+					Message: fmt.Sprintf("count: %d", i),
+					Context: map[string]interface{}{
+						"i": i,
+					},
+				})
+				time.Sleep(10 * time.Millisecond)
+			}
+			log.Debug().Msg("sending done")
+			s.Update(Status{
+				Message: "DONE",
+			})
+			log.Debug().Msgf("return")
+
+			return nil
+		},
+	}
+
+	require.NoError(t, New([]Job{job}, func(options *Options) {
+		options.Summarize.Enabled = true
+		options.Summarize.Interval = 5 * time.Millisecond
+	}).Execute())
 }
 
 func Test_SingleItemSucceeds(t *testing.T) {
@@ -128,27 +166,61 @@ func Test_LargeBatchStopsExecutingOnFailure(t *testing.T) {
 	assert.Less(t, numCalled, 300)
 }
 
+type jobsOptions struct {
+	Count                  int
+	FailFraction           float32
+	MaxDuration            time.Duration
+	ReportStatus           bool
+	MaxStatusReportsPerJob int
+}
+
 type testJob struct {
-	description string
-	err         error
-	callCount   int
-	sleep       time.Duration
-	mutex       sync.Mutex
+	description       string
+	err               error
+	callCount         int
+	sleep             time.Duration
+	reportStatus      bool
+	reportStatusCount int
+	statusReporter    StatusReporter
+	mutex             sync.Mutex
 }
 
 func (j *testJob) job() Job {
+	if j.reportStatus {
+		j.statusReporter = NewStatusReporter()
+	}
 	return Job{
-		Description: j.description,
-		Run:         j.run,
+		Description:    j.description,
+		Run:            j.run,
+		StatusReporter: j.statusReporter,
 	}
 }
 
 func (j *testJob) run() error {
 	j.mutex.Lock()
-	defer j.mutex.Unlock()
 	j.callCount++
-	if j.sleep > 0 {
+	j.mutex.Unlock()
+
+	if j.sleep == 0 {
+		return j.err
+	}
+
+	if !j.reportStatus {
 		time.Sleep(j.sleep)
+		return j.err
+	}
+
+	intervals := testutils.SliceIntoRandomIntervals(j.sleep, j.reportStatusCount)
+	for i, interval := range intervals {
+		msg := "even"
+		if i%2 == 0 {
+			msg = "odd"
+		}
+		j.statusReporter.Update(Status{
+			Message: msg,
+			Context: map[string]interface{}{"i": i, "n": len(intervals)},
+		})
+		time.Sleep(interval)
 	}
 	return j.err
 }

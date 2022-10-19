@@ -48,10 +48,11 @@ type SyncOptions struct {
 	HardRefresh bool
 	// SyncIfNoDiff if true, sync even if the hard refresh indicates there are no config differences
 	SyncIfNoDiff bool
-	// WaitHealthy if true, wait for the application to become healhty after syncing
-	WaitHealthy bool
-	// WaitHealthyTimeoutSeconds set to non-zero value to override default WaitHealthy timeout
-	WaitHealthyTimeoutSeconds int
+	WaitHealthy  struct {
+		// Enabled if true, wait for the application to become healhty after syncing
+		Enabled bool
+		WaitHealthyOptions
+	}
 	// OnlyLabels if not empty, only sync resources with the given labels
 	OnlyLabels map[string]string
 	// SkipLegacyConfigsRestart if true, do not restart deployments to pick up firecloud-develop changes
@@ -59,6 +60,12 @@ type SyncOptions struct {
 }
 
 type SyncOption func(options *SyncOptions)
+
+type WaitHealthyOptions struct {
+	// TimeoutSeconds how long to wait for an application to become healthy after syncing
+	TimeoutSeconds int `default:"600"`
+}
+type WaitHealthyOption func(options *WaitHealthyOptions)
 
 type WaitExistOptions struct {
 	// WaitExistTimeoutSeconds how long to wait for an application to exist before timing out
@@ -102,8 +109,7 @@ type argocdConfig struct {
 	// SyncRetries how many times to retry failed sync operations before giving up
 	SyncRetries int `default:"4"`
 
-	// WaitHealthyTimeoutSeconds how long to wait for an application to become healthy after syncing
-	WaitHealthyTimeoutSeconds int `default:"600"`
+	WaitHealthy WaitHealthyOptions
 
 	WaitExistOptions
 }
@@ -123,7 +129,7 @@ type ArgoCD interface {
 	// HardRefresh will hard refresh an ArgoCD app (force a manifest re-render without a corresponding git change)
 	HardRefresh(appName string) error
 	// WaitHealthy will wait for an ArgoCD app to become healthy (but not necessarily synced)
-	WaitHealthy(appName string) error
+	WaitHealthy(appName string, options ...WaitHealthyOption) error
 	// WaitExist will wait for an ArgoCD app to exist
 	WaitExist(appName string, options ...WaitExistOption) error
 	// SyncRelease will sync a Terra release's ArgoCD app(s), including the legacy configs app if there is one
@@ -232,7 +238,7 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, err
 		return result, err
 	}
 
-	if opts.WaitHealthy {
+	if opts.WaitHealthy.Enabled {
 		if err := a.WaitHealthy(appName); err != nil {
 			return result, err
 		}
@@ -265,7 +271,7 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 
 	// Sync primary app without waiting for it to become healthy
 	optionsNoWaitHealthy := append(options, func(options *SyncOptions) {
-		options.WaitHealthy = false
+		options.WaitHealthy.Enabled = false
 	})
 	if _, err := a.SyncApp(primaryApp, optionsNoWaitHealthy...); err != nil {
 		return err
@@ -291,7 +297,7 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	}
 
 	// Now wait for the primary app to become healthy
-	if syncOpts.WaitHealthy {
+	if syncOpts.WaitHealthy.Enabled {
 		return a.WaitHealthy(primaryApp)
 	}
 	return nil
@@ -322,15 +328,19 @@ func (a *argocd) HardRefresh(appName string) error {
 	return err
 }
 
-func (a *argocd) WaitHealthy(appName string) error {
-	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", a.cfg.WaitHealthyTimeoutSeconds, appName)
+func (a *argocd) WaitHealthy(appName string, options ...WaitHealthyOption) error {
+	opts := a.cfg.WaitHealthy
+	for _, opt := range options {
+		opt(&opts)
+	}
+	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", opts.TimeoutSeconds, appName)
 
 	return a.runCommand([]string{
 		"app",
 		"wait",
 		appName,
 		"--timeout",
-		fmt.Sprintf("%d", a.cfg.WaitHealthyTimeoutSeconds),
+		fmt.Sprintf("%d", opts.TimeoutSeconds),
 		"--health",
 	})
 }
@@ -385,11 +395,11 @@ func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
 }
 
 func (a *argocd) defaultSyncOptions() SyncOptions {
-	return SyncOptions{
-		HardRefresh:  true,
-		SyncIfNoDiff: false,
-		WaitHealthy:  true,
-	}
+	var options SyncOptions
+	options.HardRefresh = true
+	options.SyncIfNoDiff = false
+	options.WaitHealthy.Enabled = true
+	return options
 }
 
 func (a *argocd) asSyncOptions(options ...SyncOption) SyncOptions {
