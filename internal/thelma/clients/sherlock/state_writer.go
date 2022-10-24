@@ -112,14 +112,15 @@ func (s *Client) EnableRelease(env terra.Environment, releaseName string) error 
 
 	// enable the chart-release in environment
 	enabledChart := &models.V2controllersCreatableChartRelease{
-		AppVersionExact:   templateRelease.AppVersionExact,
-		Chart:             templateRelease.Chart,
-		ChartVersionExact: templateRelease.ChartVersionExact,
-		Environment:       env.Name(),
-		HelmfileRef:       templateRelease.HelmfileRef,
-		Port:              templateRelease.Port,
-		Protocol:          templateRelease.Protocol,
-		Subdomain:         templateRelease.Subdomain,
+		AppVersionExact:     templateRelease.AppVersionExact,
+		Chart:               templateRelease.Chart,
+		ChartVersionExact:   templateRelease.ChartVersionExact,
+		Environment:         env.Name(),
+		HelmfileRef:         templateRelease.HelmfileRef,
+		Port:                templateRelease.Port,
+		Protocol:            templateRelease.Protocol,
+		Subdomain:           templateRelease.Subdomain,
+		FirecloudDevelopRef: templateRelease.FirecloudDevelopRef,
 	}
 	log.Info().Msgf("enabling chart-release: %q in environment: %q", releaseName, env.Name())
 	params := chart_releases.NewPostAPIV2ChartReleasesParams().WithChartRelease(enabledChart)
@@ -134,16 +135,26 @@ func (s *Client) DisableRelease(envName, releaseName string) error {
 }
 
 func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
+	var defaultFirecloudDevelopRef string
+	// the default firecloud develop ref should be dev for template and static envs ie bees
+	if env.Lifecycle().IsDynamic() || env.Lifecycle().IsTemplate() {
+		defaultFirecloudDevelopRef = "dev"
+	} else {
+		// for live envs it should be the environment branch corresponding to the env name
+		defaultFirecloudDevelopRef = env.Name()
+	}
 	return &models.V2controllersCreatableEnvironment{
-		Base:                env.Base(),
-		BaseDomain:          utils.Nullable(env.BaseDomain()),
-		DefaultCluster:      env.DefaultCluster().Name(),
-		DefaultNamespace:    env.Namespace(),
-		Lifecycle:           utils.Nullable(env.Lifecycle().String()),
-		Name:                env.Name(),
-		NamePrefixesDomain:  utils.Nullable(env.NamePrefixesDomain()),
-		RequiresSuitability: utils.Nullable(env.RequireSuitable()),
-		TemplateEnvironment: env.Template(),
+		Base:                       env.Base(),
+		BaseDomain:                 utils.Nullable(env.BaseDomain()),
+		DefaultCluster:             env.DefaultCluster().Name(),
+		DefaultNamespace:           env.Namespace(),
+		Lifecycle:                  utils.Nullable(env.Lifecycle().String()),
+		Name:                       env.Name(),
+		NamePrefixesDomain:         utils.Nullable(env.NamePrefixesDomain()),
+		RequiresSuitability:        utils.Nullable(env.RequireSuitable()),
+		TemplateEnvironment:        env.Template(),
+		HelmfileRef:                utils.Nullable(env.TerraHelmfileRef()),
+		DefaultFirecloudDevelopRef: &defaultFirecloudDevelopRef,
 	}
 }
 
@@ -157,6 +168,8 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatab
 		Provider:            &provider,
 		GoogleProject:       cluster.Project(),
 		RequiresSuitability: utils.Nullable(cluster.RequireSuitable()),
+		HelmfileRef:         utils.Nullable(cluster.TerraHelmfileRef()),
+		Location:            utils.Nullable(cluster.Location()),
 	}
 }
 
@@ -186,6 +199,8 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     utils.Nullable(int64(release.Port())),
 		DefaultProtocol: utils.Nullable(release.Protocol()),
+		// TODO don't default this figure out how thelma actually determines if legacy configs should be rendered
+		LegacyConfigsEnabled: utils.Nullable(true),
 	}
 	// first try to create the chart
 	newChartRequestParams := charts.NewPostAPIV2ChartsParams().
@@ -207,16 +222,17 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 		releaseNamespace = release.Namespace()
 	}
 	modelChartRelease := models.V2controllersCreatableChartRelease{
-		AppVersionExact:   release.AppVersion(),
-		Chart:             release.ChartName(),
-		ChartVersionExact: release.ChartVersion(),
-		Environment:       environmentName,
-		HelmfileRef:       utils.Nullable("master"),
-		Name:              releaseName,
-		Namespace:         releaseNamespace,
-		Port:              int64(release.Port()),
-		Protocol:          release.Protocol(),
-		Subdomain:         release.Subdomain(),
+		AppVersionExact:     release.AppVersion(),
+		Chart:               release.ChartName(),
+		ChartVersionExact:   release.ChartVersion(),
+		Environment:         environmentName,
+		HelmfileRef:         utils.Nullable(release.TerraHelmfileRef()),
+		Name:                releaseName,
+		Namespace:           releaseNamespace,
+		Port:                int64(release.Port()),
+		Protocol:            release.Protocol(),
+		Subdomain:           release.Subdomain(),
+		FirecloudDevelopRef: release.FirecloudDevelopRef(),
 	}
 
 	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
@@ -237,6 +253,8 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     nil,
 		DefaultProtocol: nil,
+		// Cluster releases will never have legacy configs
+		LegacyConfigsEnabled: utils.Nullable(false),
 	}
 
 	// first try to create the chart
@@ -254,12 +272,13 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 	// then the chart release
 	releaseName := strings.Join([]string{release.ChartName(), release.Cluster().Name()}, "-")
 	modelChartRelease := models.V2controllersCreatableChartRelease{
-		Chart:             release.ChartName(),
-		ChartVersionExact: release.ChartVersion(),
-		Cluster:           release.ClusterName(),
-		HelmfileRef:       utils.Nullable("master"),
-		Name:              releaseName,
-		Namespace:         release.Namespace(),
+		Chart:               release.ChartName(),
+		ChartVersionExact:   release.ChartVersion(),
+		Cluster:             release.ClusterName(),
+		HelmfileRef:         utils.Nullable(release.TerraHelmfileRef()),
+		Name:                releaseName,
+		Namespace:           release.Namespace(),
+		FirecloudDevelopRef: release.FirecloudDevelopRef(),
 	}
 
 	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
