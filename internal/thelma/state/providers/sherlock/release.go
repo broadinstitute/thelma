@@ -3,16 +3,17 @@ package sherlock
 import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 
 type release struct {
-	name         string
-	enabled      bool
-	releaseType  terra.ReleaseType
-	chartVersion string
-	chartName    string
-	repo         string
-	namespace    string
-	cluster      terra.Cluster
-	destination  terra.Destination
-	helmfileRef  string
+	name                string
+	enabled             bool
+	releaseType         terra.ReleaseType
+	chartVersion        string
+	chartName           string
+	repo                string
+	namespace           string
+	cluster             terra.Cluster
+	destination         terra.Destination
+	helmfileRef         string
+	firecloudDevelopRef string
 }
 
 func (r *release) Name() string {
@@ -67,8 +68,6 @@ func (r *release) TerraHelmfileRef() string {
 	return r.helmfileRef
 }
 
-// TODO implement this for real once sherlock backend changes are merged
 func (r *release) FirecloudDevelopRef() string {
-	// panic("not implemented on sherlock backend yet")
-	return "dev"
+	return r.firecloudDevelopRef
 }
