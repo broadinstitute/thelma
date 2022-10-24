@@ -101,7 +101,7 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 	}
 
 	// validate/load pin and seed options
-	pinOptions, err := cmd.pinFlags.GetPinOptions(ctx)
+	pinOptions, err := cmd.pinFlags.GetPinOptions(thelmaApp, ctx)
 	if err != nil {
 		return err
 	}

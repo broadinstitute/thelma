@@ -2,6 +2,7 @@ package pinflags
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -15,6 +16,7 @@ type flagValues struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
+	fromEnv             string
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
@@ -23,11 +25,13 @@ var flagNames = struct {
 	firecloudDevelopRef string
 	versionsFile        string
 	versionsFormat      string
+	fromEnv             string
 }{
 	terraHelmfileRef:    "terra-helmfile-ref",
 	firecloudDevelopRef: "firecloud-develop-ref",
 	versionsFile:        "versions-file",
 	versionsFormat:      "versions-format",
+	fromEnv:             "from-env",
 }
 
 type pinFlags struct {
@@ -39,7 +43,7 @@ type PinFlags interface {
 	// AddFlags add version pinning flags such as --versions-file, --terra-helmfile-ref, and so forth to a Cobra command
 	AddFlags(*cobra.Command)
 	// GetPinOptions can be called during a Run function to get a bee.PinOptions populated with settings from version pinning CLI flags
-	GetPinOptions(rc cli.RunContext) (bee.PinOptions, error)
+	GetPinOptions(thelmaApp app.ThelmaApp, rc cli.RunContext) (bee.PinOptions, error)
 }
 
 // NewPinFlags returns a new PinFlags
@@ -52,29 +56,40 @@ func (p *pinFlags) AddFlags(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&p.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin BEE to specific firecloud-develop branch (instead of dev)")
 	cobraCommand.Flags().StringVar(&p.options.versionsFile, flagNames.versionsFile, "", `Path to file containing application version overrides (see "thelma bee pin --help" for more info)`)
 	cobraCommand.Flags().StringVar(&p.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
+	cobraCommand.Flags().StringVar(&p.options.fromEnv, flagNames.fromEnv, "", "Name of an environment to pull versions from")
 }
 
-func (p *pinFlags) GetPinOptions(rc cli.RunContext) (bee.PinOptions, error) {
-	var overrides bee.PinOptions
+func (p *pinFlags) GetPinOptions(thelmaApp app.ThelmaApp, rc cli.RunContext) (bee.PinOptions, error) {
+	var pinOpts bee.PinOptions
 
-	overrides.Flags.TerraHelmfileRef = p.options.terraHelmfileRef
-	overrides.Flags.FirecloudDevelopRef = p.options.firecloudDevelopRef
+	pinOpts.Flags.TerraHelmfileRef = p.options.terraHelmfileRef
+	pinOpts.Flags.FirecloudDevelopRef = p.options.firecloudDevelopRef
 
-	fileOverrides, err := p.loadReleaseOverridesFromFile(rc)
+	fileOverrides, err := p.loadReleaseOverrides(thelmaApp, rc)
 	if err != nil {
-		return overrides, err
+		return pinOpts, err
 	}
+	pinOpts.FileOverrides = fileOverrides
 
-	overrides.FileOverrides = fileOverrides
-	return overrides, nil
+	return pinOpts, nil
 }
 
-func (p *pinFlags) loadReleaseOverridesFromFile(rc cli.RunContext) (map[string]terra.VersionOverride, error) {
-	if !rc.CobraCommand().Flags().Changed(flagNames.versionsFile) {
-		// return empty map if no overrides file was supplied
+func (p *pinFlags) loadReleaseOverrides(thelmaApp app.ThelmaApp, rc cli.RunContext) (map[string]terra.VersionOverride, error) {
+	flags := rc.CobraCommand().Flags()
+	if flags.Changed(flagNames.fromEnv) {
+		if flags.Changed(flagNames.versionsFile) {
+			return nil, fmt.Errorf("either %s or %s can be specified, but not both", flagNames.versionsFile, flagNames.fromEnv)
+		}
+		return p.loadReleaseOverridesFromEnv(thelmaApp)
+	} else if flags.Changed(flagNames.versionsFile) {
+		return p.loadReleaseOverridesFromFile()
+	} else {
+		// return empty map if no overrides env or file was supplied
 		return make(map[string]terra.VersionOverride), nil
 	}
+}
 
+func (p *pinFlags) loadReleaseOverridesFromFile() (map[string]terra.VersionOverride, error) {
 	file := p.options.versionsFile
 	format := p.options.versionsFormat
 
@@ -87,4 +102,34 @@ func (p *pinFlags) loadReleaseOverridesFromFile(rc cli.RunContext) (map[string]t
 		return nil, err
 	}
 	return versions, nil
+}
+
+func (p *pinFlags) loadReleaseOverridesFromEnv(thelmaApp app.ThelmaApp) (map[string]terra.VersionOverride, error) {
+	state, err := thelmaApp.State()
+	if err != nil {
+		return nil, err
+	}
+	env, err := state.Environments().Get(p.options.fromEnv)
+	if err != nil {
+		return nil, err
+	}
+	if env == nil {
+		return nil, fmt.Errorf("--%s: no such environment %q", flagNames.fromEnv, p.options.fromEnv)
+	}
+
+	result := make(map[string]terra.VersionOverride)
+	for _, release := range env.Releases() {
+		var appVersion string
+		if release.IsAppRelease() {
+			appVersion = release.(terra.AppRelease).AppVersion()
+		}
+		override := terra.VersionOverride{
+			AppVersion:          appVersion,
+			ChartVersion:        release.ChartVersion(),
+			TerraHelmfileRef:    release.TerraHelmfileRef(),
+			FirecloudDevelopRef: release.FirecloudDevelopRef(),
+		}
+		result[release.Name()] = override
+	}
+	return result, nil
 }

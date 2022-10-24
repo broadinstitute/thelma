@@ -121,7 +121,7 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	pinOptions, err := cmd.pinOptions.GetPinOptions(ctx)
+	pinOptions, err := cmd.pinOptions.GetPinOptions(app, ctx)
 	if err != nil {
 		return err
 	}
@@ -129,6 +129,8 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	if err = bees.PinVersions(env, pinOptions); err != nil {
 		return err
 	}
+	ctx.SetOutput(pinOptions)
+
 	if err = bees.RefreshBeeGenerator(); err != nil {
 		return err
 	}
