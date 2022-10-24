@@ -135,32 +135,37 @@ func (s *Client) DisableRelease(envName, releaseName string) error {
 }
 
 func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
-	var defaultFirecloudDevelopRef string
-	// the default firecloud develop ref should be dev for template and static envs ie bees
-	if env.Lifecycle().IsDynamic() || env.Lifecycle().IsTemplate() {
-		defaultFirecloudDevelopRef = "dev"
+	// if Helmfile ref isn't set it should default to head
+	var helmfileRef string
+	if env.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
 	} else {
-		// for live envs it should be the environment branch corresponding to the env name
-		defaultFirecloudDevelopRef = env.Name()
+		helmfileRef = env.TerraHelmfileRef()
 	}
 	return &models.V2controllersCreatableEnvironment{
-		Base:                       env.Base(),
-		BaseDomain:                 utils.Nullable(env.BaseDomain()),
-		DefaultCluster:             env.DefaultCluster().Name(),
-		DefaultNamespace:           env.Namespace(),
-		Lifecycle:                  utils.Nullable(env.Lifecycle().String()),
-		Name:                       env.Name(),
-		NamePrefixesDomain:         utils.Nullable(env.NamePrefixesDomain()),
-		RequiresSuitability:        utils.Nullable(env.RequireSuitable()),
-		TemplateEnvironment:        env.Template(),
-		HelmfileRef:                utils.Nullable(env.TerraHelmfileRef()),
-		DefaultFirecloudDevelopRef: &defaultFirecloudDevelopRef,
+		Base:                env.Base(),
+		BaseDomain:          utils.Nullable(env.BaseDomain()),
+		DefaultCluster:      env.DefaultCluster().Name(),
+		DefaultNamespace:    env.Namespace(),
+		Lifecycle:           utils.Nullable(env.Lifecycle().String()),
+		Name:                env.Name(),
+		NamePrefixesDomain:  utils.Nullable(env.NamePrefixesDomain()),
+		RequiresSuitability: utils.Nullable(env.RequireSuitable()),
+		TemplateEnvironment: env.Template(),
+		HelmfileRef:         utils.Nullable(helmfileRef),
 	}
 }
 
 func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatableCluster {
 	// Hard coding to google for now since we don't have azure clusters
 	provider := "google"
+	// if Helmfile ref isn't set it should default to head
+	var helmfileRef string
+	if cluster.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
+	} else {
+		helmfileRef = cluster.TerraHelmfileRef()
+	}
 	return &models.V2controllersCreatableCluster{
 		Address:             cluster.Address(),
 		Base:                cluster.Base(),
@@ -168,7 +173,7 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatab
 		Provider:            &provider,
 		GoogleProject:       cluster.Project(),
 		RequiresSuitability: utils.Nullable(cluster.RequireSuitable()),
-		HelmfileRef:         utils.Nullable(cluster.TerraHelmfileRef()),
+		HelmfileRef:         &helmfileRef,
 		Location:            utils.Nullable(cluster.Location()),
 	}
 }
@@ -221,12 +226,19 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 	} else {
 		releaseNamespace = release.Namespace()
 	}
+	// helmfile ref should default to HEAD if unspecified
+	var helmfileRef string
+	if release.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
+	} else {
+		helmfileRef = release.TerraHelmfileRef()
+	}
 	modelChartRelease := models.V2controllersCreatableChartRelease{
 		AppVersionExact:     release.AppVersion(),
 		Chart:               release.ChartName(),
 		ChartVersionExact:   release.ChartVersion(),
 		Environment:         environmentName,
-		HelmfileRef:         utils.Nullable(release.TerraHelmfileRef()),
+		HelmfileRef:         utils.Nullable(helmfileRef),
 		Name:                releaseName,
 		Namespace:           releaseNamespace,
 		Port:                int64(release.Port()),
@@ -271,11 +283,18 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 
 	// then the chart release
 	releaseName := strings.Join([]string{release.ChartName(), release.Cluster().Name()}, "-")
+	// helmfile ref should default to HEAD if unspecified
+	var helmfileRef string
+	if release.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
+	} else {
+		helmfileRef = release.TerraHelmfileRef()
+	}
 	modelChartRelease := models.V2controllersCreatableChartRelease{
 		Chart:               release.ChartName(),
 		ChartVersionExact:   release.ChartVersion(),
 		Cluster:             release.ClusterName(),
-		HelmfileRef:         utils.Nullable(release.TerraHelmfileRef()),
+		HelmfileRef:         utils.Nullable(helmfileRef),
 		Name:                releaseName,
 		Namespace:           release.Namespace(),
 		FirecloudDevelopRef: release.FirecloudDevelopRef(),
