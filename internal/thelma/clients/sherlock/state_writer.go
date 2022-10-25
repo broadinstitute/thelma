@@ -199,6 +199,7 @@ func (s *Client) writeReleases(destinationName string, releases []terra.Release)
 }
 
 func (s *Client) writeAppRelease(environmentName string, release terra.AppRelease) error {
+	log.Debug().Msgf("release name: %v", release.Name())
 	modelChart := models.V2controllersCreatableChart{
 		Name:            release.ChartName(),
 		ChartRepo:       utils.Nullable(release.Repo()),
@@ -218,8 +219,14 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 			return fmt.Errorf("error creating chart: %v", err)
 		}
 	}
-	// then the chart release
-	releaseName := strings.Join([]string{release.ChartName(), environmentName}, "-")
+	// check for a release name override
+	var releaseName string
+	if release.Name() == release.ChartName() {
+		releaseName = strings.Join([]string{release.ChartName(), environmentName}, "-")
+	} else {
+		releaseName = strings.Join([]string{release.Name(), environmentName}, "-")
+	}
+
 	var releaseNamespace string
 	if release.Environment().Lifecycle().IsDynamic() {
 		releaseNamespace = environmentName
@@ -281,8 +288,13 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 		}
 	}
 
-	// then the chart release
-	releaseName := strings.Join([]string{release.ChartName(), release.Cluster().Name()}, "-")
+	// check for a release name override
+	var releaseName string
+	if release.Name() == release.ChartName() {
+		releaseName = strings.Join([]string{release.ChartName(), release.ClusterName()}, "-")
+	} else {
+		releaseName = strings.Join([]string{release.Name(), release.ClusterName()}, "-")
+	}
 	// helmfile ref should default to HEAD if unspecified
 	var helmfileRef string
 	if release.TerraHelmfileRef() == "" {

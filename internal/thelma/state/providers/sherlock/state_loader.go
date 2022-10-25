@@ -64,11 +64,13 @@ func (s *stateLoader) buildClustersState(clusters sherlock.Clusters) (map[string
 		c := &cluster{
 			address:       cl.Address,
 			googleProject: cl.GoogleProject,
+			location:      *cl.Location,
 			destination: destination{
-				name:            cl.Name,
-				base:            cl.Base,
-				requireSuitable: *cl.RequiresSuitability,
-				destinationType: terra.ClusterDestination,
+				name:             cl.Name,
+				base:             cl.Base,
+				requireSuitable:  *cl.RequiresSuitability,
+				destinationType:  terra.ClusterDestination,
+				terraHelmfileRef: *cl.HelmfileRef,
 			},
 		}
 		stateReleases, err := s.sherlock.ClusterReleases(cl.Name)
@@ -113,10 +115,11 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 			baseDomain:         *env.BaseDomain,
 			namePrefixesDomain: *env.NamePrefixesDomain,
 			destination: destination{
-				name:            env.Name,
-				base:            env.Base,
-				requireSuitable: *env.RequiresSuitability,
-				destinationType: terra.EnvironmentDestination,
+				name:             env.Name,
+				base:             env.Base,
+				requireSuitable:  *env.RequiresSuitability,
+				destinationType:  terra.EnvironmentDestination,
+				terraHelmfileRef: *env.HelmfileRef,
 			},
 		}
 		stateReleases, err := s.sherlock.EnvironmentReleases(env.Name)

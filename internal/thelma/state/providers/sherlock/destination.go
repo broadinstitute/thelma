@@ -43,7 +43,6 @@ func (t *destination) RequireSuitable() bool {
 	return t.requireSuitable
 }
 
-// TODO
 func (t *destination) TerraHelmfileRef() string {
 	return t.terraHelmfileRef
 }

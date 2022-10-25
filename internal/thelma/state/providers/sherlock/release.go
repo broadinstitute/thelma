@@ -1,6 +1,11 @@
 package sherlock
 
-import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+)
 
 type release struct {
 	name                string
@@ -17,7 +22,13 @@ type release struct {
 }
 
 func (r *release) Name() string {
-	return r.chartName
+	// sherlock requires unique release names so they are of the from RELEASE_NAME-(ENV_NAME | CLUSTER_NAME)
+	// depending on release type. For compatibility with terra-helmfile values file structure and mimicking behavior in the
+	// gitops provider, the env or cluster suffix must be stripped here
+
+	// if there are multiple '-' separators we only want to trim off the final one
+	releaseName := strings.TrimSuffix(r.name, fmt.Sprintf("-%s", r.destination.Name()))
+	return releaseName
 }
 
 func (r *release) Type() terra.ReleaseType {
