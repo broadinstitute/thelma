@@ -240,10 +240,12 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 	} else {
 		helmfileRef = release.TerraHelmfileRef()
 	}
+
 	modelChartRelease := models.V2controllersCreatableChartRelease{
 		AppVersionExact:     release.AppVersion(),
 		Chart:               release.ChartName(),
 		ChartVersionExact:   release.ChartVersion(),
+		Cluster:             release.ClusterName(),
 		Environment:         environmentName,
 		HelmfileRef:         utils.Nullable(helmfileRef),
 		Name:                releaseName,

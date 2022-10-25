@@ -128,6 +128,7 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 		}
 
 		for _, r := range stateReleases {
+			clusterName := r.Cluster
 			releases[r.Name] = &appRelease{
 				appVersion: r.AppVersionExact,
 				subdomain:  r.Subdomain,
@@ -142,7 +143,7 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 					repo:                *r.ChartInfo.ChartRepo,
 					namespace:           r.Namespace,
 					helmfileRef:         *r.HelmfileRef,
-					cluster:             clusters[env.DefaultCluster],
+					cluster:             clusters[clusterName],
 					destination:         e,
 					firecloudDevelopRef: r.FirecloudDevelopRef,
 				},
