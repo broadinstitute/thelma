@@ -20,7 +20,10 @@ func (s *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
 	createdEnvNames := make([]string, 0)
 	for _, environment := range envs {
 		log.Info().Msgf("exporting state for environment: %s", environment.Name())
-		newEnv := toModelCreatableEnvironment(environment)
+		// When exporting state, we don't want Sherlock to try to be smart and interpolate
+		// BEE chart releases. We'll create them manually based on our own gitops state
+		// in the next step.
+		newEnv := toModelCreatableEnvironment(environment, false)
 
 		newEnvRequestParams := environments.NewPostAPIV2EnvironmentsParams().
 			WithEnvironment(newEnv)
@@ -134,7 +137,7 @@ func (s *Client) DisableRelease(envName, releaseName string) error {
 	return err
 }
 
-func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
+func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplate bool) *models.V2controllersCreatableEnvironment {
 	// if Helmfile ref isn't set it should default to head
 	var helmfileRef string
 	if env.TerraHelmfileRef() == "" {
@@ -143,16 +146,17 @@ func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCre
 		helmfileRef = env.TerraHelmfileRef()
 	}
 	return &models.V2controllersCreatableEnvironment{
-		Base:                env.Base(),
-		BaseDomain:          utils.Nullable(env.BaseDomain()),
-		DefaultCluster:      env.DefaultCluster().Name(),
-		DefaultNamespace:    env.Namespace(),
-		Lifecycle:           utils.Nullable(env.Lifecycle().String()),
-		Name:                env.Name(),
-		NamePrefixesDomain:  utils.Nullable(env.NamePrefixesDomain()),
-		RequiresSuitability: utils.Nullable(env.RequireSuitable()),
-		TemplateEnvironment: env.Template(),
-		HelmfileRef:         utils.Nullable(helmfileRef),
+		Base:                      env.Base(),
+		BaseDomain:                utils.Nullable(env.BaseDomain()),
+		DefaultCluster:            env.DefaultCluster().Name(),
+		DefaultNamespace:          env.Namespace(),
+		Lifecycle:                 utils.Nullable(env.Lifecycle().String()),
+		Name:                      env.Name(),
+		NamePrefixesDomain:        utils.Nullable(env.NamePrefixesDomain()),
+		RequiresSuitability:       utils.Nullable(env.RequireSuitable()),
+		TemplateEnvironment:       env.Template(),
+		HelmfileRef:               utils.Nullable(helmfileRef),
+		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
 	}
 }
 
