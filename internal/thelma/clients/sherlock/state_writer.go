@@ -227,12 +227,6 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 		releaseName = strings.Join([]string{release.Name(), environmentName}, "-")
 	}
 
-	var releaseNamespace string
-	if release.Environment().Lifecycle().IsDynamic() {
-		releaseNamespace = environmentName
-	} else {
-		releaseNamespace = release.Namespace()
-	}
 	// helmfile ref should default to HEAD if unspecified
 	var helmfileRef string
 	if release.TerraHelmfileRef() == "" {
@@ -249,7 +243,7 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 		Environment:         environmentName,
 		HelmfileRef:         utils.Nullable(helmfileRef),
 		Name:                releaseName,
-		Namespace:           releaseNamespace,
+		Namespace:           release.Namespace(),
 		Port:                int64(release.Port()),
 		Protocol:            release.Protocol(),
 		Subdomain:           release.Subdomain(),
