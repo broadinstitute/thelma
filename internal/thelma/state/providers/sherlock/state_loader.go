@@ -110,6 +110,7 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 		}
 		e := &environment{
 			defaultCluster:     clusters[env.DefaultCluster],
+			defaultNamespace:   env.DefaultNamespace,
 			lifecycle:          lifecycle,
 			template:           env.TemplateEnvironment,
 			baseDomain:         *env.BaseDomain,

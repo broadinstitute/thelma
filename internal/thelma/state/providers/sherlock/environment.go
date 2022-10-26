@@ -6,6 +6,7 @@ import (
 
 type environment struct {
 	defaultCluster       terra.Cluster
+	defaultNamespace     string
 	releases             map[string]*appRelease
 	lifecycle            terra.Lifecycle
 	template             string
@@ -50,7 +51,11 @@ func (e *environment) Base() string {
 }
 
 func (e *environment) Namespace() string {
-	return e.Name()
+	if e.defaultNamespace != "" {
+		return e.defaultNamespace
+	} else {
+		return e.Name()
+	}
 }
 
 func (e *environment) BaseDomain() string {
