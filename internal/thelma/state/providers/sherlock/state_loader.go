@@ -109,12 +109,13 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 			return nil, err
 		}
 		e := &environment{
-			defaultCluster:     clusters[env.DefaultCluster],
-			defaultNamespace:   env.DefaultNamespace,
-			lifecycle:          lifecycle,
-			template:           env.TemplateEnvironment,
-			baseDomain:         *env.BaseDomain,
-			namePrefixesDomain: *env.NamePrefixesDomain,
+			defaultCluster:       clusters[env.DefaultCluster],
+			defaultNamespace:     env.DefaultNamespace,
+			lifecycle:            lifecycle,
+			template:             env.TemplateEnvironment,
+			baseDomain:           *env.BaseDomain,
+			namePrefixesDomain:   *env.NamePrefixesDomain,
+			uniqueResourcePrefix: env.UniqueResourcePrefix,
 			destination: destination{
 				name:             env.Name,
 				base:             env.Base,

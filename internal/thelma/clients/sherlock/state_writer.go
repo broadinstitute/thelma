@@ -157,6 +157,7 @@ func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplat
 		TemplateEnvironment:       env.Template(),
 		HelmfileRef:               utils.Nullable(helmfileRef),
 		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
+		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
 	}
 }
 
