@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	naming "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -248,8 +249,8 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 		return err
 	}
 
-	legacyConfigsApp := LegacyConfigsApplicationName(release)
-	primaryApp := ApplicationName(release)
+	legacyConfigsApp := naming.LegacyConfigsApplicationName(release)
+	primaryApp := naming.ApplicationName(release)
 
 	// Sync the legacy configs app, if one exists
 	legacyConfigsWereSynced := false
@@ -300,7 +301,7 @@ func (a *argocd) SyncReleases(releases []terra.Release, maxParallel int, options
 	for _, release := range releases {
 		r := release
 		jobs = append(jobs, pool.Job{
-			Description: ApplicationName(r),
+			Description: naming.ApplicationName(r),
 			Run: func() error {
 				log.Info().Msgf("Syncing ArgoCD application(s) for %s in %s", r.Name(), r.Destination().Name())
 				return a.SyncRelease(r, options...)
@@ -435,7 +436,7 @@ func (a *argocd) hasLegacyConfigsApp(release terra.Release) (bool, error) {
 		return false, err
 	}
 
-	legacyConfigsName := LegacyConfigsApplicationName(release)
+	legacyConfigsName := naming.LegacyConfigsApplicationName(release)
 	for _, line := range lines {
 		if strings.TrimSpace(line) == legacyConfigsName {
 			return true, nil
@@ -646,4 +647,30 @@ func readTokenFromVault(cfg argocdConfig, vaultClient *vaultapi.Client) (string,
 	}
 	logging.MaskSecret(asStr)
 	return asStr, nil
+}
+
+// releaseSelector returns set of selectors for all argo apps associated with a release
+// (often just the primary application, but can include the legacy configs application as well)
+func releaseSelector(release terra.Release) map[string]string {
+	if release.IsAppRelease() {
+		return map[string]string{
+			"app": release.Name(),
+			"env": release.Destination().Name(),
+		}
+	} else {
+		return map[string]string{
+			"release": release.Name(),
+			"cluster": release.Destination().Name(),
+			"type":    "cluster",
+		}
+	}
+}
+
+// joinSelector join map of label key-value pairs {"a":"b", "c":"d"} into selector string "a=b,c=d"
+func joinSelector(labels map[string]string) string {
+	var list []string
+	for name, value := range labels {
+		list = append(list, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(list, ",")
 }

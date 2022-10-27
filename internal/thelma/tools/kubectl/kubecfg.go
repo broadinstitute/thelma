@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/flock"
 	"github.com/rs/zerolog/log"
@@ -43,13 +43,13 @@ func newKubeConfig(file string, gkeClient *container.ClusterManagerClient, token
 // kubeconfig manages entries in a `kubectl` config file (traditionally ~/.kube/config) for Terra environments & releases.
 // It creates context entries for environments and releases.
 // It works like `gcloud container clusters get-credentials`, except:
-// * Users don't have to specify a project or location (because thelma already knows where clusters live)
-// * Context entries are named in a more user-friendly fashion. For example, the context for the "alpha" environment
-//   is called `alpha`, instead of `gke_broad-dsde-alpha_us-central1-a_terra-alpha`. This makes it possible to quickly run
-//   a kubectl command against the alpha environment using `kubectl -c alpha` (no need to specify a namespace).
+//   - Users don't have to specify a project or location (because thelma already knows where clusters live)
+//   - Context entries are named in a more user-friendly fashion. For example, the context for the "alpha" environment
+//     is called `alpha`, instead of `gke_broad-dsde-alpha_us-central1-a_terra-alpha`. This makes it possible to quickly run
+//     a kubectl command against the alpha environment using `kubectl -c alpha` (no need to specify a namespace).
+//
 // Read more about kubectl contexts here:
 // https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/#define-clusters-users-and-contexts
-//
 type kubeconfig struct {
 	file        string                          // path to kubeconfig file (eg. ~/.thelma/config/kubeconfig)
 	gkeClient   *container.ClusterManagerClient // google container engine / kubernetes engine client

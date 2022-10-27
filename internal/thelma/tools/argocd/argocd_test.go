@@ -3,6 +3,7 @@ package argocd
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -133,4 +134,13 @@ func Test_Login(t *testing.T) {
 			assert.Regexp(t, tc.expectError, err.Error())
 		})
 	}
+}
+
+func Test_releaseSelector(t *testing.T) {
+	fixture := statefixtures.LoadFixture(statefixtures.Default, t)
+	samDev := fixture.Release("sam", "dev")
+	yaleTerraDev := fixture.Release("yale", "terra-dev")
+
+	assert.Equal(t, map[string]string{"app": "sam", "env": "dev"}, releaseSelector(samDev))
+	assert.Equal(t, map[string]string{"release": "yale", "cluster": "terra-dev", "type": "cluster"}, releaseSelector(yaleTerraDev))
 }

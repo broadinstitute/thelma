@@ -8,6 +8,7 @@ import (
 
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	argocd_names "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
@@ -131,7 +132,7 @@ func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 		return env, err
 	}
 
-	if err = b.argocd.WaitExist(argocd.GeneratorName(env)); err != nil {
+	if err = b.argocd.WaitExist(argocd_names.GeneratorName(env)); err != nil {
 		return nil, err
 	}
 	if err = b.SyncEnvironmentGenerator(env); err != nil {
@@ -202,7 +203,7 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 }
 
 func (b *bees) SyncEnvironmentGenerator(env terra.Environment) error {
-	appName := argocd.GeneratorName(env)
+	appName := argocd_names.GeneratorName(env)
 	log.Info().Msgf("Syncing generator %s for %s", appName, env.Name())
 	_, err := b.argocd.SyncApp(appName)
 	return err

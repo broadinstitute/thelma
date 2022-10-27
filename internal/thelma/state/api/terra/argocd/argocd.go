@@ -45,36 +45,3 @@ func GeneratorName(destination terra.Destination) string {
 	projectName := ProjectName(destination)
 	return fmt.Sprintf("%s-generator", projectName)
 }
-
-// releaseSelector returns set of selectors for all argo apps associated with a release
-// (often just the primary application, but can include the legacy configs application as well)
-func releaseSelector(release terra.Release) map[string]string {
-	if release.IsAppRelease() {
-		return map[string]string{
-			"app": release.Name(),
-			"env": release.Destination().Name(),
-		}
-	} else {
-		return map[string]string{
-			"release": release.Name(),
-			"cluster": release.Destination().Name(),
-			"type":    "cluster",
-		}
-	}
-}
-
-// EnvironmentSelector returns set of selectors for all argo apps associated with an environment
-func EnvironmentSelector(env terra.Environment) map[string]string {
-	return map[string]string{
-		"env": env.Name(),
-	}
-}
-
-// joinSelector join map of label key-value pairs {"a":"b", "c":"d"} into selector string "a=b,c=d"
-func joinSelector(labels map[string]string) string {
-	var list []string
-	for name, value := range labels {
-		list = append(list, fmt.Sprintf("%s=%s", name, value))
-	}
-	return strings.Join(list, ",")
-}
