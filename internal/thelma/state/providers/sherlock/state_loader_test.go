@@ -59,7 +59,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	prodCluster, err := _clusters.Get("terra-prod")
 	suite.Assert().NoError(err)
 	prodClusterReleases := prodCluster.Releases()
-	suite.Assert().Equal("sam", prodClusterReleases[0].Name())
+	suite.Assert().Equal("sam-prod", prodClusterReleases[0].Name())
 }
 
 func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
@@ -74,14 +74,6 @@ func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
 	suite.Assert().Error(err)
 	suite.Assert().ErrorContains(err, errMsg)
 	suite.Assert().Nil(state)
-}
-
-func nullableBool(b bool) *bool {
-	return &b
-}
-
-func nullableString(s string) *string {
-	return &s
 }
 
 //nolint:govet // Ignore checks for unkeyed nested struct literals
