@@ -9,5 +9,7 @@ type Cluster interface {
 	ProjectSuffix() string
 	// Location is the name of the zone or region where the cluster lives (eg. "us-central1-a")
 	Location() string
+	// ArtifactBucket is the name of a GCS bucket for the cluster where Thelma can upload artifacts
+	ArtifactBucket() string
 	Destination
 }
