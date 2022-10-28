@@ -13,6 +13,7 @@ import (
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
+	"sort"
 	"strings"
 	"time"
 )
@@ -672,5 +673,6 @@ func joinSelector(labels map[string]string) string {
 	for name, value := range labels {
 		list = append(list, fmt.Sprintf("%s=%s", name, value))
 	}
+	sort.Strings(list)
 	return strings.Join(list, ",")
 }

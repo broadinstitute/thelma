@@ -144,3 +144,7 @@ func Test_releaseSelector(t *testing.T) {
 	assert.Equal(t, map[string]string{"app": "sam", "env": "dev"}, releaseSelector(samDev))
 	assert.Equal(t, map[string]string{"release": "yale", "cluster": "terra-dev", "type": "cluster"}, releaseSelector(yaleTerraDev))
 }
+
+func Test_joinSelector(t *testing.T) {
+	assert.Equal(t, "a=b,c=d,x=y", joinSelector(map[string]string{"x": "y", "a": "b", "c": "d"}))
+}
