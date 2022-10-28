@@ -158,3 +158,5 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/state/api/terra --name Cluster --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster.go
 	mockery --dir ./internal/thelma/state/api/terra --name StateWriter --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_writer.go
 	mockery --dir ./internal/thelma/state/api/terra --name Environment --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename environment.go
+	mockery --dir ./internal/thelma/state/providers/sherlock --name StateReadWriter --output=./internal/thelma/state/providers/sherlock/mocks --outpkg mocks --filename state_read_writer.go
+	go generate /Users/chelsea/scratch/thelma-merge/thelma/internal/thelma/clients/google/testing/generators/generators.go
