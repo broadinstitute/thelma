@@ -64,11 +64,13 @@ func (s *stateLoader) buildClustersState(clusters sherlock.Clusters) (map[string
 		c := &cluster{
 			address:       cl.Address,
 			googleProject: cl.GoogleProject,
+			location:      *cl.Location,
 			destination: destination{
-				name:            cl.Name,
-				base:            cl.Base,
-				requireSuitable: *cl.RequiresSuitability,
-				destinationType: terra.ClusterDestination,
+				name:             cl.Name,
+				base:             cl.Base,
+				requireSuitable:  *cl.RequiresSuitability,
+				destinationType:  terra.ClusterDestination,
+				terraHelmfileRef: *cl.HelmfileRef,
 			},
 		}
 		stateReleases, err := s.sherlock.ClusterReleases(cl.Name)
@@ -107,16 +109,19 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 			return nil, err
 		}
 		e := &environment{
-			defaultCluster:     clusters[env.DefaultCluster],
-			lifecycle:          lifecycle,
-			template:           env.TemplateEnvironment,
-			baseDomain:         *env.BaseDomain,
-			namePrefixesDomain: *env.NamePrefixesDomain,
+			defaultCluster:       clusters[env.DefaultCluster],
+			defaultNamespace:     env.DefaultNamespace,
+			lifecycle:            lifecycle,
+			template:             env.TemplateEnvironment,
+			baseDomain:           *env.BaseDomain,
+			namePrefixesDomain:   *env.NamePrefixesDomain,
+			uniqueResourcePrefix: env.UniqueResourcePrefix,
 			destination: destination{
-				name:            env.Name,
-				base:            env.Base,
-				requireSuitable: *env.RequiresSuitability,
-				destinationType: terra.EnvironmentDestination,
+				name:             env.Name,
+				base:             env.Base,
+				requireSuitable:  *env.RequiresSuitability,
+				destinationType:  terra.EnvironmentDestination,
+				terraHelmfileRef: *env.HelmfileRef,
 			},
 		}
 		stateReleases, err := s.sherlock.EnvironmentReleases(env.Name)
@@ -125,22 +130,24 @@ func (s *stateLoader) buildEnvironmentsState(environments sherlock.Environments,
 		}
 
 		for _, r := range stateReleases {
+			clusterName := r.Cluster
 			releases[r.Name] = &appRelease{
 				appVersion: r.AppVersionExact,
 				subdomain:  r.Subdomain,
 				protocol:   r.Protocol,
 				port:       int(r.Port),
 				release: release{
-					name:         r.Name,
-					enabled:      true,
-					releaseType:  terra.AppReleaseType,
-					chartVersion: r.ChartVersionExact,
-					chartName:    r.Chart,
-					repo:         *r.ChartInfo.ChartRepo,
-					namespace:    r.Namespace,
-					helmfileRef:  *r.HelmfileRef,
-					cluster:      clusters[env.DefaultCluster],
-					destination:  e,
+					name:                r.Name,
+					enabled:             true,
+					releaseType:         terra.AppReleaseType,
+					chartVersion:        r.ChartVersionExact,
+					chartName:           r.Chart,
+					repo:                *r.ChartInfo.ChartRepo,
+					namespace:           r.Namespace,
+					helmfileRef:         *r.HelmfileRef,
+					cluster:             clusters[clusterName],
+					destination:         e,
+					firecloudDevelopRef: r.FirecloudDevelopRef,
 				},
 			}
 		}

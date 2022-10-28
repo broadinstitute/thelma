@@ -20,7 +20,10 @@ func (s *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
 	createdEnvNames := make([]string, 0)
 	for _, environment := range envs {
 		log.Info().Msgf("exporting state for environment: %s", environment.Name())
-		newEnv := toModelCreatableEnvironment(environment)
+		// When exporting state, we don't want Sherlock to try to be smart and interpolate
+		// BEE chart releases. We'll create them manually based on our own gitops state
+		// in the next step.
+		newEnv := toModelCreatableEnvironment(environment, false)
 
 		newEnvRequestParams := environments.NewPostAPIV2EnvironmentsParams().
 			WithEnvironment(newEnv)
@@ -112,14 +115,15 @@ func (s *Client) EnableRelease(env terra.Environment, releaseName string) error 
 
 	// enable the chart-release in environment
 	enabledChart := &models.V2controllersCreatableChartRelease{
-		AppVersionExact:   templateRelease.AppVersionExact,
-		Chart:             templateRelease.Chart,
-		ChartVersionExact: templateRelease.ChartVersionExact,
-		Environment:       env.Name(),
-		HelmfileRef:       templateRelease.HelmfileRef,
-		Port:              templateRelease.Port,
-		Protocol:          templateRelease.Protocol,
-		Subdomain:         templateRelease.Subdomain,
+		AppVersionExact:     templateRelease.AppVersionExact,
+		Chart:               templateRelease.Chart,
+		ChartVersionExact:   templateRelease.ChartVersionExact,
+		Environment:         env.Name(),
+		HelmfileRef:         templateRelease.HelmfileRef,
+		Port:                templateRelease.Port,
+		Protocol:            templateRelease.Protocol,
+		Subdomain:           templateRelease.Subdomain,
+		FirecloudDevelopRef: templateRelease.FirecloudDevelopRef,
 	}
 	log.Info().Msgf("enabling chart-release: %q in environment: %q", releaseName, env.Name())
 	params := chart_releases.NewPostAPIV2ChartReleasesParams().WithChartRelease(enabledChart)
@@ -133,23 +137,40 @@ func (s *Client) DisableRelease(envName, releaseName string) error {
 	return err
 }
 
-func toModelCreatableEnvironment(env terra.Environment) *models.V2controllersCreatableEnvironment {
+func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplate bool) *models.V2controllersCreatableEnvironment {
+	// if Helmfile ref isn't set it should default to head
+	var helmfileRef string
+	if env.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
+	} else {
+		helmfileRef = env.TerraHelmfileRef()
+	}
 	return &models.V2controllersCreatableEnvironment{
-		Base:                env.Base(),
-		BaseDomain:          utils.Nullable(env.BaseDomain()),
-		DefaultCluster:      env.DefaultCluster().Name(),
-		DefaultNamespace:    env.Namespace(),
-		Lifecycle:           utils.Nullable(env.Lifecycle().String()),
-		Name:                env.Name(),
-		NamePrefixesDomain:  utils.Nullable(env.NamePrefixesDomain()),
-		RequiresSuitability: utils.Nullable(env.RequireSuitable()),
-		TemplateEnvironment: env.Template(),
+		Base:                      env.Base(),
+		BaseDomain:                utils.Nullable(env.BaseDomain()),
+		DefaultCluster:            env.DefaultCluster().Name(),
+		DefaultNamespace:          env.Namespace(),
+		Lifecycle:                 utils.Nullable(env.Lifecycle().String()),
+		Name:                      env.Name(),
+		NamePrefixesDomain:        utils.Nullable(env.NamePrefixesDomain()),
+		RequiresSuitability:       utils.Nullable(env.RequireSuitable()),
+		TemplateEnvironment:       env.Template(),
+		HelmfileRef:               utils.Nullable(helmfileRef),
+		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
+		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
 	}
 }
 
 func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatableCluster {
 	// Hard coding to google for now since we don't have azure clusters
 	provider := "google"
+	// if Helmfile ref isn't set it should default to head
+	var helmfileRef string
+	if cluster.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
+	} else {
+		helmfileRef = cluster.TerraHelmfileRef()
+	}
 	return &models.V2controllersCreatableCluster{
 		Address:             cluster.Address(),
 		Base:                cluster.Base(),
@@ -157,6 +178,8 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatab
 		Provider:            &provider,
 		GoogleProject:       cluster.Project(),
 		RequiresSuitability: utils.Nullable(cluster.RequireSuitable()),
+		HelmfileRef:         &helmfileRef,
+		Location:            utils.Nullable(cluster.Location()),
 	}
 }
 
@@ -181,11 +204,14 @@ func (s *Client) writeReleases(destinationName string, releases []terra.Release)
 }
 
 func (s *Client) writeAppRelease(environmentName string, release terra.AppRelease) error {
+	log.Debug().Msgf("release name: %v", release.Name())
 	modelChart := models.V2controllersCreatableChart{
 		Name:            release.ChartName(),
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     utils.Nullable(int64(release.Port())),
 		DefaultProtocol: utils.Nullable(release.Protocol()),
+		// TODO don't default this figure out how thelma actually determines if legacy configs should be rendered
+		LegacyConfigsEnabled: utils.Nullable(true),
 	}
 	// first try to create the chart
 	newChartRequestParams := charts.NewPostAPIV2ChartsParams().
@@ -198,25 +224,35 @@ func (s *Client) writeAppRelease(environmentName string, release terra.AppReleas
 			return fmt.Errorf("error creating chart: %v", err)
 		}
 	}
-	// then the chart release
-	releaseName := strings.Join([]string{release.ChartName(), environmentName}, "-")
-	var releaseNamespace string
-	if release.Environment().Lifecycle().IsDynamic() {
-		releaseNamespace = environmentName
+	// check for a release name override
+	var releaseName string
+	if release.Name() == release.ChartName() {
+		releaseName = strings.Join([]string{release.ChartName(), environmentName}, "-")
 	} else {
-		releaseNamespace = release.Namespace()
+		releaseName = strings.Join([]string{release.Name(), environmentName}, "-")
 	}
+
+	// helmfile ref should default to HEAD if unspecified
+	var helmfileRef string
+	if release.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
+	} else {
+		helmfileRef = release.TerraHelmfileRef()
+	}
+
 	modelChartRelease := models.V2controllersCreatableChartRelease{
-		AppVersionExact:   release.AppVersion(),
-		Chart:             release.ChartName(),
-		ChartVersionExact: release.ChartVersion(),
-		Environment:       environmentName,
-		HelmfileRef:       utils.Nullable("master"),
-		Name:              releaseName,
-		Namespace:         releaseNamespace,
-		Port:              int64(release.Port()),
-		Protocol:          release.Protocol(),
-		Subdomain:         release.Subdomain(),
+		AppVersionExact:     release.AppVersion(),
+		Chart:               release.ChartName(),
+		ChartVersionExact:   release.ChartVersion(),
+		Cluster:             release.ClusterName(),
+		Environment:         environmentName,
+		HelmfileRef:         utils.Nullable(helmfileRef),
+		Name:                releaseName,
+		Namespace:           release.Namespace(),
+		Port:                int64(release.Port()),
+		Protocol:            release.Protocol(),
+		Subdomain:           release.Subdomain(),
+		FirecloudDevelopRef: release.FirecloudDevelopRef(),
 	}
 
 	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
@@ -237,6 +273,8 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     nil,
 		DefaultProtocol: nil,
+		// Cluster releases will never have legacy configs
+		LegacyConfigsEnabled: utils.Nullable(false),
 	}
 
 	// first try to create the chart
@@ -251,15 +289,28 @@ func (s *Client) writeClusterRelease(release terra.ClusterRelease) error {
 		}
 	}
 
-	// then the chart release
-	releaseName := strings.Join([]string{release.ChartName(), release.Cluster().Name()}, "-")
+	// check for a release name override
+	var releaseName string
+	if release.Name() == release.ChartName() {
+		releaseName = strings.Join([]string{release.ChartName(), release.ClusterName()}, "-")
+	} else {
+		releaseName = strings.Join([]string{release.Name(), release.ClusterName()}, "-")
+	}
+	// helmfile ref should default to HEAD if unspecified
+	var helmfileRef string
+	if release.TerraHelmfileRef() == "" {
+		helmfileRef = "HEAD"
+	} else {
+		helmfileRef = release.TerraHelmfileRef()
+	}
 	modelChartRelease := models.V2controllersCreatableChartRelease{
-		Chart:             release.ChartName(),
-		ChartVersionExact: release.ChartVersion(),
-		Cluster:           release.ClusterName(),
-		HelmfileRef:       utils.Nullable("master"),
-		Name:              releaseName,
-		Namespace:         release.Namespace(),
+		Chart:               release.ChartName(),
+		ChartVersionExact:   release.ChartVersion(),
+		Cluster:             release.ClusterName(),
+		HelmfileRef:         utils.Nullable(helmfileRef),
+		Name:                releaseName,
+		Namespace:           release.Namespace(),
+		FirecloudDevelopRef: release.FirecloudDevelopRef(),
 	}
 
 	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().

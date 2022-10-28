@@ -1,22 +1,34 @@
 package sherlock
 
-import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+)
 
 type release struct {
-	name         string
-	enabled      bool
-	releaseType  terra.ReleaseType
-	chartVersion string
-	chartName    string
-	repo         string
-	namespace    string
-	cluster      terra.Cluster
-	destination  terra.Destination
-	helmfileRef  string
+	name                string
+	enabled             bool
+	releaseType         terra.ReleaseType
+	chartVersion        string
+	chartName           string
+	repo                string
+	namespace           string
+	cluster             terra.Cluster
+	destination         terra.Destination
+	helmfileRef         string
+	firecloudDevelopRef string
 }
 
 func (r *release) Name() string {
-	return r.chartName
+	// sherlock requires unique release names so they are of the from RELEASE_NAME-(ENV_NAME | CLUSTER_NAME)
+	// depending on release type. For compatibility with terra-helmfile values file structure and mimicking behavior in the
+	// gitops provider, the env or cluster suffix must be stripped here
+
+	// if there are multiple '-' separators we only want to trim off the final one
+	releaseName := strings.TrimSuffix(r.name, fmt.Sprintf("-%s", r.destination.Name()))
+	return releaseName
 }
 
 func (r *release) Type() terra.ReleaseType {
@@ -67,8 +79,6 @@ func (r *release) TerraHelmfileRef() string {
 	return r.helmfileRef
 }
 
-// TODO implement this for real once sherlock backend changes are merged
 func (r *release) FirecloudDevelopRef() string {
-	// panic("not implemented on sherlock backend yet")
-	return "dev"
+	return r.firecloudDevelopRef
 }

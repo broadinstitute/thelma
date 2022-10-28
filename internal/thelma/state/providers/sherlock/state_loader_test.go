@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/sherlock/clients/go/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/suite"
 )
@@ -58,7 +59,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	prodCluster, err := _clusters.Get("terra-prod")
 	suite.Assert().NoError(err)
 	prodClusterReleases := prodCluster.Releases()
-	suite.Assert().Equal("sam", prodClusterReleases[0].Name())
+	suite.Assert().Equal("sam-prod", prodClusterReleases[0].Name())
 }
 
 func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
@@ -75,14 +76,6 @@ func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
 	suite.Assert().Nil(state)
 }
 
-func nullableBool(b bool) *bool {
-	return &b
-}
-
-func nullableString(s string) *string {
-	return &s
-}
-
 //nolint:govet // Ignore checks for unkeyed nested struct literals
 func setStateExpectations(mock *mocks.StateReadWriter) {
 	mock.On("Clusters").Return(
@@ -92,8 +85,10 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					Name:                "terra-dev",
 					GoogleProject:       "dev-proj",
 					Address:             "10.10.10.10",
-					RequiresSuitability: nullableBool(false),
-					Provider:            nullableString("google"),
+					RequiresSuitability: utils.Nullable(false),
+					Provider:            utils.Nullable("google"),
+					Location:            utils.Nullable("us-central1-a"),
+					HelmfileRef:         utils.Nullable("HEAD"),
 				},
 			},
 			sherlock.Cluster{
@@ -101,8 +96,10 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					Name:                "terra-prod",
 					GoogleProject:       "prod-proj",
 					Address:             "10.10.10.11",
-					RequiresSuitability: nullableBool(true),
-					Provider:            nullableString("google"),
+					RequiresSuitability: utils.Nullable(true),
+					Provider:            utils.Nullable("google"),
+					Location:            utils.Nullable("us-central-1"),
+					HelmfileRef:         utils.Nullable("HEAD"),
 				},
 			},
 		}, nil,
@@ -114,24 +111,26 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 				&models.V2controllersEnvironment{
 					Name:                "dev",
 					Base:                "live",
-					BaseDomain:          nullableString("dsde-dev.broadinstitute.org"),
+					BaseDomain:          utils.Nullable("dsde-dev.broadinstitute.org"),
 					DefaultCluster:      "terra-dev",
 					DefaultNamespace:    "terra-dev",
-					Lifecycle:           nullableString("static"),
-					RequiresSuitability: nullableBool(false),
-					NamePrefixesDomain:  nullableBool(true),
+					Lifecycle:           utils.Nullable("static"),
+					RequiresSuitability: utils.Nullable(false),
+					NamePrefixesDomain:  utils.Nullable(true),
+					HelmfileRef:         utils.Nullable("HEAD"),
 				},
 			},
 			sherlock.Environment{
 				&models.V2controllersEnvironment{
 					Name:                "prod",
 					Base:                "live",
-					BaseDomain:          nullableString("dsde-prod.broadinstitute.org"),
+					BaseDomain:          utils.Nullable("dsde-prod.broadinstitute.org"),
 					DefaultCluster:      "terra-prod",
 					DefaultNamespace:    "terra-prod",
-					Lifecycle:           nullableString("static"),
-					RequiresSuitability: nullableBool(true),
-					NamePrefixesDomain:  nullableBool(false),
+					Lifecycle:           utils.Nullable("static"),
+					RequiresSuitability: utils.Nullable(true),
+					NamePrefixesDomain:  utils.Nullable(false),
+					HelmfileRef:         utils.Nullable("HEAD"),
 				},
 			},
 		}, nil,
@@ -146,12 +145,12 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					ChartVersionExact: "0.43.0",
 					Cluster:           "terra-dev",
 					ChartInfo: &models.V2controllersChart{
-						ChartRepo: nullableString(""),
+						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "dev",
 					Name:        "sam-dev",
 					Namespace:   "terra-dev",
-					HelmfileRef: nullableString("asdf"),
+					HelmfileRef: utils.Nullable("asdf"),
 				},
 			},
 		}, nil,
@@ -166,7 +165,7 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					ChartVersionExact: "0.42.0",
 					Cluster:           "terra-prod",
 					ChartInfo: &models.V2controllersChart{
-						ChartRepo: nullableString(""),
+						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "prod",
 					Name:        "sam-prod",
@@ -185,12 +184,13 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					ChartVersionExact: "0.33.0",
 					Cluster:           "terra-dev",
 					ChartInfo: &models.V2controllersChart{
-						ChartRepo: nullableString(""),
+						ChartRepo: utils.Nullable(""),
 					},
-					Environment: "dev",
-					Name:        "datarepo-dev",
-					Namespace:   "terra-dev",
-					HelmfileRef: nullableString("oisgff"),
+					Environment:         "dev",
+					Name:                "datarepo-dev",
+					Namespace:           "terra-dev",
+					HelmfileRef:         utils.Nullable("oisgff"),
+					FirecloudDevelopRef: "",
 				},
 			},
 		}, nil,
@@ -205,12 +205,13 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					ChartVersionExact: "0.32.0",
 					Cluster:           "terra-prod",
 					ChartInfo: &models.V2controllersChart{
-						ChartRepo: nullableString(""),
+						ChartRepo: utils.Nullable(""),
 					},
-					Environment: "prod",
-					Name:        "datarepo-prod",
-					Namespace:   "terra-prod",
-					HelmfileRef: nullableString("wlekjerw"),
+					Environment:         "prod",
+					Name:                "datarepo-prod",
+					Namespace:           "terra-prod",
+					HelmfileRef:         utils.Nullable("wlekjerw"),
+					FirecloudDevelopRef: "",
 				},
 			},
 		}, nil,

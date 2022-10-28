@@ -157,8 +157,6 @@ func buildDynamicEnvironment(template terra.Environment, name string, writer ter
 		template:           template.Name(),
 		baseDomain:         template.BaseDomain(),
 		namePrefixesDomain: template.NamePrefixesDomain(),
-		// TODO use a real unique prefix
-		uniqueResourcePrefix: "blah",
 		destination: destination{
 			base:            template.Base(),
 			requireSuitable: template.RequireSuitable(),
