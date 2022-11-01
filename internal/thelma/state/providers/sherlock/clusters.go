@@ -6,7 +6,7 @@ type clusters struct {
 	state *state
 }
 
-func newClusters(s *state) terra.Clusters {
+func newClustersView(s *state) terra.Clusters {
 	return &clusters{
 		state: s,
 	}

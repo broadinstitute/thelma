@@ -5,31 +5,25 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
-// StateReadWriter is an interface representing the ability to both read and
-// create/update thelma's internal state using a sherlock client
-type StateReadWriter interface {
-	StateLoader
-	sherlock.StateWriter
-}
-
+// state is an implementer of terra.State, the overall provider interface for Thelma
 type state struct {
-	sherlock     StateReadWriter
+	sherlock     sherlock.StateReadWriter
 	environments map[string]*environment
 	clusters     map[string]*cluster
 }
 
 func (s *state) Destinations() terra.Destinations {
-	return newDestinations(s)
+	return newDestinationsView(s)
 }
 
 func (s *state) Environments() terra.Environments {
-	return newEnvironments(s)
+	return newEnvironmentsView(s)
 }
 
 func (s *state) Clusters() terra.Clusters {
-	return newClusters(s)
+	return newClustersView(s)
 }
 
 func (s *state) Releases() terra.Releases {
-	return newReleases(s)
+	return newReleasesView(s)
 }
