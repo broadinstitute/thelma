@@ -83,7 +83,7 @@ func configureClientRuntime(addr, token string) (*Client, error) {
 
 // getStatus is used in tests to verify that an initialzied sherlock client
 // can successfully issue a request against a remote sherlock backend
-func (c Client) getStatus() error {
+func (c *Client) getStatus() error {
 	params := misc.NewGetStatusParams()
 	_, err := c.client.Misc.GetStatus(params)
 	return err

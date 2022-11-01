@@ -2,6 +2,7 @@ package sherlock
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
 
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
@@ -47,28 +48,12 @@ func (e *environments) Exists(name string) (bool, error) {
 	return exists, nil
 }
 
-func (e *environments) CreateFromTemplate(name string, template terra.Environment) (terra.Environment, error) {
-	exists, err := e.Exists(name)
-	if err != nil {
-		return nil, fmt.Errorf("error checking for environment name conflict: %v", err)
-	}
-	if exists {
-		return nil, fmt.Errorf("can't create environment: %s: an environment of the same name already exists", template.Name())
-	}
-
-	if !template.Lifecycle().IsTemplate() {
-		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
-	}
-
-	return buildDynamicEnvironment(template, name, e.state.sherlock)
+func (e *environments) CreateFromTemplate(name string, template terra.Environment, owner string) (string, error) {
+	return e.state.sherlock.CreateEnvironmentFromTemplate(template.Name(), "", name, owner)
 }
 
-func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment) (terra.Environment, error) {
-	if !template.Lifecycle().IsTemplate() {
-		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
-	}
-	// sherlock will autogenerate names for dynamic envs so we don't need to specify one
-	return buildDynamicEnvironment(template, "", e.state.sherlock)
+func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment, owner string) (string, error) {
+	return e.state.sherlock.CreateEnvironmentFromTemplate(template.Name(), namePrefix, "", owner)
 }
 
 func (e *environments) EnableRelease(environmentName string, releaseName string) error {
@@ -93,26 +78,26 @@ func (e *environments) DisableRelease(environmentName string, releaseName string
 	return e.state.sherlock.DisableRelease(environmentName, releaseName)
 }
 
-// TODO use a real implmentation of this
 func (e *environments) PinVersions(environmentName string, versions map[string]terra.VersionOverride) (map[string]terra.VersionOverride, error) {
-	// panic("TODO")
-	return nil, nil
+	return versions, e.state.sherlock.PinEnvironmentVersions(environmentName, versions)
 }
 
 func (e *environments) PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error {
-	panic("TODO")
+	environment, err := e.Get(environmentName)
+	if err != nil {
+		return err
+	}
+	return e.state.sherlock.SetTerraHelmfileRefForEntireEnvironment(environment, terraHelmfileRef)
 }
 
 func (e *environments) UnpinVersions(environmentName string) (map[string]terra.VersionOverride, error) {
-	panic("TODO")
-}
-
-func (e *environments) SetBuildNumber(environmentName string, buildNumber int) (int, error) {
-	panic("TODO")
-}
-
-func (e *environments) UnsetBuildNumber(environmentName string) (int, error) {
-	panic("TODO")
+	environment, err := e.Get(environmentName)
+	if err != nil {
+		return nil, err
+	}
+	log.Warn().Msg("sherlock state provider does not directly support unpinning, so the environment's git refs will be reset and it will be pinned to the current state of dev")
+	log.Debug().Msg("note that because sherlock does not store overrides, thelma will report that zero overrides were lifted")
+	return nil, e.state.sherlock.ResetEnvironmentAndPinToDev(environment)
 }
 
 func (e *environments) Delete(name string) error {
@@ -122,62 +107,4 @@ func (e *environments) Delete(name string) error {
 	}
 	_, err = e.state.sherlock.DeleteEnvironments([]terra.Environment{env})
 	return err
-}
-
-func buildDynamicEnvironment(template terra.Environment, name string, writer terra.StateWriter) (*environment, error) {
-	dynamicEnvReleases := make(map[string]*appRelease)
-
-	for _, r := range template.Releases() {
-		templateRelease := r.(*appRelease)
-		newRelease := &appRelease{
-			appVersion: templateRelease.AppVersion(),
-			subdomain:  templateRelease.Subdomain(),
-			protocol:   templateRelease.Protocol(),
-			port:       templateRelease.Port(),
-			release: release{
-				name:         templateRelease.Name(),
-				enabled:      templateRelease.enabled,
-				releaseType:  templateRelease.Type(),
-				chartVersion: templateRelease.ChartVersion(),
-				chartName:    templateRelease.ChartName(),
-				repo:         templateRelease.Repo(),
-				namespace:    templateRelease.Namespace(),
-				cluster:      templateRelease.Cluster(),
-				destination:  nil,
-				helmfileRef:  template.TerraHelmfileRef(),
-			},
-		}
-		dynamicEnvReleases[newRelease.Name()] = newRelease
-	}
-
-	env := &environment{
-		defaultCluster:     template.DefaultCluster(),
-		releases:           dynamicEnvReleases,
-		lifecycle:          terra.Dynamic,
-		template:           template.Name(),
-		baseDomain:         template.BaseDomain(),
-		namePrefixesDomain: template.NamePrefixesDomain(),
-		destination: destination{
-			base:            template.Base(),
-			requireSuitable: template.RequireSuitable(),
-			destinationType: terra.EnvironmentDestination,
-		},
-	}
-	for _, r := range env.Releases() {
-		r.(*appRelease).destination = env
-	}
-
-	newEnvs := make([]terra.Environment, 0)
-	newEnvs = append(newEnvs, env)
-	envNames, err := writer.WriteEnvironments(newEnvs)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(envNames) != 1 {
-		return nil, fmt.Errorf("expected only 1 environment to be created but received multiple: %v", envNames)
-	}
-
-	env.name = envNames[0]
-	return env, nil
 }

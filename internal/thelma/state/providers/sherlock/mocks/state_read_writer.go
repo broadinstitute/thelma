@@ -61,6 +61,27 @@ func (_m *StateReadWriter) Clusters() (sherlock.Clusters, error) {
 	return r0, r1
 }
 
+// CreateEnvironmentFromTemplate provides a mock function with given fields: templateName, desiredNamePrefix, desiredName, desiredOwnerEmail
+func (_m *StateReadWriter) CreateEnvironmentFromTemplate(templateName string, desiredNamePrefix string, desiredName string, desiredOwnerEmail string) (string, error) {
+	ret := _m.Called(templateName, desiredNamePrefix, desiredName, desiredOwnerEmail)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, string, string, string) string); ok {
+		r0 = rf(templateName, desiredNamePrefix, desiredName, desiredOwnerEmail)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string, string, string) error); ok {
+		r1 = rf(templateName, desiredNamePrefix, desiredName, desiredOwnerEmail)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteEnvironments provides a mock function with given fields: _a0
 func (_m *StateReadWriter) DeleteEnvironments(_a0 []terra.Environment) ([]string, error) {
 	ret := _m.Called(_a0)
@@ -156,6 +177,48 @@ func (_m *StateReadWriter) Environments() (sherlock.Environments, error) {
 	}
 
 	return r0, r1
+}
+
+// PinEnvironmentVersions provides a mock function with given fields: environmentName, versions
+func (_m *StateReadWriter) PinEnvironmentVersions(environmentName string, versions map[string]terra.VersionOverride) error {
+	ret := _m.Called(environmentName, versions)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, map[string]terra.VersionOverride) error); ok {
+		r0 = rf(environmentName, versions)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ResetEnvironmentAndPinToDev provides a mock function with given fields: environment
+func (_m *StateReadWriter) ResetEnvironmentAndPinToDev(environment terra.Environment) error {
+	ret := _m.Called(environment)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(terra.Environment) error); ok {
+		r0 = rf(environment)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetTerraHelmfileRefForEntireEnvironment provides a mock function with given fields: environment, terraHelmfileRef
+func (_m *StateReadWriter) SetTerraHelmfileRefForEntireEnvironment(environment terra.Environment, terraHelmfileRef string) error {
+	ret := _m.Called(environment, terraHelmfileRef)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(terra.Environment, string) error); ok {
+		r0 = rf(environment, terraHelmfileRef)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // WriteClusters provides a mock function with given fields: _a0
