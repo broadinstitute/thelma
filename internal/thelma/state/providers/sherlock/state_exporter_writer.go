@@ -5,19 +5,19 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 )
 
-type stateWriter struct {
+type StateExporterWriter struct {
 	stateWriter terra.StateWriter
 	state       terra.State
 }
 
-func NewSherlockStateWriter(state terra.State, writer terra.StateWriter) *stateWriter {
-	return &stateWriter{
+func NewSherlockStateWriter(state terra.State, writer terra.StateWriter) *StateExporterWriter {
+	return &StateExporterWriter{
 		stateWriter: writer,
 		state:       state,
 	}
 }
 
-func (s *stateWriter) WriteEnvironments() error {
+func (s *StateExporterWriter) WriteEnvironments() error {
 	// Need to create template envs first as other envs that reference them will 404 in sherlock otherwise
 	templateEnvfilter := filter.Environments().HasLifecycle(terra.Template)
 	templateEnvs, err := s.state.Environments().Filter(templateEnvfilter)
@@ -43,7 +43,7 @@ func (s *stateWriter) WriteEnvironments() error {
 	return err
 }
 
-func (s *stateWriter) WriteClusters() error {
+func (s *StateExporterWriter) WriteClusters() error {
 	allClusters, err := s.state.Clusters().All()
 	if err != nil {
 		return err

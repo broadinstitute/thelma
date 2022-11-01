@@ -38,6 +38,7 @@ type DeleteOptions struct {
 type CreateOptions struct {
 	Name              string
 	NamePrefix        string
+	Owner             string
 	GenerateName      bool
 	Template          string
 	SyncGeneratorOnly bool
@@ -92,23 +93,23 @@ func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 		return nil, err
 	}
 
-	var env terra.Environment
+	var envName string
 	if options.GenerateName {
-		env, err = b.state.Environments().CreateFromTemplateGenerateName(options.NamePrefix, template)
+		envName, err = b.state.Environments().CreateFromTemplateGenerateName(options.NamePrefix, template, options.Owner)
 	} else {
-		env, err = b.state.Environments().CreateFromTemplate(options.Name, template)
+		envName, err = b.state.Environments().CreateFromTemplate(options.Name, template, options.Owner)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info().Msgf("Created new environment %s", env.Name())
+	log.Info().Msgf("Created new environment %s", envName)
 
-	// Load environment from state file
+	// Reload state; required since "creating an environment" just returns the name of what was created.
 	if err = b.reloadState(); err != nil {
 		return nil, err
 	}
-	env, err = b.state.Environments().Get(env.Name())
+	env, err := b.state.Environments().Get(envName)
 	if err != nil {
 		return nil, err
 	}

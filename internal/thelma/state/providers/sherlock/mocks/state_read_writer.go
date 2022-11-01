@@ -61,6 +61,27 @@ func (_m *StateReadWriter) Clusters() (sherlock.Clusters, error) {
 	return r0, r1
 }
 
+// CreateEnvironmentFromTemplate provides a mock function with given fields: templateName, desiredName, desiredOwnerEmail
+func (_m *StateReadWriter) CreateEnvironmentFromTemplate(templateName string, desiredName string, desiredOwnerEmail string) (string, error) {
+	ret := _m.Called(templateName, desiredName, desiredOwnerEmail)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, string, string) string); ok {
+		r0 = rf(templateName, desiredName, desiredOwnerEmail)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
+		r1 = rf(templateName, desiredName, desiredOwnerEmail)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteEnvironments provides a mock function with given fields: _a0
 func (_m *StateReadWriter) DeleteEnvironments(_a0 []terra.Environment) ([]string, error) {
 	ret := _m.Called(_a0)

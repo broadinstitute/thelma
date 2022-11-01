@@ -124,6 +124,10 @@ github.com/broadinstitute/sherlock v0.0.74 h1:lBrps5ujr8GY15D+j9ZMYma9Rob15CtwAl
 github.com/broadinstitute/sherlock v0.0.74/go.mod h1:xa+Cxcx/Ccx6HOvqxc8pQKIIBvzkDpfrF4bTE6VuISU=
 github.com/broadinstitute/sherlock v0.0.79 h1:TxWkv8SVNdX28Iba01rPaLHL+mzmOhkBh8emmjaN+6E=
 github.com/broadinstitute/sherlock v0.0.79/go.mod h1:LXdtU6wux6nLluEC9Ayf44HsiJAVrYhwo4EvbjI6GL0=
+github.com/broadinstitute/sherlock v0.0.80 h1:HLhJGFi4czHzTU+1XtlA7FDbCA15hTHwJvIwSYjkamU=
+github.com/broadinstitute/sherlock v0.0.80/go.mod h1:LXdtU6wux6nLluEC9Ayf44HsiJAVrYhwo4EvbjI6GL0=
+github.com/broadinstitute/sherlock v0.0.81-0.20221031204150-118922ad16fd h1:c5KGOQgYsw6r5i5riGOWtTT6zJe17CixG2g0hu0iW8o=
+github.com/broadinstitute/sherlock v0.0.81-0.20221031204150-118922ad16fd/go.mod h1:LXdtU6wux6nLluEC9Ayf44HsiJAVrYhwo4EvbjI6GL0=
 github.com/cenkalti/backoff/v3 v3.0.0 h1:ske+9nBpD9qZsTBoF41nW5L+AIuFBKMeze18XQ3eG1c=
 github.com/cenkalti/backoff/v3 v3.0.0/go.mod h1:cIeZDE3IrqwwJl6VUwCN6trj1oXrTS4rc0ij+ULvLYs=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

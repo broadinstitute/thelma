@@ -48,17 +48,23 @@ func (e *environments) Exists(name string) (bool, error) {
 	return exists, nil
 }
 
-func (e *environments) CreateFromTemplate(name string, template terra.Environment) (terra.Environment, error) {
+// CreateFromTemplate doesn't actually need to call buildDynamicEnvironment, because it only needs to return the name.
+// The required side effect is to record enough state that the name can be used to (re)construct the dynamic environment,
+// so what's needed here is pretty minimal--the heavy lifting will be done when Thelma reloads the state and grabs
+// this environment then.
+// This slightly-roundabout mechanism is here because it makes a ton of sense for Sherlock, which does all its logic
+// in the side-effect step here and has a very thin "get" step later after Thelma reloads.
+func (e *environments) CreateFromTemplate(name string, template terra.Environment, _ string) (string, error) {
 	exists, err := e.Exists(name)
 	if err != nil {
-		return nil, fmt.Errorf("error checking for environment name conflict: %v", err)
+		return "", fmt.Errorf("error checking for environment name conflict: %v", err)
 	}
 	if exists {
-		return nil, fmt.Errorf("can't create environment %s: an environment by that name already exists", name)
+		return "", fmt.Errorf("can't create environment %s: an environment by that name already exists", name)
 	}
 
 	if !template.Lifecycle().IsTemplate() {
-		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
+		return "", fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
 	}
 
 	var env statebucket.DynamicEnvironment
@@ -67,23 +73,23 @@ func (e *environments) CreateFromTemplate(name string, template terra.Environmen
 
 	env, err = e.state.statebucket.Add(env)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return buildDynamicEnvironment(template, env), nil
+	return env.Name, nil
 }
 
-func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment) (terra.Environment, error) {
+func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment, _ string) (string, error) {
 	if !template.Lifecycle().IsTemplate() {
-		return nil, fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
+		return "", fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
 	}
 	var env statebucket.DynamicEnvironment
 	env.Template = template.Name()
 	env, err := e.state.statebucket.AddGenerateName(namePrefix, env)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return buildDynamicEnvironment(template, env), nil
+	return env.Name, nil
 }
 
 func (e *environments) EnableRelease(environmentName string, releaseName string) error {

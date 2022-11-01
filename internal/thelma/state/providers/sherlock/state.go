@@ -1,6 +1,7 @@
 package sherlock
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
@@ -8,7 +9,7 @@ import (
 // create/update thelma's internal state using a sherlock client
 type StateReadWriter interface {
 	StateLoader
-	terra.StateWriter
+	sherlock.StateWriter
 }
 
 type state struct {
