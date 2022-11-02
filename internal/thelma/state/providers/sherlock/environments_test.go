@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )

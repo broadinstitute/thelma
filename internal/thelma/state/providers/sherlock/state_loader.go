@@ -141,7 +141,7 @@ retry:
 					},
 				}
 			default:
-				return nil, fmt.Errorf("unexpected destination type %s for release %s", stateRelease.DestinationType, stateRelease.Name)
+				return nil, fmt.Errorf("unexpected destination type '%s' for release '%s'", stateRelease.DestinationType, stateRelease.Name)
 			}
 		}
 
