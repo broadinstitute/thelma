@@ -81,6 +81,7 @@ type thelmaApp struct {
 	paths       paths.Paths
 	scratch     scratch.Scratch
 	stateLoader terra.StateLoader
+	cachedState *terra.State
 }
 
 func (t *thelmaApp) Clients() clients.Clients {

@@ -45,9 +45,18 @@ type stateLoader struct {
 	statebucket statebucket.StateBucket
 	thelmaHome  string
 	shellRunner shell.Runner
+	cached      terra.State
 }
 
 func (s *stateLoader) Load() (terra.State, error) {
+	if s.cached == nil {
+		return s.Reload()
+	} else {
+		return s.cached, nil
+	}
+}
+
+func (s *stateLoader) Reload() (terra.State, error) {
 	_versions, err := NewVersions(s.thelmaHome, s.shellRunner)
 	if err != nil {
 		return nil, err
@@ -63,12 +72,14 @@ func (s *stateLoader) Load() (terra.State, error) {
 		return nil, err
 	}
 
-	return &state{
+	_state := &state{
 		statebucket:  s.statebucket,
 		versions:     _versions,
 		clusters:     _clusters,
 		environments: _environments,
-	}, nil
+	}
+	s.cached = _state
+	return _state, nil
 }
 
 func loadEnvironments(configRepoPath string, versions Versions, clusters map[string]*cluster, sb statebucket.StateBucket) (map[string]*environment, error) {
