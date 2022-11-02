@@ -150,13 +150,15 @@ clean: ## Clean up all generated files
 
 mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/cli --name RunContext --output=./internal/thelma/cli/mocks --outpkg mocks --filename run_context.go
+	mockery --dir ./internal/thelma/clients/google --name Clients --output=./internal/thelma/clients/google/mocks --outpkg mocks --filename clients.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Locker --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename locker.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Bucket --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename bucket.go
 	mockery --dir ./internal/thelma/clients/sherlock --name StateReadWriter --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename state_read_writer.go
+	mockery --dir ./internal/thelma/state/api/terra --name AppRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename app_release.go
+	mockery --dir ./internal/thelma/state/api/terra --name ClusterRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster_release.go
 	mockery --dir ./internal/thelma/state/api/terra --name Release --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename release.go
 	mockery --dir ./internal/thelma/state/api/terra --name Environment --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename environment.go
 	mockery --dir ./internal/thelma/state/api/terra --name Cluster --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster.go
 	mockery --dir ./internal/thelma/state/api/terra --name StateWriter --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_writer.go
-	mockery --dir ./internal/thelma/state/api/terra --name Environment --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename environment.go
 	mockery --dir ./internal/thelma/state/providers/sherlock --name StateReadWriter --output=./internal/thelma/state/providers/sherlock/mocks --outpkg mocks --filename state_read_writer.go
 	go generate /Users/chelsea/scratch/thelma-merge/thelma/internal/thelma/clients/google/testing/generators/generators.go
