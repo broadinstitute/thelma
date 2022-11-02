@@ -10,8 +10,6 @@ import (
 type StateLoader interface {
 	Environments() (Environments, error)
 	Clusters() (Clusters, error)
-	ClusterReleases(clusterName string) (Releases, error)
-	EnvironmentReleases(environmentName string) (Releases, error)
 	Releases() (Releases, error)
 }
 
@@ -84,38 +82,6 @@ func wrapReleases(rs ...*models.V2controllersChartRelease) Releases {
 	}
 
 	return releases
-}
-
-func (c *Client) ClusterReleases(clusterName string) (Releases, error) {
-	desiredDestinationType := "cluster"
-	params := chart_releases.NewGetAPIV2ChartReleasesParams()
-	params.Cluster = &clusterName
-	params.DestinationType = &desiredDestinationType
-
-	clusterReleasesResponse, err := c.client.ChartReleases.GetAPIV2ChartReleases(params)
-	if err != nil {
-		return nil, err
-	}
-
-	clusterReleasesPayload := clusterReleasesResponse.GetPayload()
-	clusterReleases := wrapReleases(clusterReleasesPayload...)
-
-	return clusterReleases, nil
-}
-
-func (c *Client) EnvironmentReleases(environmentName string) (Releases, error) {
-	params := chart_releases.NewGetAPIV2ChartReleasesParams()
-	params.Environment = &environmentName
-
-	environmentReleasesResponse, err := c.client.ChartReleases.GetAPIV2ChartReleases(params)
-	if err != nil {
-		return nil, err
-	}
-
-	environmentReleasesPayload := environmentReleasesResponse.GetPayload()
-	environmentReleases := wrapReleases(environmentReleasesPayload...)
-
-	return environmentReleases, nil
 }
 
 func (c *Client) Releases() (Releases, error) {
