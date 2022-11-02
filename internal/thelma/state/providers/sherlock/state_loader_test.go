@@ -69,8 +69,10 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 
 	// Calling Reload() is not
 	_, err = s.Reload()
+	suite.Assert().NoError(err)
 	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 2)
 	_, err = s.Load()
+	suite.Assert().NoError(err)
 	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 2)
 }
 
