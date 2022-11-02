@@ -60,6 +60,18 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	suite.Assert().NoError(err)
 	prodClusterReleases := prodCluster.Releases()
 	suite.Assert().Equal("sam-prod", prodClusterReleases[0].Name())
+
+	// Calling Load() is cached
+	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 1)
+	_, err = s.Load()
+	suite.Assert().NoError(err)
+	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 1)
+
+	// Calling Reload() is not
+	_, err = s.Reload()
+	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 2)
+	_, err = s.Load()
+	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 2)
 }
 
 func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
