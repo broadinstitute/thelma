@@ -40,7 +40,8 @@ func newFakeGRPCServer(t *testing.T, registerMockBackends func(server *grpc.Serv
 	// start server in async goroutine
 	go func() {
 		if err := gsrv.Serve(listener); err != nil {
-			t.Fatal(err)
+			// we can't use t.Fatal err since we're in a separate goroutine
+			panic(err)
 		}
 	}()
 
