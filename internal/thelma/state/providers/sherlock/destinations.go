@@ -11,7 +11,7 @@ type destinations struct {
 	state *state
 }
 
-func newDestinations(s *state) terra.Destinations {
+func newDestinationsView(s *state) terra.Destinations {
 	return &destinations{
 		state: s,
 	}

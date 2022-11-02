@@ -13,7 +13,14 @@ import (
 
 const configKey = "sherlock"
 
-// Client contains an API client for a remote sherlock server
+// StateReadWriter is an interface representing the ability to both read and
+// create/update thelma's internal state using a sherlock client
+type StateReadWriter interface {
+	StateLoader
+	StateWriter
+}
+
+// Client contains an API client for a remote sherlock server. It implements StateReadWriter.
 type Client struct {
 	client *client.Sherlock
 }
@@ -32,7 +39,7 @@ func New(config config.Config, iapToken string) (*Client, error) {
 	return configureClientRuntime(sherlockConfig.Addr, iapToken)
 }
 
-// NewWithHostNameOverride enables thelma commands to utilize a sherlock client that targets
+// NewWithHostnameOverride enables thelma commands to utilize a sherlock client that targets
 // a different sherlock instance from the one used for state loading
 func NewWithHostnameOverride(addr, iapToken string) (*Client, error) {
 	return configureClientRuntime(addr, iapToken)
@@ -47,7 +54,7 @@ func loadConfig(thelmaConfig config.Config) (sherlockConfig, error) {
 }
 
 // sherlock client lib expects host and scheme as separate input values but
-// specifying an fqdn in config makes more sense so this helper exists to extract the
+// specifying a fqdn in config makes more sense so this helper exists to extract the
 // component parts
 func extractSchemeAndHost(addr string) (string, string, error) {
 	sherlockURL, err := url.Parse(addr)
@@ -77,8 +84,7 @@ func configureClientRuntime(addr, token string) (*Client, error) {
 	transport.DefaultAuthentication = httptransport.BearerToken(token)
 
 	sherlockClient := client.New(transport, strfmt.Default)
-	client := &Client{client: sherlockClient}
-	return client, nil
+	return &Client{client: sherlockClient}, nil
 }
 
 // getStatus is used in tests to verify that an initialzied sherlock client

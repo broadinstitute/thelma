@@ -6,7 +6,7 @@ type releases struct {
 	state *state
 }
 
-func newReleases(s *state) terra.Releases {
+func newReleasesView(s *state) terra.Releases {
 	return &releases{
 		state: s,
 	}

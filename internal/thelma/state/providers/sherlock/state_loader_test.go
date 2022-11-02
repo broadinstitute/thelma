@@ -6,7 +6,7 @@ import (
 
 	"github.com/broadinstitute/sherlock/clients/go/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/suite"
@@ -136,10 +136,11 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 		}, nil,
 	)
 
-	mock.On("ClusterReleases", "terra-dev").Return(
+	mock.On("Releases").Return(
 		sherlock.Releases{
 			sherlock.Release{
 				&models.V2controllersChartRelease{
+					DestinationType:   "cluster",
 					AppVersionExact:   "1.0.1",
 					Chart:             "sam",
 					ChartVersionExact: "0.43.0",
@@ -147,19 +148,16 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					ChartInfo: &models.V2controllersChart{
 						ChartRepo: utils.Nullable(""),
 					},
-					Environment: "dev",
-					Name:        "sam-dev",
-					Namespace:   "terra-dev",
-					HelmfileRef: utils.Nullable("asdf"),
+					Environment:         "dev",
+					Name:                "sam-dev",
+					Namespace:           "terra-dev",
+					HelmfileRef:         utils.Nullable("wlekjerw"),
+					FirecloudDevelopRef: "",
 				},
 			},
-		}, nil,
-	)
-
-	mock.On("ClusterReleases", "terra-prod").Return(
-		sherlock.Releases{
 			sherlock.Release{
 				&models.V2controllersChartRelease{
+					DestinationType:   "cluster",
 					AppVersionExact:   "1.0.0",
 					Chart:             "sam",
 					ChartVersionExact: "0.42.0",
@@ -167,18 +165,16 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					ChartInfo: &models.V2controllersChart{
 						ChartRepo: utils.Nullable(""),
 					},
-					Environment: "prod",
-					Name:        "sam-prod",
-					Namespace:   "terra-prod",
+					Environment:         "prod",
+					Name:                "sam-prod",
+					Namespace:           "terra-prod",
+					HelmfileRef:         utils.Nullable("wlekjerw"),
+					FirecloudDevelopRef: "",
 				},
 			},
-		}, nil,
-	)
-
-	mock.On("EnvironmentReleases", "dev").Return(
-		sherlock.Releases{
 			sherlock.Release{
 				&models.V2controllersChartRelease{
+					DestinationType:   "environment",
 					AppVersionExact:   "0.160.0",
 					Chart:             "datarepo",
 					ChartVersionExact: "0.33.0",
@@ -193,13 +189,9 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					FirecloudDevelopRef: "",
 				},
 			},
-		}, nil,
-	)
-
-	mock.On("EnvironmentReleases", "prod").Return(
-		sherlock.Releases{
 			sherlock.Release{
 				&models.V2controllersChartRelease{
+					DestinationType:   "environment",
 					AppVersionExact:   "0.156.0",
 					Chart:             "datarepo",
 					ChartVersionExact: "0.32.0",

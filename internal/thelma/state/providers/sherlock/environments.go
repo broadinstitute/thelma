@@ -11,7 +11,7 @@ type environments struct {
 	state *state
 }
 
-func newEnvironments(s *state) terra.Environments {
+func newEnvironmentsView(s *state) terra.Environments {
 	return &environments{
 		state: s,
 	}

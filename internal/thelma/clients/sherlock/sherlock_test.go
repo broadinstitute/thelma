@@ -93,24 +93,14 @@ func (suite *sherlockClientSuite) TestFetchClusters() {
 	suite.Assert().Equal("5.6.7.8", clusters[1].Address)
 }
 
-func (suite *sherlockClientSuite) TestFetchEnvironmentReleases() {
+func (suite *sherlockClientSuite) TestFetchReleases() {
 	client, err := New(suite.config, "fake")
 	suite.Assert().NoError(err)
-	envReleases, err := client.EnvironmentReleases("dev")
+	releases, err := client.Releases()
 	suite.Assert().NoError(err)
 
-	suite.Assert().Equal(1, len(envReleases))
-	suite.Assert().Equal("sam", envReleases[0].Chart)
-}
-
-func (suite *sherlockClientSuite) TestFetchClusterReleases() {
-	client, err := New(suite.config, "fake")
-	suite.Assert().NoError(err)
-	clusterReleases, err := client.ClusterReleases("tools")
-	suite.Assert().NoError(err)
-
-	suite.Assert().Equal(2, len(clusterReleases))
-	suite.Assert().Equal("argocd-tools", clusterReleases[1].Name)
+	suite.Assert().Equal(3, len(releases))
+	suite.Assert().Equal("sam", releases[0].Chart)
 }
 
 func (suite *sherlockClientSuite) TestFetchEnvironmentsError() {
@@ -127,17 +117,10 @@ func (suite *sherlockClientSuite) TestFetchClustersError() {
 	suite.Assert().Error(err)
 }
 
-func (suite *sherlockClientSuite) TestFetchEnvironmentReleasesError() {
+func (suite *sherlockClientSuite) TestFetchReleasesError() {
 	client, err := New(suite.errConfig, "fake")
 	suite.Assert().NoError(err)
-	_, err = client.EnvironmentReleases("blah")
-	suite.Assert().Error(err)
-}
-
-func (suite *sherlockClientSuite) TestFetchClusterReleasesError() {
-	client, err := New(suite.errConfig, "fake")
-	suite.Assert().NoError(err)
-	_, err = client.ClusterReleases("blah")
+	_, err = client.Releases()
 	suite.Assert().Error(err)
 }
 
@@ -200,42 +183,34 @@ func mockChartReleasesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		encoder := json.NewEncoder(w)
-		if r.URL.Query().Has("environment") {
-			environmentParam := r.URL.Query().Get("environment")
-			if environmentParam == "dev" {
-				_ = encoder.Encode([]*models.V2controllersChartRelease{
-					{
-						AppVersionExact:   "0.2.1",
-						Chart:             "sam",
-						ChartVersionExact: "1.2.3",
-						Name:              "sam-dev",
-						Cluster:           "terra-dev",
-						Environment:       "dev",
-					},
-				})
-			}
-		}
-		if r.URL.Query().Has("cluster") {
-			clusterParam := r.URL.Query().Get("cluster")
-			if clusterParam == "tools" {
-				_ = encoder.Encode([]*models.V2controllersChartRelease{
-					{
-						AppVersionExact:   "2.2.1",
-						Chart:             "grafana",
-						ChartVersionExact: "0.0.3",
-						Name:              "grafana-tools",
-						Cluster:           "tools",
-					},
-					{
-						AppVersionExact:   "1.0.5",
-						Chart:             "argocd",
-						ChartVersionExact: "0.3.1",
-						Name:              "argocd-tools",
-						Cluster:           "tools",
-					},
-				})
-			}
-		}
+		_ = encoder.Encode([]*models.V2controllersChartRelease{
+			{
+				DestinationType:   "environment",
+				AppVersionExact:   "0.2.1",
+				Chart:             "sam",
+				ChartVersionExact: "1.2.3",
+				Name:              "sam-dev",
+				Cluster:           "terra-dev",
+				Environment:       "dev",
+			},
+			{
+				DestinationType:   "cluster",
+				AppVersionExact:   "2.2.1",
+				Chart:             "grafana",
+				ChartVersionExact: "0.0.3",
+				Name:              "grafana-tools",
+				Cluster:           "tools",
+			},
+			{
+				DestinationType:   "cluster",
+				AppVersionExact:   "1.0.5",
+				Chart:             "argocd",
+				ChartVersionExact: "0.3.1",
+				Name:              "argocd-tools",
+				Cluster:           "tools",
+			},
+		})
+
 	}
 }
 

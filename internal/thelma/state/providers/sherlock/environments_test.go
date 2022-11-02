@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -24,7 +24,7 @@ func (suite *environmentsSuite) TestDeleteNonExistingEnvironment() {
 		sherlock: mockStateReadWriter,
 	}
 
-	testEnvironments := newEnvironments(&mockState)
+	testEnvironments := newEnvironmentsView(&mockState)
 
 	err := testEnvironments.Delete("blah")
 	suite.Assert().Error(err)
@@ -44,7 +44,7 @@ func (suite *environmentsSuite) TestDeleteExistingEnvironment() {
 		sherlock:     mockStateReadWriter,
 		environments: mockEnvironments,
 	}
-	testEnvironments := newEnvironments(&mockState)
+	testEnvironments := newEnvironmentsView(&mockState)
 	err := testEnvironments.Delete("existing-env")
 	suite.Assert().NoError(err)
 }
@@ -63,7 +63,7 @@ func (suite *environmentsSuite) TestDeleteEnvironmentError() {
 		sherlock:     mockStateReadWriter,
 		environments: mockEnvironments,
 	}
-	testEnvironments := newEnvironments(&mockState)
+	testEnvironments := newEnvironmentsView(&mockState)
 	err := testEnvironments.Delete("existing-env")
 	suite.Assert().ErrorContains(err, "some error")
 }
