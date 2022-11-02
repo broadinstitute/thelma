@@ -17,6 +17,8 @@ func Test_PubSub(t *testing.T) {
 		Name: "my-topic-id",
 	}, nil)
 
+	mocks.ExpectGetTopic("does-not-exist", nil, NotFoundError())
+
 	mocks.ExpectListTopicSubscriptions("my-topic-id", []string{
 		"sub-1",
 		"sub-2",
@@ -31,6 +33,11 @@ func Test_PubSub(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, exists)
 	assert.Equal(t, "my-topic-id", topic.ID())
+
+	missing := client.Topic("does-not-exist")
+	exists, err = missing.Exists(context.TODO())
+	require.NoError(t, err)
+	assert.False(t, exists)
 
 	var subscriptions []*pubsub.Subscription
 	it := topic.Subscriptions(context.TODO())

@@ -7,11 +7,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/testing/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/api/option"
 	containerpb "google.golang.org/genproto/googleapis/container/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"net"
 	"testing"
 )
 
@@ -34,34 +31,19 @@ func (c *ContainerClusterManagerMocks) ExpectGetCluster(projectId string, locati
 
 // NewMockClusterManagerServerAndClient creates a connected mock cluster manager server and client
 func NewMockClusterManagerServerAndClient(t *testing.T) (*ContainerClusterManagerMocks, *container.ClusterManagerClient) {
-	mockServer := mocks.NewClusterManagerServer(t)
-
-	// Create a GRPC server
-	// reference: https://github.com/googleapis/google-cloud-go/blob/main/testing.md#testing-grpc-services-using-fakes
-	listener, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	gsrv := grpc.NewServer()
+	// Note - we intentionally do NOT pass in the test object to the generated mock, because it
+	// will end up calling t.FailNow() in the grpc server's goroutine instead of main,
+	// causing tests to hang in some situations. (It's a no-no to call t.FailNow() outside of the test's main goroutine)
+	mockServer := &mocks.ClusterManagerServer{}
 	t.Cleanup(func() {
-		gsrv.Stop()
+		mockServer.AssertExpectations(t)
 	})
 
-	// Configure the GRPC server to serve responses from our mock cluster manager server
-	containerpb.RegisterClusterManagerServer(gsrv, mockServer)
-	go func() {
-		if err := gsrv.Serve(listener); err != nil {
-			panic(err)
-		}
-	}()
+	server := newFakeGRPCServer(t, func(s *grpc.Server) {
+		containerpb.RegisterClusterManagerServer(s, mockServer)
+	})
 
-	// Create client that is configured to talk to the fake GRPC server
-	fakeServerAddr := listener.Addr().String()
-	client, err := container.NewClusterManagerClient(context.TODO(),
-		option.WithEndpoint(fakeServerAddr),
-		option.WithoutAuthentication(),
-		option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
-	)
+	client, err := container.NewClusterManagerClient(context.TODO(), server.clientOptions...)
 	require.NoError(t, err)
 
 	return &ContainerClusterManagerMocks{mockServer: mockServer}, client

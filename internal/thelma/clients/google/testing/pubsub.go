@@ -7,12 +7,9 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/testing/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/api/option"
 	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"net"
 	"testing"
 )
 
@@ -71,38 +68,24 @@ func (p *PubSubMocks) subscriptionName(subscriptionId string) string {
 
 // NewMockPubSubServerAndClient creates a connected mock cluster manager server and client
 func NewMockPubSubServerAndClient(t *testing.T, projectId string) (*PubSubMocks, *pubsub.Client) {
-	mockPublisherServer := mocks.NewPublisherServer(t)
-	mockSubscriberServer := mocks.NewSubscriberServer(t)
+	// Note - we intentionally do NOT pass in the test object to the generated mock, because it
+	// will end up calling t.FailNow() in the grpc server's goroutine instead of main,
+	// causing tests to hang in some situations. (It's a no-no to call t.FailNow() outside of the test's main goroutine)
+	mockPublisherServer := &mocks.PublisherServer{}
+	mockSubscriberServer := &mocks.SubscriberServer{}
 
-	// Create a GRPC server
-	// reference: https://github.com/googleapis/google-cloud-go/blob/main/testing.md#testing-grpc-services-using-fakes
-	listener, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	gsrv := grpc.NewServer()
 	t.Cleanup(func() {
-		gsrv.Stop()
+		mockPublisherServer.AssertExpectations(t)
+		mockSubscriberServer.AssertExpectations(t)
 	})
 
-	// Configure the GRPC server to serve responses from our mock server
-	pubsubpb.RegisterPublisherServer(gsrv, mockPublisherServer)
-	pubsubpb.RegisterSubscriberServer(gsrv, mockSubscriberServer)
-	//	pubsubpb.RegisterSubscriberServer()
-	go func() {
-		if err := gsrv.Serve(listener); err != nil {
-			panic(err)
-		}
-	}()
+	server := newFakeGRPCServer(t, func(s *grpc.Server) {
+		// Configure the GRPC server to serve responses from our mock server
+		pubsubpb.RegisterPublisherServer(s, mockPublisherServer)
+		pubsubpb.RegisterSubscriberServer(s, mockSubscriberServer)
+	})
 
-	// Create client that is configured to talk to the fake GRPC server
-	fakeServerAddr := listener.Addr().String()
-	client, err := pubsub.NewClient(context.TODO(),
-		projectId,
-		option.WithEndpoint(fakeServerAddr),
-		option.WithoutAuthentication(),
-		option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
-	)
+	client, err := pubsub.NewClient(context.TODO(), projectId, server.clientOptions...)
 	require.NoError(t, err)
 
 	return &PubSubMocks{
