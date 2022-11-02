@@ -362,7 +362,7 @@ func (b *bees) templateNames() ([]string, error) {
 }
 
 func (b *bees) reloadState() error {
-	state, err := b.stateLoader.Load()
+	state, err := b.stateLoader.Reload()
 	if err != nil {
 		return err
 	}

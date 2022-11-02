@@ -231,7 +231,7 @@ func TestUpdateState(t *testing.T) {
 	_, err = state.Environments().CreateFromTemplate("sam-ci-003", template, "")
 	require.NoError(t, err)
 
-	state, err = app.State() // reload state
+	state, err = app.StateLoader().Reload() // reload state
 	require.NoError(t, err)
 
 	newEnv, err := state.Environments().Get("sam-ci-003")

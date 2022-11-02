@@ -12,6 +12,7 @@ type stateLoader struct {
 	sherlock    sherlock.StateReadWriter
 	shellRunner shell.Runner
 	thelmaHome  string
+	cached      terra.State
 }
 
 func NewStateLoader(thelmaHome string, shellRunner shell.Runner, sherlock sherlock.StateReadWriter) terra.StateLoader {
@@ -23,6 +24,14 @@ func NewStateLoader(thelmaHome string, shellRunner shell.Runner, sherlock sherlo
 }
 
 func (s *stateLoader) Load() (terra.State, error) {
+	if s.cached == nil {
+		return s.Reload()
+	} else {
+		return s.cached, nil
+	}
+}
+
+func (s *stateLoader) Reload() (terra.State, error) {
 	// Note that this retry loop is *not* for retrying actual errors. Maybe we'll make that call at some point,
 	// but right now if there's an actual error talking to Sherlock or with the returned data, we want to error
 	// so we can fix it.
@@ -45,9 +54,9 @@ retry:
 			return nil, err
 		}
 
-		clusters := make(map[string]*cluster)
+		_clusters := make(map[string]*cluster)
 		for _, stateCluster := range stateClusters {
-			clusters[stateCluster.Name] = &cluster{
+			_clusters[stateCluster.Name] = &cluster{
 				address:       stateCluster.Address,
 				googleProject: stateCluster.GoogleProject,
 				location:      *stateCluster.Location,
@@ -62,9 +71,9 @@ retry:
 			}
 		}
 
-		environments := make(map[string]*environment)
+		_environments := make(map[string]*environment)
 		for _, stateEnvironment := range stateEnvironments {
-			if _, knownCluster := clusters[stateEnvironment.DefaultCluster]; stateEnvironment.DefaultCluster != "" && !knownCluster {
+			if _, knownCluster := _clusters[stateEnvironment.DefaultCluster]; stateEnvironment.DefaultCluster != "" && !knownCluster {
 				log.Warn().Msgf("environment '%s' had cluster '%s' that we do not have: race condition detected, retrying...",
 					stateEnvironment.Name, stateEnvironment.DefaultCluster)
 				continue retry
@@ -73,8 +82,8 @@ retry:
 			if err := lifecycle.FromString(*stateEnvironment.Lifecycle); err != nil {
 				return nil, err
 			}
-			environments[stateEnvironment.Name] = &environment{
-				defaultCluster:       clusters[stateEnvironment.DefaultCluster],
+			_environments[stateEnvironment.Name] = &environment{
+				defaultCluster:       _clusters[stateEnvironment.DefaultCluster],
 				defaultNamespace:     stateEnvironment.DefaultNamespace,
 				releases:             make(map[string]*appRelease),
 				lifecycle:            lifecycle,
@@ -93,19 +102,19 @@ retry:
 		}
 
 		for _, stateRelease := range stateReleases {
-			if _, knownCluster := clusters[stateRelease.Cluster]; stateRelease.Cluster != "" && !knownCluster {
+			if _, knownCluster := _clusters[stateRelease.Cluster]; stateRelease.Cluster != "" && !knownCluster {
 				log.Warn().Msgf("chart release '%s' has cluster '%s' that we do not have: race condition detected, retrying...",
 					stateRelease.Name, stateRelease.Cluster)
 				continue retry
 			}
-			if _, knownEnvironment := environments[stateRelease.Environment]; stateRelease.Environment != "" && !knownEnvironment {
+			if _, knownEnvironment := _environments[stateRelease.Environment]; stateRelease.Environment != "" && !knownEnvironment {
 				log.Warn().Msgf("chart release '%s' has environment '%s' that we do not have: race condition detected, retrying...",
 					stateRelease.Name, stateRelease.Environment)
 				continue retry
 			}
 			switch stateRelease.DestinationType {
 			case "cluster":
-				clusters[stateRelease.Cluster].releases[stateRelease.Name] = &clusterRelease{
+				_clusters[stateRelease.Cluster].releases[stateRelease.Name] = &clusterRelease{
 					release: release{
 						name:                stateRelease.Name,
 						enabled:             true,
@@ -114,14 +123,14 @@ retry:
 						chartName:           stateRelease.Chart,
 						repo:                *stateRelease.ChartInfo.ChartRepo,
 						namespace:           stateRelease.Namespace,
-						cluster:             clusters[stateRelease.Cluster],
-						destination:         clusters[stateRelease.Cluster],
+						cluster:             _clusters[stateRelease.Cluster],
+						destination:         _clusters[stateRelease.Cluster],
 						helmfileRef:         *stateRelease.HelmfileRef,
 						firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
 					},
 				}
 			case "environment":
-				environments[stateRelease.Environment].releases[stateRelease.Name] = &appRelease{
+				_environments[stateRelease.Environment].releases[stateRelease.Name] = &appRelease{
 					appVersion: stateRelease.AppVersionExact,
 					subdomain:  stateRelease.Subdomain,
 					protocol:   stateRelease.Protocol,
@@ -134,8 +143,8 @@ retry:
 						chartName:           stateRelease.Chart,
 						repo:                *stateRelease.ChartInfo.ChartRepo,
 						namespace:           stateRelease.Namespace,
-						cluster:             clusters[stateRelease.Cluster],
-						destination:         environments[stateRelease.Environment],
+						cluster:             _clusters[stateRelease.Cluster],
+						destination:         _environments[stateRelease.Environment],
 						helmfileRef:         *stateRelease.HelmfileRef,
 						firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
 					},
@@ -145,11 +154,13 @@ retry:
 			}
 		}
 
-		return &state{
+		_state := &state{
 			sherlock:     s.sherlock,
-			environments: environments,
-			clusters:     clusters,
-		}, nil
+			environments: _environments,
+			clusters:     _clusters,
+		}
+		s.cached = _state
+		return _state, nil
 	}
 	return nil, fmt.Errorf("ran out of retries trying to resolve race conditions while loading state from sherlock")
 }
