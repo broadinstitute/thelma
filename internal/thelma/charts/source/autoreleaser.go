@@ -17,6 +17,8 @@ const targetVersionSet = gitops.Dev
 // AutoReleaser offers a UpdateReleaseVersion to take a newly published chart and update development instances to use
 // it.
 // It stores lists of different update mechanisms so they can be easily enabled/disabled by the caller.
+// This is a literal struct, not an interface, so the callers can configure it out without needing to pass multiple
+// parameters around.
 type AutoReleaser struct {
 	GitopsUpdaters           []gitops.Versions
 	SherlockUpdaters         []sherlock.ChartVersionUpdater

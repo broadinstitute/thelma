@@ -29,7 +29,12 @@ type ChartsDir interface {
 }
 
 // NewChartsDir constructs a new ChartsDir
-func NewChartsDir(sourceDir string, publisher publish.Publisher, shellRunner shell.Runner, autoreleaser *AutoReleaser) (ChartsDir, error) {
+func NewChartsDir(
+	sourceDir string,
+	publisher publish.Publisher,
+	shellRunner shell.Runner,
+	autoreleaser *AutoReleaser,
+) (ChartsDir, error) {
 
 	charts, err := loadCharts(sourceDir, shellRunner)
 	if err != nil {
