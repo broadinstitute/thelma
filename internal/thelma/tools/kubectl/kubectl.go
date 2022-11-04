@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
@@ -50,17 +51,22 @@ func NewKubectl(shellRunner shell.Runner, thelmaRoot root.Root, tokenSource oaut
 	configFile := path.Join(thelmaRoot.ConfigDir(), kubeConfigName)
 
 	return &kubectl{
-		configFile:  configFile,
 		shellRunner: shellRunner,
-		kubeconfig:  newKubeConfig(configFile, gkeClient, tokenSource),
+		kubeconfig:  kubecfg.New(configFile, gkeClient, tokenSource),
 	}, nil
+}
+
+func newWithKubeCfg(shellRunner shell.Runner, kubeconfig kubecfg.Kubeconfig) Kubectl {
+	return &kubectl{
+		shellRunner: shellRunner,
+		kubeconfig:  kubeconfig,
+	}
 }
 
 // implements the Kubectl interface
 type kubectl struct {
-	configFile  string
 	shellRunner shell.Runner
-	kubeconfig  *kubeconfig
+	kubeconfig  kubecfg.Kubeconfig
 }
 
 func (k *kubectl) ShutDown(env terra.Environment) error {
@@ -102,7 +108,7 @@ func (k *kubectl) DeleteNamespace(env terra.Environment) error {
 
 func (k *kubectl) PortForward(targetRelease terra.Release, targetResource string, targetPort int) (int, func() error, error) {
 	log.Debug().Msgf("Port-forwarding to %s on port %d (in %s cluster's %s namespace)", targetResource, targetPort, targetRelease.ClusterName(), targetRelease.Namespace())
-	kubectx, err := k.kubeconfig.addRelease(targetRelease)
+	kubectx, err := k.kubeconfig.ForRelease(targetRelease)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -162,7 +168,7 @@ func parsePortFromPortForwardOutput(output string) int {
 
 // runForEnv will run a kubectl command for all of an environment's contexts
 func (k *kubectl) runForEnv(env terra.Environment, args []string) error {
-	kubectxs, err := k.kubeconfig.addAllReleases(env)
+	kubectxs, err := k.kubeconfig.ForEnvironment(env)
 	if err != nil {
 		return err
 	}
@@ -176,15 +182,15 @@ func (k *kubectl) runForEnv(env terra.Environment, args []string) error {
 	return nil
 }
 
-func (k *kubectl) makeCmd(_kubectx kubectx, args []string) shell.Command {
-	kargs := []string{"--context", _kubectx.contextName, "--namespace", _kubectx.namespace}
+func (k *kubectl) makeCmd(kubectx kubecfg.Kubectx, args []string) shell.Command {
+	kargs := []string{"--context", kubectx.ContextName(), "--namespace", kubectx.Namespace()}
 	kargs = append(kargs, args...)
 
 	return shell.Command{
 		Prog: prog,
 		Args: kargs,
 		Env: []string{
-			fmt.Sprintf("%s=%s", kubeConfigEnvVar, k.configFile),
+			fmt.Sprintf("%s=%s", kubeConfigEnvVar, k.kubeconfig.ConfigFile()),
 		},
 	}
 }

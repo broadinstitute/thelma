@@ -1,4 +1,4 @@
-package kubectl
+package kubecfg
 
 import (
 	container "cloud.google.com/go/container/apiv1"
@@ -15,18 +15,70 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"path"
+	"sort"
+	"sync"
 	"time"
 )
 
+// defaultAuthInfo name of AuthInfo inside kube config file to use for authentication to non-prod clusters
+const defaultAuthInfo = "default"
+
 // kubectx represents a run context for a kubectl command
 type kubectx struct {
-	contextName string        // contextName name of the run context in kubecfg
+	contextName string        // contextName name of the run context in the kubecfg file
 	namespace   string        // namespace to run command in
 	cluster     terra.Cluster // cluster the cluster this command should be executed against
 }
 
-// newKubeConfig constructs a kubeconfig
-func newKubeConfig(file string, gkeClient *container.ClusterManagerClient, tokenSource oauth2.TokenSource) *kubeconfig {
+// Kubectx represents a run context for a kubectl command
+type Kubectx interface {
+	// ContextName name of the run context in the kubecfg file
+	ContextName() string
+	// Namespace kubectl command should run against
+	Namespace() string
+}
+
+func (k kubectx) ContextName() string {
+	return k.contextName
+}
+
+func (k kubectx) Namespace() string {
+	return k.namespace
+}
+
+// ReleaseKtx is a convenience type that bundles a terra.Release with its associated Kubectx
+type ReleaseKtx struct {
+	Release terra.Release
+	Kubectx Kubectx
+}
+
+// Kubeconfig manages entries in a `kubectl` config file (traditionally ~/.kube/config) for Terra environments & releases.
+// It creates context entries for environments and releases.
+// It works like `gcloud container clusters get-credentials`, except:
+//   - Users don't have to specify a project or location (because thelma already knows where clusters live)
+//   - Context entries are named in a more user-friendly fashion. For example, the context for the "alpha" environment
+//     is called `alpha`, instead of `gke_broad-dsde-alpha_us-central1-a_terra-alpha`. This makes it possible to quickly run
+//     a kubectl command against the alpha environment using `kubectl -c alpha` (no need to specify a namespace).
+//
+// Read more about kubectl contexts here:
+// https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/#define-clusters-users-and-contexts
+//
+// Q: Why not just shell out to gcloud?
+// Because `gcloud` is a big ol' Python app. Thelma is designed to run on developer laptops and depending on users
+// having the correct version of gcloud and Python installed is more brittle than just generating GKE credentials ourselves.
+type Kubeconfig interface {
+	// ConfigFile path to the .kubecfg file where context entries are generated
+	ConfigFile() string
+	// ForRelease returns the name of the kubectx to use for executing commands against this release
+	ForRelease(terra.Release) (Kubectx, error)
+	// ForReleases returns a kubectx for each given release
+	ForReleases(releases ...terra.Release) ([]ReleaseKtx, error)
+	// ForEnvironment returns all kubectxs for all releases in an environment
+	ForEnvironment(env terra.Environment) ([]Kubectx, error)
+}
+
+// New constructs a Kubeconfig
+func New(file string, gkeClient *container.ClusterManagerClient, tokenSource oauth2.TokenSource) Kubeconfig {
 	lockfile := path.Join(path.Dir(file), "."+path.Base(file)+".lk")
 
 	return &kubeconfig{
@@ -37,40 +89,44 @@ func newKubeConfig(file string, gkeClient *container.ClusterManagerClient, token
 			options.Timeout = 30 * time.Second
 			options.RetryInterval = 100 * time.Millisecond
 		}),
+		writtenCtxs: make(map[string]struct{}),
 	}
 }
 
-// kubeconfig manages entries in a `kubectl` config file (traditionally ~/.kube/config) for Terra environments & releases.
-// It creates context entries for environments and releases.
-// It works like `gcloud container clusters get-credentials`, except:
-//   - Users don't have to specify a project or location (because thelma already knows where clusters live)
-//   - Context entries are named in a more user-friendly fashion. For example, the context for the "alpha" environment
-//     is called `alpha`, instead of `gke_broad-dsde-alpha_us-central1-a_terra-alpha`. This makes it possible to quickly run
-//     a kubectl command against the alpha environment using `kubectl -c alpha` (no need to specify a namespace).
-//
-// Read more about kubectl contexts here:
-// https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/#define-clusters-users-and-contexts
 type kubeconfig struct {
-	file        string                          // path to kubeconfig file (eg. ~/.thelma/config/kubeconfig)
+	file        string                          // path to kubeconfig file we should write auth creds to (eg. ~/.thelma/config/kubeconfig)
 	gkeClient   *container.ClusterManagerClient // google container engine / kubernetes engine client
 	tokenSource oauth2.TokenSource              // token source to be used when adding auth token to kubeconfig file
 	locker      flock.Locker                    // file lock for preventing concurrent kubeconfig updates from stomping on each other
+	writtenCtxs map[string]struct{}             // cache for previously-written kubectxs
+	mutex       sync.Mutex                      // mutex for safe read/writing to writtenContexts
 }
 
-// addEnvironmentDefault updates the kubecfg to include a context for the environment, pointing at the environment's
-// namespace and default cluster. For example, if called for Terra's alpha environment, this will add a context to
-// the kubeconfig that is called "alpha", points at the "terra-alpha" namespace, and is configured to point at the
-// terra-alpha cluster in the broad-dsde-alpha project.
-//
-// Note that this does NOT generate a context for releases that live outside the environent's default cluster.
-// (eg. "datarepo"). To generate a context for those releases as well, call addAllReleases() instead.
-func (c *kubeconfig) addEnvironmentDefault(env terra.Environment) (kubectx, error) {
-	_kubectx := c.kubectxForEnvironment(env)
-	err := c.writeContext(_kubectx)
-	if err != nil {
-		return kubectx{}, err
+func (c *kubeconfig) ForRelease(release terra.Release) (Kubectx, error) {
+	return c.addRelease(release)
+}
+
+func (c *kubeconfig) ForReleases(releases ...terra.Release) ([]ReleaseKtx, error) {
+	var result []ReleaseKtx
+	for _, r := range releases {
+		ktx, err := c.ForRelease(r)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, ReleaseKtx{
+			Release: r,
+			Kubectx: ktx,
+		})
 	}
-	return _kubectx, nil
+	return result, nil
+}
+
+func (c *kubeconfig) ForEnvironment(env terra.Environment) ([]Kubectx, error) {
+	return c.addAllReleases(env)
+}
+
+func (c *kubeconfig) ConfigFile() string {
+	return c.file
 }
 
 // addAllReleases updates the kubecfg to include a context for all releases in an environment.
@@ -82,8 +138,8 @@ func (c *kubeconfig) addEnvironmentDefault(env terra.Environment) (kubectx, erro
 // For example, when called for Terra's alpha environment, addAllReleases will add a default context
 // called "alpha" as well as a context called "datarepo-alpha", which points at DataRepo's alpha cluster
 // and the "terra-alpha" namespace.
-func (c *kubeconfig) addAllReleases(env terra.Environment) ([]kubectx, error) {
-	var kubectxts []kubectx
+func (c *kubeconfig) addAllReleases(env terra.Environment) ([]Kubectx, error) {
+	var kubectxts []Kubectx
 
 	// add environment's default context
 	defaultCtx, err := c.addEnvironmentDefault(env)
@@ -103,7 +159,28 @@ func (c *kubeconfig) addAllReleases(env terra.Environment) ([]kubectx, error) {
 		}
 	}
 
+	// sort by context name for predictability and easy testing
+	sort.Slice(kubectxts, func(i, j int) bool {
+		return kubectxts[i].ContextName() < kubectxts[j].ContextName()
+	})
+
 	return kubectxts, nil
+}
+
+// addEnvironmentDefault updates the kubecfg to include a context for the environment, pointing at the environment's
+// namespace and default cluster. For example, if called for Terra's alpha environment, this will add a context to
+// the kubeconfig that is called "alpha", points at the "terra-alpha" namespace, and is configured to point at the
+// terra-alpha cluster in the broad-dsde-alpha project.
+//
+// Note that this does NOT generate a context for releases that live outside the environent's default cluster.
+// (eg. "datarepo"). To generate a context for those releases as well, call addAllReleases() instead.
+func (c *kubeconfig) addEnvironmentDefault(env terra.Environment) (Kubectx, error) {
+	_kubectx := kubectxForEnvironment(env)
+	err := c.writeContextIfNeeded(_kubectx)
+	if err != nil {
+		return kubectx{}, err
+	}
+	return _kubectx, nil
 }
 
 // addRelease adds a context for this release to the kubecfg file.
@@ -113,13 +190,38 @@ func (c *kubeconfig) addAllReleases(env terra.Environment) ([]kubectx, error) {
 //
 // Else, this will add context for this release that is keyed by the release's Argo application name and points
 // at the release's target cluster and namespace.
-func (c *kubeconfig) addRelease(release terra.Release) (kubectx, error) {
-	_kubectx := c.kubectxForRelease(release)
-	err := c.writeContext(_kubectx)
+func (c *kubeconfig) addRelease(release terra.Release) (Kubectx, error) {
+	_kubectx := kubectxForRelease(release)
+	err := c.writeContextIfNeeded(_kubectx)
 	if err != nil {
 		return kubectx{}, err
 	}
 	return _kubectx, nil
+}
+
+// writeContextIfNeeded writes a context with the given name, namespace, and target cluster to the kubeconfig file,
+// unless the same context has already been written at least once by this kubecfg instance.
+// (saves THelma from making a Google Cloud api call for every `kubectl` command it runs)
+func (c *kubeconfig) writeContextIfNeeded(ctx kubectx) error {
+	c.mutex.Lock()
+	_, exists := c.writtenCtxs[ctx.contextName]
+	c.mutex.Unlock()
+
+	if exists {
+		// this context has already been written once by this kubecfg, no need to write again.
+		return nil
+	}
+
+	err := c.writeContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	c.mutex.Lock()
+	c.writtenCtxs[ctx.contextName] = struct{}{}
+	c.mutex.Unlock()
+
+	return nil
 }
 
 // writeContext writes a context with the given name, namespace and target cluster to the kubeconfig file
@@ -132,13 +234,13 @@ func (c *kubeconfig) writeContext(ctx kubectx) error {
 		Msgf("Generating %s entry for %s", c.file, ctx.contextName)
 
 	return c.locker.WithLock(func() error {
-		return c.writeContextUnsafe(ctx.contextName, ctx.namespace, ctx.cluster)
+		return c.writeContextUnsafe(ctx)
 	})
 }
 
 // writeContextUnsafe writes a context with the given name, namespace and target cluster to the kubeconfig file
 // (it does not synchronize write access, hence "unsafe")
-func (c *kubeconfig) writeContextUnsafe(contextName string, namespace string, cluster terra.Cluster) error {
+func (c *kubeconfig) writeContextUnsafe(ctx kubectx) error {
 	cfg, err := c.readKubecfg()
 	if err != nil {
 		return err
@@ -147,6 +249,8 @@ func (c *kubeconfig) writeContextUnsafe(contextName string, namespace string, cl
 	if cfg == nil {
 		cfg = &clientcmdapi.Config{}
 	}
+
+	cluster := ctx.cluster
 
 	clusterData, err := c.gkeClient.GetCluster(context.Background(), &containerpb.GetClusterRequest{
 		Name: fmt.Sprintf("projects/%s/locations/%s/clusters/%s",
@@ -177,9 +281,9 @@ func (c *kubeconfig) writeContextUnsafe(contextName string, namespace string, cl
 	if len(cfg.Contexts) == 0 {
 		cfg.Contexts = make(map[string]*clientcmdapi.Context)
 	}
-	cfg.Contexts[contextName] = &clientcmdapi.Context{
+	cfg.Contexts[ctx.contextName] = &clientcmdapi.Context{
 		Cluster:   cluster.Name(),
-		Namespace: namespace,
+		Namespace: ctx.namespace,
 		AuthInfo:  defaultAuthInfo,
 	}
 
@@ -218,7 +322,7 @@ func (c *kubeconfig) readKubecfg() (*clientcmdapi.Config, error) {
 	return clientcmd.LoadFromFile(c.file)
 }
 
-func (c *kubeconfig) kubectxForEnvironment(env terra.Environment) kubectx {
+func kubectxForEnvironment(env terra.Environment) kubectx {
 	return kubectx{
 		contextName: env.Name(),
 		cluster:     env.DefaultCluster(),
@@ -226,9 +330,9 @@ func (c *kubeconfig) kubectxForEnvironment(env terra.Environment) kubectx {
 	}
 }
 
-func (c *kubeconfig) kubectxForRelease(release terra.Release) kubectx {
+func kubectxForRelease(release terra.Release) kubectx {
 	return kubectx{
-		contextName: c.contextNameForRelease(release),
+		contextName: contextNameForRelease(release),
 		cluster:     release.Cluster(),
 		namespace:   release.Namespace(),
 	}
@@ -239,7 +343,7 @@ func (c *kubeconfig) kubectxForRelease(release terra.Release) kubectx {
 // environment name. ("alpha", "staging", "fiab-choover-funky-squirrel")
 // If the release is a cluster release, or if the release is deployed to a different cluster than the environment's
 // default, use the ArgoCD application name, which is globally unique (eg. "datarepo-staging")
-func (c *kubeconfig) contextNameForRelease(release terra.Release) string {
+func contextNameForRelease(release terra.Release) string {
 	if release.IsClusterRelease() {
 		return argocd.ApplicationName(release)
 	}
