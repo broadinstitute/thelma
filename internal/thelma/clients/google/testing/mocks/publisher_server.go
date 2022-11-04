@@ -16,6 +16,14 @@ type PublisherServer struct {
 	mock.Mock
 }
 
+type PublisherServer_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *PublisherServer) EXPECT() *PublisherServer_Expecter {
+	return &PublisherServer_Expecter{mock: &_m.Mock}
+}
+
 // CreateTopic provides a mock function with given fields: _a0, _a1
 func (_m *PublisherServer) CreateTopic(_a0 context.Context, _a1 *pubsub.Topic) (*pubsub.Topic, error) {
 	ret := _m.Called(_a0, _a1)
@@ -37,6 +45,30 @@ func (_m *PublisherServer) CreateTopic(_a0 context.Context, _a1 *pubsub.Topic) (
 	}
 
 	return r0, r1
+}
+
+// PublisherServer_CreateTopic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateTopic'
+type PublisherServer_CreateTopic_Call struct {
+	*mock.Call
+}
+
+// CreateTopic is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.Topic
+func (_e *PublisherServer_Expecter) CreateTopic(_a0 interface{}, _a1 interface{}) *PublisherServer_CreateTopic_Call {
+	return &PublisherServer_CreateTopic_Call{Call: _e.mock.On("CreateTopic", _a0, _a1)}
+}
+
+func (_c *PublisherServer_CreateTopic_Call) Run(run func(_a0 context.Context, _a1 *pubsub.Topic)) *PublisherServer_CreateTopic_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.Topic))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_CreateTopic_Call) Return(_a0 *pubsub.Topic, _a1 error) *PublisherServer_CreateTopic_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // DeleteTopic provides a mock function with given fields: _a0, _a1
@@ -62,6 +94,30 @@ func (_m *PublisherServer) DeleteTopic(_a0 context.Context, _a1 *pubsub.DeleteTo
 	return r0, r1
 }
 
+// PublisherServer_DeleteTopic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteTopic'
+type PublisherServer_DeleteTopic_Call struct {
+	*mock.Call
+}
+
+// DeleteTopic is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.DeleteTopicRequest
+func (_e *PublisherServer_Expecter) DeleteTopic(_a0 interface{}, _a1 interface{}) *PublisherServer_DeleteTopic_Call {
+	return &PublisherServer_DeleteTopic_Call{Call: _e.mock.On("DeleteTopic", _a0, _a1)}
+}
+
+func (_c *PublisherServer_DeleteTopic_Call) Run(run func(_a0 context.Context, _a1 *pubsub.DeleteTopicRequest)) *PublisherServer_DeleteTopic_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.DeleteTopicRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_DeleteTopic_Call) Return(_a0 *emptypb.Empty, _a1 error) *PublisherServer_DeleteTopic_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // DetachSubscription provides a mock function with given fields: _a0, _a1
 func (_m *PublisherServer) DetachSubscription(_a0 context.Context, _a1 *pubsub.DetachSubscriptionRequest) (*pubsub.DetachSubscriptionResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -83,6 +139,30 @@ func (_m *PublisherServer) DetachSubscription(_a0 context.Context, _a1 *pubsub.D
 	}
 
 	return r0, r1
+}
+
+// PublisherServer_DetachSubscription_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DetachSubscription'
+type PublisherServer_DetachSubscription_Call struct {
+	*mock.Call
+}
+
+// DetachSubscription is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.DetachSubscriptionRequest
+func (_e *PublisherServer_Expecter) DetachSubscription(_a0 interface{}, _a1 interface{}) *PublisherServer_DetachSubscription_Call {
+	return &PublisherServer_DetachSubscription_Call{Call: _e.mock.On("DetachSubscription", _a0, _a1)}
+}
+
+func (_c *PublisherServer_DetachSubscription_Call) Run(run func(_a0 context.Context, _a1 *pubsub.DetachSubscriptionRequest)) *PublisherServer_DetachSubscription_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.DetachSubscriptionRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_DetachSubscription_Call) Return(_a0 *pubsub.DetachSubscriptionResponse, _a1 error) *PublisherServer_DetachSubscription_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // GetTopic provides a mock function with given fields: _a0, _a1
@@ -108,6 +188,30 @@ func (_m *PublisherServer) GetTopic(_a0 context.Context, _a1 *pubsub.GetTopicReq
 	return r0, r1
 }
 
+// PublisherServer_GetTopic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTopic'
+type PublisherServer_GetTopic_Call struct {
+	*mock.Call
+}
+
+// GetTopic is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.GetTopicRequest
+func (_e *PublisherServer_Expecter) GetTopic(_a0 interface{}, _a1 interface{}) *PublisherServer_GetTopic_Call {
+	return &PublisherServer_GetTopic_Call{Call: _e.mock.On("GetTopic", _a0, _a1)}
+}
+
+func (_c *PublisherServer_GetTopic_Call) Run(run func(_a0 context.Context, _a1 *pubsub.GetTopicRequest)) *PublisherServer_GetTopic_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.GetTopicRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_GetTopic_Call) Return(_a0 *pubsub.Topic, _a1 error) *PublisherServer_GetTopic_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // ListTopicSnapshots provides a mock function with given fields: _a0, _a1
 func (_m *PublisherServer) ListTopicSnapshots(_a0 context.Context, _a1 *pubsub.ListTopicSnapshotsRequest) (*pubsub.ListTopicSnapshotsResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -129,6 +233,30 @@ func (_m *PublisherServer) ListTopicSnapshots(_a0 context.Context, _a1 *pubsub.L
 	}
 
 	return r0, r1
+}
+
+// PublisherServer_ListTopicSnapshots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTopicSnapshots'
+type PublisherServer_ListTopicSnapshots_Call struct {
+	*mock.Call
+}
+
+// ListTopicSnapshots is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.ListTopicSnapshotsRequest
+func (_e *PublisherServer_Expecter) ListTopicSnapshots(_a0 interface{}, _a1 interface{}) *PublisherServer_ListTopicSnapshots_Call {
+	return &PublisherServer_ListTopicSnapshots_Call{Call: _e.mock.On("ListTopicSnapshots", _a0, _a1)}
+}
+
+func (_c *PublisherServer_ListTopicSnapshots_Call) Run(run func(_a0 context.Context, _a1 *pubsub.ListTopicSnapshotsRequest)) *PublisherServer_ListTopicSnapshots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.ListTopicSnapshotsRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_ListTopicSnapshots_Call) Return(_a0 *pubsub.ListTopicSnapshotsResponse, _a1 error) *PublisherServer_ListTopicSnapshots_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // ListTopicSubscriptions provides a mock function with given fields: _a0, _a1
@@ -154,6 +282,30 @@ func (_m *PublisherServer) ListTopicSubscriptions(_a0 context.Context, _a1 *pubs
 	return r0, r1
 }
 
+// PublisherServer_ListTopicSubscriptions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTopicSubscriptions'
+type PublisherServer_ListTopicSubscriptions_Call struct {
+	*mock.Call
+}
+
+// ListTopicSubscriptions is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.ListTopicSubscriptionsRequest
+func (_e *PublisherServer_Expecter) ListTopicSubscriptions(_a0 interface{}, _a1 interface{}) *PublisherServer_ListTopicSubscriptions_Call {
+	return &PublisherServer_ListTopicSubscriptions_Call{Call: _e.mock.On("ListTopicSubscriptions", _a0, _a1)}
+}
+
+func (_c *PublisherServer_ListTopicSubscriptions_Call) Run(run func(_a0 context.Context, _a1 *pubsub.ListTopicSubscriptionsRequest)) *PublisherServer_ListTopicSubscriptions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.ListTopicSubscriptionsRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_ListTopicSubscriptions_Call) Return(_a0 *pubsub.ListTopicSubscriptionsResponse, _a1 error) *PublisherServer_ListTopicSubscriptions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // ListTopics provides a mock function with given fields: _a0, _a1
 func (_m *PublisherServer) ListTopics(_a0 context.Context, _a1 *pubsub.ListTopicsRequest) (*pubsub.ListTopicsResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -175,6 +327,30 @@ func (_m *PublisherServer) ListTopics(_a0 context.Context, _a1 *pubsub.ListTopic
 	}
 
 	return r0, r1
+}
+
+// PublisherServer_ListTopics_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTopics'
+type PublisherServer_ListTopics_Call struct {
+	*mock.Call
+}
+
+// ListTopics is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.ListTopicsRequest
+func (_e *PublisherServer_Expecter) ListTopics(_a0 interface{}, _a1 interface{}) *PublisherServer_ListTopics_Call {
+	return &PublisherServer_ListTopics_Call{Call: _e.mock.On("ListTopics", _a0, _a1)}
+}
+
+func (_c *PublisherServer_ListTopics_Call) Run(run func(_a0 context.Context, _a1 *pubsub.ListTopicsRequest)) *PublisherServer_ListTopics_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.ListTopicsRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_ListTopics_Call) Return(_a0 *pubsub.ListTopicsResponse, _a1 error) *PublisherServer_ListTopics_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // Publish provides a mock function with given fields: _a0, _a1
@@ -200,6 +376,30 @@ func (_m *PublisherServer) Publish(_a0 context.Context, _a1 *pubsub.PublishReque
 	return r0, r1
 }
 
+// PublisherServer_Publish_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Publish'
+type PublisherServer_Publish_Call struct {
+	*mock.Call
+}
+
+// Publish is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.PublishRequest
+func (_e *PublisherServer_Expecter) Publish(_a0 interface{}, _a1 interface{}) *PublisherServer_Publish_Call {
+	return &PublisherServer_Publish_Call{Call: _e.mock.On("Publish", _a0, _a1)}
+}
+
+func (_c *PublisherServer_Publish_Call) Run(run func(_a0 context.Context, _a1 *pubsub.PublishRequest)) *PublisherServer_Publish_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.PublishRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_Publish_Call) Return(_a0 *pubsub.PublishResponse, _a1 error) *PublisherServer_Publish_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // UpdateTopic provides a mock function with given fields: _a0, _a1
 func (_m *PublisherServer) UpdateTopic(_a0 context.Context, _a1 *pubsub.UpdateTopicRequest) (*pubsub.Topic, error) {
 	ret := _m.Called(_a0, _a1)
@@ -221,6 +421,30 @@ func (_m *PublisherServer) UpdateTopic(_a0 context.Context, _a1 *pubsub.UpdateTo
 	}
 
 	return r0, r1
+}
+
+// PublisherServer_UpdateTopic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateTopic'
+type PublisherServer_UpdateTopic_Call struct {
+	*mock.Call
+}
+
+// UpdateTopic is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.UpdateTopicRequest
+func (_e *PublisherServer_Expecter) UpdateTopic(_a0 interface{}, _a1 interface{}) *PublisherServer_UpdateTopic_Call {
+	return &PublisherServer_UpdateTopic_Call{Call: _e.mock.On("UpdateTopic", _a0, _a1)}
+}
+
+func (_c *PublisherServer_UpdateTopic_Call) Run(run func(_a0 context.Context, _a1 *pubsub.UpdateTopicRequest)) *PublisherServer_UpdateTopic_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.UpdateTopicRequest))
+	})
+	return _c
+}
+
+func (_c *PublisherServer_UpdateTopic_Call) Return(_a0 *pubsub.Topic, _a1 error) *PublisherServer_UpdateTopic_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 type mockConstructorTestingTNewPublisherServer interface {

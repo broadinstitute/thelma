@@ -20,6 +20,14 @@ type Clients struct {
 	mock.Mock
 }
 
+type Clients_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *Clients) EXPECT() *Clients_Expecter {
+	return &Clients_Expecter{mock: &_m.Mock}
+}
+
 // Bucket provides a mock function with given fields: name, options
 func (_m *Clients) Bucket(name string, options ...bucket.BucketOption) (bucket.Bucket, error) {
 	_va := make([]interface{}, len(options))
@@ -50,6 +58,37 @@ func (_m *Clients) Bucket(name string, options ...bucket.BucketOption) (bucket.B
 	return r0, r1
 }
 
+// Clients_Bucket_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Bucket'
+type Clients_Bucket_Call struct {
+	*mock.Call
+}
+
+// Bucket is a helper method to define mock.On call
+//  - name string
+//  - options ...bucket.BucketOption
+func (_e *Clients_Expecter) Bucket(name interface{}, options ...interface{}) *Clients_Bucket_Call {
+	return &Clients_Bucket_Call{Call: _e.mock.On("Bucket",
+		append([]interface{}{name}, options...)...)}
+}
+
+func (_c *Clients_Bucket_Call) Run(run func(name string, options ...bucket.BucketOption)) *Clients_Bucket_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]bucket.BucketOption, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(bucket.BucketOption)
+			}
+		}
+		run(args[0].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Clients_Bucket_Call) Return(_a0 bucket.Bucket, _a1 error) *Clients_Bucket_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // Kubectl provides a mock function with given fields:
 func (_m *Clients) Kubectl() (kubectl.Kubectl, error) {
 	ret := _m.Called()
@@ -71,6 +110,28 @@ func (_m *Clients) Kubectl() (kubectl.Kubectl, error) {
 	}
 
 	return r0, r1
+}
+
+// Clients_Kubectl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Kubectl'
+type Clients_Kubectl_Call struct {
+	*mock.Call
+}
+
+// Kubectl is a helper method to define mock.On call
+func (_e *Clients_Expecter) Kubectl() *Clients_Kubectl_Call {
+	return &Clients_Kubectl_Call{Call: _e.mock.On("Kubectl")}
+}
+
+func (_c *Clients_Kubectl_Call) Run(run func()) *Clients_Kubectl_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Clients_Kubectl_Call) Return(_a0 kubectl.Kubectl, _a1 error) *Clients_Kubectl_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // PubSub provides a mock function with given fields: projectId
@@ -96,6 +157,29 @@ func (_m *Clients) PubSub(projectId string) (*pubsub.Client, error) {
 	return r0, r1
 }
 
+// Clients_PubSub_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PubSub'
+type Clients_PubSub_Call struct {
+	*mock.Call
+}
+
+// PubSub is a helper method to define mock.On call
+//  - projectId string
+func (_e *Clients_Expecter) PubSub(projectId interface{}) *Clients_PubSub_Call {
+	return &Clients_PubSub_Call{Call: _e.mock.On("PubSub", projectId)}
+}
+
+func (_c *Clients_PubSub_Call) Run(run func(projectId string)) *Clients_PubSub_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Clients_PubSub_Call) Return(_a0 *pubsub.Client, _a1 error) *Clients_PubSub_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // SetSubject provides a mock function with given fields: subject
 func (_m *Clients) SetSubject(subject string) google.Clients {
 	ret := _m.Called(subject)
@@ -110,6 +194,29 @@ func (_m *Clients) SetSubject(subject string) google.Clients {
 	}
 
 	return r0
+}
+
+// Clients_SetSubject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSubject'
+type Clients_SetSubject_Call struct {
+	*mock.Call
+}
+
+// SetSubject is a helper method to define mock.On call
+//  - subject string
+func (_e *Clients_Expecter) SetSubject(subject interface{}) *Clients_SetSubject_Call {
+	return &Clients_SetSubject_Call{Call: _e.mock.On("SetSubject", subject)}
+}
+
+func (_c *Clients_SetSubject_Call) Run(run func(subject string)) *Clients_SetSubject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Clients_SetSubject_Call) Return(_a0 google.Clients) *Clients_SetSubject_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Terra provides a mock function with given fields:
@@ -133,6 +240,28 @@ func (_m *Clients) Terra() (terraapi.TerraClient, error) {
 	}
 
 	return r0, r1
+}
+
+// Clients_Terra_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Terra'
+type Clients_Terra_Call struct {
+	*mock.Call
+}
+
+// Terra is a helper method to define mock.On call
+func (_e *Clients_Expecter) Terra() *Clients_Terra_Call {
+	return &Clients_Terra_Call{Call: _e.mock.On("Terra")}
+}
+
+func (_c *Clients_Terra_Call) Run(run func()) *Clients_Terra_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Clients_Terra_Call) Return(_a0 terraapi.TerraClient, _a1 error) *Clients_Terra_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 type mockConstructorTestingTNewClients interface {

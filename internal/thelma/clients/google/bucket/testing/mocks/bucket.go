@@ -18,6 +18,14 @@ type Bucket struct {
 	mock.Mock
 }
 
+type Bucket_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *Bucket) EXPECT() *Bucket_Expecter {
+	return &Bucket_Expecter{mock: &_m.Mock}
+}
+
 // Attrs provides a mock function with given fields: objectName
 func (_m *Bucket) Attrs(objectName string) (*storage.ObjectAttrs, error) {
 	ret := _m.Called(objectName)
@@ -41,6 +49,29 @@ func (_m *Bucket) Attrs(objectName string) (*storage.ObjectAttrs, error) {
 	return r0, r1
 }
 
+// Bucket_Attrs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Attrs'
+type Bucket_Attrs_Call struct {
+	*mock.Call
+}
+
+// Attrs is a helper method to define mock.On call
+//  - objectName string
+func (_e *Bucket_Expecter) Attrs(objectName interface{}) *Bucket_Attrs_Call {
+	return &Bucket_Attrs_Call{Call: _e.mock.On("Attrs", objectName)}
+}
+
+func (_c *Bucket_Attrs_Call) Run(run func(objectName string)) *Bucket_Attrs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Bucket_Attrs_Call) Return(_a0 *storage.ObjectAttrs, _a1 error) *Bucket_Attrs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // Close provides a mock function with given fields:
 func (_m *Bucket) Close() error {
 	ret := _m.Called()
@@ -53,6 +84,28 @@ func (_m *Bucket) Close() error {
 	}
 
 	return r0
+}
+
+// Bucket_Close_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Close'
+type Bucket_Close_Call struct {
+	*mock.Call
+}
+
+// Close is a helper method to define mock.On call
+func (_e *Bucket_Expecter) Close() *Bucket_Close_Call {
+	return &Bucket_Close_Call{Call: _e.mock.On("Close")}
+}
+
+func (_c *Bucket_Close_Call) Run(run func()) *Bucket_Close_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Bucket_Close_Call) Return(_a0 error) *Bucket_Close_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Delete provides a mock function with given fields: objectName
@@ -69,6 +122,29 @@ func (_m *Bucket) Delete(objectName string) error {
 	return r0
 }
 
+// Bucket_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type Bucket_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//  - objectName string
+func (_e *Bucket_Expecter) Delete(objectName interface{}) *Bucket_Delete_Call {
+	return &Bucket_Delete_Call{Call: _e.mock.On("Delete", objectName)}
+}
+
+func (_c *Bucket_Delete_Call) Run(run func(objectName string)) *Bucket_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Bucket_Delete_Call) Return(_a0 error) *Bucket_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Download provides a mock function with given fields: objectName, localPath
 func (_m *Bucket) Download(objectName string, localPath string) error {
 	ret := _m.Called(objectName, localPath)
@@ -81,6 +157,30 @@ func (_m *Bucket) Download(objectName string, localPath string) error {
 	}
 
 	return r0
+}
+
+// Bucket_Download_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Download'
+type Bucket_Download_Call struct {
+	*mock.Call
+}
+
+// Download is a helper method to define mock.On call
+//  - objectName string
+//  - localPath string
+func (_e *Bucket_Expecter) Download(objectName interface{}, localPath interface{}) *Bucket_Download_Call {
+	return &Bucket_Download_Call{Call: _e.mock.On("Download", objectName, localPath)}
+}
+
+func (_c *Bucket_Download_Call) Run(run func(objectName string, localPath string)) *Bucket_Download_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Bucket_Download_Call) Return(_a0 error) *Bucket_Download_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Exists provides a mock function with given fields: objectName
@@ -104,6 +204,29 @@ func (_m *Bucket) Exists(objectName string) (bool, error) {
 	return r0, r1
 }
 
+// Bucket_Exists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exists'
+type Bucket_Exists_Call struct {
+	*mock.Call
+}
+
+// Exists is a helper method to define mock.On call
+//  - objectName string
+func (_e *Bucket_Expecter) Exists(objectName interface{}) *Bucket_Exists_Call {
+	return &Bucket_Exists_Call{Call: _e.mock.On("Exists", objectName)}
+}
+
+func (_c *Bucket_Exists_Call) Run(run func(objectName string)) *Bucket_Exists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Bucket_Exists_Call) Return(_a0 bool, _a1 error) *Bucket_Exists_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // Name provides a mock function with given fields:
 func (_m *Bucket) Name() string {
 	ret := _m.Called()
@@ -116,6 +239,28 @@ func (_m *Bucket) Name() string {
 	}
 
 	return r0
+}
+
+// Bucket_Name_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Name'
+type Bucket_Name_Call struct {
+	*mock.Call
+}
+
+// Name is a helper method to define mock.On call
+func (_e *Bucket_Expecter) Name() *Bucket_Name_Call {
+	return &Bucket_Name_Call{Call: _e.mock.On("Name")}
+}
+
+func (_c *Bucket_Name_Call) Run(run func()) *Bucket_Name_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Bucket_Name_Call) Return(_a0 string) *Bucket_Name_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // NewLocker provides a mock function with given fields: objectName, maxWait, options
@@ -141,6 +286,38 @@ func (_m *Bucket) NewLocker(objectName string, maxWait time.Duration, options ..
 	return r0
 }
 
+// Bucket_NewLocker_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NewLocker'
+type Bucket_NewLocker_Call struct {
+	*mock.Call
+}
+
+// NewLocker is a helper method to define mock.On call
+//  - objectName string
+//  - maxWait time.Duration
+//  - options ...bucket.LockerOption
+func (_e *Bucket_Expecter) NewLocker(objectName interface{}, maxWait interface{}, options ...interface{}) *Bucket_NewLocker_Call {
+	return &Bucket_NewLocker_Call{Call: _e.mock.On("NewLocker",
+		append([]interface{}{objectName, maxWait}, options...)...)}
+}
+
+func (_c *Bucket_NewLocker_Call) Run(run func(objectName string, maxWait time.Duration, options ...bucket.LockerOption)) *Bucket_NewLocker_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]bucket.LockerOption, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(bucket.LockerOption)
+			}
+		}
+		run(args[0].(string), args[1].(time.Duration), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Bucket_NewLocker_Call) Return(_a0 bucket.Locker) *Bucket_NewLocker_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Read provides a mock function with given fields: objectName
 func (_m *Bucket) Read(objectName string) ([]byte, error) {
 	ret := _m.Called(objectName)
@@ -164,6 +341,29 @@ func (_m *Bucket) Read(objectName string) ([]byte, error) {
 	return r0, r1
 }
 
+// Bucket_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type Bucket_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//  - objectName string
+func (_e *Bucket_Expecter) Read(objectName interface{}) *Bucket_Read_Call {
+	return &Bucket_Read_Call{Call: _e.mock.On("Read", objectName)}
+}
+
+func (_c *Bucket_Read_Call) Run(run func(objectName string)) *Bucket_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Bucket_Read_Call) Return(_a0 []byte, _a1 error) *Bucket_Read_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // Update provides a mock function with given fields: objectName, attrs
 func (_m *Bucket) Update(objectName string, attrs ...object.AttrSetter) error {
 	_va := make([]interface{}, len(attrs))
@@ -183,6 +383,37 @@ func (_m *Bucket) Update(objectName string, attrs ...object.AttrSetter) error {
 	}
 
 	return r0
+}
+
+// Bucket_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type Bucket_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//  - objectName string
+//  - attrs ...object.AttrSetter
+func (_e *Bucket_Expecter) Update(objectName interface{}, attrs ...interface{}) *Bucket_Update_Call {
+	return &Bucket_Update_Call{Call: _e.mock.On("Update",
+		append([]interface{}{objectName}, attrs...)...)}
+}
+
+func (_c *Bucket_Update_Call) Run(run func(objectName string, attrs ...object.AttrSetter)) *Bucket_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]object.AttrSetter, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(object.AttrSetter)
+			}
+		}
+		run(args[0].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Bucket_Update_Call) Return(_a0 error) *Bucket_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Upload provides a mock function with given fields: localPath, objectName, attrs
@@ -206,6 +437,38 @@ func (_m *Bucket) Upload(localPath string, objectName string, attrs ...object.At
 	return r0
 }
 
+// Bucket_Upload_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upload'
+type Bucket_Upload_Call struct {
+	*mock.Call
+}
+
+// Upload is a helper method to define mock.On call
+//  - localPath string
+//  - objectName string
+//  - attrs ...object.AttrSetter
+func (_e *Bucket_Expecter) Upload(localPath interface{}, objectName interface{}, attrs ...interface{}) *Bucket_Upload_Call {
+	return &Bucket_Upload_Call{Call: _e.mock.On("Upload",
+		append([]interface{}{localPath, objectName}, attrs...)...)}
+}
+
+func (_c *Bucket_Upload_Call) Run(run func(localPath string, objectName string, attrs ...object.AttrSetter)) *Bucket_Upload_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]object.AttrSetter, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(object.AttrSetter)
+			}
+		}
+		run(args[0].(string), args[1].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Bucket_Upload_Call) Return(_a0 error) *Bucket_Upload_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Write provides a mock function with given fields: objectName, content, attrs
 func (_m *Bucket) Write(objectName string, content []byte, attrs ...object.AttrSetter) error {
 	_va := make([]interface{}, len(attrs))
@@ -225,6 +488,38 @@ func (_m *Bucket) Write(objectName string, content []byte, attrs ...object.AttrS
 	}
 
 	return r0
+}
+
+// Bucket_Write_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Write'
+type Bucket_Write_Call struct {
+	*mock.Call
+}
+
+// Write is a helper method to define mock.On call
+//  - objectName string
+//  - content []byte
+//  - attrs ...object.AttrSetter
+func (_e *Bucket_Expecter) Write(objectName interface{}, content interface{}, attrs ...interface{}) *Bucket_Write_Call {
+	return &Bucket_Write_Call{Call: _e.mock.On("Write",
+		append([]interface{}{objectName, content}, attrs...)...)}
+}
+
+func (_c *Bucket_Write_Call) Run(run func(objectName string, content []byte, attrs ...object.AttrSetter)) *Bucket_Write_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]object.AttrSetter, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(object.AttrSetter)
+			}
+		}
+		run(args[0].(string), args[1].([]byte), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Bucket_Write_Call) Return(_a0 error) *Bucket_Write_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 type mockConstructorTestingTNewBucket interface {

@@ -16,6 +16,14 @@ type SubscriberServer struct {
 	mock.Mock
 }
 
+type SubscriberServer_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *SubscriberServer) EXPECT() *SubscriberServer_Expecter {
+	return &SubscriberServer_Expecter{mock: &_m.Mock}
+}
+
 // Acknowledge provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) Acknowledge(_a0 context.Context, _a1 *pubsub.AcknowledgeRequest) (*emptypb.Empty, error) {
 	ret := _m.Called(_a0, _a1)
@@ -37,6 +45,30 @@ func (_m *SubscriberServer) Acknowledge(_a0 context.Context, _a1 *pubsub.Acknowl
 	}
 
 	return r0, r1
+}
+
+// SubscriberServer_Acknowledge_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Acknowledge'
+type SubscriberServer_Acknowledge_Call struct {
+	*mock.Call
+}
+
+// Acknowledge is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.AcknowledgeRequest
+func (_e *SubscriberServer_Expecter) Acknowledge(_a0 interface{}, _a1 interface{}) *SubscriberServer_Acknowledge_Call {
+	return &SubscriberServer_Acknowledge_Call{Call: _e.mock.On("Acknowledge", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_Acknowledge_Call) Run(run func(_a0 context.Context, _a1 *pubsub.AcknowledgeRequest)) *SubscriberServer_Acknowledge_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.AcknowledgeRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_Acknowledge_Call) Return(_a0 *emptypb.Empty, _a1 error) *SubscriberServer_Acknowledge_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // CreateSnapshot provides a mock function with given fields: _a0, _a1
@@ -62,6 +94,30 @@ func (_m *SubscriberServer) CreateSnapshot(_a0 context.Context, _a1 *pubsub.Crea
 	return r0, r1
 }
 
+// SubscriberServer_CreateSnapshot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateSnapshot'
+type SubscriberServer_CreateSnapshot_Call struct {
+	*mock.Call
+}
+
+// CreateSnapshot is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.CreateSnapshotRequest
+func (_e *SubscriberServer_Expecter) CreateSnapshot(_a0 interface{}, _a1 interface{}) *SubscriberServer_CreateSnapshot_Call {
+	return &SubscriberServer_CreateSnapshot_Call{Call: _e.mock.On("CreateSnapshot", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_CreateSnapshot_Call) Run(run func(_a0 context.Context, _a1 *pubsub.CreateSnapshotRequest)) *SubscriberServer_CreateSnapshot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.CreateSnapshotRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_CreateSnapshot_Call) Return(_a0 *pubsub.Snapshot, _a1 error) *SubscriberServer_CreateSnapshot_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // CreateSubscription provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) CreateSubscription(_a0 context.Context, _a1 *pubsub.Subscription) (*pubsub.Subscription, error) {
 	ret := _m.Called(_a0, _a1)
@@ -83,6 +139,30 @@ func (_m *SubscriberServer) CreateSubscription(_a0 context.Context, _a1 *pubsub.
 	}
 
 	return r0, r1
+}
+
+// SubscriberServer_CreateSubscription_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateSubscription'
+type SubscriberServer_CreateSubscription_Call struct {
+	*mock.Call
+}
+
+// CreateSubscription is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.Subscription
+func (_e *SubscriberServer_Expecter) CreateSubscription(_a0 interface{}, _a1 interface{}) *SubscriberServer_CreateSubscription_Call {
+	return &SubscriberServer_CreateSubscription_Call{Call: _e.mock.On("CreateSubscription", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_CreateSubscription_Call) Run(run func(_a0 context.Context, _a1 *pubsub.Subscription)) *SubscriberServer_CreateSubscription_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.Subscription))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_CreateSubscription_Call) Return(_a0 *pubsub.Subscription, _a1 error) *SubscriberServer_CreateSubscription_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // DeleteSnapshot provides a mock function with given fields: _a0, _a1
@@ -108,6 +188,30 @@ func (_m *SubscriberServer) DeleteSnapshot(_a0 context.Context, _a1 *pubsub.Dele
 	return r0, r1
 }
 
+// SubscriberServer_DeleteSnapshot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSnapshot'
+type SubscriberServer_DeleteSnapshot_Call struct {
+	*mock.Call
+}
+
+// DeleteSnapshot is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.DeleteSnapshotRequest
+func (_e *SubscriberServer_Expecter) DeleteSnapshot(_a0 interface{}, _a1 interface{}) *SubscriberServer_DeleteSnapshot_Call {
+	return &SubscriberServer_DeleteSnapshot_Call{Call: _e.mock.On("DeleteSnapshot", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_DeleteSnapshot_Call) Run(run func(_a0 context.Context, _a1 *pubsub.DeleteSnapshotRequest)) *SubscriberServer_DeleteSnapshot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.DeleteSnapshotRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_DeleteSnapshot_Call) Return(_a0 *emptypb.Empty, _a1 error) *SubscriberServer_DeleteSnapshot_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // DeleteSubscription provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) DeleteSubscription(_a0 context.Context, _a1 *pubsub.DeleteSubscriptionRequest) (*emptypb.Empty, error) {
 	ret := _m.Called(_a0, _a1)
@@ -129,6 +233,30 @@ func (_m *SubscriberServer) DeleteSubscription(_a0 context.Context, _a1 *pubsub.
 	}
 
 	return r0, r1
+}
+
+// SubscriberServer_DeleteSubscription_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSubscription'
+type SubscriberServer_DeleteSubscription_Call struct {
+	*mock.Call
+}
+
+// DeleteSubscription is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.DeleteSubscriptionRequest
+func (_e *SubscriberServer_Expecter) DeleteSubscription(_a0 interface{}, _a1 interface{}) *SubscriberServer_DeleteSubscription_Call {
+	return &SubscriberServer_DeleteSubscription_Call{Call: _e.mock.On("DeleteSubscription", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_DeleteSubscription_Call) Run(run func(_a0 context.Context, _a1 *pubsub.DeleteSubscriptionRequest)) *SubscriberServer_DeleteSubscription_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.DeleteSubscriptionRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_DeleteSubscription_Call) Return(_a0 *emptypb.Empty, _a1 error) *SubscriberServer_DeleteSubscription_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // GetSnapshot provides a mock function with given fields: _a0, _a1
@@ -154,6 +282,30 @@ func (_m *SubscriberServer) GetSnapshot(_a0 context.Context, _a1 *pubsub.GetSnap
 	return r0, r1
 }
 
+// SubscriberServer_GetSnapshot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSnapshot'
+type SubscriberServer_GetSnapshot_Call struct {
+	*mock.Call
+}
+
+// GetSnapshot is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.GetSnapshotRequest
+func (_e *SubscriberServer_Expecter) GetSnapshot(_a0 interface{}, _a1 interface{}) *SubscriberServer_GetSnapshot_Call {
+	return &SubscriberServer_GetSnapshot_Call{Call: _e.mock.On("GetSnapshot", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_GetSnapshot_Call) Run(run func(_a0 context.Context, _a1 *pubsub.GetSnapshotRequest)) *SubscriberServer_GetSnapshot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.GetSnapshotRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_GetSnapshot_Call) Return(_a0 *pubsub.Snapshot, _a1 error) *SubscriberServer_GetSnapshot_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // GetSubscription provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) GetSubscription(_a0 context.Context, _a1 *pubsub.GetSubscriptionRequest) (*pubsub.Subscription, error) {
 	ret := _m.Called(_a0, _a1)
@@ -175,6 +327,30 @@ func (_m *SubscriberServer) GetSubscription(_a0 context.Context, _a1 *pubsub.Get
 	}
 
 	return r0, r1
+}
+
+// SubscriberServer_GetSubscription_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSubscription'
+type SubscriberServer_GetSubscription_Call struct {
+	*mock.Call
+}
+
+// GetSubscription is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.GetSubscriptionRequest
+func (_e *SubscriberServer_Expecter) GetSubscription(_a0 interface{}, _a1 interface{}) *SubscriberServer_GetSubscription_Call {
+	return &SubscriberServer_GetSubscription_Call{Call: _e.mock.On("GetSubscription", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_GetSubscription_Call) Run(run func(_a0 context.Context, _a1 *pubsub.GetSubscriptionRequest)) *SubscriberServer_GetSubscription_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.GetSubscriptionRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_GetSubscription_Call) Return(_a0 *pubsub.Subscription, _a1 error) *SubscriberServer_GetSubscription_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // ListSnapshots provides a mock function with given fields: _a0, _a1
@@ -200,6 +376,30 @@ func (_m *SubscriberServer) ListSnapshots(_a0 context.Context, _a1 *pubsub.ListS
 	return r0, r1
 }
 
+// SubscriberServer_ListSnapshots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSnapshots'
+type SubscriberServer_ListSnapshots_Call struct {
+	*mock.Call
+}
+
+// ListSnapshots is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.ListSnapshotsRequest
+func (_e *SubscriberServer_Expecter) ListSnapshots(_a0 interface{}, _a1 interface{}) *SubscriberServer_ListSnapshots_Call {
+	return &SubscriberServer_ListSnapshots_Call{Call: _e.mock.On("ListSnapshots", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_ListSnapshots_Call) Run(run func(_a0 context.Context, _a1 *pubsub.ListSnapshotsRequest)) *SubscriberServer_ListSnapshots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.ListSnapshotsRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_ListSnapshots_Call) Return(_a0 *pubsub.ListSnapshotsResponse, _a1 error) *SubscriberServer_ListSnapshots_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // ListSubscriptions provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) ListSubscriptions(_a0 context.Context, _a1 *pubsub.ListSubscriptionsRequest) (*pubsub.ListSubscriptionsResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -221,6 +421,30 @@ func (_m *SubscriberServer) ListSubscriptions(_a0 context.Context, _a1 *pubsub.L
 	}
 
 	return r0, r1
+}
+
+// SubscriberServer_ListSubscriptions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSubscriptions'
+type SubscriberServer_ListSubscriptions_Call struct {
+	*mock.Call
+}
+
+// ListSubscriptions is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.ListSubscriptionsRequest
+func (_e *SubscriberServer_Expecter) ListSubscriptions(_a0 interface{}, _a1 interface{}) *SubscriberServer_ListSubscriptions_Call {
+	return &SubscriberServer_ListSubscriptions_Call{Call: _e.mock.On("ListSubscriptions", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_ListSubscriptions_Call) Run(run func(_a0 context.Context, _a1 *pubsub.ListSubscriptionsRequest)) *SubscriberServer_ListSubscriptions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.ListSubscriptionsRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_ListSubscriptions_Call) Return(_a0 *pubsub.ListSubscriptionsResponse, _a1 error) *SubscriberServer_ListSubscriptions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // ModifyAckDeadline provides a mock function with given fields: _a0, _a1
@@ -246,6 +470,30 @@ func (_m *SubscriberServer) ModifyAckDeadline(_a0 context.Context, _a1 *pubsub.M
 	return r0, r1
 }
 
+// SubscriberServer_ModifyAckDeadline_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ModifyAckDeadline'
+type SubscriberServer_ModifyAckDeadline_Call struct {
+	*mock.Call
+}
+
+// ModifyAckDeadline is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.ModifyAckDeadlineRequest
+func (_e *SubscriberServer_Expecter) ModifyAckDeadline(_a0 interface{}, _a1 interface{}) *SubscriberServer_ModifyAckDeadline_Call {
+	return &SubscriberServer_ModifyAckDeadline_Call{Call: _e.mock.On("ModifyAckDeadline", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_ModifyAckDeadline_Call) Run(run func(_a0 context.Context, _a1 *pubsub.ModifyAckDeadlineRequest)) *SubscriberServer_ModifyAckDeadline_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.ModifyAckDeadlineRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_ModifyAckDeadline_Call) Return(_a0 *emptypb.Empty, _a1 error) *SubscriberServer_ModifyAckDeadline_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // ModifyPushConfig provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) ModifyPushConfig(_a0 context.Context, _a1 *pubsub.ModifyPushConfigRequest) (*emptypb.Empty, error) {
 	ret := _m.Called(_a0, _a1)
@@ -267,6 +515,30 @@ func (_m *SubscriberServer) ModifyPushConfig(_a0 context.Context, _a1 *pubsub.Mo
 	}
 
 	return r0, r1
+}
+
+// SubscriberServer_ModifyPushConfig_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ModifyPushConfig'
+type SubscriberServer_ModifyPushConfig_Call struct {
+	*mock.Call
+}
+
+// ModifyPushConfig is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.ModifyPushConfigRequest
+func (_e *SubscriberServer_Expecter) ModifyPushConfig(_a0 interface{}, _a1 interface{}) *SubscriberServer_ModifyPushConfig_Call {
+	return &SubscriberServer_ModifyPushConfig_Call{Call: _e.mock.On("ModifyPushConfig", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_ModifyPushConfig_Call) Run(run func(_a0 context.Context, _a1 *pubsub.ModifyPushConfigRequest)) *SubscriberServer_ModifyPushConfig_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.ModifyPushConfigRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_ModifyPushConfig_Call) Return(_a0 *emptypb.Empty, _a1 error) *SubscriberServer_ModifyPushConfig_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 // Pull provides a mock function with given fields: _a0, _a1
@@ -292,6 +564,30 @@ func (_m *SubscriberServer) Pull(_a0 context.Context, _a1 *pubsub.PullRequest) (
 	return r0, r1
 }
 
+// SubscriberServer_Pull_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Pull'
+type SubscriberServer_Pull_Call struct {
+	*mock.Call
+}
+
+// Pull is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.PullRequest
+func (_e *SubscriberServer_Expecter) Pull(_a0 interface{}, _a1 interface{}) *SubscriberServer_Pull_Call {
+	return &SubscriberServer_Pull_Call{Call: _e.mock.On("Pull", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_Pull_Call) Run(run func(_a0 context.Context, _a1 *pubsub.PullRequest)) *SubscriberServer_Pull_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.PullRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_Pull_Call) Return(_a0 *pubsub.PullResponse, _a1 error) *SubscriberServer_Pull_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // Seek provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) Seek(_a0 context.Context, _a1 *pubsub.SeekRequest) (*pubsub.SeekResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -315,6 +611,30 @@ func (_m *SubscriberServer) Seek(_a0 context.Context, _a1 *pubsub.SeekRequest) (
 	return r0, r1
 }
 
+// SubscriberServer_Seek_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Seek'
+type SubscriberServer_Seek_Call struct {
+	*mock.Call
+}
+
+// Seek is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.SeekRequest
+func (_e *SubscriberServer_Expecter) Seek(_a0 interface{}, _a1 interface{}) *SubscriberServer_Seek_Call {
+	return &SubscriberServer_Seek_Call{Call: _e.mock.On("Seek", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_Seek_Call) Run(run func(_a0 context.Context, _a1 *pubsub.SeekRequest)) *SubscriberServer_Seek_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.SeekRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_Seek_Call) Return(_a0 *pubsub.SeekResponse, _a1 error) *SubscriberServer_Seek_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // StreamingPull provides a mock function with given fields: _a0
 func (_m *SubscriberServer) StreamingPull(_a0 pubsub.Subscriber_StreamingPullServer) error {
 	ret := _m.Called(_a0)
@@ -327,6 +647,29 @@ func (_m *SubscriberServer) StreamingPull(_a0 pubsub.Subscriber_StreamingPullSer
 	}
 
 	return r0
+}
+
+// SubscriberServer_StreamingPull_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StreamingPull'
+type SubscriberServer_StreamingPull_Call struct {
+	*mock.Call
+}
+
+// StreamingPull is a helper method to define mock.On call
+//  - _a0 pubsub.Subscriber_StreamingPullServer
+func (_e *SubscriberServer_Expecter) StreamingPull(_a0 interface{}) *SubscriberServer_StreamingPull_Call {
+	return &SubscriberServer_StreamingPull_Call{Call: _e.mock.On("StreamingPull", _a0)}
+}
+
+func (_c *SubscriberServer_StreamingPull_Call) Run(run func(_a0 pubsub.Subscriber_StreamingPullServer)) *SubscriberServer_StreamingPull_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(pubsub.Subscriber_StreamingPullServer))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_StreamingPull_Call) Return(_a0 error) *SubscriberServer_StreamingPull_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // UpdateSnapshot provides a mock function with given fields: _a0, _a1
@@ -352,6 +695,30 @@ func (_m *SubscriberServer) UpdateSnapshot(_a0 context.Context, _a1 *pubsub.Upda
 	return r0, r1
 }
 
+// SubscriberServer_UpdateSnapshot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSnapshot'
+type SubscriberServer_UpdateSnapshot_Call struct {
+	*mock.Call
+}
+
+// UpdateSnapshot is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.UpdateSnapshotRequest
+func (_e *SubscriberServer_Expecter) UpdateSnapshot(_a0 interface{}, _a1 interface{}) *SubscriberServer_UpdateSnapshot_Call {
+	return &SubscriberServer_UpdateSnapshot_Call{Call: _e.mock.On("UpdateSnapshot", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_UpdateSnapshot_Call) Run(run func(_a0 context.Context, _a1 *pubsub.UpdateSnapshotRequest)) *SubscriberServer_UpdateSnapshot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.UpdateSnapshotRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_UpdateSnapshot_Call) Return(_a0 *pubsub.Snapshot, _a1 error) *SubscriberServer_UpdateSnapshot_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // UpdateSubscription provides a mock function with given fields: _a0, _a1
 func (_m *SubscriberServer) UpdateSubscription(_a0 context.Context, _a1 *pubsub.UpdateSubscriptionRequest) (*pubsub.Subscription, error) {
 	ret := _m.Called(_a0, _a1)
@@ -373,6 +740,30 @@ func (_m *SubscriberServer) UpdateSubscription(_a0 context.Context, _a1 *pubsub.
 	}
 
 	return r0, r1
+}
+
+// SubscriberServer_UpdateSubscription_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSubscription'
+type SubscriberServer_UpdateSubscription_Call struct {
+	*mock.Call
+}
+
+// UpdateSubscription is a helper method to define mock.On call
+//  - _a0 context.Context
+//  - _a1 *pubsub.UpdateSubscriptionRequest
+func (_e *SubscriberServer_Expecter) UpdateSubscription(_a0 interface{}, _a1 interface{}) *SubscriberServer_UpdateSubscription_Call {
+	return &SubscriberServer_UpdateSubscription_Call{Call: _e.mock.On("UpdateSubscription", _a0, _a1)}
+}
+
+func (_c *SubscriberServer_UpdateSubscription_Call) Run(run func(_a0 context.Context, _a1 *pubsub.UpdateSubscriptionRequest)) *SubscriberServer_UpdateSubscription_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*pubsub.UpdateSubscriptionRequest))
+	})
+	return _c
+}
+
+func (_c *SubscriberServer_UpdateSubscription_Call) Return(_a0 *pubsub.Subscription, _a1 error) *SubscriberServer_UpdateSubscription_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 type mockConstructorTestingTNewSubscriberServer interface {
