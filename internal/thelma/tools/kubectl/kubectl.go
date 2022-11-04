@@ -20,9 +20,6 @@ import (
 // kubeConfigName name of the kube config file generated / updated by Thelma, stored in ~/.thelma/config/
 const kubeConfigName = "kubecfg"
 
-// defaultAuthInfo name of AuthInfo inside kube config to use for authentication to non-prod clusters
-const defaultAuthInfo = "default"
-
 // prog name of the kubectl binary we're executing
 const prog = `kubectl`
 
