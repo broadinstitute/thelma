@@ -2,6 +2,8 @@ package pool
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -10,8 +12,41 @@ import (
 	"time"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixMilli())
+}
+
 func Test_EmptyWorkloadSucceeds(t *testing.T) {
 	require.NoError(t, New([]Job{}).Execute())
+}
+
+func Test_SingleJobWithCustomStatusReporter(t *testing.T) {
+	job := Job{
+		Name: "sam",
+		Run: func(s StatusReporter) error {
+			for i := 0; i < 10; i++ {
+				log.Debug().Msgf("sending status: %d", i)
+				s.Update(Status{
+					Message: fmt.Sprintf("count: %d", i),
+					Context: map[string]interface{}{
+						"i": i,
+					},
+				})
+				time.Sleep(10 * time.Millisecond)
+			}
+			log.Debug().Msg("sending done")
+			s.Update(Status{
+				Message: "DONE",
+			})
+			log.Debug().Msgf("return")
+			return nil
+		},
+	}
+
+	require.NoError(t, New([]Job{job}, func(options *Options) {
+		options.Summarizer.Enabled = true
+		options.Summarizer.Interval = 5 * time.Millisecond
+	}).Execute())
 }
 
 func Test_SingleItemSucceeds(t *testing.T) {
@@ -138,17 +173,34 @@ type testJob struct {
 
 func (j *testJob) job() Job {
 	return Job{
-		Description: j.description,
-		Run:         j.run,
+		Name: j.description,
+		Run:  j.run,
 	}
 }
 
-func (j *testJob) run() error {
+func (j *testJob) run(s StatusReporter) error {
 	j.mutex.Lock()
-	defer j.mutex.Unlock()
 	j.callCount++
-	if j.sleep > 0 {
-		time.Sleep(j.sleep)
+	j.mutex.Unlock()
+
+	if j.sleep == 0 {
+		return j.err
+	}
+
+	// take the total time for our fake test job and split it into 5 random intervals.
+	// then send a status update after each interval.
+	// the goal here is to thoroughly exercise the status updater to catch concurrency issues
+	intervals := testutils.SliceIntoRandomIntervals(j.sleep, rand.Intn(5))
+	for i, interval := range intervals {
+		msg := "even"
+		if i%2 == 0 {
+			msg = "odd"
+		}
+		s.Update(Status{
+			Message: msg,
+			Context: map[string]interface{}{"i": i, "n": len(intervals)},
+		})
+		time.Sleep(interval)
 	}
 	return j.err
 }
