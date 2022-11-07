@@ -8,9 +8,13 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/option"
+	"io"
+	"path"
 	"strings"
 	"time"
 )
+
+const cloudConsoleBaseURL = "https://console.cloud.google.com/storage/browser"
 
 type BucketOption func(options *BucketOptions)
 
@@ -55,6 +59,9 @@ type Bucket interface {
 	// Write replaces object contents with given content
 	Write(objectName string, content []byte, attrs ...object.AttrSetter) error
 
+	// WriteFromStream replaces object contents with given content
+	WriteFromStream(objectName string, reader io.Reader, attrs ...object.AttrSetter) error
+
 	// Delete deletes the object from the bucket
 	Delete(objectName string) error
 
@@ -66,6 +73,11 @@ type Bucket interface {
 
 	// NewLocker returns a Locker instance for the given object
 	NewLocker(objectName string, maxWait time.Duration, options ...LockerOption) Locker
+
+	// CloudConsoleURL returns a URL pointing an object in the Google cloud console
+	// See https://cloud.google.com/storage/docs/request-endpoints#console
+	// Returns https://console.cloud.google.com/storage/browser/<BUCKET_NAME>/<OBJECT_NAME>
+	CloudConsoleURL(objectNameOrPrefix string) string
 }
 
 // implements Bucket
@@ -135,6 +147,11 @@ func (b *bucket) Write(objectName string, content []byte, attrs ...object.AttrSe
 	return b.do(objectName, object.NewWrite(content, _attrs))
 }
 
+func (b *bucket) WriteFromStream(objectName string, reader io.Reader, attrs ...object.AttrSetter) error {
+	_attrs := collateAttrs(attrs)
+	return b.do(objectName, object.NewWriteFromStream(reader, _attrs))
+}
+
 func (b *bucket) Attrs(objectName string) (*storage.ObjectAttrs, error) {
 	op := object.NewAttrs()
 	err := b.do(objectName, op)
@@ -148,6 +165,14 @@ func (b *bucket) Update(objectName string, attrs ...object.AttrSetter) error {
 
 func (b *bucket) Delete(objectName string) error {
 	return b.do(objectName, object.NewDelete())
+}
+
+func (b *bucket) CloudConsoleURL(objectNameOrPrefix string) string {
+	return CloudConsoleURL(b.name, path.Join(b.prefix, objectNameOrPrefix))
+}
+
+func CloudConsoleURL(bucketName string, objectNameOrPrefix string) string {
+	return fmt.Sprintf("%s/%s/%s", cloudConsoleBaseURL, bucketName, objectNameOrPrefix)
 }
 
 // do executes an operation, adding useful contextual logging

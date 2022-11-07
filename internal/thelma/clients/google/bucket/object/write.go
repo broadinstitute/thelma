@@ -3,6 +3,7 @@ package object
 import (
 	"fmt"
 	"github.com/rs/zerolog"
+	"io"
 )
 
 type Write interface {
@@ -16,8 +17,16 @@ func NewWrite(content []byte, attrs AttrSet) Write {
 	}
 }
 
+func NewWriteFromStream(reader io.Reader, attrs AttrSet) Write {
+	return &write{
+		reader: reader,
+		attrs:  attrs,
+	}
+}
+
 type write struct {
 	content []byte
+	reader  io.Reader
 	attrs   AttrSet
 }
 
@@ -30,7 +39,7 @@ func (w *write) Handler(object Object, logger zerolog.Logger) error {
 	w.attrs.writeToLogEvent(logger.Debug())
 	w.attrs.applyToWriter(writer)
 
-	written, err := writer.Write(w.content)
+	written, err := w.writeContent(writer)
 	if err != nil {
 		return fmt.Errorf("error writing object: %v", err)
 	}
@@ -40,4 +49,13 @@ func (w *write) Handler(object Object, logger zerolog.Logger) error {
 
 	logTransfer(logger, int64(written))
 	return nil
+}
+
+func (w *write) writeContent(writer io.Writer) (int64, error) {
+	if w.reader != nil {
+		return io.Copy(writer, w.reader)
+	} else {
+		written, err := writer.Write(w.content)
+		return int64(written), err
+	}
 }
