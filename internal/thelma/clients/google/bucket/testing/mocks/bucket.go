@@ -3,7 +3,10 @@
 package mocks
 
 import (
+	io "io"
+
 	bucket "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+
 	mock "github.com/stretchr/testify/mock"
 
 	object "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
@@ -104,6 +107,43 @@ func (_c *Bucket_Close_Call) Run(run func()) *Bucket_Close_Call {
 }
 
 func (_c *Bucket_Close_Call) Return(_a0 error) *Bucket_Close_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// CloudConsoleURL provides a mock function with given fields: objectNameOrPrefix
+func (_m *Bucket) CloudConsoleURL(objectNameOrPrefix string) string {
+	ret := _m.Called(objectNameOrPrefix)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string) string); ok {
+		r0 = rf(objectNameOrPrefix)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// Bucket_CloudConsoleURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloudConsoleURL'
+type Bucket_CloudConsoleURL_Call struct {
+	*mock.Call
+}
+
+// CloudConsoleURL is a helper method to define mock.On call
+//  - objectNameOrPrefix string
+func (_e *Bucket_Expecter) CloudConsoleURL(objectNameOrPrefix interface{}) *Bucket_CloudConsoleURL_Call {
+	return &Bucket_CloudConsoleURL_Call{Call: _e.mock.On("CloudConsoleURL", objectNameOrPrefix)}
+}
+
+func (_c *Bucket_CloudConsoleURL_Call) Run(run func(objectNameOrPrefix string)) *Bucket_CloudConsoleURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Bucket_CloudConsoleURL_Call) Return(_a0 string) *Bucket_CloudConsoleURL_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
@@ -518,6 +558,59 @@ func (_c *Bucket_Write_Call) Run(run func(objectName string, content []byte, att
 }
 
 func (_c *Bucket_Write_Call) Return(_a0 error) *Bucket_Write_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// WriteFromStream provides a mock function with given fields: objectName, reader, attrs
+func (_m *Bucket) WriteFromStream(objectName string, reader io.Reader, attrs ...object.AttrSetter) error {
+	_va := make([]interface{}, len(attrs))
+	for _i := range attrs {
+		_va[_i] = attrs[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, objectName, reader)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, io.Reader, ...object.AttrSetter) error); ok {
+		r0 = rf(objectName, reader, attrs...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Bucket_WriteFromStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WriteFromStream'
+type Bucket_WriteFromStream_Call struct {
+	*mock.Call
+}
+
+// WriteFromStream is a helper method to define mock.On call
+//  - objectName string
+//  - reader io.Reader
+//  - attrs ...object.AttrSetter
+func (_e *Bucket_Expecter) WriteFromStream(objectName interface{}, reader interface{}, attrs ...interface{}) *Bucket_WriteFromStream_Call {
+	return &Bucket_WriteFromStream_Call{Call: _e.mock.On("WriteFromStream",
+		append([]interface{}{objectName, reader}, attrs...)...)}
+}
+
+func (_c *Bucket_WriteFromStream_Call) Run(run func(objectName string, reader io.Reader, attrs ...object.AttrSetter)) *Bucket_WriteFromStream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]object.AttrSetter, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(object.AttrSetter)
+			}
+		}
+		run(args[0].(string), args[1].(io.Reader), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Bucket_WriteFromStream_Call) Return(_a0 error) *Bucket_WriteFromStream_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
