@@ -141,34 +141,37 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	publisher := pb.Publisher()
 
 	autoreleaser := &source.AutoReleaser{}
-	if options.gitops {
-		gitopsVersions, err := gitops.NewVersions(app.Config().Home(), app.ShellRunner())
-		if err != nil {
-			return nil, err
-		}
-		autoreleaser.GitopsUpdaters = []gitops.Versions{gitopsVersions}
-	}
-	if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
-		iapIdToken, err := getIapToken(app)
-		if err != nil {
-			return nil, err
-		}
-		for _, sherlockURL := range options.sherlock {
-			if sherlockURL != "" {
-				client, err := sherlock.NewWithHostnameOverride(sherlockURL, iapIdToken)
-				if err != nil {
-					return nil, err
-				}
-				autoreleaser.SherlockUpdaters = append(autoreleaser.SherlockUpdaters, client)
+	// If we're dry-running, the autoreleaser will be empty so we don't mutate anything.
+	if !options.dryRun {
+		if options.gitops {
+			gitopsVersions, err := gitops.NewVersions(app.Config().Home(), app.ShellRunner())
+			if err != nil {
+				return nil, err
 			}
+			autoreleaser.GitopsUpdaters = []gitops.Versions{gitopsVersions}
 		}
-		for _, sherlockURL := range options.softFailSherlock {
-			if sherlockURL != "" {
-				client, err := sherlock.NewWithHostnameOverride(sherlockURL, iapIdToken)
-				if err != nil {
-					return nil, err
+		if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
+			iapIdToken, err := getIapToken(app)
+			if err != nil {
+				return nil, err
+			}
+			for _, sherlockURL := range options.sherlock {
+				if sherlockURL != "" {
+					client, err := sherlock.NewWithHostnameOverride(sherlockURL, iapIdToken)
+					if err != nil {
+						return nil, err
+					}
+					autoreleaser.SherlockUpdaters = append(autoreleaser.SherlockUpdaters, client)
 				}
-				autoreleaser.SoftFailSherlockUpdaters = append(autoreleaser.SoftFailSherlockUpdaters, client)
+			}
+			for _, sherlockURL := range options.softFailSherlock {
+				if sherlockURL != "" {
+					client, err := sherlock.NewWithHostnameOverride(sherlockURL, iapIdToken)
+					if err != nil {
+						return nil, err
+					}
+					autoreleaser.SoftFailSherlockUpdaters = append(autoreleaser.SoftFailSherlockUpdaters, client)
+				}
 			}
 		}
 	}
