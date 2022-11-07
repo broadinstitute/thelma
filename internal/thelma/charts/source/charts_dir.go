@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
+	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"path"
@@ -13,27 +14,23 @@ import (
 
 // ChartsDir represents a directory of Helm chart sources on the local filesystem.
 type ChartsDir interface {
-	// PublishAndRelease calculates out downstream dependents of the given charts, increments versions, publishes new
-	// chart packages to the Helm repo, and releases those new versions into our version systems courtesy of
-	// AutoReleaser.
+	// Given a set of charts to release, release new versions of them, as well as any downstream dependents.
+	// For example, if chart `bar` depends on chart `foo`, Release([]string{`foo`}) will also release `bar`.
 	//
-	// If chart `bar` depends on chart `foo`, just including `foo` in the chartNames will also publish and release
-	// `bar`.
-	//
-	// Returns a map representing the names and versions of charts that were published and released. Eg.
+	// Returns a map representing the names and versions of charts that were released. Eg.
 	// {
 	//   "foo": "1.2.3",
 	//   "bar": "0.2.0",
 	// }
-	PublishAndRelease(chartNames []string, description string) (publishedVersions map[string]string, err error)
+	Release(chartNames []string) (releasedVersions map[string]string, err error)
 }
 
 // NewChartsDir constructs a new ChartsDir
 func NewChartsDir(
 	sourceDir string,
 	publisher publish.Publisher,
+	versions gitops.Versions,
 	shellRunner shell.Runner,
-	autoreleaser *AutoReleaser,
 ) (ChartsDir, error) {
 
 	charts, err := loadCharts(sourceDir, shellRunner)
@@ -50,7 +47,7 @@ func NewChartsDir(
 		sourceDir:       sourceDir,
 		charts:          charts,
 		publisher:       publisher,
-		autoreleaser:    autoreleaser,
+		autoreleaser:    NewAutoReleaser(versions),
 		dependencyGraph: dependencyGraph,
 	}, nil
 }
@@ -60,11 +57,11 @@ type chartsDir struct {
 	sourceDir       string
 	charts          map[string]Chart
 	publisher       publish.Publisher
-	autoreleaser    *AutoReleaser
+	autoreleaser    AutoReleaser
 	dependencyGraph *dependency.Graph
 }
 
-func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (map[string]string, error) {
+func (d *chartsDir) Release(chartNames []string) (map[string]string, error) {
 	chartsToPublish := chartNames
 	for _, chartName := range chartsToPublish {
 		if _, exists := d.charts[chartName]; !exists {
@@ -78,16 +75,14 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 	d.dependencyGraph.TopoSort(chartsToPublish)
 	log.Info().Msgf("%d charts will be published: %s", len(chartsToPublish), strings.Join(chartsToPublish, ", "))
 
-	publishedVersions := make(map[string]string, len(chartsToPublish))
-	lastVersions := make(map[string]string, len(chartsToPublish))
+	releasedVersions := make(map[string]string, len(chartsToPublish))
 	for _, chartName := range chartsToPublish {
 		_chart := d.charts[chartName]
 
 		if err := _chart.GenerateDocs(); err != nil {
 			return nil, err
 		}
-		lastVersions[chartName] = d.publisher.Index().MostRecentVersion(chartName)
-		newVersion, err := _chart.BumpChartVersion(lastVersions[chartName])
+		newVersion, err := _chart.BumpChartVersion(d.publisher.Index().MostRecentVersion(chartName))
 		if err != nil {
 			return nil, err
 		}
@@ -100,27 +95,20 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 		if err := _chart.PackageChart(d.publisher.ChartDir()); err != nil {
 			return nil, err
 		}
-		publishedVersions[chartName] = newVersion
+		if err := d.autoreleaser.UpdateReleaseVersion(_chart, newVersion); err != nil {
+			return nil, err
+		}
+		releasedVersions[chartName] = newVersion
 	}
 
 	count, err := d.publisher.Publish()
 	if err != nil {
 		return nil, err
 	}
+
 	log.Info().Msgf("%d charts were uploaded to the repository", count)
 
-	// We run the autoreleaser after publishing the charts to avoid an instance where a chart release points at a chart
-	// version that hasn't been published quite yet
-	if d.autoreleaser != nil {
-		for _, chartName := range chartsToPublish {
-			err = d.autoreleaser.UpdateReleaseVersion(d.charts[chartName], publishedVersions[chartName], lastVersions[chartName], description)
-			if err != nil {
-				return publishedVersions, err
-			}
-		}
-	}
-
-	return publishedVersions, nil
+	return releasedVersions, nil
 }
 
 // Go through all dependents and update version constraints to match new version
