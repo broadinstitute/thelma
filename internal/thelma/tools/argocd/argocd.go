@@ -302,8 +302,8 @@ func (a *argocd) SyncReleases(releases []terra.Release, maxParallel int, options
 	for _, release := range releases {
 		r := release
 		jobs = append(jobs, pool.Job{
-			Description: naming.ApplicationName(r),
-			Run: func() error {
+			Name: naming.ApplicationName(r),
+			Run: func(_ pool.StatusReporter) error {
 				log.Info().Msgf("Syncing ArgoCD application(s) for %s in %s", r.Name(), r.Destination().Name())
 				return a.SyncRelease(r, options...)
 			},
