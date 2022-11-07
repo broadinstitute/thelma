@@ -205,9 +205,12 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 // Note that this environment variable is only respected for this CLI command--other commands don't have the same
 // shortcut behavior.
 func getIapToken(app app.ThelmaApp) (string, error) {
-	if token, found := os.LookupEnv(iapIdTokenEnvironmentVariable); found {
+	if token, found := os.LookupEnv(iapIdTokenEnvironmentVariable); token != "" {
 		return token, nil
 	} else {
+		if found {
+			log.Warn().Msgf("IAP ID token environment variable '%s' was set but was empty", iapIdTokenEnvironmentVariable)
+		}
 		return app.Clients().IAPToken()
 	}
 }
