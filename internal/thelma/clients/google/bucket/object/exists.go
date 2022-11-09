@@ -7,7 +7,7 @@ import (
 
 type Exists interface {
 	Exists() bool
-	Operation
+	SyncOperation
 }
 
 func NewExists() Exists {

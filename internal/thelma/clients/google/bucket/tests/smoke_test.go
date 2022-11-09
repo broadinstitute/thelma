@@ -16,7 +16,6 @@ import (
 	brequire "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/testing/require"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
 	"os"
 	"path"
 	"testing"
@@ -144,26 +143,24 @@ func TestBucket_ReadAndWrite(t *testing.T) {
 	assert.Equal(t, content, string(readContent))
 }
 
-func TestBucket_WriteFromStream(t *testing.T) {
+func TestBucket_Writer(t *testing.T) {
 	_bucket := bucket.NewTestBucket(t)
-	objectName := "my-object-2"
-	content := "abcd2345"
+	objectName := "my-test-object"
+	writer := _bucket.Writer(objectName)
 
-	bassert.NoObjectExists(t, _bucket, objectName, "object should not exist at start of test")
-
-	_, err := _bucket.Read(objectName)
-	require.Error(t, err, "attempt to read object that does not exist should return error")
-
-	reader, writer := io.Pipe()
-
-	go func() {
-		writer.Write([]byte(content))
-		writer.Close()
-	}()
-
-	err = _bucket.WriteFromStream(objectName, reader)
+	_, err := writer.Write([]byte("a"))
 	require.NoError(t, err)
-	brequire.ObjectHasContent(t, _bucket, objectName, content)
+
+	_, err = writer.Write([]byte("b"))
+	require.NoError(t, err)
+
+	_, err = writer.Write([]byte("c"))
+	require.NoError(t, err)
+
+	err = writer.Close()
+	require.NoError(t, err)
+
+	brequire.ObjectHasContent(t, _bucket, objectName, "abc")
 }
 
 func TestBucket_WriteUpdatesAttributes(t *testing.T) {

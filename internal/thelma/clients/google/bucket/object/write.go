@@ -7,7 +7,7 @@ import (
 )
 
 type Write interface {
-	Operation
+	SyncOperation
 }
 
 func NewWrite(content []byte, attrs AttrSet) Write {
@@ -47,7 +47,7 @@ func (w *write) Handler(object Object, logger zerolog.Logger) error {
 		return fmt.Errorf("error closing writer: %v", err)
 	}
 
-	logTransfer(logger, int64(written))
+	logTransfer(logger, written)
 	return nil
 }
 

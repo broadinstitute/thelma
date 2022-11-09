@@ -8,7 +8,7 @@ import (
 )
 
 type Download interface {
-	Operation
+	SyncOperation
 }
 
 func NewDownload(toFile string) Download {
