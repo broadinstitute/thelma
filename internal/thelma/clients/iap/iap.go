@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -50,6 +51,11 @@ const tokenValidationIapResponseHeader = "x-goog-iap-generated-response"
 // how long to wait before timing out compute engine metadata request
 const computeEngineMetadataRequestTimeout = 15 * time.Second
 
+// An environment variable, out-of-band from Thelma's config and normal operation, that can
+// contain a ready-to-go IAP ID token to bypass the logic in this file. See
+// CheckEnvironmentShortCircuit.
+const tokenShortCircuitEnvironmentVariable = "THELMA_IAP_ID_TOKEN"
+
 type iapConfig struct {
 	Provider         string `default:"browser"  validate:"oneof=workloadidentity browser"`
 	OAuthCredentials struct {
@@ -78,6 +84,13 @@ type persistentToken struct {
 	RefreshToken string    `json:"refresh_token"`
 	TokenType    string    `json:"token_type"`
 	Expiry       time.Time `json:"expiry"`
+}
+
+// CheckEnvironmentShortCircuit will return an IAP ID token itself if and only if one was provided out-of-band. The
+// caller can use it before calling TokenProvider to possibly avoid the need for Thelma to do its own Vault and
+// GCP authentication.
+func CheckEnvironmentShortCircuit() string {
+	return os.Getenv(tokenShortCircuitEnvironmentVariable)
 }
 
 // TokenProvider returns a new token provider for IAP tokens
