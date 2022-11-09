@@ -24,7 +24,7 @@ func NewFakeVaultServer(t *testing.T) *FakeVaultServer {
 	mux := http.NewServeMux()
 
 	mux.Handle("/v1/auth/github/login", toHttpHandler(_state.handleGithubLogin))
-	mux.Handle("/v1/auth/token/lookup", toHttpHandler(_state.handleTokenLookup))
+	mux.Handle("/v1/auth/token/lookup-self", toHttpHandler(_state.handleTokenLookup))
 	mux.Handle("/v1/secret/", toHttpHandler(_state.handleSecret))
 	mux.Handle("/", toHttpHandler(_state.handleUnmatchedRequest))
 
