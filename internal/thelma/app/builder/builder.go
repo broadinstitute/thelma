@@ -59,7 +59,7 @@ const (
 const stateLoaderConfigPrefix string = "stateloader"
 
 type StateLoaderConfig struct {
-	Source string `default:"gitops"`
+	Source string `default:"sherlock"`
 }
 
 func NewBuilder() ThelmaBuilder {
