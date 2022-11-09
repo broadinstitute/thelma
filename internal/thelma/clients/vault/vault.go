@@ -214,7 +214,7 @@ func tokenLookup(client *vaultapi.Client, vaultToken string) error {
 	_client.SetToken(vaultToken)
 
 	// we don't actually care about any data in the response, just that the token lookup succeeds
-	_, err = _client.Logical().Write(tokenLookupPath, nil)
+	_, err = _client.Logical().Read(tokenLookupPath)
 
 	return err
 }
