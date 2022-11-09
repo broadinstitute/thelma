@@ -16,7 +16,7 @@ const vaultTokenCredentialKey = "vault-token"
 
 const githubLoginPath = "/auth/github/login"
 const approleLoginPath = "/auth/approle/login"
-const tokenLookupPath = "/auth/token/lookup"
+const tokenLookupPath = "/auth/token/lookup-self"
 
 const approleRoleIdEnvVar = "VAULT_ROLE_ID"
 const approleSecretIdEnvVar = "VAULT_SECRET_ID"
