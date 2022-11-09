@@ -8,6 +8,7 @@ import (
 
 const delimiter = "-"
 const configsName = "configs"
+const argocdAppInstanceLabel = "argocd.argoproj.io/instance"
 
 // LegacyConfigsApplicationName name of the firecloud-develop application for a release, eg. cromwell-configs-dev
 func LegacyConfigsApplicationName(release terra.Release) string {
@@ -44,4 +45,12 @@ func ProjectName(destination terra.Destination) string {
 func GeneratorName(destination terra.Destination) string {
 	projectName := ProjectName(destination)
 	return fmt.Sprintf("%s-generator", projectName)
+}
+
+// ApplicationSelector returns a set of Kubernetes labels that selects for resources managed by the given Argo app,
+// suitable for use with `kubectl get -l`
+func ApplicationSelector(applicationName string) map[string]string {
+	return map[string]string{
+		argocdAppInstanceLabel: applicationName,
+	}
 }
