@@ -11,6 +11,8 @@ type ReleaseFilters interface {
 	Any() terra.ReleaseFilter
 	// HasName returns a filter that matches releases with the given name(s)
 	HasName(releaseName ...string) terra.ReleaseFilter
+	// HasFullName returns a filter that matches release with the given full name(s)
+	HasFullName(releaseFullName ...string) terra.ReleaseFilter
 	// HasDestinationName returns a filter that matches releases with the given destination
 	HasDestinationName(destinationName string) terra.ReleaseFilter
 	// DestinationMatches returns a filter that matches releases with matching destinations
@@ -46,6 +48,20 @@ func (r releaseFilters) HasName(releaseNames ...string) terra.ReleaseFilter {
 		matcher: func(r terra.Release) bool {
 			for _, name := range releaseNames {
 				if r.Name() == name {
+					return true
+				}
+			}
+			return false
+		},
+	}
+}
+
+func (r releaseFilters) HasFullName(releaseFullNames ...string) terra.ReleaseFilter {
+	return releaseFilter{
+		string: fmt.Sprintf("hasFullName(%s)", join(quote(releaseFullNames)...)),
+		matcher: func(r terra.Release) bool {
+			for _, fullName := range releaseFullNames {
+				if r.FullName() == fullName {
 					return true
 				}
 			}

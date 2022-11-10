@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/spf13/pflag"
 )
 
 // -r / --release flag
@@ -15,15 +16,19 @@ func newReleasesFlag() *enumFlag {
 		defaultValues: []string{},
 		usageMessage:  "Run for specific release(s) (set to ALL to include all releases)",
 
-		preProcessHook: func(flagValues []string, args []string, changed bool) ([]string, error) {
+		preProcessHook: func(flagValues []string, args []string, pflags *pflag.FlagSet) ([]string, error) {
 			// UX: make it possible for users to specify a release as the first positional arg instead of as a flag
-			if changed {
+			if pflags.Changed(flagNames.release) {
 				if len(args) > 0 {
 					return nil, fmt.Errorf("releases can either be specified with the --%s flag or via positional argument, not both", ReleasesFlagName)
 				}
 				return flagValues, nil
 			} else if len(args) > 0 {
 				return []string{args[0]}, nil
+			} else if pflags.Changed(flagNames.exactRelease) {
+				// If there's no releases specified but there are exact releases specified, act as if this flag had been
+				// set to ALL so we don't filter on it
+				return []string{allSelector}, nil
 			} else {
 				// We have a lot of releases, and most developers want to render for a specific service,
 				// so force users to supply --releases=ALL if they _really_ want to render for all releases and not a specific release
@@ -36,11 +41,43 @@ func newReleasesFlag() *enumFlag {
 			if err != nil {
 				return nil, err
 			}
-			return releaseNames(releases), nil
+			return namesSet(releases), nil
 		},
 
 		buildFilter: func(f *filterBuilder, uniqueValues []string) {
 			f.addReleaseFilter(filter.Releases().HasName(uniqueValues...))
+		},
+	}
+}
+
+// --exact-release flag
+func newExactReleasesFlag() *enumFlag {
+	return &enumFlag{
+		flagName:     flagNames.exactRelease,
+		usageMessage: "Run for specific release(s), via globally-unique destination-suffixed names like are stored in Sherlock",
+		preProcessHook: func(flagValues []string, args []string, pflags *pflag.FlagSet) (normalizedValues []string, err error) {
+			if len(flagValues) == 0 {
+				// If there's no exact releases specified, act as if this flag had been set to ALL so we don't filter on it.
+				// Note that we do this in a hook rather than with defaultValues so we can identify when a user passes ALL
+				// to this flag and tell them to pass it to --release instead.
+				return []string{allSelector}, nil
+			}
+			for _, flagValue := range flagValues {
+				if flagValue == allSelector {
+					return nil, fmt.Errorf("--%s cannot be used with %s, use --%s %s instead", flagNames.exactRelease, allSelector, flagNames.release, allSelector)
+				}
+			}
+			return flagValues, nil
+		},
+		validValues: func(state terra.State) (set.StringSet, error) {
+			releases, err := state.Releases().All()
+			if err != nil {
+				return nil, err
+			}
+			return releaseFullNames(releases), nil
+		},
+		buildFilter: func(f *filterBuilder, uniqueValues []string) {
+			f.addReleaseFilter(filter.Releases().HasFullName(uniqueValues...))
 		},
 	}
 }
@@ -58,7 +95,7 @@ func newClustersFlag() *enumFlag {
 			if err != nil {
 				return nil, err
 			}
-			return clusterNames(clusters), nil
+			return namesSet(clusters), nil
 		},
 
 		buildFilter: func(f *filterBuilder, uniqueValues []string) {
@@ -80,7 +117,7 @@ func newEnvironmentsFlag() *enumFlag {
 			if err != nil {
 				return nil, err
 			}
-			return environmentNames(environments), nil
+			return namesSet(environments), nil
 		},
 
 		buildFilter: func(f *filterBuilder, uniqueValues []string) {
@@ -144,7 +181,7 @@ func newEnvironmentTemplatesFlag() *enumFlag {
 			if err != nil {
 				return nil, err
 			}
-			return environmentNames(envs), nil
+			return namesSet(envs), nil
 		},
 
 		buildFilter: func(f *filterBuilder, values []string) {
@@ -170,28 +207,18 @@ func newEnvironmentLifecyclesFlag() *enumFlag {
 	}
 }
 
-// TODO refactor these repetitive methods when generics are available
-
-func releaseNames(releases []terra.Release) set.StringSet {
+func namesSet[T terra.Named](named []T) set.StringSet {
 	names := set.NewStringSet()
+	for _, n := range named {
+		names.Add(n.Name())
+	}
+	return names
+}
+
+func releaseFullNames(releases []terra.Release) set.StringSet {
+	fullNames := set.NewStringSet()
 	for _, r := range releases {
-		names.Add(r.Name())
+		fullNames.Add(r.FullName())
 	}
-	return names
-}
-
-func environmentNames(envs []terra.Environment) set.StringSet {
-	names := set.NewStringSet()
-	for _, env := range envs {
-		names.Add(env.Name())
-	}
-	return names
-}
-
-func clusterNames(clusters []terra.Cluster) set.StringSet {
-	names := set.NewStringSet()
-	for _, cluster := range clusters {
-		names.Add(cluster.Name())
-	}
-	return names
+	return fullNames
 }

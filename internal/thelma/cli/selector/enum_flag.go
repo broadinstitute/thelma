@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"sort"
 	"strings"
 )
@@ -16,8 +17,10 @@ type valueSet struct {
 }
 
 // enumFlag is for processing cli flags that can contain either
-//  (1) a set of possible values (eg. "--environments foo,bar,baz")
-//  (2) an ALL selector (meaning include all values, eg. "--environments ALL")
+//
+//	(1) a set of possible values (eg. "--environments foo,bar,baz")
+//	(2) an ALL selector (meaning include all values, eg. "--environments ALL")
+//
 // and produce a filter
 type enumFlag struct {
 	// flagName long name of this flag, eg. "releases", "environments", etc
@@ -36,7 +39,7 @@ type enumFlag struct {
 	userValues []string
 
 	// preProcessHook callback function that can be used to manipulate user-supplied flag values before further processing
-	preProcessHook func(flagValues []string, args []string, changed bool) (normalizedValues []string, err error)
+	preProcessHook func(flagValues []string, args []string, pflags *pflag.FlagSet) (normalizedValues []string, err error)
 
 	// validValues callback function that must return the set of valid values for this flag
 	validValues func(state terra.State) (set.StringSet, error)
@@ -55,12 +58,12 @@ func (e *enumFlag) addToCobraCommand(cobraCommand *cobra.Command) {
 }
 
 // processInput convert user input into a filter and add it to the filterBuilder
-func (e *enumFlag) processInput(f *filterBuilder, state terra.State, changed bool, args []string) error {
+func (e *enumFlag) processInput(f *filterBuilder, state terra.State, args []string, pflags *pflag.FlagSet) error {
 	inputValues := e.userValues
 
 	if e.preProcessHook != nil {
 		var err error
-		inputValues, err = e.preProcessHook(e.userValues, args, changed)
+		inputValues, err = e.preProcessHook(e.userValues, args, pflags)
 		if err != nil {
 			return err
 		}
@@ -121,9 +124,12 @@ func (e *enumFlag) validate(state terra.State, inputValues []string) (*valueSet,
 
 // collateSelectorValues collects selector values into a string set
 // given a slice of strings like
-//   "foo,bar", "bar foo", "baz", "quux,baz"
+//
+//	"foo,bar", "bar foo", "baz", "quux,baz"
+//
 // return a set consisting of the elements:
-//   "foo", "bar", "baz", "quux"
+//
+//	"foo", "bar", "baz", "quux"
 func collateSelectorValues(values []string) set.StringSet {
 	_set := set.NewStringSet()
 

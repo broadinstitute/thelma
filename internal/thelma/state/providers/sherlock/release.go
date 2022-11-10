@@ -21,6 +21,12 @@ type release struct {
 	firecloudDevelopRef string
 }
 
+// FullName provides the entire name of the chart release, globally unique as enforced by Sherlock. Name provides
+// a truncated name used by Thelma for brevity that is only unique across a destination.
+func (r *release) FullName() string {
+	return r.name
+}
+
 func (r *release) Name() string {
 	// sherlock requires unique release names so they are of the from RELEASE_NAME-(ENV_NAME | CLUSTER_NAME)
 	// depending on release type. For compatibility with terra-helmfile values file structure and mimicking behavior in the
