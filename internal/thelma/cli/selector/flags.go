@@ -55,7 +55,7 @@ func newExactReleasesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:     flagNames.exactRelease,
 		usageMessage: "Run for specific release(s), via globally-unique destination-suffixed names like are stored in Sherlock",
-		preProcessHook: func(flagValues []string, args []string, pflags *pflag.FlagSet) (normalizedValues []string, err error) {
+		preProcessHook: func(flagValues []string, _ []string, _ *pflag.FlagSet) (normalizedValues []string, err error) {
 			if len(flagValues) == 0 {
 				// If there's no exact releases specified, act as if this flag had been set to ALL so we don't filter on it.
 				// Note that we do this in a hook rather than with defaultValues so we can identify when a user passes ALL
