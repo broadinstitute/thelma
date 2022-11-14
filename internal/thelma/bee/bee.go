@@ -19,6 +19,7 @@ const generatorArgoApp = "terra-bee-generator"
 type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
 	CreateWith(options CreateOptions) (terra.Environment, error)
+	ProvisionWith(name string, options ProvisionOptions) (terra.Environment, error)
 	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
 	Seeder() seed.Seeder
@@ -36,11 +37,17 @@ type DeleteOptions struct {
 }
 
 type CreateOptions struct {
+	NamePrefix   string
+	Owner        string
+	GenerateName bool
+	Template     string
+	ProvisionOptions
+}
+
+type ProvisionOptions struct {
+	// Name within the context of ProvisionOptions is just the name of the environment.
+	// In the context of CreateOptions, it means the name of the environment *to create*.
 	Name              string
-	NamePrefix        string
-	Owner             string
-	GenerateName      bool
-	Template          string
 	SyncGeneratorOnly bool
 	WaitHealthy       bool
 	PinOptions        PinOptions
@@ -109,13 +116,17 @@ func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 	if err = b.reloadState(); err != nil {
 		return nil, err
 	}
-	env, err := b.state.Environments().Get(envName)
+	return b.ProvisionWith(envName, options.ProvisionOptions)
+}
+
+func (b *bees) ProvisionWith(name string, options ProvisionOptions) (terra.Environment, error) {
+	env, err := b.state.Environments().Get(name)
 	if err != nil {
 		return nil, err
 	}
 	if env == nil {
 		// don't think this could ever happen, but let's provide a useful error anyway
-		return nil, fmt.Errorf("error creating environment %q: missing from state after creation", env.Name())
+		return nil, fmt.Errorf("error provisioning environment %q: missing from state", env.Name())
 	}
 
 	err = b.kubectl.CreateNamespace(env)
