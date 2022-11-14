@@ -26,7 +26,7 @@ func NewArgoCDSyncCommand() cli.ThelmaCommand {
 	return &syncCommand{
 		selector: selector.NewSelector(func(options *selector.Options) {
 			options.IncludeBulkFlags = false
-			options.RequireDestination = true
+			options.RequireDestinationOrExact = true
 		}),
 	}
 }
