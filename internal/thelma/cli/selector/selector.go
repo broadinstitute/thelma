@@ -21,6 +21,7 @@ const ReleasesFlagName = "release"
 
 var flagNames = struct {
 	release              string
+	exactRelease         string
 	environment          string
 	cluster              string
 	environmentLifecycle string
@@ -29,6 +30,7 @@ var flagNames = struct {
 	destinationBase      string
 }{
 	release:              ReleasesFlagName,
+	exactRelease:         "exact-release",
 	environment:          "environment",
 	cluster:              "cluster",
 	environmentLifecycle: "environment-lifecycle",
@@ -42,8 +44,10 @@ type Option func(*Options)
 type Options struct {
 	// IncludeBulkFlags include bulk destination selection flags such as --destination-type, --environment-template, and so on
 	IncludeBulkFlags bool
-	// RequireDestination require at least one destination be specified with -e / -c flags
-	RequireDestination bool
+	// RequireDestinationOrExact requires either one of --environment or --cluster to be passed or for --exact-release to be
+	// used instead of --release (since --exact-release is globally unique, as enforced by Sherlock, it is enough to find
+	// the destination on its own).
+	RequireDestinationOrExact bool
 }
 
 type Selector struct {
@@ -66,8 +70,8 @@ type Selection struct {
 
 func NewSelector(options ...Option) *Selector {
 	opts := Options{
-		IncludeBulkFlags:   true,
-		RequireDestination: false,
+		IncludeBulkFlags:          true,
+		RequireDestinationOrExact: false,
 	}
 	for _, option := range options {
 		option(&opts)
@@ -75,6 +79,7 @@ func NewSelector(options ...Option) *Selector {
 
 	flags := []*enumFlag{
 		newReleasesFlag(),
+		newExactReleasesFlag(),
 		newEnvironmentsFlag(),
 		newClustersFlag(),
 	}
@@ -111,7 +116,7 @@ func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args [
 	}
 
 	for _, flag := range s.flags {
-		if err := flag.processInput(s.filterBuilder, state, pflags.Changed(flag.flagName), args); err != nil {
+		if err := flag.processInput(s.filterBuilder, state, args, pflags); err != nil {
 			return nil, err
 		}
 	}
@@ -135,9 +140,11 @@ func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args [
 }
 
 func (s *Selector) checkRequiredFlags(flags *pflag.FlagSet) error {
-	if s.options.RequireDestination {
-		if !flags.Changed(flagNames.environment) && !flags.Changed(flagNames.cluster) {
-			return fmt.Errorf("please specify a target environment or cluster with the -e/-c flags")
+	if s.options.RequireDestinationOrExact {
+		// "If -e isn't provided, and -c isn't provided, and the user hasn't passed just --exact-release instead of --r"
+		if !flags.Changed(flagNames.environment) && !flags.Changed(flagNames.cluster) &&
+			!(flags.Changed(flagNames.exactRelease) && !flags.Changed(flagNames.release)) {
+			return fmt.Errorf("please specify a target environment or cluster with the -e/-c flags, or specify only full Sherlock-style release names with --exact-release")
 		}
 	}
 	return nil

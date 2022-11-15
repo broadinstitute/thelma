@@ -229,7 +229,7 @@ func (c *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) 
 		releases := env.Releases()
 		for _, release := range releases {
 			if err := c.deleteRelease(release); err != nil {
-				log.Warn().Msgf("error deleting chart release %s in environment %s: %v", release.Name(), env.Name(), err)
+				return nil, fmt.Errorf("error deleting chart release %s in environment %s: %v", release.Name(), env.Name(), err)
 			}
 		}
 		params := environments.NewDeleteAPIV2EnvironmentsSelectorParams().

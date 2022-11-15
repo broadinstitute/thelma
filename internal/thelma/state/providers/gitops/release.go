@@ -1,6 +1,7 @@
 package gitops
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
@@ -16,6 +17,13 @@ type release struct {
 	destination         terra.Destination
 	terraHelmfileRef    string
 	firecloudDevelopRef string
+}
+
+// FullName is meant to be globally unique, since it is meant to expose Sherlock's full globally-unique names, which
+// are destination-suffixed. Gitops-based releases don't include that, so to provide a method returning the same thing
+// we just append the destination ourselves.
+func (r *release) FullName() string {
+	return fmt.Sprintf("%s-%s", r.name, r.destination.Name())
 }
 
 func (r *release) Name() string {

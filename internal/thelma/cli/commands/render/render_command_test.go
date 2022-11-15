@@ -178,6 +178,11 @@ func TestRenderArgParsing(t *testing.T) {
 			expectedError: regexp.MustCompile("--app-version cannot be used for cluster releases"),
 		},
 		{
+			description:   "--exact-release ALL invalid",
+			arguments:     Args("render --exact-release ALL"),
+			expectedError: regexp.MustCompile("--exact-release cannot be used with ALL"),
+		},
+		{
 			description: "config repo path must be set",
 			arguments:   []string{"render"},
 			setupFn: func(tc *testConfig) error {
@@ -414,6 +419,17 @@ func TestRenderArgParsing(t *testing.T) {
 			arguments:   Args("render --argocd ALL"),
 			setupFn: func(tc *testConfig) error {
 				tc.expected.helmfileArgs.ArgocdMode = true
+				return nil
+			},
+		},
+		{
+			description: "--exact-release should match full name",
+			arguments:   Args("render --exact-release leonardo-dev"),
+			setupFn: func(tc *testConfig) error {
+				tc.expected.renderOptions.Scope = scope.Release
+				tc.expected.renderOptions.Releases = []terra.Release{
+					fixture.Release("leonardo", "dev"),
+				}
 				return nil
 			},
 		},

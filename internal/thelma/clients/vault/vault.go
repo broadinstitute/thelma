@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 	"os"
 )
 
@@ -14,7 +15,11 @@ const githubTokenCredentialKey = "github-token"
 const vaultTokenCredentialKey = "vault-token"
 
 const githubLoginPath = "/auth/github/login"
-const tokenLookupPath = "/auth/token/lookup"
+const approleLoginPath = "/auth/approle/login"
+const tokenLookupPath = "/auth/token/lookup-self"
+
+const approleRoleIdEnvVar = "VAULT_ROLE_ID"
+const approleSecretIdEnvVar = "VAULT_SECRET_ID"
 
 type vaultConfig struct {
 	Addr string `default:"https://clotho.broadinstitute.org:8200"`
@@ -85,6 +90,20 @@ func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.
 		options.IssueFn = func() ([]byte, error) {
 			githubPAT, err := githubToken.Get()
 			if err != nil {
+				// Couldn't get GitHub auth, see if we can log in via approle before we error out:
+				approleRoleId := os.Getenv(approleRoleIdEnvVar)
+				approleSecretId := os.Getenv(approleSecretIdEnvVar)
+				if approleRoleId != "" && approleSecretId != "" {
+					vaultToken, approleErr := approleLogin(unauthedClient, approleRoleId, approleSecretId)
+					if approleErr != nil {
+						// If that failed on its own merits, note that error but continue to return the primary Github error
+						log.Warn().Msgf("tried to login to Vault with approle because Github failed but encountered another error: %v", approleErr)
+					} else {
+						// If approle worked, return it immediately so we ignore the Github error
+						return []byte(vaultToken), nil
+					}
+				}
+
 				return nil, fmt.Errorf("could not issue new Vault token, failed to load Github PAT: %v", err)
 			}
 			vaultToken, err := login(unauthedClient, string(githubPAT))
@@ -166,6 +185,24 @@ func login(client *vaultapi.Client, githubToken string) (string, error) {
 	return secret.Auth.ClientToken, nil
 }
 
+// approleLogin is like login except via role+secret ID rather than via GitHub PAT
+// https://developer.hashicorp.com/vault/docs/auth/approle
+func approleLogin(client *vaultapi.Client, roleId string, secretId string) (string, error) {
+	_client, err := client.Clone()
+	if err != nil {
+		return "", err
+	}
+
+	secret, err := _client.Logical().Write(approleLoginPath, map[string]interface{}{
+		"role_id":   roleId,
+		"secret_id": secretId,
+	})
+	if err != nil {
+		return "", fmt.Errorf("approle login request failed: %v", err)
+	}
+	return secret.Auth.ClientToken, nil
+}
+
 // tokenLookup performs a token lookup API request (the equivalent of "vault token lookup" on the command-line)
 // https://www.vaultproject.io/api-docs/auth/token#lookup-a-token
 func tokenLookup(client *vaultapi.Client, vaultToken string) error {
@@ -177,7 +214,7 @@ func tokenLookup(client *vaultapi.Client, vaultToken string) error {
 	_client.SetToken(vaultToken)
 
 	// we don't actually care about any data in the response, just that the token lookup succeeds
-	_, err = _client.Logical().Write(tokenLookupPath, nil)
+	_, err = _client.Logical().Read(tokenLookupPath)
 
 	return err
 }

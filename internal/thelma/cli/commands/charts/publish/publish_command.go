@@ -13,12 +13,10 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 const helpMessage = `Publishes Helm charts for Terra services`
 const defaultBucketName = "terra-helm"
-const iapIdTokenEnvironmentVariable = "THELMA_IAP_ID_TOKEN"
 const sherlockProdURL = "https://sherlock.dsp-devops.broadinstitute.org"
 const sherlockDevURL = "https://sherlock-dev.dsp-devops.broadinstitute.org"
 
@@ -151,7 +149,7 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 			autoreleaser.GitopsUpdaters = []gitops.Versions{gitopsVersions}
 		}
 		if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
-			iapIdToken, err := getIapToken(app)
+			iapIdToken, err := app.Clients().IAPToken()
 			if err != nil {
 				return nil, err
 			}
@@ -197,20 +195,4 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	}
 	views.SortChartReleases(view)
 	return view, nil
-}
-
-// getIapToken tries to read the IAP ID token itself from THELMA_IAP_ID_TOKEN, and if that fails, it tries to call
-// Thelma's overall TokenProvider mechanism, which will load Vault auth and work with either Workload Identity or
-// browser-based authentication.
-// Note that this environment variable is only respected for this CLI command--other commands don't have the same
-// shortcut behavior.
-func getIapToken(app app.ThelmaApp) (string, error) {
-	if token, found := os.LookupEnv(iapIdTokenEnvironmentVariable); token != "" {
-		return token, nil
-	} else {
-		if found {
-			log.Warn().Msgf("IAP ID token environment variable '%s' was set but was empty", iapIdTokenEnvironmentVariable)
-		}
-		return app.Clients().IAPToken()
-	}
 }

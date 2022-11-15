@@ -70,6 +70,10 @@ func (c *clients) GoogleUsingADC(allowNonBroad bool) google.Clients {
 }
 
 func (c *clients) IAPToken() (string, error) {
+	if outOfBandToken := iap.CheckEnvironmentShortCircuit(); outOfBandToken != "" {
+		return outOfBandToken, nil
+	}
+
 	vaultClient, err := c.Vault()
 	if err != nil {
 		return "", err
