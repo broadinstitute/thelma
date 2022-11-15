@@ -2,16 +2,20 @@
 package clients
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
+	slackapi "github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
+	"os"
 )
 
 // Clients convenience builders for client objects used in Thelma commands
@@ -32,6 +36,8 @@ type Clients interface {
 	GoogleUsingADC(bool) google.Clients
 	// Sherlock returns a swagger API client for a sherlock server instance
 	Sherlock() (*sherlock.Client, error)
+	// Slack for the DSP Slack instance
+	Slack() (*slackapi.SlackAPI, error)
 }
 
 func New(thelmaConfig config.Config, thelmaRoot root.Root, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
@@ -109,4 +115,20 @@ func (c *clients) Sherlock() (*sherlock.Client, error) {
 		return nil, err
 	}
 	return sherlock.New(c.thelmaConfig, iapToken)
+}
+
+func (c *clients) Slack() (*slackapi.SlackAPI, error) {
+	var token *bytes.Buffer
+	envToken := new(bytes.Buffer)
+	len, _ := envToken.WriteString(os.Getenv("SLACK_TOKEN"))
+	if len == 0 {
+		cloudToken, err := slackapi.GetSlackToken()
+		if err != nil {
+			return nil, fmt.Errorf("no SLACK_TOKEN and retrieval failed with %v", err)
+		}
+		token = cloudToken
+	} else {
+		token = envToken
+	}
+	return slackapi.New(token.String())
 }
