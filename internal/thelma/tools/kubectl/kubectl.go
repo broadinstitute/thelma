@@ -38,6 +38,8 @@ type Kubectl interface {
 	DeleteNamespace(env terra.Environment) error
 	// CreateNamespace will create the environment's namespace
 	CreateNamespace(env terra.Environment) error
+	// ExportLogs will export deployment and statefulset container logs for a Terra release
+	ExportLogs(release []terra.Release, toDir string, option ...ExportLogsOption) error
 	// PortForward runs `kubectl port-forward` and returns the forwarding local port, a callback to stop forwarding, and
 	// a possible error if the command failed.
 	// The targetResource should be of the form `[pods|deployment|replicaset|service]/<name>`, like `service/sam-postgres-service`.
@@ -171,12 +173,16 @@ func (k *kubectl) runForEnv(env terra.Environment, args []string) error {
 	}
 
 	for _, _kubectx := range kubectxs {
-		if err := k.shellRunner.Run(k.makeCmd(_kubectx, args)); err != nil {
+		if err := k.runForKubectx(_kubectx, args); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (k *kubectl) runForKubectx(kubectx kubecfg.Kubectx, args []string, opts ...shell.RunOption) error {
+	return k.shellRunner.Run(k.makeCmd(kubectx, args), opts...)
 }
 
 func (k *kubectl) makeCmd(kubectx kubecfg.Kubectx, args []string) shell.Command {
