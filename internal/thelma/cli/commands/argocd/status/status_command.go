@@ -5,14 +5,12 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/spf13/cobra"
 )
 
 const helpMessage = `Report status for a collection of ArgoCD application(s)`
 
 type statusCommand struct {
-	argocd   argocd.ArgoCD
 	selector *selector.Selector
 }
 

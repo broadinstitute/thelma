@@ -276,6 +276,42 @@ func (_c *ClusterRelease_FirecloudDevelopRef_Call) Return(_a0 string) *ClusterRe
 	return _c
 }
 
+// FullName provides a mock function with given fields:
+func (_m *ClusterRelease) FullName() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// ClusterRelease_FullName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FullName'
+type ClusterRelease_FullName_Call struct {
+	*mock.Call
+}
+
+// FullName is a helper method to define mock.On call
+func (_e *ClusterRelease_Expecter) FullName() *ClusterRelease_FullName_Call {
+	return &ClusterRelease_FullName_Call{Call: _e.mock.On("FullName")}
+}
+
+func (_c *ClusterRelease_FullName_Call) Run(run func()) *ClusterRelease_FullName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ClusterRelease_FullName_Call) Return(_a0 string) *ClusterRelease_FullName_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // IsAppRelease provides a mock function with given fields:
 func (_m *ClusterRelease) IsAppRelease() bool {
 	ret := _m.Called()

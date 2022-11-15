@@ -149,7 +149,6 @@ Flags:
 			Short: "A fake command",
 			Long:  "A very fake command",
 			Run: func(cmd *cobra.Command, args []string) {
-				return
 			},
 		}
 		var cmdOpts cmdOptions
