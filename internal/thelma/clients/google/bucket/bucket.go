@@ -215,7 +215,8 @@ func (b *bucket) do(objectName string, op object.SyncOperation) error {
 	// run the operation
 	err := op.Handler(obj, opLogger.logger())
 
-	opLogger.operationFinished(err)
+	// operationFinished will wrap the error with useful information
+	err = opLogger.operationFinished(err)
 
 	return err
 }

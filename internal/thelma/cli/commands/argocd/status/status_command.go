@@ -20,7 +20,7 @@ func NewArgoCDStatusCommand() cli.ThelmaCommand {
 	return &statusCommand{
 		selector: selector.NewSelector(func(options *selector.Options) {
 			options.IncludeBulkFlags = false
-			options.RequireDestination = true
+			options.RequireDestinationOrExact = true
 		}),
 	}
 }

@@ -34,7 +34,7 @@ func NewLogsCommand() cli.ThelmaCommand {
 		artifactsFlags: artifactsflags.NewArtifactsFlags(),
 		selector: selector.NewSelector(func(options *selector.Options) {
 			options.IncludeBulkFlags = false
-			options.RequireDestination = true
+			options.RequireDestinationOrExact = true
 		}),
 	}
 }
