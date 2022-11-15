@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
+	kubecfg "github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	mock "github.com/stretchr/testify/mock"
 
 	terra "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"

@@ -164,6 +164,6 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/state/api/terra --name Cluster --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster.go
 	mockery --dir ./internal/thelma/state/api/terra --name StateWriter --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_writer.go
 	mockery --dir ./internal/thelma/clients/sherlock --name StateReadWriter --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename state_read_writer.go
-	mockery --dir ./internal/thelma/tools/kubectl/kubecfg --name Kubeconfig --output=./internal/thelma/tools/kubectl/kubecfg/mocks --outpkg mocks --filename kubecfg.go
-	mockery --dir ./internal/thelma/tools/kubectl/kubecfg --name Kubectx --output=./internal/thelma/tools/kubectl/kubecfg/mocks --outpkg mocks --filename kubectx.go
+	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubeconfig --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubecfg.go
+	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubectx --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubectx.go
 	go generate /Users/chelsea/scratch/thelma-merge/thelma/internal/thelma/clients/google/testing/generators/generators.go

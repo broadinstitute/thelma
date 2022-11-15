@@ -111,43 +111,6 @@ func (_c *Bucket_Close_Call) Return(_a0 error) *Bucket_Close_Call {
 	return _c
 }
 
-// CloudConsoleURL provides a mock function with given fields: objectNameOrPrefix
-func (_m *Bucket) CloudConsoleURL(objectNameOrPrefix string) string {
-	ret := _m.Called(objectNameOrPrefix)
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func(string) string); ok {
-		r0 = rf(objectNameOrPrefix)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// Bucket_CloudConsoleURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloudConsoleURL'
-type Bucket_CloudConsoleURL_Call struct {
-	*mock.Call
-}
-
-// CloudConsoleURL is a helper method to define mock.On call
-//  - objectNameOrPrefix string
-func (_e *Bucket_Expecter) CloudConsoleURL(objectNameOrPrefix interface{}) *Bucket_CloudConsoleURL_Call {
-	return &Bucket_CloudConsoleURL_Call{Call: _e.mock.On("CloudConsoleObjectDetailURL", objectNameOrPrefix)}
-}
-
-func (_c *Bucket_CloudConsoleURL_Call) Run(run func(objectNameOrPrefix string)) *Bucket_CloudConsoleURL_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *Bucket_CloudConsoleURL_Call) Return(_a0 string) *Bucket_CloudConsoleURL_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
 // Delete provides a mock function with given fields: objectName
 func (_m *Bucket) Delete(objectName string) error {
 	ret := _m.Called(objectName)
@@ -611,6 +574,45 @@ func (_c *Bucket_WriteFromStream_Call) Run(run func(objectName string, reader io
 }
 
 func (_c *Bucket_WriteFromStream_Call) Return(_a0 error) *Bucket_WriteFromStream_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// Writer provides a mock function with given fields: objectName
+func (_m *Bucket) Writer(objectName string) io.WriteCloser {
+	ret := _m.Called(objectName)
+
+	var r0 io.WriteCloser
+	if rf, ok := ret.Get(0).(func(string) io.WriteCloser); ok {
+		r0 = rf(objectName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(io.WriteCloser)
+		}
+	}
+
+	return r0
+}
+
+// Bucket_Writer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Writer'
+type Bucket_Writer_Call struct {
+	*mock.Call
+}
+
+// Writer is a helper method to define mock.On call
+//  - objectName string
+func (_e *Bucket_Expecter) Writer(objectName interface{}) *Bucket_Writer_Call {
+	return &Bucket_Writer_Call{Call: _e.mock.On("Writer", objectName)}
+}
+
+func (_c *Bucket_Writer_Call) Run(run func(objectName string)) *Bucket_Writer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *Bucket_Writer_Call) Return(_a0 io.WriteCloser) *Bucket_Writer_Call {
 	_c.Call.Return(_a0)
 	return _c
 }

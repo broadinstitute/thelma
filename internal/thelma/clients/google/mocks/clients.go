@@ -3,12 +3,14 @@
 package mocks
 
 import (
-	google "github.com/broadinstitute/thelma/internal/thelma/clients/google"
+	container "cloud.google.com/go/container/apiv1"
 	bucket "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 
-	kubectl "github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
+	google "github.com/broadinstitute/thelma/internal/thelma/clients/google"
 
 	mock "github.com/stretchr/testify/mock"
+
+	oauth2 "golang.org/x/oauth2"
 
 	pubsub "cloud.google.com/go/pubsub"
 
@@ -89,16 +91,16 @@ func (_c *Clients_Bucket_Call) Return(_a0 bucket.Bucket, _a1 error) *Clients_Buc
 	return _c
 }
 
-// Kubectl provides a mock function with given fields:
-func (_m *Clients) Kubectl() (kubectl.Kubectl, error) {
+// ClusterManager provides a mock function with given fields:
+func (_m *Clients) ClusterManager() (*container.ClusterManagerClient, error) {
 	ret := _m.Called()
 
-	var r0 kubectl.Kubectl
-	if rf, ok := ret.Get(0).(func() kubectl.Kubectl); ok {
+	var r0 *container.ClusterManagerClient
+	if rf, ok := ret.Get(0).(func() *container.ClusterManagerClient); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(kubectl.Kubectl)
+			r0 = ret.Get(0).(*container.ClusterManagerClient)
 		}
 	}
 
@@ -112,24 +114,24 @@ func (_m *Clients) Kubectl() (kubectl.Kubectl, error) {
 	return r0, r1
 }
 
-// Clients_Kubectl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Kubectl'
-type Clients_Kubectl_Call struct {
+// Clients_ClusterManager_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClusterManager'
+type Clients_ClusterManager_Call struct {
 	*mock.Call
 }
 
-// Kubectl is a helper method to define mock.On call
-func (_e *Clients_Expecter) Kubectl() *Clients_Kubectl_Call {
-	return &Clients_Kubectl_Call{Call: _e.mock.On("Kubectl")}
+// ClusterManager is a helper method to define mock.On call
+func (_e *Clients_Expecter) ClusterManager() *Clients_ClusterManager_Call {
+	return &Clients_ClusterManager_Call{Call: _e.mock.On("ClusterManager")}
 }
 
-func (_c *Clients_Kubectl_Call) Run(run func()) *Clients_Kubectl_Call {
+func (_c *Clients_ClusterManager_Call) Run(run func()) *Clients_ClusterManager_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *Clients_Kubectl_Call) Return(_a0 kubectl.Kubectl, _a1 error) *Clients_Kubectl_Call {
+func (_c *Clients_ClusterManager_Call) Return(_a0 *container.ClusterManagerClient, _a1 error) *Clients_ClusterManager_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
@@ -260,6 +262,51 @@ func (_c *Clients_Terra_Call) Run(run func()) *Clients_Terra_Call {
 }
 
 func (_c *Clients_Terra_Call) Return(_a0 terraapi.TerraClient, _a1 error) *Clients_Terra_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+// TokenSource provides a mock function with given fields:
+func (_m *Clients) TokenSource() (oauth2.TokenSource, error) {
+	ret := _m.Called()
+
+	var r0 oauth2.TokenSource
+	if rf, ok := ret.Get(0).(func() oauth2.TokenSource); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(oauth2.TokenSource)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Clients_TokenSource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TokenSource'
+type Clients_TokenSource_Call struct {
+	*mock.Call
+}
+
+// TokenSource is a helper method to define mock.On call
+func (_e *Clients_Expecter) TokenSource() *Clients_TokenSource_Call {
+	return &Clients_TokenSource_Call{Call: _e.mock.On("TokenSource")}
+}
+
+func (_c *Clients_TokenSource_Call) Run(run func()) *Clients_TokenSource_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Clients_TokenSource_Call) Return(_a0 oauth2.TokenSource, _a1 error) *Clients_TokenSource_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
