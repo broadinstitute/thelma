@@ -82,8 +82,16 @@ func (l *logs) Logs(release terra.Release, opts ...LogsOption) error {
 	if len(containers) == 0 {
 		return fmt.Errorf("found no matching containers for %s in %s", release.Name(), release.Destination().Name())
 	}
-
-	_container, err := tryToPickCorrectContainer(containers)
+	var _container container
+	if len(containers) == 1 {
+		_container = containers[0]
+	} else {
+		_container, err = tryToPickCorrectContainer(containers)
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("Found %d matching containers in %s, will collect logs for %s in %s", len(containers), release.Name(), _container.containerName, _container.resourceName)
+	}
 
 	_kubectl, err := l.k8sclients.Kubectl()
 	if err != nil {
@@ -163,7 +171,7 @@ func defaultLogsOptions() LogsOptions {
 		ContainerFilter: func(container container) bool {
 			return true
 		},
-		MaxLines: 0,
+		MaxLines: -1, // -1 means no default line limit, try to export everything
 	}
 }
 

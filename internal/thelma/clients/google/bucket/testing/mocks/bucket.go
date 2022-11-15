@@ -133,7 +133,7 @@ type Bucket_CloudConsoleURL_Call struct {
 // CloudConsoleURL is a helper method to define mock.On call
 //  - objectNameOrPrefix string
 func (_e *Bucket_Expecter) CloudConsoleURL(objectNameOrPrefix interface{}) *Bucket_CloudConsoleURL_Call {
-	return &Bucket_CloudConsoleURL_Call{Call: _e.mock.On("CloudConsoleURL", objectNameOrPrefix)}
+	return &Bucket_CloudConsoleURL_Call{Call: _e.mock.On("CloudConsoleObjectDetailURL", objectNameOrPrefix)}
 }
 
 func (_c *Bucket_CloudConsoleURL_Call) Run(run func(objectNameOrPrefix string)) *Bucket_CloudConsoleURL_Call {

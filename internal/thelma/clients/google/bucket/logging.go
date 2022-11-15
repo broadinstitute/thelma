@@ -5,34 +5,49 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"sync"
 	"time"
 )
 
+// operationLogger logs details about a given GCS operation
 type operationLogger struct {
 	operationKind      string
 	objectName         string
 	prefixedObjectName string
 	bucketPrefix       string
 	bucketName         string
+	mutex              sync.Mutex
 	startTime          time.Time
+	started            bool
+	finished           bool
 }
 
 func (i *operationLogger) operationStarted() {
-	startTime := time.Now()
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
 
-	i.startTime = startTime
+	if i.started {
+		return
+	}
 
+	i.started = true
+	i.startTime = time.Now()
 	logger := i.logger()
 	logger.Trace().Msgf("%s %s", i.operationKind, i.objectUrl())
 }
 
-func (i *operationLogger) operationFinished(err error) {
-	var startTime time.Time
-	startTime = i.startTime
+func (i *operationLogger) operationFinished(err error) error {
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
 
+	if i.finished {
+		return err
+	}
+
+	i.finished = true
 	logger := i.logger()
 
-	duration := time.Since(startTime)
+	duration := time.Since(i.startTime)
 	event := logger.Debug()
 	event.Dur("duration", duration)
 
@@ -41,10 +56,12 @@ func (i *operationLogger) operationFinished(err error) {
 		event.Err(err)
 		returnErr := fmt.Errorf("%s %q failed: %v", i.operationKind, i.objectUrl(), err)
 		event.Msgf(returnErr.Error())
+		return returnErr
 	}
 
 	event.Str("status", "ok")
 	event.Msgf("%s finished in %s", i.operationKind, duration)
+	return nil
 }
 
 func (i *operationLogger) objectUrl() string {

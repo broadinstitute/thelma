@@ -11,7 +11,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
@@ -37,8 +36,6 @@ var tokenScopes = []string{
 type Clients interface {
 	// Bucket constructs a new Bucket using Thelma's globally-configured Google authentication options
 	Bucket(name string, options ...bucket.BucketOption) (bucket.Bucket, error)
-	// Kubectl returns a new Kubectl instance
-	Kubectl() (kubectl.Kubectl, error)
 	// Terra returns a new terraapi.TerraClient instance
 	Terra() (terraapi.TerraClient, error)
 	// SetSubject allows usage of domain-wide delegation privileges, to authenticate as a user via
@@ -46,6 +43,10 @@ type Clients interface {
 	SetSubject(subject string) Clients
 	// PubSub returns a new google pubsub client
 	PubSub(projectId string) (*pubsub.Client, error)
+	// ClusterManager returns a new google container cluster manager client
+	ClusterManager() (*container.ClusterManagerClient, error)
+	// TokenSource returns an oauth TokenSource for this client factory's configured identity
+	TokenSource() (oauth2.TokenSource, error)
 }
 
 type googleConfig struct {
@@ -134,26 +135,8 @@ func (g *google) Bucket(name string, options ...bucket.BucketOption) (bucket.Buc
 	return bucket.NewBucket(name, options...)
 }
 
-func (g *google) Kubectl() (kubectl.Kubectl, error) {
-	clientOpts, err := g.clientOptions()
-	if err != nil {
-		return nil, err
-	}
-	gkeClient, err := container.NewClusterManagerClient(context.Background(), clientOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	tokenSource, err := g.tokenSource()
-	if err != nil {
-		return nil, err
-	}
-
-	return kubectl.NewKubectl(g.shellRunner, g.thelmaRoot, tokenSource, gkeClient)
-}
-
 func (g *google) Terra() (terraapi.TerraClient, error) {
-	tokenSource, err := g.tokenSource()
+	tokenSource, err := g.TokenSource()
 	if err != nil {
 		return nil, fmt.Errorf("error obtaining token source: %v", err)
 	}
@@ -183,6 +166,22 @@ func (g *google) PubSub(projectId string) (*pubsub.Client, error) {
 	return pubsub.NewClient(context.Background(), projectId, clientOpts...)
 }
 
+func (g *google) ClusterManager() (*container.ClusterManagerClient, error) {
+	clientOpts, err := g.clientOptions()
+	if err != nil {
+		return nil, err
+	}
+	return container.NewClusterManagerClient(context.Background(), clientOpts...)
+}
+
+func (g *google) TokenSource() (oauth2.TokenSource, error) {
+	creds, err := g.oauthCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return creds.TokenSource, nil
+}
+
 func (g *google) clientOptions() ([]option.ClientOption, error) {
 	creds, err := g.oauthCredentials()
 	if err != nil {
@@ -191,14 +190,6 @@ func (g *google) clientOptions() ([]option.ClientOption, error) {
 	return []option.ClientOption{
 		option.WithCredentials(creds),
 	}, nil
-}
-
-func (g *google) tokenSource() (oauth2.TokenSource, error) {
-	creds, err := g.oauthCredentials()
-	if err != nil {
-		return nil, err
-	}
-	return creds.TokenSource, nil
 }
 
 func (g *google) oauthCredentials() (*oauth2google.Credentials, error) {

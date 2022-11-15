@@ -1,6 +1,8 @@
 package artifacts
 
-import "io"
+import (
+	"io"
+)
 
 func newMultiWriteCloser(writeClosers ...io.WriteCloser) *multiWriteCloser {
 	var writers []io.Writer

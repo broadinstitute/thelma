@@ -5,6 +5,7 @@ import (
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
+	argocd_status "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/status"
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
 	auth_argocd "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/argocd"
@@ -24,8 +25,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts"
 	charts_import "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/import"
 	charts_publish "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/publish"
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/ops"
-	ops_export "github.com/broadinstitute/thelma/internal/thelma/cli/commands/ops/export"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/logs"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/render"
 	states "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state"
 	state_export "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state/export"
@@ -47,6 +47,7 @@ func Execute() {
 
 func withCommands(opts *cli.Options) {
 	opts.AddCommand("argocd", argocd.NewArgoCDCommand())
+	opts.AddCommand("argocd status", argocd_status.NewArgoCDStatusCommand())
 	opts.AddCommand("argocd sync", argocd_sync.NewArgoCDSyncCommand())
 
 	opts.AddCommand("auth", auth.NewAuthCommand())
@@ -70,8 +71,7 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("charts import", charts_import.NewChartsImportCommand())
 	opts.AddCommand("charts publish", charts_publish.NewChartsPublishCommand())
 
-	opts.AddCommand("ops", ops.NewOpsCommand())
-	opts.AddCommand("ops export", ops_export.NewOpsExportCommand())
+	opts.AddCommand("logs", logs.NewLogsCommand())
 
 	opts.AddCommand("render", render.NewRenderCommand())
 

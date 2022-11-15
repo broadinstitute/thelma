@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/rs/zerolog/log"
 	"io"
 	"os"
@@ -33,15 +34,15 @@ type Manager interface {
 	// Note: Callers are responsible for closing the writer once data has been written!
 	Writer(release terra.Release, path string) (io.WriteCloser, error)
 
-	// GetArtifactLocation returns links to an individual artifact path.
+	// Location returns links to an individual artifact path.
 	// Either of the fields in the returned Links struct may be empty, depending on how the Manager is configured.
 	// For example if the Manager is not configured to upload artifacts to GCS, the CloudConsoleLink field will be empty
-	GetArtifactLocation(release terra.Release, path string) Location
+	Location(release terra.Release, path string) Location
 
-	// GetArtifactsBaseLocation returns links to the base directory/path for all artifacts for this Release
+	// BaseLocationForRelease returns links to the base directory/path for all artifacts for this Release
 	// Either of the fields in the returned Links struct may be empty, depending on how the manager is configured
 	// For example if the Manager is not configured to upload artifacts to GCS, the CloudConsoleLink field will be empty
-	GetArtifactsBaseLocation(release terra.Release) Location
+	BaseLocationForRelease(release terra.Release) Location
 }
 
 type Type int64
@@ -75,15 +76,31 @@ type manager struct {
 	timestamp     time.Time
 }
 
-func (m *manager) GetArtifactLocation(release terra.Release, path string) Location {
+func (m *manager) Location(release terra.Release, path string) Location {
 	return Location{
-		CloudConsoleURL: m.cloudConsoleLink(release, path),
-		FilesystemPath:  m.filesytemPath(release, path),
+		CloudConsoleURL: m.cloudConsoleObjectLink(release, path),
+		FilesystemPath:  m.filesystemPath(release, path),
 	}
 }
 
-func (m *manager) GetArtifactsBaseLocation(release terra.Release) Location {
-	return m.GetArtifactLocation(release, "")
+func (m *manager) BaseLocationForRelease(release terra.Release) Location {
+	return Location{
+		CloudConsoleURL: m.cloudConsolePathPrefixLink(release, ""),
+		FilesystemPath:  m.filesystemPath(release, ""),
+	}
+}
+
+func (m *manager) CloudConsoleURLsForDestination(destination terra.Destination) []string {
+	bucketNames := set.NewStringSet()
+	for _, release := range destination.Releases() {
+		bucketNames.Add(release.Cluster().ArtifactBucket())
+	}
+
+	var urls []string
+	for _, _bucketName := range bucketNames.Elements() {
+		urls = append(urls, bucket.CloudConsoleObjectListURL(_bucketName, destination.Name()))
+	}
+	return urls
 }
 
 func (m *manager) Writer(release terra.Release, _path string) (io.WriteCloser, error) {
@@ -119,14 +136,21 @@ func (m *manager) relativePath(release terra.Release, _path string) string {
 	return path.Join(m.basePath(release), _path)
 }
 
-func (m *manager) cloudConsoleLink(release terra.Release, _path string) string {
+func (m *manager) cloudConsoleObjectLink(release terra.Release, objectName string) string {
 	if !m.options.Upload {
 		return ""
 	}
-	return bucket.CloudConsoleURL(bucketName(release), m.relativePath(release, _path))
+	return bucket.CloudConsoleObjectDetailURL(bucketName(release), m.relativePath(release, objectName))
 }
 
-func (m *manager) filesytemPath(release terra.Release, _path string) string {
+func (m *manager) cloudConsolePathPrefixLink(release terra.Release, pathPrefix string) string {
+	if !m.options.Upload {
+		return ""
+	}
+	return bucket.CloudConsoleObjectListURL(bucketName(release), m.relativePath(release, pathPrefix))
+}
+
+func (m *manager) filesystemPath(release terra.Release, _path string) string {
 	if m.options.Dir == "" {
 		return ""
 	}

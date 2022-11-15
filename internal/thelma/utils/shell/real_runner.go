@@ -66,7 +66,9 @@ func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cm
 	errWriter := io.MultiWriter(writers...)
 
 	// Wrap user-supplied stdout and stderr in new io.Writers that log messages at debug level
-	stdout = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stdout").Logger(), "[out] ", stdout)
+	if opts.LogStdout {
+		stdout = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stdout").Logger(), "[out] ", stdout)
+	}
 	stderr = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errWriter)
 
 	// Convert our command arguments to exec.Cmd struct

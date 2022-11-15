@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/flags"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func NewArtifactsFlags(opts ...flags.Option) ArtifactsFlags {
@@ -33,9 +34,10 @@ type artifactsFlags struct {
 }
 
 func (s *artifactsFlags) AddFlags(cobraCommand *cobra.Command) {
-	cobraCommand.Flags().StringVarP(&s.options.Dir, flagNames.dir, "d", "", "Path to local directory where artifacts should be exported")
-	cobraCommand.Flags().BoolVarP(&s.options.Upload, flagNames.upload, "u", false, "If true, upload artifacts to cluster artifact bucket")
-	s.flagOptions.Apply(cobraCommand.Flags())
+	s.flagOptions.Apply(cobraCommand.Flags(), func(flags *pflag.FlagSet) {
+		flags.StringVarP(&s.options.Dir, flagNames.dir, "d", "", "Path to local directory where artifacts should be exported")
+		flags.BoolVarP(&s.options.Upload, flagNames.upload, "u", false, "If true, upload artifacts to cluster artifact bucket")
+	})
 }
 
 func (s *artifactsFlags) GetOptions() (artifacts.Options, error) {

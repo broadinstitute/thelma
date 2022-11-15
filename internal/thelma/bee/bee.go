@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
+	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"strings"
 
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
@@ -33,20 +34,24 @@ type Bees interface {
 }
 
 type DeleteOptions struct {
-	Unseed bool
+	Unseed           bool
+	ExportLogs       bool
+	ArtifactsOptions artifacts.Options
 }
 
 type CreateOptions struct {
-	Name              string
-	NamePrefix        string
-	Owner             string
-	GenerateName      bool
-	Template          string
-	SyncGeneratorOnly bool
-	WaitHealthy       bool
-	PinOptions        PinOptions
-	Seed              bool
-	SeedOptions       seed.SeedOptions
+	Name                string
+	NamePrefix          string
+	Owner               string
+	GenerateName        bool
+	Template            string
+	SyncGeneratorOnly   bool
+	WaitHealthy         bool
+	PinOptions          PinOptions
+	Seed                bool
+	SeedOptions         seed.SeedOptions
+	ExportLogsOnFailure bool
+	ArtifactsOptions    artifacts.Options
 }
 
 type PinOptions struct {

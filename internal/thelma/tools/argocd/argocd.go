@@ -130,6 +130,8 @@ type ArgoCD interface {
 	SyncRelease(release terra.Release, options ...SyncOption) error
 	// SyncReleases will sync the ArgoCD apps for multiple Terra releases in parallel
 	SyncReleases(releases []terra.Release, maxParallel int, options ...SyncOption) error
+	// AppStatus returns a summary of an application's health status
+	AppStatus(appName string) (ApplicationStatus, error)
 }
 
 // BrowserLogin is a thin wrapper around the `argocd login --sso` command, which:

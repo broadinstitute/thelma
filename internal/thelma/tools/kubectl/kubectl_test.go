@@ -1,10 +1,10 @@
 package kubectl
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl/kubecfg"
-	kubecfgmocks "github.com/broadinstitute/thelma/internal/thelma/tools/kubectl/kubecfg/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,15 +12,15 @@ import (
 )
 
 func Test_CreateAndDeleteNamespace(t *testing.T) {
-	mockKubeCfg := kubecfgmocks.NewKubeconfig(t)
+	mockKubeCfg := mocks.NewKubeconfig(t)
 	mockRunner := shell.DefaultMockRunner()
-	_kubectl := newWithKubeCfg(mockRunner, mockKubeCfg)
+	_kubectl := New(mockRunner, mockKubeCfg)
 
 	env := statemocks.NewEnvironment(t)
 	env.EXPECT().Namespace().Return("terra-fake-bee")
 	env.EXPECT().Lifecycle().Return(terra.Dynamic)
 
-	ktx := kubecfgmocks.NewKubectx(t)
+	ktx := mocks.NewKubectx(t)
 	ktx.EXPECT().Namespace().Return("terra-fake-bee")
 	ktx.EXPECT().ContextName().Return("my-ctx")
 
@@ -43,18 +43,18 @@ func Test_CreateAndDeleteNamespace(t *testing.T) {
 }
 
 func Test_Shutdown(t *testing.T) {
-	mockKubeCfg := kubecfgmocks.NewKubeconfig(t)
+	mockKubeCfg := mocks.NewKubeconfig(t)
 	mockRunner := shell.DefaultMockRunner()
-	_kubectl := newWithKubeCfg(mockRunner, mockKubeCfg)
+	_kubectl := New(mockRunner, mockKubeCfg)
 
 	env := statemocks.NewEnvironment(t)
 	env.EXPECT().Name().Return("staging")
 
-	ktx1 := kubecfgmocks.NewKubectx(t)
+	ktx1 := mocks.NewKubectx(t)
 	ktx1.EXPECT().Namespace().Return("terra-staging")
 	ktx1.EXPECT().ContextName().Return("my-ctx-1")
 
-	ktx2 := kubecfgmocks.NewKubectx(t)
+	ktx2 := mocks.NewKubectx(t)
 	ktx2.EXPECT().Namespace().Return("terra-staging")
 	ktx2.EXPECT().ContextName().Return("my-ctx-2")
 
@@ -86,9 +86,9 @@ func Test_Shutdown(t *testing.T) {
 }
 
 func Test_DeletePVCs(t *testing.T) {
-	mockKubeCfg := kubecfgmocks.NewKubeconfig(t)
+	mockKubeCfg := mocks.NewKubeconfig(t)
 	mockRunner := shell.DefaultMockRunner()
-	_kubectl := newWithKubeCfg(mockRunner, mockKubeCfg)
+	_kubectl := New(mockRunner, mockKubeCfg)
 
 	liveEnv := statemocks.NewEnvironment(t)
 	liveEnv.EXPECT().Lifecycle().Return(terra.Static)
@@ -99,7 +99,7 @@ func Test_DeletePVCs(t *testing.T) {
 	env.EXPECT().Name().Return("fake-bee")
 	env.EXPECT().Lifecycle().Return(terra.Dynamic)
 
-	ktx := kubecfgmocks.NewKubectx(t)
+	ktx := mocks.NewKubectx(t)
 	ktx.EXPECT().Namespace().Return("terra-fake-bee")
 	ktx.EXPECT().ContextName().Return("my-ctx")
 

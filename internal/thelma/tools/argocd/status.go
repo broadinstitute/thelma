@@ -14,9 +14,11 @@ type application struct {
 }
 
 type ApplicationStatus struct {
+	// Overall health status for the application
 	Health struct {
 		Status string
 	}
+	// Overall sync status for the application
 	Sync struct {
 		Status string
 	}
@@ -24,17 +26,18 @@ type ApplicationStatus struct {
 }
 
 type Resource struct {
-	Kind    string
-	Name    string
-	Status  string
-	Version string
-	Health  struct {
-		Status  string
-		Message string
-	}
+	Kind      string
+	Name      string
+	Version   string
+	Namespace string
+	Status    string
+	Health    struct {
+		Status  string `yaml:",omitempty"`
+		Message string `yaml:",omitempty"`
+	} `yaml:",omitempty"`
 }
 
-func (a *argocd) Status(appName string) (ApplicationStatus, error) {
+func (a *argocd) AppStatus(appName string) (ApplicationStatus, error) {
 	buf := bytes.Buffer{}
 	err := a.runCommand([]string{"app", "get", appName, "-o", "yaml"}, func(options *shell.RunOptions) {
 		options.Stdout = &buf

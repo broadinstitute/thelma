@@ -233,9 +233,13 @@ func (c *kubeconfig) writeContext(ctx kubectx) error {
 		Str("cluster", ctx.cluster.Name()).
 		Msgf("Generating %s entry for %s", c.file, ctx.contextName)
 
-	return c.locker.WithLock(func() error {
+	err := c.locker.WithLock(func() error {
 		return c.writeContextUnsafe(ctx)
 	})
+	if err != nil {
+		return fmt.Errorf("error generating kubectx for cluster %s: %v", ctx.cluster.Name(), err)
+	}
+	return nil
 }
 
 // writeContextUnsafe writes a context with the given name, namespace and target cluster to the kubeconfig file

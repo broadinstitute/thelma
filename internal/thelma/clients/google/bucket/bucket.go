@@ -3,11 +3,9 @@ package bucket
 import (
 	"cloud.google.com/go/storage"
 	"context"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
 	"google.golang.org/api/option"
 	"io"
-	"path"
 	"strings"
 	"time"
 )
@@ -78,11 +76,6 @@ type Bucket interface {
 
 	// NewLocker returns a Locker instance for the given object
 	NewLocker(objectName string, maxWait time.Duration, options ...LockerOption) Locker
-
-	// CloudConsoleURL returns a URL pointing an object in the Google cloud console
-	// See https://cloud.google.com/storage/docs/request-endpoints#console
-	// Returns https://console.cloud.google.com/storage/browser/<BUCKET_NAME>/<OBJECT_NAME>
-	CloudConsoleURL(objectNameOrPrefix string) string
 }
 
 // implements Bucket
@@ -174,14 +167,6 @@ func (b *bucket) Update(objectName string, attrs ...object.AttrSetter) error {
 
 func (b *bucket) Delete(objectName string) error {
 	return b.do(objectName, object.NewDelete())
-}
-
-func (b *bucket) CloudConsoleURL(objectNameOrPrefix string) string {
-	return CloudConsoleURL(b.name, path.Join(b.prefix, objectNameOrPrefix))
-}
-
-func CloudConsoleURL(bucketName string, objectNameOrPrefix string) string {
-	return fmt.Sprintf("%s/%s/%s", cloudConsoleBaseURL, bucketName, objectNameOrPrefix)
 }
 
 func (b *bucket) newSyncOperationLogger(objectName string, op object.SyncOperation) *operationLogger {
