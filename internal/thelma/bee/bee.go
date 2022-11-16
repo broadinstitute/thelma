@@ -51,14 +51,14 @@ type CreateOptions struct {
 type ProvisionOptions struct {
 	// Name within the context of ProvisionOptions is just the name of the environment.
 	// In the context of CreateOptions, it means the name of the environment *to create*.
-	Name              string
-	SyncGeneratorOnly bool
-	WaitHealthy       bool
-	PinOptions        PinOptions
-	Seed              bool
-	SeedOptions       seed.SeedOptions
-  ExportLogs       bool
-	ArtifactsOptions artifacts.Options
+	Name                string
+	SyncGeneratorOnly   bool
+	WaitHealthy         bool
+	PinOptions          PinOptions
+	Seed                bool
+	SeedOptions         seed.SeedOptions
+	ExportLogsOnFailure bool
+	ArtifactsOptions    artifacts.Options
 }
 
 type PinOptions struct {

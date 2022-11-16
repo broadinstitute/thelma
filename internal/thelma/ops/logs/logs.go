@@ -104,77 +104,6 @@ func (l *logs) Logs(release terra.Release, opts ...LogsOption) error {
 	})
 }
 
-func tryToPickCorrectContainer(containers []container) (container, error) {
-	if len(containers) == 1 {
-		return containers[0], nil
-	}
-
-	deploymentsOnly := func(c container) bool {
-		return c.resourceKind == "deployment"
-	}
-
-	specificDeployment := func(c container) bool {
-		if strings.Contains(c.resourceName, "backend") {
-			return true
-		}
-		if strings.Contains(c.resourceName, "runner") {
-			return true
-		}
-		return false
-	}
-
-	namedoesNotIncludeProxy := func(c container) bool {
-		return !strings.Contains(c.containerName, "proxy")
-	}
-
-	nameIncludesAppOrAPI := func(c container) bool {
-		if strings.Contains(c.containerName, "app") {
-			return true
-		}
-		if strings.Contains(c.containerName, "api") {
-			return true
-		}
-		return c.containerName == "app"
-	}
-
-	filtersToTry := []func(container) bool{
-		deploymentsOnly,
-		specificDeployment,
-		namedoesNotIncludeProxy,
-		nameIncludesAppOrAPI,
-	}
-
-	winnowed := make([]container, len(containers))
-	copy(winnowed, containers)
-
-	for _, filter := range filtersToTry {
-		filtered := filterContainers(winnowed, filter)
-		if len(filtered) == 0 {
-			// skip this filter, it removed all possible matches
-			continue
-		}
-		if len(filtered) == 1 {
-			return filtered[0], nil
-		}
-		winnowed = filtered
-	}
-
-	var list []string
-	for _, _container := range containers {
-		list = append(list, fmt.Sprintf("%s in %s", _container.containerName, _container.resourceName))
-	}
-	return container{}, fmt.Errorf("found multiple matching containers, please use flags to specify:\n%s", strings.Join(list, "\n"))
-}
-
-func defaultLogsOptions() LogsOptions {
-	return LogsOptions{
-		ContainerFilter: func(container container) bool {
-			return true
-		},
-		MaxLines: -1, // -1 means no default line limit, try to export everything
-	}
-}
-
 func (l *logs) Export(releases []terra.Release, _artifacts artifacts.Manager, opts ...ExportOption) ([]artifacts.Location, error) {
 	options := ExportOptions{
 		ParallelWorkers: 10,
@@ -247,6 +176,77 @@ func (l *logs) Export(releases []terra.Release, _artifacts artifacts.Manager, op
 	}
 
 	return locations, nil
+}
+
+func tryToPickCorrectContainer(containers []container) (container, error) {
+	if len(containers) == 1 {
+		return containers[0], nil
+	}
+
+	deploymentsOnly := func(c container) bool {
+		return c.resourceKind == "deployment"
+	}
+
+	specificDeployment := func(c container) bool {
+		if strings.Contains(c.resourceName, "backend") {
+			return true
+		}
+		if strings.Contains(c.resourceName, "runner") {
+			return true
+		}
+		return false
+	}
+
+	namedoesNotIncludeProxy := func(c container) bool {
+		return !strings.Contains(c.containerName, "proxy")
+	}
+
+	nameIncludesAppOrAPI := func(c container) bool {
+		if strings.Contains(c.containerName, "app") {
+			return true
+		}
+		if strings.Contains(c.containerName, "api") {
+			return true
+		}
+		return c.containerName == "app"
+	}
+
+	filtersToTry := []func(container) bool{
+		deploymentsOnly,
+		specificDeployment,
+		namedoesNotIncludeProxy,
+		nameIncludesAppOrAPI,
+	}
+
+	winnowed := make([]container, len(containers))
+	copy(winnowed, containers)
+
+	for _, filter := range filtersToTry {
+		filtered := filterContainers(winnowed, filter)
+		if len(filtered) == 0 {
+			// skip this filter, it removed all possible matches
+			continue
+		}
+		if len(filtered) == 1 {
+			return filtered[0], nil
+		}
+		winnowed = filtered
+	}
+
+	var list []string
+	for _, _container := range containers {
+		list = append(list, fmt.Sprintf("%s in %s", _container.containerName, _container.resourceName))
+	}
+	return container{}, fmt.Errorf("found multiple matching containers, please use flags to specify:\n%s", strings.Join(list, "\n"))
+}
+
+func defaultLogsOptions() LogsOptions {
+	return LogsOptions{
+		ContainerFilter: func(container container) bool {
+			return true
+		},
+		MaxLines: -1, // -1 means no default line limit, i.e. try to export everything
+	}
 }
 
 func filterContainers(toFilter []container, filterFn func(container container) bool) []container {

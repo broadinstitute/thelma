@@ -8,7 +8,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	naming "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
@@ -122,14 +121,12 @@ type ArgoCD interface {
 	SyncApp(appName string, options ...SyncOption) (SyncResult, error)
 	// HardRefresh will hard refresh an ArgoCD app (force a manifest re-render without a corresponding git change)
 	HardRefresh(appName string) error
-	// WaitHealthy will wait for an ArgoCD app to become healthy (but not necessarily synced)
-	WaitHealthy(appName string) error
+	// WaitHealthy will wait for a release's primary ArgoCD app to become healthy (but not necessarily synced)
+	WaitHealthy(release terra.Release) error
 	// WaitExist will wait for an ArgoCD app to exist
 	WaitExist(appName string, options ...WaitExistOption) error
 	// SyncRelease will sync a Terra release's ArgoCD app(s), including the legacy configs app if there is one
 	SyncRelease(release terra.Release, options ...SyncOption) error
-	// SyncReleases will sync the ArgoCD apps for multiple Terra releases in parallel
-	SyncReleases(releases []terra.Release, maxParallel int, options ...SyncOption) error
 	// AppStatus returns a summary of an application's health status
 	AppStatus(appName string) (ApplicationStatus, error)
 }
@@ -235,7 +232,7 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, err
 	}
 
 	if opts.WaitHealthy {
-		if err := a.WaitHealthy(appName); err != nil {
+		if err := a.waitHealthy(appName); err != nil {
 			return result, err
 		}
 	}
@@ -279,7 +276,7 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 		} else {
 			if legacyConfigsWereSynced {
 				log.Info().Msgf("Waiting for %s to become healthy before restarting deployments", primaryApp)
-				if err := a.WaitHealthy(primaryApp); err != nil {
+				if err := a.waitHealthy(primaryApp); err != nil {
 					return err
 				}
 				log.Info().Msgf("Restarting deployments in %s to pick up potential firecloud-develop config changes", primaryApp)
@@ -294,29 +291,9 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 
 	// Now wait for the primary app to become healthy
 	if syncOpts.WaitHealthy {
-		return a.WaitHealthy(primaryApp)
+		return a.waitHealthy(primaryApp)
 	}
 	return nil
-}
-
-func (a *argocd) SyncReleases(releases []terra.Release, maxParallel int, options ...SyncOption) error {
-	var jobs []pool.Job
-	for _, release := range releases {
-		r := release
-		jobs = append(jobs, pool.Job{
-			Name: naming.ApplicationName(r),
-			Run: func(_ pool.StatusReporter) error {
-				log.Info().Msgf("Syncing ArgoCD application(s) for %s in %s", r.Name(), r.Destination().Name())
-				return a.SyncRelease(r, options...)
-			},
-		})
-	}
-
-	_pool := pool.New(jobs, func(options *pool.Options) {
-		options.NumWorkers = maxParallel
-		options.StopProcessingOnError = false
-	})
-	return _pool.Execute()
 }
 
 func (a *argocd) HardRefresh(appName string) error {
@@ -324,7 +301,11 @@ func (a *argocd) HardRefresh(appName string) error {
 	return err
 }
 
-func (a *argocd) WaitHealthy(appName string) error {
+func (a *argocd) WaitHealthy(release terra.Release) error {
+	return a.waitHealthy(naming.ApplicationName(release))
+}
+
+func (a *argocd) waitHealthy(appName string) error {
 	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", a.cfg.WaitHealthyTimeoutSeconds, appName)
 
 	return a.runCommand([]string{

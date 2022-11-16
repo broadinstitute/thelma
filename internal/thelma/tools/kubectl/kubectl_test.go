@@ -115,6 +115,10 @@ func Test_DeletePVCs(t *testing.T) {
 	require.NoError(t, _kubectl.DeletePVCs(env))
 }
 
+func Test_Logs(t *testing.T) {
+	t.Fatal("TODO")
+}
+
 func Test_parsePortFromPortForwardOutput(t *testing.T) {
 	tests := []struct {
 		name string
