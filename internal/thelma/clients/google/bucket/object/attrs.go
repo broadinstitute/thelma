@@ -8,7 +8,7 @@ import (
 // Attrs reads the attributes of an object in a GCS bucket
 type Attrs interface {
 	Attrs() *storage.ObjectAttrs
-	Operation
+	SyncOperation
 }
 
 func NewAttrs() Attrs {

@@ -7,12 +7,14 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
+	"sync"
 )
 
 // Clients convenience builders for client objects used in Thelma commands
@@ -31,6 +33,8 @@ type Clients interface {
 	// GoogleUsingADC is like Google but forces usage of the environment's Application Default Credentials,
 	// optionally allowing non-Broad email addresses
 	GoogleUsingADC(bool) google.Clients
+	// Kubernetes returns a factory for Kubernetes clients
+	Kubernetes() kubernetes.Clients
 	// Sherlock returns a swagger API client for a sherlock server instance
 	Sherlock() (*sherlock.Client, error)
 	// Slack returns a wrapper around the official API client
@@ -51,6 +55,8 @@ type clients struct {
 	thelmaRoot   root.Root
 	creds        credentials.Credentials
 	runner       shell.Runner
+	mutex        sync.Mutex
+	kubernetes   kubernetes.Clients
 }
 
 func (c *clients) Google() google.Clients {
@@ -112,6 +118,20 @@ func (c *clients) Sherlock() (*sherlock.Client, error) {
 		return nil, err
 	}
 	return sherlock.New(c.thelmaConfig, iapToken)
+}
+
+func (c *clients) Kubernetes() kubernetes.Clients {
+	// the Kubernetes client factory does some caching, so we
+	// lazy-initialize and cache a single instance
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.kubernetes != nil {
+		return c.kubernetes
+	}
+	_kubernetes := kubernetes.New(c.thelmaRoot, c.runner, c.Google())
+	c.kubernetes = _kubernetes
+	return c.kubernetes
 }
 
 func (c *clients) Slack() (*slack.Slack, error) {

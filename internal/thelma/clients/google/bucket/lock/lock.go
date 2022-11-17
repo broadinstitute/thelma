@@ -26,7 +26,7 @@ type Options struct {
 
 type Lock interface {
 	Generation() int64
-	object.Operation
+	object.SyncOperation
 }
 
 func NewLock(options Options) Lock {

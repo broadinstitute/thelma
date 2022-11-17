@@ -6,7 +6,7 @@ import (
 
 // Update updates attributes of an object in a GCS bucket
 type Update interface {
-	Operation
+	SyncOperation
 }
 
 func NewUpdate(attrs AttrSet) Update {

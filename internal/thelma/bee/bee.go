@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
+	"github.com/broadinstitute/thelma/internal/thelma/ops"
+	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
+	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
+	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"strings"
 
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	argocd_names "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
@@ -18,9 +23,9 @@ import (
 const generatorArgoApp = "terra-bee-generator"
 
 type Bees interface {
-	DeleteWith(name string, options DeleteOptions) (terra.Environment, error)
-	CreateWith(options CreateOptions) (terra.Environment, error)
-	ProvisionWith(name string, options ProvisionOptions) (terra.Environment, error)
+	DeleteWith(name string, options DeleteOptions) (*Bee, error)
+	CreateWith(options CreateOptions) (*Bee, error)
+	ProvisionWith(name string, options ProvisionOptions) (*Bee, error)
 	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
 	Seeder() seed.Seeder
@@ -28,13 +33,14 @@ type Bees interface {
 	PinVersions(bee terra.Environment, overrides PinOptions) error
 	UnpinVersions(bee terra.Environment) error
 	SyncEnvironmentGenerator(env terra.Environment) error
-	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error
-	ResetStatefulSets(env terra.Environment) error
+	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]status.Status, error)
+	ResetStatefulSets(env terra.Environment) (map[terra.Release]status.Status, error)
 	RefreshBeeGenerator() error
 }
 
 type DeleteOptions struct {
-	Unseed bool
+	Unseed     bool
+	ExportLogs bool
 }
 
 type CreateOptions struct {
@@ -48,13 +54,15 @@ type CreateOptions struct {
 type ProvisionOptions struct {
 	// Name within the context of ProvisionOptions is just the name of the environment.
 	// In the context of CreateOptions, it means the name of the environment *to create*.
-	Name              string
-	SyncGeneratorOnly bool
-	WaitHealthy       bool
-	PinOptions        PinOptions
-	Notify            bool
-	Seed              bool
-	SeedOptions       seed.SeedOptions
+	Name                     string
+	SyncGeneratorOnly        bool
+	WaitHealthy              bool
+	WaitHealthTimeoutSeconds int
+	PinOptions               PinOptions
+	Notify                   bool
+	Seed                     bool
+	SeedOptions              seed.SeedOptions
+	ExportLogsOnFailure      bool
 }
 
 type PinOptions struct {
@@ -69,7 +77,14 @@ type PinOptions struct {
 	FileOverrides map[string]terra.VersionOverride
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl, slack *slack.Slack) (Bees, error) {
+// Bee encapsulates operational information about a BEE
+type Bee struct {
+	Environment      terra.Environment
+	Status           map[terra.Release]status.Status
+	ContainerLogsURL string
+}
+
+func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl, ops ops.Ops, slack *slack.Slack) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -82,6 +97,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Se
 		seeder:      seeder,
 		cleanup:     cleanup,
 		kubectl:     kubectl,
+		ops:         ops,
 		slack:       slack,
 	}, nil
 }
@@ -94,10 +110,11 @@ type bees struct {
 	seeder      seed.Seeder
 	kubectl     kubectl.Kubectl
 	cleanup     cleanup.Cleanup
+	ops         ops.Ops
 	slack       *slack.Slack
 }
 
-func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
+func (b *bees) CreateWith(options CreateOptions) (*Bee, error) {
 	template, err := b.GetTemplate(options.Template)
 
 	if err != nil {
@@ -123,7 +140,7 @@ func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {
 	return b.ProvisionWith(envName, options.ProvisionOptions)
 }
 
-func (b *bees) ProvisionWith(name string, options ProvisionOptions) (terra.Environment, error) {
+func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error) {
 	env, err := b.state.Environments().Get(name)
 	if err != nil {
 		return nil, err
@@ -133,47 +150,57 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (terra.Envir
 		return nil, fmt.Errorf("error provisioning environment %q: missing from state", env.Name())
 	}
 
+	bee := &Bee{
+		Environment: env,
+	}
+
 	err = b.kubectl.CreateNamespace(env)
 	if err != nil {
-		return nil, err
+		return bee, err
 	}
 
 	if err = b.PinVersions(env, options.PinOptions); err != nil {
-		return nil, err
+		return bee, err
 	}
 
 	if err = b.RefreshBeeGenerator(); err != nil {
-		return env, err
+		return bee, err
 	}
 
-	if err = b.argocd.WaitExist(argocd.GeneratorName(env)); err != nil {
-		return nil, err
+	if err = b.argocd.WaitExist(argocd_names.GeneratorName(env)); err != nil {
+		return bee, err
 	}
 	if err = b.SyncEnvironmentGenerator(env); err != nil {
-		return env, err
+		return bee, err
 	}
 	if options.SyncGeneratorOnly {
 		log.Warn().Msgf("Won't sync Argo apps for %s", env.Name())
-		return env, nil
+		return bee, nil
 	}
 
 	log.Info().Msgf("Syncing all Argo apps in environment %s", env.Name())
-	err = b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
+	statuses, err := b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
 		// No need to do a legacy configs restart the first time we create a BEE
 		// (the deployments are being created for the first time)
 		_options.SyncIfNoDiff = true
 		_options.SkipLegacyConfigsRestart = true
 		_options.WaitHealthy = options.WaitHealthy
+		_options.WaitHealthyTimeoutSeconds = options.WaitHealthTimeoutSeconds
 	})
-	if err != nil {
-		return env, err
+
+	bee.Status = statuses
+
+	if err == nil && options.Seed {
+		log.Info().Msgf("Seeding BEE with test data")
+		err = b.seeder.Seed(env, options.SeedOptions)
 	}
 
-	if options.Seed {
-		log.Info().Msgf("Seeding BEE with test data")
-		if err = b.seeder.Seed(env, options.SeedOptions); err != nil {
-			return env, err
+	if err != nil && options.ExportLogsOnFailure {
+		_, logErr := b.exportLogs(env)
+		if err != nil {
+			log.Error().Err(logErr).Msgf("error exporting logs from %s: %v", env.Name(), logErr)
 		}
+		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
 	}
 
 	if options.Notify {
@@ -199,13 +226,31 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (terra.Envir
 		}
 	}
 
-	return env, err
+	return bee, err
 }
 
-func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment, error) {
+func (b *bees) exportLogs(bee terra.Environment) (map[terra.Release]artifacts.Location, error) {
+	return b.ops.Logs().Export(bee.Releases(), func(opts *logs.ExportOptions) {
+		opts.Artifacts.Upload = true
+	})
+}
+
+func (b *bees) DeleteWith(name string, options DeleteOptions) (*Bee, error) {
 	env, err := b.GetBee(name)
 	if err != nil {
 		return nil, err
+	}
+
+	bee := &Bee{
+		Environment: env,
+	}
+
+	if options.ExportLogs {
+		_, err := b.exportLogs(env)
+		if err != nil {
+			log.Warn().Msgf("Container log export failed")
+		}
+		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
 	}
 
 	if options.Unseed {
@@ -218,40 +263,45 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (terra.Environment
 	}
 
 	if err = b.kubectl.DeleteNamespace(env); err != nil {
-		return nil, err
+		return bee, err
 	}
 
 	if err = b.cleanup.Cleanup(env); err != nil {
-		return nil, err
+		return bee, err
 	}
 
 	if err = b.state.Environments().Delete(env.Name()); err != nil {
-		return nil, err
+		return bee, err
 	}
 
 	log.Info().Msgf("Deleted environment %s from state", name)
 
 	log.Info().Msgf("Deleting Argo apps for %s", name)
 	if err = b.RefreshBeeGenerator(); err != nil {
-		return env, err
+		return bee, err
 	}
 
-	return env, nil
+	return bee, nil
 }
 
 func (b *bees) SyncEnvironmentGenerator(env terra.Environment) error {
-	appName := argocd.GeneratorName(env)
+	appName := argocd_names.GeneratorName(env)
 	log.Info().Msgf("Syncing generator %s for %s", appName, env.Name())
 	_, err := b.argocd.SyncApp(appName)
 	return err
 }
 
-func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) error {
+func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]status.Status, error) {
 	releases, err := b.state.Releases().Filter(filter.Releases().BelongsToEnvironment(env))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return b.argocd.SyncReleases(releases, len(releases), options...)
+
+	_sync, err := b.ops.Sync()
+	if err != nil {
+		return nil, err
+	}
+	return _sync.Sync(releases, len(releases), options...)
 }
 
 func (b *bees) RefreshBeeGenerator() error {
@@ -357,24 +407,20 @@ func (b *bees) GetTemplate(name string) (terra.Environment, error) {
 	return nil, fmt.Errorf("no template by the name %q exists, valid templates are: %s", name, strings.Join(names, ", "))
 }
 
-func (b *bees) ResetStatefulSets(env terra.Environment) error {
+func (b *bees) ResetStatefulSets(env terra.Environment) (map[terra.Release]status.Status, error) {
 	var err error
 
 	if err = b.kubectl.ShutDown(env); err != nil {
-		return err
+		return nil, err
 	}
 	if err = b.kubectl.DeletePVCs(env); err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Info().Msgf("Syncing ArgoCD to provision new disks and bring services back up")
-	if err = b.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
+	return b.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
 		options.SyncIfNoDiff = true
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func (b *bees) Seeder() seed.Seeder {

@@ -8,6 +8,7 @@ import (
 
 const delimiter = "-"
 const configsName = "configs"
+const argocdAppInstanceLabel = "argocd.argoproj.io/instance"
 
 // LegacyConfigsApplicationName name of the firecloud-develop application for a release, eg. cromwell-configs-dev
 func LegacyConfigsApplicationName(release terra.Release) string {
@@ -46,35 +47,10 @@ func GeneratorName(destination terra.Destination) string {
 	return fmt.Sprintf("%s-generator", projectName)
 }
 
-// releaseSelector returns set of selectors for all argo apps associated with a release
-// (often just the primary application, but can include the legacy configs application as well)
-func releaseSelector(release terra.Release) map[string]string {
-	if release.IsAppRelease() {
-		return map[string]string{
-			"app": release.Name(),
-			"env": release.Destination().Name(),
-		}
-	} else {
-		return map[string]string{
-			"release": release.Name(),
-			"cluster": release.Destination().Name(),
-			"type":    "cluster",
-		}
-	}
-}
-
-// EnvironmentSelector returns set of selectors for all argo apps associated with an environment
-func EnvironmentSelector(env terra.Environment) map[string]string {
+// ApplicationSelector returns a set of Kubernetes labels that selects for resources managed by the given Argo app,
+// suitable for use with `kubectl get -l`
+func ApplicationSelector(applicationName string) map[string]string {
 	return map[string]string{
-		"env": env.Name(),
+		argocdAppInstanceLabel: applicationName,
 	}
-}
-
-// joinSelector join map of label key-value pairs {"a":"b", "c":"d"} into selector string "a=b,c=d"
-func joinSelector(labels map[string]string) string {
-	var list []string
-	for name, value := range labels {
-		list = append(list, fmt.Sprintf("%s=%s", name, value))
-	}
-	return strings.Join(list, ",")
 }

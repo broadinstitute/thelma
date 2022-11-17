@@ -9,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/clients"
+	"github.com/broadinstitute/thelma/internal/thelma/ops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
@@ -33,6 +34,8 @@ type ThelmaApp interface {
 	Credentials() credentials.Credentials
 	// ShellRunner returns ShellRunner for this ThelmaApp
 	ShellRunner() shell.Runner
+	// Ops returns the Ops interface for this ThelmaApp
+	Ops() ops.Ops
 	// Paths returns Paths for this ThelmaApp
 	Paths() paths.Paths
 	// Scratch returns the Scratch instance for this ThelmaApp
@@ -97,6 +100,10 @@ func (t *thelmaApp) Credentials() credentials.Credentials {
 
 func (t *thelmaApp) ShellRunner() shell.Runner {
 	return t.shellRunner
+}
+
+func (t *thelmaApp) Ops() ops.Ops {
+	return ops.NewOps(t.clients)
 }
 
 func (t *thelmaApp) Paths() paths.Paths {

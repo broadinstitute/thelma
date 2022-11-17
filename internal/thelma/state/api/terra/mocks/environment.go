@@ -12,6 +12,14 @@ type Environment struct {
 	mock.Mock
 }
 
+type Environment_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *Environment) EXPECT() *Environment_Expecter {
+	return &Environment_Expecter{mock: &_m.Mock}
+}
+
 // Base provides a mock function with given fields:
 func (_m *Environment) Base() string {
 	ret := _m.Called()
@@ -26,6 +34,28 @@ func (_m *Environment) Base() string {
 	return r0
 }
 
+// Environment_Base_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Base'
+type Environment_Base_Call struct {
+	*mock.Call
+}
+
+// Base is a helper method to define mock.On call
+func (_e *Environment_Expecter) Base() *Environment_Base_Call {
+	return &Environment_Base_Call{Call: _e.mock.On("Base")}
+}
+
+func (_c *Environment_Base_Call) Run(run func()) *Environment_Base_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Base_Call) Return(_a0 string) *Environment_Base_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // BaseDomain provides a mock function with given fields:
 func (_m *Environment) BaseDomain() string {
 	ret := _m.Called()
@@ -38,6 +68,28 @@ func (_m *Environment) BaseDomain() string {
 	}
 
 	return r0
+}
+
+// Environment_BaseDomain_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BaseDomain'
+type Environment_BaseDomain_Call struct {
+	*mock.Call
+}
+
+// BaseDomain is a helper method to define mock.On call
+func (_e *Environment_Expecter) BaseDomain() *Environment_BaseDomain_Call {
+	return &Environment_BaseDomain_Call{Call: _e.mock.On("BaseDomain")}
+}
+
+func (_c *Environment_BaseDomain_Call) Run(run func()) *Environment_BaseDomain_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_BaseDomain_Call) Return(_a0 string) *Environment_BaseDomain_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // DefaultCluster provides a mock function with given fields:
@@ -56,6 +108,28 @@ func (_m *Environment) DefaultCluster() terra.Cluster {
 	return r0
 }
 
+// Environment_DefaultCluster_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DefaultCluster'
+type Environment_DefaultCluster_Call struct {
+	*mock.Call
+}
+
+// DefaultCluster is a helper method to define mock.On call
+func (_e *Environment_Expecter) DefaultCluster() *Environment_DefaultCluster_Call {
+	return &Environment_DefaultCluster_Call{Call: _e.mock.On("DefaultCluster")}
+}
+
+func (_c *Environment_DefaultCluster_Call) Run(run func()) *Environment_DefaultCluster_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_DefaultCluster_Call) Return(_a0 terra.Cluster) *Environment_DefaultCluster_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // IsCluster provides a mock function with given fields:
 func (_m *Environment) IsCluster() bool {
 	ret := _m.Called()
@@ -68,6 +142,28 @@ func (_m *Environment) IsCluster() bool {
 	}
 
 	return r0
+}
+
+// Environment_IsCluster_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsCluster'
+type Environment_IsCluster_Call struct {
+	*mock.Call
+}
+
+// IsCluster is a helper method to define mock.On call
+func (_e *Environment_Expecter) IsCluster() *Environment_IsCluster_Call {
+	return &Environment_IsCluster_Call{Call: _e.mock.On("IsCluster")}
+}
+
+func (_c *Environment_IsCluster_Call) Run(run func()) *Environment_IsCluster_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_IsCluster_Call) Return(_a0 bool) *Environment_IsCluster_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // IsEnvironment provides a mock function with given fields:
@@ -84,6 +180,28 @@ func (_m *Environment) IsEnvironment() bool {
 	return r0
 }
 
+// Environment_IsEnvironment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsEnvironment'
+type Environment_IsEnvironment_Call struct {
+	*mock.Call
+}
+
+// IsEnvironment is a helper method to define mock.On call
+func (_e *Environment_Expecter) IsEnvironment() *Environment_IsEnvironment_Call {
+	return &Environment_IsEnvironment_Call{Call: _e.mock.On("IsEnvironment")}
+}
+
+func (_c *Environment_IsEnvironment_Call) Run(run func()) *Environment_IsEnvironment_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_IsEnvironment_Call) Return(_a0 bool) *Environment_IsEnvironment_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Lifecycle provides a mock function with given fields:
 func (_m *Environment) Lifecycle() terra.Lifecycle {
 	ret := _m.Called()
@@ -96,6 +214,28 @@ func (_m *Environment) Lifecycle() terra.Lifecycle {
 	}
 
 	return r0
+}
+
+// Environment_Lifecycle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Lifecycle'
+type Environment_Lifecycle_Call struct {
+	*mock.Call
+}
+
+// Lifecycle is a helper method to define mock.On call
+func (_e *Environment_Expecter) Lifecycle() *Environment_Lifecycle_Call {
+	return &Environment_Lifecycle_Call{Call: _e.mock.On("Lifecycle")}
+}
+
+func (_c *Environment_Lifecycle_Call) Run(run func()) *Environment_Lifecycle_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Lifecycle_Call) Return(_a0 terra.Lifecycle) *Environment_Lifecycle_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Name provides a mock function with given fields:
@@ -112,6 +252,28 @@ func (_m *Environment) Name() string {
 	return r0
 }
 
+// Environment_Name_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Name'
+type Environment_Name_Call struct {
+	*mock.Call
+}
+
+// Name is a helper method to define mock.On call
+func (_e *Environment_Expecter) Name() *Environment_Name_Call {
+	return &Environment_Name_Call{Call: _e.mock.On("Name")}
+}
+
+func (_c *Environment_Name_Call) Run(run func()) *Environment_Name_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Name_Call) Return(_a0 string) *Environment_Name_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // NamePrefixesDomain provides a mock function with given fields:
 func (_m *Environment) NamePrefixesDomain() bool {
 	ret := _m.Called()
@@ -124,6 +286,28 @@ func (_m *Environment) NamePrefixesDomain() bool {
 	}
 
 	return r0
+}
+
+// Environment_NamePrefixesDomain_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NamePrefixesDomain'
+type Environment_NamePrefixesDomain_Call struct {
+	*mock.Call
+}
+
+// NamePrefixesDomain is a helper method to define mock.On call
+func (_e *Environment_Expecter) NamePrefixesDomain() *Environment_NamePrefixesDomain_Call {
+	return &Environment_NamePrefixesDomain_Call{Call: _e.mock.On("NamePrefixesDomain")}
+}
+
+func (_c *Environment_NamePrefixesDomain_Call) Run(run func()) *Environment_NamePrefixesDomain_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_NamePrefixesDomain_Call) Return(_a0 bool) *Environment_NamePrefixesDomain_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Namespace provides a mock function with given fields:
@@ -154,6 +338,28 @@ func (_m *Environment) Owner() string {
 	return r0
 }
 
+// Environment_Namespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Namespace'
+type Environment_Namespace_Call struct {
+	*mock.Call
+}
+
+// Namespace is a helper method to define mock.On call
+func (_e *Environment_Expecter) Namespace() *Environment_Namespace_Call {
+	return &Environment_Namespace_Call{Call: _e.mock.On("Namespace")}
+}
+
+func (_c *Environment_Namespace_Call) Run(run func()) *Environment_Namespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Namespace_Call) Return(_a0 string) *Environment_Namespace_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // ReleaseType provides a mock function with given fields:
 func (_m *Environment) ReleaseType() terra.ReleaseType {
 	ret := _m.Called()
@@ -166,6 +372,28 @@ func (_m *Environment) ReleaseType() terra.ReleaseType {
 	}
 
 	return r0
+}
+
+// Environment_ReleaseType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReleaseType'
+type Environment_ReleaseType_Call struct {
+	*mock.Call
+}
+
+// ReleaseType is a helper method to define mock.On call
+func (_e *Environment_Expecter) ReleaseType() *Environment_ReleaseType_Call {
+	return &Environment_ReleaseType_Call{Call: _e.mock.On("ReleaseType")}
+}
+
+func (_c *Environment_ReleaseType_Call) Run(run func()) *Environment_ReleaseType_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_ReleaseType_Call) Return(_a0 terra.ReleaseType) *Environment_ReleaseType_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Releases provides a mock function with given fields:
@@ -184,6 +412,28 @@ func (_m *Environment) Releases() []terra.Release {
 	return r0
 }
 
+// Environment_Releases_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Releases'
+type Environment_Releases_Call struct {
+	*mock.Call
+}
+
+// Releases is a helper method to define mock.On call
+func (_e *Environment_Expecter) Releases() *Environment_Releases_Call {
+	return &Environment_Releases_Call{Call: _e.mock.On("Releases")}
+}
+
+func (_c *Environment_Releases_Call) Run(run func()) *Environment_Releases_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Releases_Call) Return(_a0 []terra.Release) *Environment_Releases_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // RequireSuitable provides a mock function with given fields:
 func (_m *Environment) RequireSuitable() bool {
 	ret := _m.Called()
@@ -196,6 +446,28 @@ func (_m *Environment) RequireSuitable() bool {
 	}
 
 	return r0
+}
+
+// Environment_RequireSuitable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequireSuitable'
+type Environment_RequireSuitable_Call struct {
+	*mock.Call
+}
+
+// RequireSuitable is a helper method to define mock.On call
+func (_e *Environment_Expecter) RequireSuitable() *Environment_RequireSuitable_Call {
+	return &Environment_RequireSuitable_Call{Call: _e.mock.On("RequireSuitable")}
+}
+
+func (_c *Environment_RequireSuitable_Call) Run(run func()) *Environment_RequireSuitable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_RequireSuitable_Call) Return(_a0 bool) *Environment_RequireSuitable_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Template provides a mock function with given fields:
@@ -212,6 +484,28 @@ func (_m *Environment) Template() string {
 	return r0
 }
 
+// Environment_Template_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Template'
+type Environment_Template_Call struct {
+	*mock.Call
+}
+
+// Template is a helper method to define mock.On call
+func (_e *Environment_Expecter) Template() *Environment_Template_Call {
+	return &Environment_Template_Call{Call: _e.mock.On("Template")}
+}
+
+func (_c *Environment_Template_Call) Run(run func()) *Environment_Template_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Template_Call) Return(_a0 string) *Environment_Template_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // TerraHelmfileRef provides a mock function with given fields:
 func (_m *Environment) TerraHelmfileRef() string {
 	ret := _m.Called()
@@ -224,6 +518,28 @@ func (_m *Environment) TerraHelmfileRef() string {
 	}
 
 	return r0
+}
+
+// Environment_TerraHelmfileRef_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TerraHelmfileRef'
+type Environment_TerraHelmfileRef_Call struct {
+	*mock.Call
+}
+
+// TerraHelmfileRef is a helper method to define mock.On call
+func (_e *Environment_Expecter) TerraHelmfileRef() *Environment_TerraHelmfileRef_Call {
+	return &Environment_TerraHelmfileRef_Call{Call: _e.mock.On("TerraHelmfileRef")}
+}
+
+func (_c *Environment_TerraHelmfileRef_Call) Run(run func()) *Environment_TerraHelmfileRef_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_TerraHelmfileRef_Call) Return(_a0 string) *Environment_TerraHelmfileRef_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Type provides a mock function with given fields:
@@ -240,6 +556,28 @@ func (_m *Environment) Type() terra.DestinationType {
 	return r0
 }
 
+// Environment_Type_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Type'
+type Environment_Type_Call struct {
+	*mock.Call
+}
+
+// Type is a helper method to define mock.On call
+func (_e *Environment_Expecter) Type() *Environment_Type_Call {
+	return &Environment_Type_Call{Call: _e.mock.On("Type")}
+}
+
+func (_c *Environment_Type_Call) Run(run func()) *Environment_Type_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Type_Call) Return(_a0 terra.DestinationType) *Environment_Type_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // UniqueResourcePrefix provides a mock function with given fields:
 func (_m *Environment) UniqueResourcePrefix() string {
 	ret := _m.Called()
@@ -252,6 +590,28 @@ func (_m *Environment) UniqueResourcePrefix() string {
 	}
 
 	return r0
+}
+
+// Environment_UniqueResourcePrefix_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UniqueResourcePrefix'
+type Environment_UniqueResourcePrefix_Call struct {
+	*mock.Call
+}
+
+// UniqueResourcePrefix is a helper method to define mock.On call
+func (_e *Environment_Expecter) UniqueResourcePrefix() *Environment_UniqueResourcePrefix_Call {
+	return &Environment_UniqueResourcePrefix_Call{Call: _e.mock.On("UniqueResourcePrefix")}
+}
+
+func (_c *Environment_UniqueResourcePrefix_Call) Run(run func()) *Environment_UniqueResourcePrefix_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_UniqueResourcePrefix_Call) Return(_a0 string) *Environment_UniqueResourcePrefix_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 type mockConstructorTestingTNewEnvironment interface {

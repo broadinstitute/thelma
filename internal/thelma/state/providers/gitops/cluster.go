@@ -1,6 +1,7 @@
 package gitops
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"strings"
 )
@@ -59,6 +60,10 @@ func (c *cluster) Location() string {
 
 func (c *cluster) ReleaseType() terra.ReleaseType {
 	return terra.ClusterReleaseType
+}
+
+func (c *cluster) ArtifactBucket() string {
+	return fmt.Sprintf("thelma-artifacts-%s", c.name)
 }
 
 // Name cluster name, eg. "terra-alpha"

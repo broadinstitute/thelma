@@ -9,6 +9,14 @@ type Locker struct {
 	mock.Mock
 }
 
+type Locker_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *Locker) EXPECT() *Locker_Expecter {
+	return &Locker_Expecter{mock: &_m.Mock}
+}
+
 // Lock provides a mock function with given fields:
 func (_m *Locker) Lock() (int64, error) {
 	ret := _m.Called()
@@ -30,6 +38,28 @@ func (_m *Locker) Lock() (int64, error) {
 	return r0, r1
 }
 
+// Locker_Lock_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Lock'
+type Locker_Lock_Call struct {
+	*mock.Call
+}
+
+// Lock is a helper method to define mock.On call
+func (_e *Locker_Expecter) Lock() *Locker_Lock_Call {
+	return &Locker_Lock_Call{Call: _e.mock.On("Lock")}
+}
+
+func (_c *Locker_Lock_Call) Run(run func()) *Locker_Lock_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Locker_Lock_Call) Return(_a0 int64, _a1 error) *Locker_Lock_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // ObjectName provides a mock function with given fields:
 func (_m *Locker) ObjectName() string {
 	ret := _m.Called()
@@ -44,6 +74,28 @@ func (_m *Locker) ObjectName() string {
 	return r0
 }
 
+// Locker_ObjectName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ObjectName'
+type Locker_ObjectName_Call struct {
+	*mock.Call
+}
+
+// ObjectName is a helper method to define mock.On call
+func (_e *Locker_Expecter) ObjectName() *Locker_ObjectName_Call {
+	return &Locker_ObjectName_Call{Call: _e.mock.On("ObjectName")}
+}
+
+func (_c *Locker_ObjectName_Call) Run(run func()) *Locker_ObjectName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Locker_ObjectName_Call) Return(_a0 string) *Locker_ObjectName_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Unlock provides a mock function with given fields: lockId
 func (_m *Locker) Unlock(lockId int64) error {
 	ret := _m.Called(lockId)
@@ -56,6 +108,29 @@ func (_m *Locker) Unlock(lockId int64) error {
 	}
 
 	return r0
+}
+
+// Locker_Unlock_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Unlock'
+type Locker_Unlock_Call struct {
+	*mock.Call
+}
+
+// Unlock is a helper method to define mock.On call
+//  - lockId int64
+func (_e *Locker_Expecter) Unlock(lockId interface{}) *Locker_Unlock_Call {
+	return &Locker_Unlock_Call{Call: _e.mock.On("Unlock", lockId)}
+}
+
+func (_c *Locker_Unlock_Call) Run(run func(lockId int64)) *Locker_Unlock_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int64))
+	})
+	return _c
+}
+
+func (_c *Locker_Unlock_Call) Return(_a0 error) *Locker_Unlock_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 type mockConstructorTestingTNewLocker interface {

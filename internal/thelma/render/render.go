@@ -113,6 +113,7 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 	}
 
 	_pool := pool.New(jobs, func(options *pool.Options) {
+		options.Summarizer.Enabled = false
 		if r.options.ParallelWorkers >= 1 {
 			options.NumWorkers = r.options.ParallelWorkers
 		}
@@ -130,8 +131,8 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 		for _, release := range r.options.Releases {
 			_r := release
 			jobs = append(jobs, pool.Job{
-				Description: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
-				Run: func() error {
+				Name: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
+				Run: func(_ pool.StatusReporter) error {
 					return r.configRepo.RenderForRelease(_r, helmfileArgs)
 				},
 			})
@@ -153,8 +154,8 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 		for _, _destination := range destinations {
 			d := _destination
 			jobs = append(jobs, pool.Job{
-				Description: fmt.Sprintf("global resources for %s %s", d.Type(), d.Name()),
-				Run: func() error {
+				Name: fmt.Sprintf("global resources for %s %s", d.Type(), d.Name()),
+				Run: func(_ pool.StatusReporter) error {
 					return r.configRepo.RenderForDestination(d, helmfileArgs)
 				},
 			})

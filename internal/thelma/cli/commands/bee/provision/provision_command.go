@@ -22,17 +22,21 @@ thelma bee provision --name=bee-swat-ecstatic-spider
 `
 
 var flagNames = struct {
-	name          string
-	generatorOnly string
-	waitHealthy   string
-	seed          string
-	notify        string
+	name                      string
+	generatorOnly             string
+	waitHealthy               string
+	waitHealthyTimeoutSeconds string
+	seed                      string
+	notify                    string
+	exportLogsOnFailure       string
 }{
-	name:          "name",
-	generatorOnly: "generator-only",
-	waitHealthy:   "wait-healthy",
-	seed:          "seed",
-	notify:        "notify",
+	name:                      "name",
+	generatorOnly:             "generator-only",
+	waitHealthy:               "wait-healthy",
+	waitHealthyTimeoutSeconds: "wait-healthy-timeout-seconds",
+	seed:                      "seed",
+	notify:                    "notify",
+	exportLogsOnFailure:       "export-logs-on-failure",
 }
 
 type provisionCommand struct {
@@ -60,7 +64,9 @@ func (cmd *provisionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVarP(&cmd.options.Name, flagNames.name, "n", "NAME", "Name of the newly-created BEE to provision")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
+	cobraCommand.Flags().IntVar(&cmd.options.WaitHealthTimeoutSeconds, flagNames.waitHealthyTimeoutSeconds, 1200, "How long to wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
+	cobraCommand.Flags().BoolVar(&cmd.options.ExportLogsOnFailure, flagNames.exportLogsOnFailure, true, `Export container logs to GCS if BEE creation fails)`)
 	cobraCommand.Flags().BoolVar(&cmd.options.Notify, flagNames.notify, true, "Attempt to notify the owner via Slack upon success")
 
 	cmd.pinFlags.AddFlags(cobraCommand)
@@ -83,9 +89,9 @@ func (cmd *provisionCommand) Run(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 	if err != nil {
 		return err
 	}
-	env, err := bees.ProvisionWith(cmd.options.Name, cmd.options)
-	if env != nil {
-		ctx.SetOutput(views.DescribeBee(env))
+	_bee, err := bees.ProvisionWith(cmd.options.Name, cmd.options)
+	if _bee != nil {
+		ctx.SetOutput(views.DescribeBee(_bee))
 	}
 	return err
 }

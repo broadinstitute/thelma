@@ -1,26 +1,19 @@
 package kubectl
 
 import (
-	container "cloud.google.com/go/container/apiv1"
 	"context"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/oauth2"
-	"path"
+	"io"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
-
-// kubeConfigName name of the kube config file generated / updated by Thelma, stored in ~/.thelma/config/
-const kubeConfigName = "kubecfg"
-
-// defaultAuthInfo name of AuthInfo inside kube config to use for authentication to non-prod clusters
-const defaultAuthInfo = "default"
 
 // prog name of the kubectl binary we're executing
 const prog = `kubectl`
@@ -28,7 +21,17 @@ const prog = `kubectl`
 // kubeConfigEnvVar env var to use to pass kube config file path to `kubectl`
 const kubeConfigEnvVar = "KUBECONFIG"
 
-// https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuration
+type LogsOptions struct {
+	// Writer optional callback that should return a writer where a given container's logs should be streamed
+	// If nil, logs are streamed to stdout
+	Writer io.Writer
+	// ContainerName optional container name to specify with -c
+	ContainerName string
+	// MaxLines maximum number of log lines to retrieve
+	MaxLines int
+}
+
+type LogsOption func(options *LogsOptions)
 
 // Kubectl is a golang interface for executing `kubectl` commands
 type Kubectl interface {
@@ -40,27 +43,25 @@ type Kubectl interface {
 	DeleteNamespace(env terra.Environment) error
 	// CreateNamespace will create the environment's namespace
 	CreateNamespace(env terra.Environment) error
+	// Logs runs `kubectl logs` against the given Kubectx with given parameters
+	Logs(ktx kubecfg.Kubectx, podSelector map[string]string, option ...LogsOption) error
 	// PortForward runs `kubectl port-forward` and returns the forwarding local port, a callback to stop forwarding, and
 	// a possible error if the command failed.
 	// The targetResource should be of the form `[pods|deployment|replicaset|service]/<name>`, like `service/sam-postgres-service`.
 	PortForward(targetRelease terra.Release, targetResource string, targetPort int) (int, func() error, error)
 }
 
-func NewKubectl(shellRunner shell.Runner, thelmaRoot root.Root, tokenSource oauth2.TokenSource, gkeClient *container.ClusterManagerClient) (Kubectl, error) {
-	configFile := path.Join(thelmaRoot.ConfigDir(), kubeConfigName)
-
+func New(shellRunner shell.Runner, kubeconfig kubecfg.Kubeconfig) Kubectl {
 	return &kubectl{
-		configFile:  configFile,
 		shellRunner: shellRunner,
-		kubeconfig:  newKubeConfig(configFile, gkeClient, tokenSource),
-	}, nil
+		kubeconfig:  kubeconfig,
+	}
 }
 
 // implements the Kubectl interface
 type kubectl struct {
-	configFile  string
 	shellRunner shell.Runner
-	kubeconfig  *kubeconfig
+	kubeconfig  kubecfg.Kubeconfig
 }
 
 func (k *kubectl) ShutDown(env terra.Environment) error {
@@ -102,7 +103,7 @@ func (k *kubectl) DeleteNamespace(env terra.Environment) error {
 
 func (k *kubectl) PortForward(targetRelease terra.Release, targetResource string, targetPort int) (int, func() error, error) {
 	log.Debug().Msgf("Port-forwarding to %s on port %d (in %s cluster's %s namespace)", targetResource, targetPort, targetRelease.ClusterName(), targetRelease.Namespace())
-	kubectx, err := k.kubeconfig.addRelease(targetRelease)
+	kubectx, err := k.kubeconfig.ForRelease(targetRelease)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -146,6 +147,34 @@ func (k *kubectl) PortForward(targetRelease terra.Release, targetResource string
 	}
 }
 
+func (k *kubectl) Logs(ktx kubecfg.Kubectx, podSelector map[string]string, opts ...LogsOption) error {
+	options := LogsOptions{
+		Writer:        os.Stdout,
+		ContainerName: "",
+		MaxLines:      0,
+	}
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	args := []string{
+		"logs",
+		"--selector",
+		joinSelectorLabels(podSelector),
+	}
+	if options.ContainerName != "" {
+		args = append(args, "--container", options.ContainerName)
+	}
+	if options.MaxLines > 0 {
+		args = append(args, "--tail", fmt.Sprintf("%d", options.MaxLines))
+	}
+	return k.runForKubectx(ktx, args, func(runOpts *shell.RunOptions) {
+		runOpts.Stdout = options.Writer
+		// don't send container logs to thelma's logging system -- it's noisy AF and is a significant perf hit
+		runOpts.LogStdout = false
+	})
+}
+
 var portRegex = regexp.MustCompile(`\d+\.\d+\.\d+\.\d+:(\d+)`)
 
 func parsePortFromPortForwardOutput(output string) int {
@@ -162,13 +191,13 @@ func parsePortFromPortForwardOutput(output string) int {
 
 // runForEnv will run a kubectl command for all of an environment's contexts
 func (k *kubectl) runForEnv(env terra.Environment, args []string) error {
-	kubectxs, err := k.kubeconfig.addAllReleases(env)
+	kubectxs, err := k.kubeconfig.ForEnvironment(env)
 	if err != nil {
 		return err
 	}
 
 	for _, _kubectx := range kubectxs {
-		if err := k.shellRunner.Run(k.makeCmd(_kubectx, args)); err != nil {
+		if err := k.runForKubectx(_kubectx, args); err != nil {
 			return err
 		}
 	}
@@ -176,15 +205,29 @@ func (k *kubectl) runForEnv(env terra.Environment, args []string) error {
 	return nil
 }
 
-func (k *kubectl) makeCmd(_kubectx kubectx, args []string) shell.Command {
-	kargs := []string{"--context", _kubectx.contextName, "--namespace", _kubectx.namespace}
+func (k *kubectl) runForKubectx(kubectx kubecfg.Kubectx, args []string, opts ...shell.RunOption) error {
+	return k.shellRunner.Run(k.makeCmd(kubectx, args), opts...)
+}
+
+func (k *kubectl) makeCmd(kubectx kubecfg.Kubectx, args []string) shell.Command {
+	kargs := []string{"--context", kubectx.ContextName(), "--namespace", kubectx.Namespace()}
 	kargs = append(kargs, args...)
 
 	return shell.Command{
 		Prog: prog,
 		Args: kargs,
 		Env: []string{
-			fmt.Sprintf("%s=%s", kubeConfigEnvVar, k.configFile),
+			fmt.Sprintf("%s=%s", kubeConfigEnvVar, k.kubeconfig.ConfigFile()),
 		},
 	}
+}
+
+func joinSelectorLabels(labels map[string]string) string {
+	var pairs []string
+
+	for k, v := range labels {
+		pairs = append(pairs, k+"="+v)
+	}
+
+	return strings.Join(pairs, ",")
 }

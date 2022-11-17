@@ -1,5 +1,4 @@
 //go:build smoke
-// +build smoke
 
 package bucket
 
@@ -52,13 +51,13 @@ func (t *objectTracker) add(objectName string) {
 // test can be safely executed concurrently.
 //
 // Example:
-// func MyTest(t *testing.T) {
-//   b := NewTestBucket("my-integration-test")
 //
-//   // do things with the bucket, eg.
-//	 assert.NoError(t, b.Write("my-file", []byte("data")))
-// }
+//	func MyTest(t *testing.T) {
+//	  b := NewTestBucket("my-integration-test")
 //
+//	  // do things with the bucket, eg.
+//		 assert.NoError(t, b.Write("my-file", []byte("data")))
+//	}
 func NewTestBucket(t *testing.T) Bucket {
 	// generate prefix for this test bucket instance
 	prefix := testPrefix(t.Name())

@@ -21,11 +21,13 @@ thelma bee delete --name=swat-grungy-puma
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name   string
-	unseed string
+	name       string
+	unseed     string
+	exportLogs string
 }{
-	name:   "name",
-	unseed: "unseed",
+	name:       "name",
+	unseed:     "unseed",
+	exportLogs: "export-logs",
 }
 
 type deleteCommand struct {
@@ -44,6 +46,7 @@ func (cmd *deleteCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "", "Required. Name of the BEE to delete")
 	cobraCommand.Flags().BoolVar(&cmd.options.Unseed, flagNames.unseed, true, "Attempt to unseed BEE before deleting")
+	cobraCommand.Flags().BoolVar(&cmd.options.ExportLogs, flagNames.exportLogs, true, "If true, export BEE's logs to GCS before deleting")
 }
 
 func (cmd *deleteCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
@@ -63,9 +66,9 @@ func (cmd *deleteCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	env, err := bees.DeleteWith(cmd.name, cmd.options)
-	if env != nil {
-		rc.SetOutput(views.DescribeBee(env))
+	_bee, err := bees.DeleteWith(cmd.name, cmd.options)
+	if _bee != nil {
+		rc.SetOutput(views.DescribeBee(_bee))
 	}
 	return err
 }

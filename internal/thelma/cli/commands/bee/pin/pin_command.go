@@ -140,9 +140,10 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	if !cmd.options.sync {
 		return nil
 	}
-	return bees.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
+	_, err = bees.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
 		options.WaitHealthy = cmd.options.waitHealthy
 	})
+	return err
 }
 
 func (cmd *pinCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
