@@ -52,6 +52,7 @@ type ProvisionOptions struct {
 	SyncGeneratorOnly bool
 	WaitHealthy       bool
 	PinOptions        PinOptions
+	Notify            bool
 	Seed              bool
 	SeedOptions       seed.SeedOptions
 }

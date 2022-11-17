@@ -34,6 +34,7 @@ var flagNames = struct {
 	waitHealthy      string
 	terraHelmfileRef string
 	seed             string
+	notify           string
 }{
 	name:             "name",
 	namePrefix:       "name-prefix",
@@ -43,6 +44,7 @@ var flagNames = struct {
 	waitHealthy:      "wait-healthy",
 	terraHelmfileRef: "terra-helmfile-ref",
 	seed:             "seed",
+	notify:           "notify",
 }
 
 type createCommand struct {
@@ -74,6 +76,7 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
+	cobraCommand.Flags().BoolVar(&cmd.options.Notify, flagNames.notify, true, "Attempt to notify the owner via Slack upon success")
 
 	cmd.pinFlags.AddFlags(cobraCommand)
 	cmd.seedFlags.AddFlags(cobraCommand)
