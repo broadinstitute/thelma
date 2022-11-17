@@ -10,7 +10,7 @@ import (
 
 func Test_ProvisionHelp(t *testing.T) {
 	_cli := cli.New(func(options *cli.Options) {
-		options.AddCommand("bee", bee.NewBeeCommand())
+		options.AddCommand("bee", bee.NewSlackCommand())
 		options.AddCommand("bee create", NewBeeProvisionCommand())
 		options.ConfigureThelma(func(thelmaBuilder builder.ThelmaBuilder) {
 			thelmaBuilder.WithTestDefaults(t)
