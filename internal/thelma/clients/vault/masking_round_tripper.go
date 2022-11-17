@@ -31,6 +31,9 @@ var safeFieldNames = []string{
 
 const secretsEngineEndpoint = `^/v\d/secret/`
 
+// do not auto-mask strings < 5 characters
+const minAutoMaskLength = 5
+
 // MaskingRoundTripper implements the http.RoundTripper interface, automatically masking any secrets returned from the Vault API
 type MaskingRoundTripper struct {
 	inner          http.RoundTripper       // inner round tripper this one delegates to (this is what actually makes the request)
@@ -95,6 +98,9 @@ func (m MaskingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 				continue
 			}
 			asString, ok := value.(string)
+			if len(asString) < minAutoMaskLength {
+				continue
+			}
 			if ok {
 				logger.Debug().Str("field", field).Msgf("masked value in Vault secret")
 				m.maskFn(asString)
