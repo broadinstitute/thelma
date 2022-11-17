@@ -91,6 +91,7 @@ retry:
 				baseDomain:           *stateEnvironment.BaseDomain,
 				namePrefixesDomain:   *stateEnvironment.NamePrefixesDomain,
 				uniqueResourcePrefix: stateEnvironment.UniqueResourcePrefix,
+				owner:                stateEnvironment.Owner,
 				destination: destination{
 					name:             stateEnvironment.Name,
 					base:             stateEnvironment.Base,

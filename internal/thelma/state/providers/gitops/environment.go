@@ -102,6 +102,11 @@ func (e *environment) UniqueResourcePrefix() string {
 	return e.uniqueResourcePrefix
 }
 
+func (t *environment) Owner() string {
+	// Gitops doesn't track owner
+	return ""
+}
+
 // environmentNamespace return environment namespace for a given environment name
 func environmentNamespace(envName string) string {
 	return fmt.Sprintf("%s%s", envNamespacePrefix, envName)
