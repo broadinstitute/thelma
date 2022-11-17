@@ -102,13 +102,13 @@ func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statu
 
 	for {
 		timeout := time.After(maxWait)
-		tick := time.Tick(waitHealthyPollingInterval)
+		ticker := time.NewTicker(waitHealthyPollingInterval)
 
 		for {
 			select {
 			case <-timeout:
 				return lastStatus, fmt.Errorf("timed out waiting for healthy (%s)", lastStatus.Headline())
-			case <-tick:
+			case <-ticker.C:
 				lastStatus, err = s.status.Status(release)
 				if err != nil {
 					return
