@@ -120,17 +120,13 @@ func Test_Summarizer(t *testing.T) {
 		{
 			"level":   "warn",
 			"message": "carrot: running",
-			"status": map[string]interface{}{
-				"message": "rabbit gnawing",
-				"name":    "peter",
-			},
+			"status":  "rabbit gnawing",
+			"name":    "peter",
 		},
 		{
 			"level":   "warn",
 			"message": "celery: running",
-			"status": map[string]interface{}{
-				"message": "12% complete",
-			},
+			"status":  "12% complete",
 		},
 		{
 			"level":   "warn",
@@ -151,24 +147,18 @@ func Test_Summarizer(t *testing.T) {
 		{
 			"level":   "warn",
 			"message": "carrot: success",
-			"status": map[string]interface{}{
-				"message": "rabbit full",
-				"name":    "peter",
-			},
+			"status":  "rabbit full",
+			"name":    "peter",
 		},
 		{
 			"level":   "warn",
 			"message": "celery: running",
-			"status": map[string]interface{}{
-				"message": "67% complete",
-			},
+			"status":  "67% complete",
 		},
 		{
 			"level":   "warn",
 			"message": "onion:  running",
-			"status": map[string]interface{}{
-				"message": "onion pending",
-			},
+			"status":  "onion pending",
 		},
 		{
 			"level":   "warn",
@@ -185,25 +175,19 @@ func Test_Summarizer(t *testing.T) {
 		{
 			"level":   "warn",
 			"message": "carrot: success",
-			"status": map[string]interface{}{
-				"message": "rabbit full",
-				"name":    "peter",
-			},
+			"status":  "rabbit full",
+			"name":    "peter",
 		},
 		{
 			"level":   "warn",
 			"message": "celery: success",
-			"status": map[string]interface{}{
-				"message": "100% complete",
-			},
+			"status":  "100% complete",
 		},
 		{
 			"level":   "warn",
 			"message": "onion:  error",
 			"error":   "whoopsies",
-			"status": map[string]interface{}{
-				"message": "onion pending",
-			},
+			"status":  "onion pending",
 		},
 		{
 			"level":   "warn",
@@ -235,7 +219,7 @@ func parseMessages(t *testing.T, file string) []map[string]interface{} {
 		}
 
 		// remove duration field because it's unpredictable so we can't assert on it
-		delete(msg, "duration")
+		delete(msg, elapsedTimeField)
 
 		messages = append(messages, msg)
 	}
