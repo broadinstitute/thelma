@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
+	"github.com/rs/zerolog/log"
 )
 
 func NewBees(thelmaApp app.ThelmaApp) (bee.Bees, error) {
@@ -26,7 +27,11 @@ func NewBees(thelmaApp app.ThelmaApp) (bee.Bees, error) {
 		return nil, err
 	}
 
-	slack, _ := thelmaApp.Clients().Slack()
+	slack, err := thelmaApp.Clients().Slack()
+	if err != nil {
+		// Never error out on Slack issues, downstream calls are resilient to it having failed
+		log.Debug().Msgf("error configuring slack client: %v", err)
+	}
 
 	return bee.NewBees(_argocd, thelmaApp.StateLoader(), seeder, _cleanup, kubectl, slack)
 }
