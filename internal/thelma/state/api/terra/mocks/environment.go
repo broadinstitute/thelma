@@ -140,6 +140,20 @@ func (_m *Environment) Namespace() string {
 	return r0
 }
 
+// Owner provides a mock function with given fields:
+func (_m *Environment) Owner() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // ReleaseType provides a mock function with given fields:
 func (_m *Environment) ReleaseType() terra.ReleaseType {
 	ret := _m.Called()

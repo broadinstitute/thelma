@@ -114,6 +114,20 @@ func (_m *Release) FirecloudDevelopRef() string {
 	return r0
 }
 
+// FullName provides a mock function with given fields:
+func (_m *Release) FullName() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // IsAppRelease provides a mock function with given fields:
 func (_m *Release) IsAppRelease() bool {
 	ret := _m.Called()
