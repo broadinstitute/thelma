@@ -254,20 +254,6 @@ func (_m *Release) FirecloudDevelopRef() string {
 	return r0
 }
 
-// FullName provides a mock function with given fields:
-func (_m *Release) FullName() string {
-	ret := _m.Called()
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
 // Release_FirecloudDevelopRef_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FirecloudDevelopRef'
 type Release_FirecloudDevelopRef_Call struct {
 	*mock.Call
