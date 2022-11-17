@@ -148,12 +148,22 @@ coverage: ## Open coverage report from test run in browser. Run "make test" firs
 clean: ## Clean up all generated files
 	rm -rf ${OUTPUT_DIR}
 
+export MOCKERY_WITH_EXPECTER=true
+
 mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/cli --name RunContext --output=./internal/thelma/cli/mocks --outpkg mocks --filename run_context.go
-	mockery --dir ./internal/thelma/clients/google/bucket --name Locker --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename locker.go
+	mockery --dir ./internal/thelma/clients/google --name Clients --output=./internal/thelma/clients/google/mocks --outpkg mocks --filename clients.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Bucket --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename bucket.go
+	mockery --dir ./internal/thelma/clients/google/bucket --name Locker --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename locker.go
 	mockery --dir ./internal/thelma/clients/sherlock --name StateReadWriter --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename state_read_writer.go
+	mockery --dir ./internal/thelma/state/api/terra --name AppRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename app_release.go
+	mockery --dir ./internal/thelma/state/api/terra --name ClusterRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster_release.go
 	mockery --dir ./internal/thelma/clients/sherlock --name ChartVersionUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_version_updater.go
 	mockery --dir ./internal/thelma/state/api/terra --name Release --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename release.go
-	mockery --dir ./internal/thelma/state/api/terra --name StateWriter --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_writer.go
 	mockery --dir ./internal/thelma/state/api/terra --name Environment --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename environment.go
+	mockery --dir ./internal/thelma/state/api/terra --name Cluster --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster.go
+	mockery --dir ./internal/thelma/state/api/terra --name StateWriter --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_writer.go
+	mockery --dir ./internal/thelma/clients/sherlock --name StateReadWriter --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename state_read_writer.go
+	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubeconfig --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubecfg.go
+	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubectx --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubectx.go
+	go generate /Users/chelsea/scratch/thelma-merge/thelma/internal/thelma/clients/google/testing/generators/generators.go

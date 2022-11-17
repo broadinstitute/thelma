@@ -9,7 +9,7 @@ import (
 // Read reads the content of an object in a GCS bucket
 type Read interface {
 	Content() []byte
-	Operation
+	SyncOperation
 }
 
 func NewRead() Read {

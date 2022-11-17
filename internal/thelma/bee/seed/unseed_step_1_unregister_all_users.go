@@ -19,11 +19,6 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 			panic("THIS SAM IS NOT IN A DYNAMIC ENVIRONMENT, REFUSING TO UNREGISTER ALL USERS")
 		}
 
-		kubectl, err := s.clientFactory.Google().Kubectl()
-		if err != nil {
-			return fmt.Errorf("error getting kubectl client: %v", err)
-		}
-
 		vault, err := s.clientFactory.Vault()
 		if err != nil {
 			return fmt.Errorf("error getting vault client: %v", err)
@@ -48,7 +43,7 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 			return fmt.Errorf("secret at %s didn't contain a %s key for Sam's database password", secretPath, config.Sam.Database.Credentials.VaultPasswordKey)
 		}
 
-		localPort, stopFunc, err := kubectl.PortForward(sam, fmt.Sprintf("service/%s", config.Sam.Database.Service), config.Sam.Database.Port)
+		localPort, stopFunc, err := s.kubectl.PortForward(sam, fmt.Sprintf("service/%s", config.Sam.Database.Service), config.Sam.Database.Port)
 		if err != nil {
 			return fmt.Errorf("error port-forwarding to Sam's database: %v", err)
 		}

@@ -8,7 +8,7 @@ import (
 )
 
 type Unlock interface {
-	object.Operation
+	object.SyncOperation
 }
 
 func NewUnlock(generation int64) Unlock {

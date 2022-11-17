@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -54,7 +55,7 @@ func (cmd *resetCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	return nil
 }
 
-func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
+func (cmd *resetCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	bees, err := builders.NewBees(app)
 	if err != nil {
 		return err
@@ -65,7 +66,11 @@ func (cmd *resetCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 		return err
 	}
 
-	return bees.ResetStatefulSets(env)
+	statuses, err := bees.ResetStatefulSets(env)
+	rc.SetOutput(views.DescribeBeeWith(env, func(options *views.DescribeOptions) {
+		options.Status = statuses
+	}))
+	return err
 }
 
 func (cmd *resetCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

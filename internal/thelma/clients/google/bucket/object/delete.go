@@ -3,7 +3,7 @@ package object
 import "github.com/rs/zerolog"
 
 type Delete interface {
-	Operation
+	SyncOperation
 }
 
 func NewDelete() Delete {

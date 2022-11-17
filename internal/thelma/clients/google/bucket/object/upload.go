@@ -8,7 +8,7 @@ import (
 )
 
 type Upload interface {
-	Operation
+	SyncOperation
 }
 
 func NewUpload(fromFile string, attrs AttrSet) Upload {

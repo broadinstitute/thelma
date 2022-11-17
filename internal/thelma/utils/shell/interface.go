@@ -7,12 +7,10 @@ import (
 	"strings"
 )
 
-//
 // Runner is an interface for running shell commands. It exists to
 // support mocking shell commands in unit tests.
 //
 // https://joshrendek.com/2014/06/go-lang-mocking-exec-dot-command-using-interfaces/
-//
 type Runner interface {
 	// Run runs a Command, streaming stdout and stderr to the log at debug level.
 	// Behavior can be customized by passing in one or more RunOption functions
@@ -33,6 +31,8 @@ type RunOptions struct {
 	Stdout io.Writer
 	// optional writer where stderr should be written
 	Stderr io.Writer
+	// if false, do not send stdout to logging system
+	LogStdout bool
 }
 
 // RunOption can be used to configure RunOptions for a Run invocation
@@ -62,16 +62,19 @@ func defaultRunOptions() RunOptions {
 	return RunOptions{
 		LogLevel:       zerolog.DebugLevel,
 		OutputLogLevel: zerolog.DebugLevel,
+		LogStdout:      true,
 	}
 }
 
 // PrettyFormat converts a command into a simple string for easy inspection. Eg.
-// &Command{
-//   Prog: []string{"echo"},
-//   Args: []string{"foo", "bar", "baz"},
-//   Dir:  "/tmp",
-//   Env:  []string{"A=B", "C=D"}
-// }
+//
+//	&Command{
+//	  Prog: []string{"echo"},
+//	  Args: []string{"foo", "bar", "baz"},
+//	  Dir:  "/tmp",
+//	  Env:  []string{"A=B", "C=D"}
+//	}
+//
 // ->
 // "A=B C=D echo foo bar baz"
 func (c Command) PrettyFormat() string {

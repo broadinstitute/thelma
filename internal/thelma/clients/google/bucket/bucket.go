@@ -3,14 +3,14 @@ package bucket
 import (
 	"cloud.google.com/go/storage"
 	"context"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/api/option"
+	"io"
 	"strings"
 	"time"
 )
+
+const cloudConsoleBaseURL = "https://console.cloud.google.com/storage/browser"
 
 type BucketOption func(options *BucketOptions)
 
@@ -54,6 +54,16 @@ type Bucket interface {
 
 	// Write replaces object contents with given content
 	Write(objectName string, content []byte, attrs ...object.AttrSetter) error
+
+	// WriteFromStream replaces object contents with content read from reader.
+	// **WARNING** WriteFromStream will block until the reader's Read() method returns an EOF error.
+	// The caller is responsible for closing whatever io source the reader is reading from
+	// (for example a pipe).
+	WriteFromStream(objectName string, reader io.Reader, attrs ...object.AttrSetter) error
+
+	// Writer returns a WriteCloser for the given object path.
+	// **WARNING** The caller is responsible for closing the writer!
+	Writer(objectName string) io.WriteCloser
 
 	// Delete deletes the object from the bucket
 	Delete(objectName string) error
@@ -135,6 +145,15 @@ func (b *bucket) Write(objectName string, content []byte, attrs ...object.AttrSe
 	return b.do(objectName, object.NewWrite(content, _attrs))
 }
 
+func (b *bucket) WriteFromStream(objectName string, reader io.Reader, attrs ...object.AttrSetter) error {
+	_attrs := collateAttrs(attrs)
+	return b.do(objectName, object.NewWriteFromStream(reader, _attrs))
+}
+
+func (b *bucket) Writer(objectName string) io.WriteCloser {
+	return b.newWriter(objectName)
+}
+
 func (b *bucket) Attrs(objectName string) (*storage.ObjectAttrs, error) {
 	op := object.NewAttrs()
 	err := b.do(objectName, op)
@@ -150,69 +169,56 @@ func (b *bucket) Delete(objectName string) error {
 	return b.do(objectName, object.NewDelete())
 }
 
-// do executes an operation, adding useful contextual logging
-func (b *bucket) do(objectName string, op object.Operation) error {
-	fullName := strings.Join([]string{b.prefix, objectName}, "")
-	objectUrl := fmt.Sprintf("gs://%s/%s", b.name, fullName)
+func (b *bucket) newSyncOperationLogger(objectName string, op object.SyncOperation) *operationLogger {
+	return &operationLogger{
+		operationKind:      op.Kind(),
+		objectName:         objectName,
+		prefixedObjectName: b.prefixedObjectName(objectName),
+		bucketName:         b.Name(),
+		bucketPrefix:       b.prefix,
+	}
+}
 
-	// Build logger with context like
-	// {
-	//   "bucket": { "name": "my-bucket", "prefix": "" },
-	//   "object": { "name": "my-object", "url": "gs://my-bucket/my-object" },
-	//   "operation": { "type": "delete", "id": "fe435a" },
-	// }
-	ctx := log.With().
-		Interface("bucket", struct {
-			Name   string `json:"name"`
-			Prefix string `json:"prefix"`
-		}{
-			Name:   b.name,
-			Prefix: b.prefix,
-		}).
-		Interface("object", struct {
-			Name string `json:"name"`
-			Url  string `json:"url"`
-		}{
-			Name: objectName,
-			Url:  objectUrl,
-		}).
-		Interface("call", struct {
-			Kind string `json:"kind"`
-			Id   string `json:"id"`
-		}{
-			Kind: op.Kind(),
-			Id:   logid.NewId(),
-		})
+func (b *bucket) newWriter(objectName string) io.WriteCloser {
+	prefixedName := b.prefixedObjectName(objectName)
 
-	logger := ctx.Logger()
+	opLogger := &operationLogger{
+		operationKind:      "write",
+		objectName:         objectName,
+		prefixedObjectName: prefixedName,
+		bucketName:         b.Name(),
+		bucketPrefix:       b.prefix,
+	}
 
-	logger.Trace().Msgf("%s %s", op.Kind(), objectUrl)
-	startTime := time.Now()
+	handle := b.client.Bucket(b.name).Object(prefixedName)
+	writer := handle.NewWriter(b.ctx)
+	return newLoggingWriteCloser(writer, opLogger)
+}
+
+func (b *bucket) prefixedObjectName(objectName string) string {
+	return strings.Join([]string{b.prefix, objectName}, "")
+}
+
+// do executes a synchronous operation, adding useful contextual logging
+func (b *bucket) do(objectName string, op object.SyncOperation) error {
+	opLogger := b.newSyncOperationLogger(objectName, op)
+
+	opLogger.operationStarted()
+
+	prefixedObjectName := b.prefixedObjectName(objectName)
 
 	obj := object.Object{
 		Ctx:    b.ctx,
-		Handle: b.client.Bucket(b.name).Object(fullName),
+		Handle: b.client.Bucket(b.name).Object(prefixedObjectName),
 	}
 
 	// run the operation
-	err := op.Handler(obj, logger)
+	err := op.Handler(obj, opLogger.logger())
 
-	// calculate operation duration and add to context
-	duration := time.Since(startTime)
-	event := logger.Debug()
-	event.Dur("duration", duration)
+	// operationFinished will wrap the error with useful information
+	err = opLogger.operationFinished(err)
 
-	if err != nil {
-		event.Str("status", "error")
-		event.Err(err)
-		returnErr := fmt.Errorf("%s failed: %v", op.Kind(), err)
-		event.Msgf(returnErr.Error())
-		return returnErr
-	}
-
-	event.Str("status", "ok")
-	event.Msgf("%s finished in %s", op.Kind(), duration)
-	return nil
+	return err
 }
 
 // collate setters into an attrs object

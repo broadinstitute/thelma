@@ -1,6 +1,7 @@
 package entrypoint
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/status"
 	"os"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -25,6 +26,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts"
 	charts_import "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/import"
 	charts_publish "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/publish"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/logs"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/render"
 	states "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state"
 	state_export "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state/export"
@@ -70,10 +72,14 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("charts import", charts_import.NewChartsImportCommand())
 	opts.AddCommand("charts publish", charts_publish.NewChartsPublishCommand())
 
+	opts.AddCommand("logs", logs.NewLogsCommand())
+
 	opts.AddCommand("render", render.NewRenderCommand())
 
 	opts.AddCommand("state", states.NewStateCommand())
 	opts.AddCommand("state export", state_export.NewStateExportCommand())
+
+	opts.AddCommand("status", status.NewStatusCommand())
 
 	opts.AddCommand("version", version.NewVersionCommand())
 }

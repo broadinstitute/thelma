@@ -14,6 +14,14 @@ type RunContext struct {
 	mock.Mock
 }
 
+type RunContext_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *RunContext) EXPECT() *RunContext_Expecter {
+	return &RunContext_Expecter{mock: &_m.Mock}
+}
+
 // Args provides a mock function with given fields:
 func (_m *RunContext) Args() []string {
 	ret := _m.Called()
@@ -28,6 +36,28 @@ func (_m *RunContext) Args() []string {
 	}
 
 	return r0
+}
+
+// RunContext_Args_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Args'
+type RunContext_Args_Call struct {
+	*mock.Call
+}
+
+// Args is a helper method to define mock.On call
+func (_e *RunContext_Expecter) Args() *RunContext_Args_Call {
+	return &RunContext_Args_Call{Call: _e.mock.On("Args")}
+}
+
+func (_c *RunContext_Args_Call) Run(run func()) *RunContext_Args_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RunContext_Args_Call) Return(_a0 []string) *RunContext_Args_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // CobraCommand provides a mock function with given fields:
@@ -46,6 +76,28 @@ func (_m *RunContext) CobraCommand() *cobra.Command {
 	return r0
 }
 
+// RunContext_CobraCommand_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CobraCommand'
+type RunContext_CobraCommand_Call struct {
+	*mock.Call
+}
+
+// CobraCommand is a helper method to define mock.On call
+func (_e *RunContext_Expecter) CobraCommand() *RunContext_CobraCommand_Call {
+	return &RunContext_CobraCommand_Call{Call: _e.mock.On("CobraCommand")}
+}
+
+func (_c *RunContext_CobraCommand_Call) Run(run func()) *RunContext_CobraCommand_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RunContext_CobraCommand_Call) Return(_a0 *cobra.Command) *RunContext_CobraCommand_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // CommandName provides a mock function with given fields:
 func (_m *RunContext) CommandName() []string {
 	ret := _m.Called()
@@ -62,6 +114,28 @@ func (_m *RunContext) CommandName() []string {
 	return r0
 }
 
+// RunContext_CommandName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CommandName'
+type RunContext_CommandName_Call struct {
+	*mock.Call
+}
+
+// CommandName is a helper method to define mock.On call
+func (_e *RunContext_Expecter) CommandName() *RunContext_CommandName_Call {
+	return &RunContext_CommandName_Call{Call: _e.mock.On("CommandName")}
+}
+
+func (_c *RunContext_CommandName_Call) Run(run func()) *RunContext_CommandName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RunContext_CommandName_Call) Return(_a0 []string) *RunContext_CommandName_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // HasOutput provides a mock function with given fields:
 func (_m *RunContext) HasOutput() bool {
 	ret := _m.Called()
@@ -74,6 +148,28 @@ func (_m *RunContext) HasOutput() bool {
 	}
 
 	return r0
+}
+
+// RunContext_HasOutput_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasOutput'
+type RunContext_HasOutput_Call struct {
+	*mock.Call
+}
+
+// HasOutput is a helper method to define mock.On call
+func (_e *RunContext_Expecter) HasOutput() *RunContext_HasOutput_Call {
+	return &RunContext_HasOutput_Call{Call: _e.mock.On("HasOutput")}
+}
+
+func (_c *RunContext_HasOutput_Call) Run(run func()) *RunContext_HasOutput_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RunContext_HasOutput_Call) Return(_a0 bool) *RunContext_HasOutput_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Output provides a mock function with given fields:
@@ -92,6 +188,28 @@ func (_m *RunContext) Output() interface{} {
 	return r0
 }
 
+// RunContext_Output_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Output'
+type RunContext_Output_Call struct {
+	*mock.Call
+}
+
+// Output is a helper method to define mock.On call
+func (_e *RunContext_Expecter) Output() *RunContext_Output_Call {
+	return &RunContext_Output_Call{Call: _e.mock.On("Output")}
+}
+
+func (_c *RunContext_Output_Call) Run(run func()) *RunContext_Output_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RunContext_Output_Call) Return(_a0 interface{}) *RunContext_Output_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Parent provides a mock function with given fields:
 func (_m *RunContext) Parent() cli.ThelmaCommand {
 	ret := _m.Called()
@@ -108,9 +226,54 @@ func (_m *RunContext) Parent() cli.ThelmaCommand {
 	return r0
 }
 
+// RunContext_Parent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Parent'
+type RunContext_Parent_Call struct {
+	*mock.Call
+}
+
+// Parent is a helper method to define mock.On call
+func (_e *RunContext_Expecter) Parent() *RunContext_Parent_Call {
+	return &RunContext_Parent_Call{Call: _e.mock.On("Parent")}
+}
+
+func (_c *RunContext_Parent_Call) Run(run func()) *RunContext_Parent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RunContext_Parent_Call) Return(_a0 cli.ThelmaCommand) *RunContext_Parent_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // SetOutput provides a mock function with given fields: data
 func (_m *RunContext) SetOutput(data interface{}) {
 	_m.Called(data)
+}
+
+// RunContext_SetOutput_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOutput'
+type RunContext_SetOutput_Call struct {
+	*mock.Call
+}
+
+// SetOutput is a helper method to define mock.On call
+//  - data interface{}
+func (_e *RunContext_Expecter) SetOutput(data interface{}) *RunContext_SetOutput_Call {
+	return &RunContext_SetOutput_Call{Call: _e.mock.On("SetOutput", data)}
+}
+
+func (_c *RunContext_SetOutput_Call) Run(run func(data interface{})) *RunContext_SetOutput_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(interface{}))
+	})
+	return _c
+}
+
+func (_c *RunContext_SetOutput_Call) Return() *RunContext_SetOutput_Call {
+	_c.Call.Return()
+	return _c
 }
 
 type mockConstructorTestingTNewRunContext interface {

@@ -1,6 +1,7 @@
 package sherlock
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -49,6 +50,10 @@ func (c *cluster) Location() string {
 
 func (c *cluster) ReleaseType() terra.ReleaseType {
 	return terra.ClusterReleaseType
+}
+
+func (c *cluster) ArtifactBucket() string {
+	return fmt.Sprintf("thelma-artifacts-%s", c.name)
 }
 
 func (c *cluster) Name() string {

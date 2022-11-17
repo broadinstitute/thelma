@@ -9,6 +9,14 @@ type ChartVersionUpdater struct {
 	mock.Mock
 }
 
+type ChartVersionUpdater_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *ChartVersionUpdater) EXPECT() *ChartVersionUpdater_Expecter {
+	return &ChartVersionUpdater_Expecter{mock: &_m.Mock}
+}
+
 // UpdateForNewChartVersion provides a mock function with given fields: chartSelector, newVersion, lastVersion, description, chartReleaseSelectors
 func (_m *ChartVersionUpdater) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error {
 	_va := make([]interface{}, len(chartReleaseSelectors))
@@ -28,6 +36,40 @@ func (_m *ChartVersionUpdater) UpdateForNewChartVersion(chartSelector string, ne
 	}
 
 	return r0
+}
+
+// ChartVersionUpdater_UpdateForNewChartVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateForNewChartVersion'
+type ChartVersionUpdater_UpdateForNewChartVersion_Call struct {
+	*mock.Call
+}
+
+// UpdateForNewChartVersion is a helper method to define mock.On call
+//  - chartSelector string
+//  - newVersion string
+//  - lastVersion string
+//  - description string
+//  - chartReleaseSelectors ...string
+func (_e *ChartVersionUpdater_Expecter) UpdateForNewChartVersion(chartSelector interface{}, newVersion interface{}, lastVersion interface{}, description interface{}, chartReleaseSelectors ...interface{}) *ChartVersionUpdater_UpdateForNewChartVersion_Call {
+	return &ChartVersionUpdater_UpdateForNewChartVersion_Call{Call: _e.mock.On("UpdateForNewChartVersion",
+		append([]interface{}{chartSelector, newVersion, lastVersion, description}, chartReleaseSelectors...)...)}
+}
+
+func (_c *ChartVersionUpdater_UpdateForNewChartVersion_Call) Run(run func(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string)) *ChartVersionUpdater_UpdateForNewChartVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]string, len(args)-4)
+		for i, a := range args[4:] {
+			if a != nil {
+				variadicArgs[i] = a.(string)
+			}
+		}
+		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *ChartVersionUpdater_UpdateForNewChartVersion_Call) Return(_a0 error) *ChartVersionUpdater_UpdateForNewChartVersion_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 type mockConstructorTestingTNewChartVersionUpdater interface {

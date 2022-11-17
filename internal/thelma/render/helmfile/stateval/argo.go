@@ -2,7 +2,7 @@ package stateval
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 )
 
 // ArgoApp -- information about the Argo application that will be used to deploy this release

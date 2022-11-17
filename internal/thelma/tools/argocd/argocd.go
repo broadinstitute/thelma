@@ -6,12 +6,17 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	naming "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
+	url "net/url"
+	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -42,18 +47,41 @@ var flags = struct {
 	outputFormat: "--output",
 }
 
+// retryInterval how long to wait between retries of failed ArgoCD cli commands
+const retryInterval = 10 * time.Second
+
+// retryCount max number of retries
+const retryCount = 3
+
+// flags holds list of errors that indicate an argocd cli command should be re-run
+var retryableErrors = []*regexp.Regexp{
+	// occasional weird socket errors that only show up on OSX
+	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: address already in use"),
+	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: file exists"),
+}
+
 // SyncOptions options for an ArgoCD sync operation
 type SyncOptions struct {
 	// HardRefresh if true, perform a hard refresh before syncing Argo apps
 	HardRefresh bool
 	// SyncIfNoDiff if true, sync even if the hard refresh indicates there are no config differences
 	SyncIfNoDiff bool
-	// WaitHealthy if true, wait for the application to become healhty after syncing
+	// WaitHealthy if true, wait for the application to become healthy after syncing
 	WaitHealthy bool
+	// WaitHealthyTimeout how long to wait for the application to become healthy before giving up
+	WaitHealthyTimeoutSeconds int
 	// OnlyLabels if not empty, only sync resources with the given labels
 	OnlyLabels map[string]string
 	// SkipLegacyConfigsRestart if true, do not restart deployments to pick up firecloud-develop changes
 	SkipLegacyConfigsRestart bool
+	// StatusReporter pool.StatusReporter
+	StatusReporter pool.StatusReporter
+}
+
+func (s SyncOptions) reportStatus(message string) {
+	if s.StatusReporter != nil {
+		s.StatusReporter.Update(pool.Status{Message: message})
+	}
 }
 
 type SyncOption func(options *SyncOptions)
@@ -120,14 +148,16 @@ type ArgoCD interface {
 	SyncApp(appName string, options ...SyncOption) (SyncResult, error)
 	// HardRefresh will hard refresh an ArgoCD app (force a manifest re-render without a corresponding git change)
 	HardRefresh(appName string) error
-	// WaitHealthy will wait for an ArgoCD app to become healthy (but not necessarily synced)
-	WaitHealthy(appName string) error
 	// WaitExist will wait for an ArgoCD app to exist
 	WaitExist(appName string, options ...WaitExistOption) error
 	// SyncRelease will sync a Terra release's ArgoCD app(s), including the legacy configs app if there is one
 	SyncRelease(release terra.Release, options ...SyncOption) error
-	// SyncReleases will sync the ArgoCD apps for multiple Terra releases in parallel
-	SyncReleases(releases []terra.Release, maxParallel int, options ...SyncOption) error
+	// AppStatus returns a summary of an application's health status
+	AppStatus(appName string) (ApplicationStatus, error)
+	// DestinationURL returns a URL to an environment's Argo applications
+	DestinationURL(dest terra.Destination) string
+	// DefaultSyncOptions returns default sync options
+	DefaultSyncOptions() SyncOptions
 }
 
 // BrowserLogin is a thin wrapper around the `argocd login --sso` command, which:
@@ -207,6 +237,7 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, err
 	var result SyncResult
 
 	// refresh the app, using hard refresh if needed
+	opts.reportStatus(fmt.Sprintf("Refreshing %s", appName))
 	hasDifferences, err := a.diffWithRetries(appName, opts)
 	if err != nil {
 		return result, err
@@ -220,18 +251,21 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, err
 		}
 	}
 
+	opts.reportStatus(fmt.Sprintf("Waiting in-progress %s", appName))
 	if err := a.waitForInProgressSyncToComplete(appName); err != nil {
 		return result, err
 	}
 
 	// we're about to sync, so update result to indicate we made an attempt
 	result.Synced = true
+	opts.reportStatus(fmt.Sprintf("Syncing %s", appName))
 	if err := a.sync(appName, opts); err != nil {
 		return result, err
 	}
 
 	if opts.WaitHealthy {
-		if err := a.WaitHealthy(appName); err != nil {
+		opts.reportStatus(fmt.Sprintf("Waiting healthy %s", appName))
+		if err := a.waitHealthy(appName, opts.WaitHealthyTimeoutSeconds); err != nil {
 			return result, err
 		}
 	}
@@ -248,8 +282,8 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 		return err
 	}
 
-	legacyConfigsApp := LegacyConfigsApplicationName(release)
-	primaryApp := ApplicationName(release)
+	legacyConfigsApp := naming.LegacyConfigsApplicationName(release)
+	primaryApp := naming.ApplicationName(release)
 
 	// Sync the legacy configs app, if one exists
 	legacyConfigsWereSynced := false
@@ -265,6 +299,7 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	optionsNoWaitHealthy := append(options, func(options *SyncOptions) {
 		options.WaitHealthy = false
 	})
+
 	if _, err := a.SyncApp(primaryApp, optionsNoWaitHealthy...); err != nil {
 		return err
 	}
@@ -274,11 +309,14 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 			log.Debug().Msgf("Won't restart deployments to pick up firecloud-develop changes (legacy config restarts are skipped)")
 		} else {
 			if legacyConfigsWereSynced {
-				log.Info().Msgf("Waiting for %s to become healthy before restarting deployments", primaryApp)
-				if err := a.WaitHealthy(primaryApp); err != nil {
+				log.Debug().Msgf("Waiting for %s to become healthy before restarting deployments", primaryApp)
+				syncOpts.reportStatus(fmt.Sprintf("Waiting healthy %s", primaryApp))
+				if err := a.waitHealthy(primaryApp, syncOpts.WaitHealthyTimeoutSeconds); err != nil {
 					return err
 				}
-				log.Info().Msgf("Restarting deployments in %s to pick up potential firecloud-develop config changes", primaryApp)
+
+				log.Debug().Msgf("Restarting deployments in %s to pick up potential firecloud-develop config changes", primaryApp)
+				syncOpts.reportStatus(fmt.Sprintf("Restart deployments %s", primaryApp))
 				if err := a.restartDeployments(primaryApp); err != nil {
 					return err
 				}
@@ -290,45 +328,25 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 
 	// Now wait for the primary app to become healthy
 	if syncOpts.WaitHealthy {
-		return a.WaitHealthy(primaryApp)
+		return a.waitHealthy(primaryApp, syncOpts.WaitHealthyTimeoutSeconds)
 	}
 	return nil
 }
 
-func (a *argocd) SyncReleases(releases []terra.Release, maxParallel int, options ...SyncOption) error {
-	var jobs []pool.Job
-	for _, release := range releases {
-		r := release
-		jobs = append(jobs, pool.Job{
-			Description: ApplicationName(r),
-			Run: func() error {
-				log.Info().Msgf("Syncing ArgoCD application(s) for %s in %s", r.Name(), r.Destination().Name())
-				return a.SyncRelease(r, options...)
-			},
-		})
-	}
-
-	_pool := pool.New(jobs, func(options *pool.Options) {
-		options.NumWorkers = maxParallel
-		options.StopProcessingOnError = false
-	})
-	return _pool.Execute()
-}
-
 func (a *argocd) HardRefresh(appName string) error {
-	_, err := a.diffWithRetries(appName, a.defaultSyncOptions())
+	_, err := a.diffWithRetries(appName, a.DefaultSyncOptions())
 	return err
 }
 
-func (a *argocd) WaitHealthy(appName string) error {
-	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", a.cfg.WaitHealthyTimeoutSeconds, appName)
+func (a *argocd) waitHealthy(appName string, timeoutSeconds int) error {
+	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", timeoutSeconds, appName)
 
 	return a.runCommand([]string{
 		"app",
 		"wait",
 		appName,
 		"--timeout",
-		fmt.Sprintf("%d", a.cfg.WaitHealthyTimeoutSeconds),
+		fmt.Sprintf("%d", timeoutSeconds),
 		"--health",
 	})
 }
@@ -382,16 +400,48 @@ func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
 	}
 }
 
-func (a *argocd) defaultSyncOptions() SyncOptions {
+func (a *argocd) DestinationURL(d terra.Destination) string {
+	var u url.URL
+	if a.cfg.TLS {
+		u.Scheme = "https"
+	} else {
+		u.Scheme = "http"
+	}
+
+	u.Host = a.cfg.Host
+
+	u.Path = "/applications"
+
+	labels := make(map[string]string)
+
+	if d.IsEnvironment() {
+		labels["env"] = d.Name()
+	} else {
+		labels["type"] = "cluster"
+		labels["cluster"] = d.Name()
+	}
+
+	selector := joinSelector(labels)
+
+	params := url.Values{
+		"labels": {selector},
+	}
+	u.RawQuery = params.Encode()
+
+	return u.String()
+}
+
+func (a *argocd) DefaultSyncOptions() SyncOptions {
 	return SyncOptions{
-		HardRefresh:  true,
-		SyncIfNoDiff: false,
-		WaitHealthy:  true,
+		HardRefresh:               true,
+		SyncIfNoDiff:              false,
+		WaitHealthy:               true,
+		WaitHealthyTimeoutSeconds: a.cfg.WaitHealthyTimeoutSeconds,
 	}
 }
 
 func (a *argocd) asSyncOptions(options ...SyncOption) SyncOptions {
-	opts := a.defaultSyncOptions()
+	opts := a.DefaultSyncOptions()
 	for _, option := range options {
 		option(&opts)
 	}
@@ -435,7 +485,7 @@ func (a *argocd) hasLegacyConfigsApp(release terra.Release) (bool, error) {
 		return false, err
 	}
 
-	legacyConfigsName := LegacyConfigsApplicationName(release)
+	legacyConfigsName := naming.LegacyConfigsApplicationName(release)
 	for _, line := range lines {
 		if strings.TrimSpace(line) == legacyConfigsName {
 			return true, nil
@@ -591,7 +641,40 @@ func (a *argocd) runCommandAndParseLineSeparatedOutput(args []string) ([]string,
 	return strings.Split(cmdOutput, "\n"), nil
 }
 
+func isRetryableError(err error) bool {
+	exitErr, ok := err.(*shell.ExitError)
+	if !ok {
+		return false
+	}
+
+	for _, regex := range retryableErrors {
+		if regex.MatchString(exitErr.Stderr) {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
+	err := a.runCommandOnce(args, options...)
+
+	for i := 0; i < retryCount; i++ {
+		if err == nil {
+			return nil
+		}
+		if !isRetryableError(err) {
+			return err
+		}
+		log.Debug().Err(err).Msgf("argocd cli command failed, retrying in %s", retryInterval)
+
+		time.Sleep(retryInterval)
+		err = a.runCommandOnce(args, options...)
+	}
+
+	return err
+}
+
+func (a *argocd) runCommandOnce(args []string, options ...shell.RunOption) error {
 	// build env var list
 	var env []string
 	if a.cfg.Host != "" {
@@ -615,6 +698,11 @@ func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
 	}
 
 	_args = append(_args, args...)
+
+	options = append(options, func(runOpts *shell.RunOptions) {
+		// argo cli commands are extremely noisy, collect at trace level
+		runOpts.OutputLogLevel = zerolog.TraceLevel
+	})
 
 	return a.runner.Run(
 		shell.Command{
@@ -646,4 +734,31 @@ func readTokenFromVault(cfg argocdConfig, vaultClient *vaultapi.Client) (string,
 	}
 	logging.MaskSecret(asStr)
 	return asStr, nil
+}
+
+// releaseSelector returns set of selectors for all argo apps associated with a release
+// (often just the primary application, but can include the legacy configs application as well)
+func releaseSelector(release terra.Release) map[string]string {
+	if release.IsAppRelease() {
+		return map[string]string{
+			"app": release.Name(),
+			"env": release.Destination().Name(),
+		}
+	} else {
+		return map[string]string{
+			"release": release.Name(),
+			"cluster": release.Destination().Name(),
+			"type":    "cluster",
+		}
+	}
+}
+
+// joinSelector join map of label key-value pairs {"a":"b", "c":"d"} into selector string "a=b,c=d"
+func joinSelector(labels map[string]string) string {
+	var list []string
+	for name, value := range labels {
+		list = append(list, fmt.Sprintf("%s=%s", name, value))
+	}
+	sort.Strings(list)
+	return strings.Join(list, ",")
 }

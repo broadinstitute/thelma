@@ -143,6 +143,39 @@ func TestBucket_ReadAndWrite(t *testing.T) {
 	assert.Equal(t, content, string(readContent))
 }
 
+func TestBucket_WriterWritesToObject(t *testing.T) {
+	_bucket := bucket.NewTestBucket(t)
+	objectName := "my-test-object"
+	writer := _bucket.Writer(objectName)
+
+	_, err := writer.Write([]byte("a"))
+	require.NoError(t, err)
+
+	_, err = writer.Write([]byte("b"))
+	require.NoError(t, err)
+
+	_, err = writer.Write([]byte("c"))
+	require.NoError(t, err)
+
+	err = writer.Close()
+	require.NoError(t, err)
+
+	brequire.ObjectHasContent(t, _bucket, objectName, "abc")
+}
+
+func TestBucket_WriterRaisesErrorOnClose(t *testing.T) {
+	badBucket, err := bucket.NewBucket("broad-dsp-devops-sdjhk3227-this-bucket-does-not-exist")
+	require.NoError(t, err)
+	objectName := "my-test-object"
+	writer := badBucket.Writer(objectName)
+
+	_, err = writer.Write([]byte("a"))
+	require.NoError(t, err)
+
+	err = writer.Close()
+	require.ErrorContains(t, err, "googleapi: Error 404: The specified bucket does not exist.")
+}
+
 func TestBucket_WriteUpdatesAttributes(t *testing.T) {
 	_bucket := bucket.NewTestBucket(t)
 	objectName := "my-object"

@@ -14,7 +14,7 @@ import (
 
 // topicIdFormats list of pubsub topics created by services running in BEEs that should be deleted
 // when the BEE is deleted (%s is substituted with environment name).
-// I HATE HATE HATE that we need to keep this list, but the go pubsub client apparently has no way of filtering
+// I HATE HATE HATE that we need to keep this list in thelma, but the go pubsub client apparently has no way of filtering
 // topic ids by regular expression. If we wanted to just match by environment name, we'd be iterating
 // through thousands of topic names client-side. :skull:
 var topicIdFormats = []string{
@@ -59,7 +59,7 @@ func (c *cleanup) cleanupPubsubTopics(env terra.Environment) error {
 
 // clean up pubsub topics in the project
 func (c *cleanup) cleanupPubsubTopicsInProject(env terra.Environment, projectId string) error {
-	log.Info().Msgf("Deleting PubSub topics and subscriptions in %s", projectId)
+	log.Info().Msgf("Deleting PubSub topics and subscriptions for %s in %s", env.Name(), projectId)
 
 	for _, topicId := range pubsubTopicIds(env) {
 		if err := c.deleteTopicAndSubscriptions(projectId, topicId); err != nil {
@@ -104,7 +104,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 		if err := sub.Delete(context.Background()); err != nil {
 			return fmt.Errorf("error deleting subscription %s for pubsub topic %s/%s: %v", sub.ID(), projectId, topicId, err)
 		}
-		log.Info().Msgf("Deleted subscription: %s", sub.ID())
+		log.Debug().Msgf("Deleted subscription: %s", sub.ID())
 	}
 
 	// delete the topic
@@ -113,7 +113,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 		return fmt.Errorf("error deleting pubsub topic %s/%s: %v", projectId, topicId, err)
 	}
 
-	log.Info().Msgf("Deleted topic: %s", topicId)
+	log.Debug().Msgf("Deleted topic: %s", topicId)
 
 	return nil
 }

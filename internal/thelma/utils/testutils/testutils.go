@@ -2,9 +2,16 @@ package testutils
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
 	"math/rand"
+	"sort"
 	"strings"
+	"time"
 )
+
+func init() {
+	seed.Rand()
+}
 
 var alphaNumeric = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
@@ -23,4 +30,31 @@ func RandString(n int) string {
 		result[i] = alphaNumeric[rand.Intn(len(alphaNumeric))]
 	}
 	return string(result)
+}
+
+// SliceIntoRandomIntervals slices a time.Duration into n random intervals
+func SliceIntoRandomIntervals(duration time.Duration, n int) []time.Duration {
+	if n < 0 {
+		panic(fmt.Errorf("can't divide duration into %d intervals", n))
+	}
+	asInt64 := int64(duration)
+
+	var boundaries []int64
+	boundaries = append(boundaries, 0)
+	for i := 0; i < n-1; i++ {
+		boundaries = append(boundaries, rand.Int63n(asInt64))
+	}
+	boundaries = append(boundaries, asInt64)
+
+	sort.Slice(boundaries, func(i, j int) bool {
+		return boundaries[i] < boundaries[j]
+	})
+
+	var result []time.Duration
+	for i := 1; i < len(boundaries); i++ {
+		delta := boundaries[i] - boundaries[i-1]
+		result = append(result, time.Duration(delta))
+	}
+
+	return result
 }
