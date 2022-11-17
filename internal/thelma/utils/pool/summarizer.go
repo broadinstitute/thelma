@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const elapsedTimeField = "time"
+
 type SummarizerOptions struct {
 	// Enabled if true, print a periodic summary of pool status while items are being processed. For example:
 	//
@@ -133,11 +135,21 @@ func (s *summarizer) logSummary() {
 
 		event := s.log()
 
-		if item.status() != nil {
-			event.Dict("status", item.status().Dict())
+		status := item.status()
+		if status != nil {
+			if status.Message != "" {
+				event.Str("status", status.Message)
+			}
+			event.Str("status", status.Message)
+			if len(status.Context) > 0 {
+				for k, v := range status.Context {
+					event.Interface(k, v)
+				}
+			}
 		}
 		if phase != Queued {
-			event.Dur("duration", item.duration())
+			// optimizing for humans reading the logs
+			event.Str(elapsedTimeField, fmt.Sprintf("%s", item.duration().Round(time.Second)))
 		}
 		if item.hasErr() {
 			event.Err(item.getErr())
