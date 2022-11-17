@@ -18,6 +18,7 @@ func Test_MaskingRoundTripper(t *testing.T) {
 			"field2":     "mask-me-2",
 			"project_id": "should-not-be-masked-1",
 			"user":       "should-not-be-masked-2",
+			"too-short":  "abcd", // should not be masked
 		},
 	)
 
