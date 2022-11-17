@@ -176,6 +176,29 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (terra.Envir
 		}
 	}
 
+	if options.Notify {
+		if env.Owner() != "" {
+			if b.slack != nil {
+				log.Info().Msgf("Notifying %s", env.Owner())
+				markdown := fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is ready to go!", env.Name(), env.Name())
+				for _, release := range env.Releases() {
+					if release.IsAppRelease() && release.ChartName() == "terraui" {
+						if terraui, ok := release.(terra.AppRelease); ok {
+							markdown += fmt.Sprintf(" Terra's UI is at %s", terraui.URL())
+						}
+					}
+				}
+				if err := b.slack.SendMessage(env.Owner(), markdown); err != nil {
+					log.Warn().Msgf("Wasn't able to notify %s: %v", err)
+				}
+			} else {
+				log.Debug().Msgf("Would have tried to notify but Slack client wasn't present; perhaps it errored earlier")
+			}
+		} else {
+			log.Debug().Msgf("Wanted to notify but the environment lacked an owner")
+		}
+	}
+
 	return env, err
 }
 
