@@ -1,11 +1,11 @@
 package entrypoint
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/status"
 	"os"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
-	argocd_status "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/status"
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
 	auth_argocd "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/argocd"
@@ -48,7 +48,6 @@ func Execute() {
 
 func withCommands(opts *cli.Options) {
 	opts.AddCommand("argocd", argocd.NewArgoCDCommand())
-	opts.AddCommand("argocd status", argocd_status.NewArgoCDStatusCommand())
 	opts.AddCommand("argocd sync", argocd_sync.NewArgoCDSyncCommand())
 
 	opts.AddCommand("auth", auth.NewAuthCommand())
@@ -79,6 +78,8 @@ func withCommands(opts *cli.Options) {
 
 	opts.AddCommand("state", states.NewStateCommand())
 	opts.AddCommand("state export", state_export.NewStateExportCommand())
+
+	opts.AddCommand("status", status.NewStatusCommand())
 
 	opts.AddCommand("version", version.NewVersionCommand())
 }

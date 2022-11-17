@@ -6,7 +6,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"io"
 	"os"
@@ -170,7 +169,6 @@ func (k *kubectl) Logs(ktx kubecfg.Kubectx, podSelector map[string]string, opts 
 		args = append(args, "--tail", fmt.Sprintf("%d", options.MaxLines))
 	}
 	return k.runForKubectx(ktx, args, func(runOpts *shell.RunOptions) {
-		runOpts.LogLevel = zerolog.InfoLevel
 		runOpts.Stdout = options.Writer
 		// don't send container logs to thelma's logging system -- it's noisy AF and is a significant perf hit
 		runOpts.LogStdout = false

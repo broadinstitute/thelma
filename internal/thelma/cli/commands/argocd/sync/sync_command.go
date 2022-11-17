@@ -3,9 +3,8 @@ package sync
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/common"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/spf13/cobra"
 )
 
@@ -16,9 +15,7 @@ type syncOptions struct {
 }
 
 type syncCommand struct {
-	argocd   argocd.ArgoCD
 	selector *selector.Selector
-	releases []terra.Release
 	options  syncOptions
 }
 
@@ -43,30 +40,29 @@ func (cmd *syncCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (cmd *syncCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
+	// nothing to do yet
+	return nil
+}
+
+func (cmd *syncCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	// compute selected releases
 	state, err := app.State()
 	if err != nil {
 		return err
 	}
-	selection, err := cmd.selector.GetSelection(state, ctx.CobraCommand().Flags(), ctx.Args())
+	selection, err := cmd.selector.GetSelection(state, rc.CobraCommand().Flags(), rc.Args())
 	if err != nil {
 		return err
 	}
 
-	cmd.releases = selection.Releases
-
-	// build argo client
-	_argocd, err := app.Clients().ArgoCD()
+	_sync, err := app.Ops().Sync()
 	if err != nil {
 		return err
 	}
-	cmd.argocd = _argocd
+	statuses, err := _sync.Sync(selection.Releases, cmd.options.maxParallel)
 
-	return nil
-}
-
-func (cmd *syncCommand) Run(_ app.ThelmaApp, _ cli.RunContext) error {
-	return cmd.argocd.SyncReleases(cmd.releases, cmd.options.maxParallel)
+	rc.SetOutput(common.ReleaseMapToStructuredView(statuses))
+	return err
 }
 
 func (cmd *syncCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

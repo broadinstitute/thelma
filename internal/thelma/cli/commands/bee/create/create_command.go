@@ -2,7 +2,6 @@ package create
 
 import (
 	"fmt"
-
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -26,23 +25,27 @@ thelma bee create \
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	name             string
-	namePrefix       string
-	owner            string
-	template         string
-	generatorOnly    string
-	waitHealthy      string
-	terraHelmfileRef string
-	seed             string
+	name                      string
+	namePrefix                string
+	owner                     string
+	template                  string
+	generatorOnly             string
+	waitHealthy               string
+	waitHealthyTimeoutSeconds string
+	terraHelmfileRef          string
+	seed                      string
+	exportLogsOnFailure       string
 }{
-	name:             "name",
-	namePrefix:       "name-prefix",
-	owner:            "owner",
-	template:         "template",
-	generatorOnly:    "generator-only",
-	waitHealthy:      "wait-healthy",
-	terraHelmfileRef: "terra-helmfile-ref",
-	seed:             "seed",
+	name:                      "name",
+	namePrefix:                "name-prefix",
+	owner:                     "owner",
+	template:                  "template",
+	generatorOnly:             "generator-only",
+	waitHealthy:               "wait-healthy",
+	waitHealthyTimeoutSeconds: "wait-healthy-timeout-seconds",
+	terraHelmfileRef:          "terra-helmfile-ref",
+	seed:                      "seed",
+	exportLogsOnFailure:       "export-logs-on-failure",
 }
 
 type createCommand struct {
@@ -73,7 +76,9 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVarP(&cmd.options.Template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
+	cobraCommand.Flags().IntVar(&cmd.options.WaitHealthTimeoutSeconds, flagNames.waitHealthyTimeoutSeconds, 1200, "How long to wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
+	cobraCommand.Flags().BoolVar(&cmd.options.ExportLogsOnFailure, flagNames.exportLogsOnFailure, true, `Export container logs to GCS if BEE creation fails)`)
 
 	cmd.pinFlags.AddFlags(cobraCommand)
 	cmd.seedFlags.AddFlags(cobraCommand)
@@ -125,9 +130,10 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	env, err := bees.CreateWith(cmd.options)
-	if env != nil {
-		ctx.SetOutput(views.DescribeBee(env))
+	_bee, err := bees.CreateWith(cmd.options)
+
+	if _bee != nil {
+		ctx.SetOutput(views.DescribeBee(_bee))
 	}
 	if err != nil {
 		return err

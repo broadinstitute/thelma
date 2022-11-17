@@ -10,14 +10,16 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
-	"io"
 	"strings"
+	"time"
 )
+
+const defaultNumWorkers = 10
 
 // Logs exports container logs from a Kubernetes cluster
 type Logs interface {
 	Logs(release terra.Release, option ...LogsOption) error
-	Export(releases []terra.Release, am artifacts.Manager, option ...ExportOption) ([]artifacts.Location, error)
+	Export(releases []terra.Release, option ...ExportOption) (map[terra.Release]artifacts.Location, error)
 }
 
 // container struct representing a container definition for which logs should be collected
@@ -41,9 +43,8 @@ type ExportOption func(options *ExportOptions)
 type ExportOptions struct {
 	// ParallelWorkers Number of goroutines to spawn to export container logs in parallel
 	ParallelWorkers int
-	// WriterFactory optional callback that should return a writer where a given container's logs should be streamed
-	// If not given, logs will be streamed to stdout
-	WriterFactory func(container) (io.WriteCloser, error)
+	// Artifacts options governing artifact storage
+	Artifacts artifacts.Options
 	LogsOptions
 }
 
@@ -56,14 +57,16 @@ type LogsOptions struct {
 	MaxLines int
 }
 
-func New(k8sclients k8sclients.Clients) Logs {
+func New(k8sclients k8sclients.Clients, artifacts artifacts.Artifacts) Logs {
 	return &logs{
 		k8sclients: k8sclients,
+		artifacts:  artifacts,
 	}
 }
 
 type logs struct {
 	k8sclients k8sclients.Clients
+	artifacts  artifacts.Artifacts
 }
 
 func (l *logs) Logs(release terra.Release, opts ...LogsOption) error {
@@ -104,18 +107,16 @@ func (l *logs) Logs(release terra.Release, opts ...LogsOption) error {
 	})
 }
 
-func (l *logs) Export(releases []terra.Release, _artifacts artifacts.Manager, opts ...ExportOption) ([]artifacts.Location, error) {
+func (l *logs) Export(releases []terra.Release, opts ...ExportOption) (map[terra.Release]artifacts.Location, error) {
 	options := ExportOptions{
-		ParallelWorkers: 10,
-		WriterFactory:   nil,
+		ParallelWorkers: defaultNumWorkers,
 		LogsOptions:     defaultLogsOptions(),
 	}
 	for _, opt := range opts {
 		opt(&options)
 	}
 
-	var locations []artifacts.Location
-
+	artifactMgr := l.artifacts.NewManager(artifacts.ContainerLog, options.Artifacts)
 	nameGenerator := newLogNameGenerator()
 
 	_kubectl, err := l.k8sclients.Kubectl()
@@ -139,12 +140,10 @@ func (l *logs) Export(releases []terra.Release, _artifacts artifacts.Manager, op
 			Name: _container.containerName,
 			Run: func(_ pool.StatusReporter) error {
 				logName := nameGenerator.generateName(_container)
-				writer, err := _artifacts.Writer(_container.release, logName)
+				writer, err := artifactMgr.Writer(_container.release, logName)
 				if err != nil {
 					return err
 				}
-				location := _artifacts.Location(_container.release, logName)
-				locations = append(locations, location)
 
 				runErr := _kubectl.Logs(_container.kubectx, _container.podSelectorLabels, func(logopts *kubectl.LogsOptions) {
 					logopts.Writer = writer
@@ -169,13 +168,15 @@ func (l *logs) Export(releases []terra.Release, _artifacts artifacts.Manager, op
 	err = pool.New(jobs, func(opts *pool.Options) {
 		opts.NumWorkers = options.ParallelWorkers
 		opts.Summarizer.WorkDescription = "container logs exported"
+		opts.Summarizer.Interval = 10 * time.Second
 	}).Execute()
 
-	if err != nil {
-		return nil, err
+	locations := make(map[terra.Release]artifacts.Location)
+	for _, release := range releases {
+		locations[release] = artifactMgr.BaseLocationForRelease(release)
 	}
 
-	return locations, nil
+	return locations, err
 }
 
 func tryToPickCorrectContainer(containers []container) (container, error) {

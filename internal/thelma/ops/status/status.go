@@ -18,9 +18,17 @@ import (
 )
 
 type Status struct {
-	Healthy            bool
-	Synced             bool
-	UnhealthyResources []Resource `yaml:",omitempty"`
+	Health             *argocd.HealthStatus
+	Sync               *argocd.SyncStatus
+	Error              error      `yaml:",omitempty"`
+	UnhealthyResources []Resource `yaml:"resources,omitempty"`
+}
+
+func (s Status) IsHealthy() bool {
+	if s.Health == nil {
+		return false
+	}
+	return *s.Health == argocd.Healthy
 }
 
 type Resource struct {
@@ -35,17 +43,6 @@ type Event struct {
 	FirstTimestamp time.Time
 	LastTimestamp  time.Time
 	Type           string
-}
-
-func toEventView(event corev1.Event) Event {
-	return Event{
-		Count:          event.Count,
-		Message:        event.Message,
-		Node:           event.Source.Host,
-		FirstTimestamp: event.FirstTimestamp.Time,
-		LastTimestamp:  event.LastTimestamp.Time,
-		Type:           event.Type,
-	}
 }
 
 type Reporter interface {
@@ -68,43 +65,41 @@ type reporter struct {
 func (r *reporter) Status(release terra.Release) (Status, error) {
 	appStatus, err := r.argocd.AppStatus(argocdnames.ApplicationName(release))
 	if err != nil {
-		return Status{}, err
+		return errStatus(err)
 	}
 
-	synced := appStatus.Sync.Status == "Synced"
-	healthy := appStatus.Health.Status == "Healthy"
+	healthy := appStatus.Health.Status == argocd.Healthy
 
 	var unhealthyResources []Resource
 
 	if !healthy {
 		apiClient, err := r.kubeclients.ForRelease(release)
 		if err != nil {
-			return Status{}, err
+			return errStatus(err)
 		}
 		eventList, err := apiClient.CoreV1().Events(release.Namespace()).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
-			return Status{}, err
+			return errStatus(err)
 		}
 
 		for _, argoResource := range appStatus.Resources {
-			if argoResource.Health.Status != "" && argoResource.Health.Status != "Healthy" {
+			if argoResource.Health.Status != argocd.Healthy {
 				resource := Resource{Resource: argoResource}
-
-				if argoResource.Health.Status != "Missing" {
+				if argoResource.Health.Status != argocd.Missing {
 					var podSelector *metav1.LabelSelector
 					var resourceUID types.UID
 
 					if argoResource.Kind == "Deployment" {
 						deployment, err := apiClient.AppsV1().Deployments(release.Namespace()).Get(context.Background(), argoResource.Name, metav1.GetOptions{})
 						if err != nil {
-							return Status{}, err
+							return errStatus(err)
 						}
 						podSelector = deployment.Spec.Selector
 						resourceUID = deployment.UID
 					} else if argoResource.Kind == "Statefulset" {
 						sts, err := apiClient.AppsV1().StatefulSets(release.Namespace()).Get(context.Background(), argoResource.Namespace, metav1.GetOptions{})
 						if err != nil {
-							return Status{}, err
+							return errStatus(err)
 						}
 						podSelector = sts.Spec.Selector
 						resourceUID = sts.UID
@@ -115,7 +110,7 @@ func (r *reporter) Status(release terra.Release) (Status, error) {
 
 					selectorMap, err := metav1.LabelSelectorAsMap(podSelector)
 					if err != nil {
-						return Status{}, err
+						return errStatus(err)
 					}
 
 					selectorString := labels.SelectorFromSet(selectorMap).String()
@@ -144,10 +139,73 @@ func (r *reporter) Status(release terra.Release) (Status, error) {
 	}
 
 	return Status{
-		Healthy:            healthy,
-		Synced:             synced,
+		Health:             &appStatus.Health.Status,
+		Sync:               &appStatus.Sync.Status,
 		UnhealthyResources: unhealthyResources,
 	}, nil
+}
+
+func (s *Status) Headline() string {
+	if s.Error != nil {
+		return fmt.Sprintf("error: %v", s.Error)
+	}
+	if s.Health == nil {
+		return "Unknown"
+	}
+
+	if len(s.UnhealthyResources) == 0 {
+		return s.Health.String()
+	}
+
+	// we have some unhealthy resources, pick one that has some events to display in more detail
+	resource := s.UnhealthyResources[0]
+
+	if len(resource.Events) == 0 {
+		return fmt.Sprintf("%s: %s: %s", s.Health.String(), resource.Name, resource.Health.Message)
+	}
+
+	mostRecentEvent := resource.Events[0]
+	for _, e := range resource.Events {
+		if e.LastTimestamp.After(mostRecentEvent.LastTimestamp) {
+			mostRecentEvent = e
+		}
+	}
+	return fmt.Sprintf("%s: %s: %s", s.Health.String(), resource.Name, mostRecentEvent.Message)
+}
+
+func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]Status, error) {
+	statuses := make(map[terra.Release]Status)
+	var mutex sync.Mutex
+
+	var jobs []pool.Job
+
+	for _, unsafe := range releases {
+		release := unsafe // copy invariant to tmp variable
+
+		jobs = append(jobs, pool.Job{
+			Name: release.FullName(),
+			Run: func(_ pool.StatusReporter) error {
+				status, err := r.Status(release)
+				if err != nil {
+					return fmt.Errorf("error generating status report for %s: %v", release.Name(), err)
+				}
+				mutex.Lock()
+				statuses[release] = status
+				mutex.Unlock()
+				return nil
+			},
+		})
+	}
+
+	_pool := pool.New(jobs, func(options *pool.Options) {
+		options.NumWorkers = 10
+		options.Summarizer.WorkDescription = "services checked"
+	})
+	err := _pool.Execute()
+	if err != nil {
+		return nil, err
+	}
+	return statuses, nil
 }
 
 func (r *reporter) eventsForPods(events []corev1.Event, pods []corev1.Pod) []corev1.Event {
@@ -170,36 +228,20 @@ func (r *reporter) eventsMatchingUID(events []corev1.Event, uid types.UID) []cor
 	return matches
 }
 
-func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]Status, error) {
-	statuses := make(map[terra.Release]Status)
-	var mutex sync.Mutex
-
-	var jobs []pool.Job
-
-	for _, unsafe := range releases {
-		release := unsafe // copy invariant to tmp variable
-
-		jobs = append(jobs, pool.Job{
-			Name: argocdnames.ApplicationName(release),
-			Run: func(_ pool.StatusReporter) error {
-				status, err := r.Status(release)
-				if err != nil {
-					return fmt.Errorf("error generating status report for %s: %v", release.Name(), err)
-				}
-				mutex.Lock()
-				statuses[release] = status
-				mutex.Unlock()
-				return nil
-			},
-		})
+func toEventView(event corev1.Event) Event {
+	return Event{
+		Count:          event.Count,
+		Message:        event.Message,
+		Node:           event.Source.Host,
+		FirstTimestamp: event.FirstTimestamp.Time,
+		LastTimestamp:  event.LastTimestamp.Time,
+		Type:           event.Type,
 	}
+}
 
-	_pool := pool.New(jobs, func(options *pool.Options) {
-		options.NumWorkers = 10
-	})
-	err := _pool.Execute()
-	if err != nil {
-		return nil, err
-	}
-	return statuses, nil
+// indicates an error was encountered while retrieving the status
+func errStatus(err error) (Status, error) {
+	return Status{
+		Error: err,
+	}, err
 }

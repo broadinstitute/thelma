@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"bytes"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -116,7 +117,41 @@ func Test_DeletePVCs(t *testing.T) {
 }
 
 func Test_Logs(t *testing.T) {
-	t.Fatal("TODO")
+	mockKubeCfg := mocks.NewKubeconfig(t)
+	mockKubectx := mocks.NewKubectx(t)
+	mockRunner := shell.DefaultMockRunner()
+	_kubectl := New(mockRunner, mockKubeCfg)
+
+	mockKubeCfg.EXPECT().ConfigFile().Return("kubecfg")
+	mockKubectx.EXPECT().ContextName().Return("fake-context")
+	mockKubectx.EXPECT().Namespace().Return("my-namespace")
+
+	mockRunner.ExpectCmd(shell.Command{
+		Prog: "kubectl",
+		Args: []string{
+			"--context",
+			"fake-context",
+			"--namespace",
+			"my-namespace",
+			"logs",
+			"--selector",
+			"a=b,c=d",
+			"--container",
+			"my-container",
+			"--tail",
+			"2",
+		},
+		Env:         []string{"KUBECONFIG=kubecfg"},
+		Dir:         "",
+		PristineEnv: false,
+	})
+	buf := &bytes.Buffer{}
+	err := _kubectl.Logs(mockKubectx, map[string]string{"a": "b", "c": "d"}, func(options *LogsOptions) {
+		options.MaxLines = 2
+		options.Writer = buf
+		options.ContainerName = "my-container"
+	})
+	require.NoError(t, err)
 }
 
 func Test_parsePortFromPortForwardOutput(t *testing.T) {

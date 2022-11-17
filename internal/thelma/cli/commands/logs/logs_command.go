@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/common"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
-	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts/artifactsflags"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
 	"github.com/spf13/cobra"
@@ -67,7 +67,7 @@ func (cmd *logsCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	_logs := logs.New(app.Clients().Kubernetes())
+	_logs := app.Ops().Logs()
 
 	if !cmd.options.export {
 		if len(selection.Releases) != 1 {
@@ -81,13 +81,13 @@ func (cmd *logsCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	artifactsMgr := artifacts.NewManager(artifacts.ContainerLog, app.Clients().Google(), artifactsOptions)
-
-	locations, err := _logs.Export(selection.Releases, artifactsMgr)
+	locations, err := _logs.Export(selection.Releases, func(options *logs.ExportOptions) {
+		options.Artifacts = artifactsOptions
+	})
 	if err != nil {
 		return err
 	}
-	rc.SetOutput(locations)
+	rc.SetOutput(common.ReleaseMapToStructuredView(locations))
 	return nil
 }
 
