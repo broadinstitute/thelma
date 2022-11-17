@@ -22,7 +22,7 @@ iap:
 
 logging:
   console:
-    level: debug
+    level: info
   file:
     # disable file logging
     enabled: false
