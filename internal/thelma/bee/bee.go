@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"strings"
 
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
@@ -67,7 +68,7 @@ type PinOptions struct {
 	FileOverrides map[string]terra.VersionOverride
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl) (Bees, error) {
+func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl, slack *slack.Slack) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -80,6 +81,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Se
 		seeder:      seeder,
 		cleanup:     cleanup,
 		kubectl:     kubectl,
+		slack:       slack,
 	}, nil
 }
 
@@ -91,6 +93,7 @@ type bees struct {
 	seeder      seed.Seeder
 	kubectl     kubectl.Kubectl
 	cleanup     cleanup.Cleanup
+	slack       *slack.Slack
 }
 
 func (b *bees) CreateWith(options CreateOptions) (terra.Environment, error) {

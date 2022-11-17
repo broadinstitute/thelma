@@ -26,7 +26,9 @@ func NewBees(thelmaApp app.ThelmaApp) (bee.Bees, error) {
 		return nil, err
 	}
 
-	return bee.NewBees(_argocd, thelmaApp.StateLoader(), seeder, _cleanup, kubectl)
+	slack, _ := thelmaApp.Clients().Slack()
+
+	return bee.NewBees(_argocd, thelmaApp.StateLoader(), seeder, _cleanup, kubectl, slack)
 }
 
 func newSeeder(thelma app.ThelmaApp) (seed.Seeder, error) {
