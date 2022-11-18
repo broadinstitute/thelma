@@ -193,7 +193,7 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 
 	if err != nil && options.ExportLogsOnFailure {
 		_, logErr := b.exportLogs(env)
-		if err != nil {
+		if logErr != nil {
 			log.Error().Err(logErr).Msgf("error exporting logs from %s: %v", env.Name(), logErr)
 		}
 		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)

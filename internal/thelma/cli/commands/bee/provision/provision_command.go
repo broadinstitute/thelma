@@ -70,7 +70,7 @@ func (cmd *provisionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cmd.seedFlags.AddFlags(cobraCommand)
 }
 
-func (cmd *provisionCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *provisionCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	if !ctx.CobraCommand().Flags().Changed(flagNames.name) {
 		return fmt.Errorf("no environment name specified; --%s is required", flagNames.name)
 	}
@@ -78,6 +78,19 @@ func (cmd *provisionCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
 		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
+	// validate/load pin and seed options
+	pinOptions, err := cmd.pinFlags.GetPinOptions(app, ctx)
+	if err != nil {
+		return err
+	}
+	cmd.options.PinOptions = pinOptions
+
+	seedOptions, err := cmd.seedFlags.GetOptions(ctx.CobraCommand())
+	if err != nil {
+		return err
+	}
+	cmd.options.SeedOptions = seedOptions
+
 	return nil
 }
 
