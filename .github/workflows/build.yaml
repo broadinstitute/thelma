@@ -366,12 +366,6 @@ jobs:
           script: |
             const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
             github.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.tagged }}' });
-      - name: Add latest tag to Docker image
-        if: github.event_name != 'pull_request'
-        run: |
-          gcloud artifacts docker tags add \
-            "${{ steps.image-name.outputs.tagged }}" \
-            "${{ steps.image-name.outputs.name }}:latest"
 
   update-latest-tag:
     if: github.event_name != 'pull_request'
