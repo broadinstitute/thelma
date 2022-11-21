@@ -55,12 +55,12 @@ func (c *terraClient) doJsonRequest(method string, url string, body io.Reader) (
 	}
 	token.SetAuthHeader(req)
 	response, err := c.httpClient.Do(req)
-	defer func(body io.ReadCloser) {
-		_ = body.Close()
-	}(response.Body)
 	if err != nil {
 		return response, "", err
 	}
+	defer func(body io.ReadCloser) {
+		_ = body.Close()
+	}(response.Body)
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return response, "", err
