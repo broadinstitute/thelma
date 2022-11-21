@@ -36,9 +36,7 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 
 	waitHealthyTimeout := s.extractWaitHealthy(options)
 
-	var optionsNoWaitHealthy []argocd.SyncOption
-	optionsNoWaitHealthy = append(optionsNoWaitHealthy, options...)
-	optionsNoWaitHealthy = append(optionsNoWaitHealthy, func(options *argocd.SyncOptions) {
+	optionsNoWaitHealthy := withOption(options, func(options *argocd.SyncOptions) {
 		options.WaitHealthy = false
 	})
 
@@ -57,12 +55,15 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 
 		jobs = append(jobs, pool.Job{
 			Name: jobName,
-			Run: func(sr pool.StatusReporter) error {
-				if err := s.argocd.SyncRelease(release, optionsNoWaitHealthy...); err != nil {
+			Run: func(statusReporter pool.StatusReporter) error {
+				opts := withOption(optionsNoWaitHealthy, func(options *argocd.SyncOptions) {
+					options.StatusReporter = statusReporter
+				})
+				if err := s.argocd.SyncRelease(release, opts...); err != nil {
 					return err
 				}
 
-				_status, err := s.waitHealthy(release, waitHealthyTimeout, sr)
+				_status, err := s.waitHealthy(release, waitHealthyTimeout, statusReporter)
 
 				mutex.Lock()
 				statusMap[release] = _status
@@ -148,4 +149,11 @@ func (s *syncer) extractWaitHealthy(opts []argocd.SyncOption) time.Duration {
 		return 0
 	}
 	return time.Duration(options.WaitHealthyTimeoutSeconds) * time.Second
+}
+
+func withOption(opts []argocd.SyncOption, option ...argocd.SyncOption) []argocd.SyncOption {
+	var result []argocd.SyncOption
+	result = append(result, opts...)
+	result = append(result, option...)
+	return result
 }
