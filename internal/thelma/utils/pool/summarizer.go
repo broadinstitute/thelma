@@ -149,7 +149,7 @@ func (s *summarizer) logSummary() {
 		}
 		if phase != Queued {
 			// optimizing for humans reading the logs
-			event.Str(elapsedTimeField, fmt.Sprintf("%s", item.duration().Round(time.Second)))
+			event.Str(elapsedTimeField, item.duration().Round(time.Second).String())
 		}
 		if item.hasErr() {
 			event.Err(item.getErr())

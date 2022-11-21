@@ -200,7 +200,6 @@ func parseMessages(t *testing.T, file string) []map[string]interface{} {
 	content, err := os.ReadFile(file)
 	require.NoError(t, err)
 
-	fmt.Println(string(content))
 	var messages []map[string]interface{}
 	for _, line := range bytes.Split(content, []byte("\n")) {
 		if len(line) == 0 {
