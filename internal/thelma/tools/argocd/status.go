@@ -1,9 +1,7 @@
 package argocd
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"gopkg.in/yaml.v3"
 )
 
@@ -113,8 +111,17 @@ func (s SyncStatus) String() string {
 	return ""
 }
 
-type application struct {
-	Status ApplicationStatus
+type Resource struct {
+	Kind      string
+	Name      string
+	Group     string
+	Version   string
+	Namespace string
+	Status    SyncStatus
+	Health    struct {
+		Status  HealthStatus `yaml:",omitempty"`
+		Message string       `yaml:",omitempty"`
+	} `yaml:",omitempty"`
 }
 
 type ApplicationStatus struct {
@@ -129,31 +136,13 @@ type ApplicationStatus struct {
 	Resources []Resource
 }
 
-type Resource struct {
-	Kind      string
-	Name      string
-	Version   string
-	Namespace string
-	Status    SyncStatus
-	Health    struct {
-		Status  HealthStatus `yaml:",omitempty"`
-		Message string       `yaml:",omitempty"`
-	} `yaml:",omitempty"`
+type ApplicationSpec struct {
+	Source struct {
+		TargetRevision string `yaml:"targetRevision"`
+	}
 }
 
-func (a *argocd) AppStatus(appName string) (ApplicationStatus, error) {
-	buf := bytes.Buffer{}
-	err := a.runCommand([]string{"app", "get", appName, "-o", "yaml"}, func(options *shell.RunOptions) {
-		options.Stdout = &buf
-	})
-	if err != nil {
-		return ApplicationStatus{}, err
-	}
-
-	var app application
-	if err = yaml.Unmarshal(buf.Bytes(), &app); err != nil {
-		return ApplicationStatus{}, fmt.Errorf("error unmarshalling argo app %s: %v", appName, err)
-	}
-
-	return app.Status, nil
+type application struct {
+	Spec   ApplicationSpec
+	Status ApplicationStatus
 }

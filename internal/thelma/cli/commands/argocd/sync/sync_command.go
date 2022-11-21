@@ -55,6 +55,11 @@ func (cmd *syncCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
+	// workaround for DDO-2476
+	// okay so, ideally we would have per-environment level-1 generators for every single environment
+	// here is the thing.
+	// we want to be able to sync JUST THE SPECIFIC ARGO app.
+	//
 	_sync, err := app.Ops().Sync()
 	if err != nil {
 		return err
