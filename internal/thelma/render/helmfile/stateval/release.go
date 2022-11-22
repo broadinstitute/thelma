@@ -6,6 +6,8 @@ import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 type Release struct {
 	// Name of this release
 	Name string `yaml:"Name"`
+	// ChartName name of the chart that is being deployed
+	ChartName string `yaml:"ChartName"`
 	// Type of this release
 	Type string `yaml:"Type"`
 	// Namespace this release is being deployed to
@@ -23,6 +25,7 @@ func forRelease(release terra.Release) Release {
 
 	return Release{
 		Name:       release.Name(),
+		ChartName:  release.ChartName(),
 		Type:       release.Type().String(),
 		Namespace:  release.Namespace(),
 		AppVersion: appVersion,

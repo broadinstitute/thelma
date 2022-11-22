@@ -26,6 +26,7 @@ func Test_BuildStateValues(t *testing.T) {
 				ChartPath: chartPath,
 				Release: Release{
 					Name:       "sam",
+					ChartName:  "sam",
 					Type:       "app",
 					Namespace:  "terra-dev",
 					AppVersion: "2d309b1645a0",
@@ -67,6 +68,7 @@ func Test_BuildStateValues(t *testing.T) {
 				ChartPath: chartPath,
 				Release: Release{
 					Name:       "sam",
+					ChartName:  "sam",
 					Type:       "app",
 					Namespace:  "terra-prod",
 					AppVersion: "8f69c32bd9fe",
@@ -108,6 +110,7 @@ func Test_BuildStateValues(t *testing.T) {
 				ChartPath: chartPath,
 				Release: Release{
 					Name:       "sam",
+					ChartName:  "sam",
 					Type:       "app",
 					Namespace:  "terra-swatomation",
 					AppVersion: "2d309b1645a0",
@@ -149,6 +152,7 @@ func Test_BuildStateValues(t *testing.T) {
 				ChartPath: chartPath,
 				Release: Release{
 					Name:       "sam",
+					ChartName:  "sam",
 					Type:       "app",
 					Namespace:  "terra-fiab-funky-chipmunk",
 					AppVersion: "2d309b1645a0",
@@ -192,6 +196,7 @@ func Test_BuildStateValues(t *testing.T) {
 				ChartPath: chartPath,
 				Release: Release{
 					Name:      "diskmanager",
+					ChartName: "diskmanager",
 					Type:      "cluster",
 					Namespace: "default",
 				},
