@@ -628,7 +628,7 @@ func (a *argocd) browserLogin() error {
 
 // run `argocd app set <app-name> --revision=<ref>` to set an Argo app's git ref
 func (a *argocd) setRef(appName string, ref string) error {
-	err := a.runCommand([]string{"app", "set", appName, "--revision", ref})
+	err := a.runCommand([]string{"app", "set", appName, "--revision", ref, "--validate=false"})
 	if err != nil {
 		return fmt.Errorf("error setting %s to revision %q: %v", appName, ref, err)
 	}
