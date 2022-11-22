@@ -98,10 +98,7 @@ func (m MaskingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 				continue
 			}
 			asString, ok := value.(string)
-			if len(asString) < minAutoMaskLength {
-				continue
-			}
-			if ok {
+			if ok && len(asString) >= minAutoMaskLength {
 				logger.Debug().Str("field", field).Msgf("masked value in Vault secret")
 				m.maskFn(asString)
 				count++
