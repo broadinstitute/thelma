@@ -14,11 +14,12 @@ func Test_MaskingRoundTripper(t *testing.T) {
 	// Add a fake secret to the vault server -- our test will retrieve it
 	fakeVaultServer.SetSecret("secret/foo/bar",
 		map[string]interface{}{
-			"field1":     "mask-me-1",
-			"field2":     "mask-me-2",
-			"project_id": "should-not-be-masked-1",
-			"user":       "should-not-be-masked-2",
-			"too-short":  "abcd", // should not be masked
+			"field1":        "mask-me-1",
+			"field2":        "mask-me-2",
+			"project_id":    "should-not-be-masked-1",
+			"user":          "should-not-be-masked-2",
+			"too-short":     "1234",  // should not be masked
+			"not-too-short": "12345", // should be masked
 		},
 	)
 
@@ -47,6 +48,6 @@ func Test_MaskingRoundTripper(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make sure the expected values were masked
-	assert.Equal(t, 2, maskedValues.Size())
-	assert.ElementsMatch(t, []string{"mask-me-1", "mask-me-2"}, maskedValues.Elements())
+	assert.Equal(t, 3, maskedValues.Size())
+	assert.ElementsMatch(t, []string{"mask-me-1", "mask-me-2", "12345"}, maskedValues.Elements())
 }

@@ -58,6 +58,10 @@ var retryableErrors = []*regexp.Regexp{
 	// occasional weird socket errors that only show up on OSX
 	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: address already in use"),
 	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: file exists"),
+	// occasional weird socket errors that only show up in Jenkins. example full message:
+	// rpc error: code = Unknown desc = Post \\\"https://ap-argocd.dsp-devops.broadinstitute.org:443/application.ApplicationService/Get\\\":
+	// dial tcp: lookup ap-argocd.dsp-devops.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout\"
+	regexp.MustCompile("rpc error: code = Unknown.*dial tcp: lookup .*: read udp .*: i/o timeout"),
 }
 
 // SyncOptions options for an ArgoCD sync operation
