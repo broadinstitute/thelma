@@ -171,7 +171,7 @@ func Test_SyncRelease(t *testing.T) {
 		WithStdout("leonardo-configs-dev\nleonardo-dev\n")
 
 	// sync legacy configs app
-	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev")
+	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
 
 	_mocks.expectCmd("app", "diff", "leonardo-configs-dev", "--hard-refresh").Exits(1) // non-zero indicates a diff was detected
 
@@ -182,7 +182,7 @@ func Test_SyncRelease(t *testing.T) {
 	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--timeout", "600", "--health")
 
 	// sync primary app
-	_mocks.expectCmd("app", "set", "leonardo-dev", "--revision", "HEAD")
+	_mocks.expectCmd("app", "set", "leonardo-dev", "--revision", "HEAD", "--validate=false")
 
 	_mocks.expectCmd("app", "diff", "leonardo-dev", "--hard-refresh").Exits(1) // non-zero indicates a diff was detected
 
@@ -206,7 +206,7 @@ func Test_setRef(t *testing.T) {
 	_mocks := setupMocks(t)
 	_argocd := _mocks.argocd
 
-	_mocks.expectCmd("app", "set", "fake-app", "--revision", "main")
+	_mocks.expectCmd("app", "set", "fake-app", "--revision", "main", "--validate=false")
 	require.NoError(t, _argocd.setRef("fake-app", "main"))
 }
 
