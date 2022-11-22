@@ -58,8 +58,6 @@ var retryableErrors = []*regexp.Regexp{
 	// occasional weird socket errors that only show up on OSX
 	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: address already in use"),
 	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: file exists"),
-	// occurs occasionally when repo server is under load and we run `argocd app set`
-	regexp.MustCompile("Unable to generate manifests in .*: rpc error: code = DeadlineExceeded desc = context deadline exceeded"),
 }
 
 // SyncOptions options for an ArgoCD sync operation
