@@ -567,7 +567,7 @@ func (a *argocd) diffWithRetries(appName string, opts SyncOptions) (hasDifferenc
 		log.Warn().Str("app", appName).Int("count", i).Err(err).Msgf("attempt %d to diff %s returned error: %v", i, appName, err)
 
 		if i < a.cfg.DiffRetries {
-			log.Warn().Str("app", appName).Int("count", i).Msgf("Will retry in %d seconds", a.cfg.DiffRetryInterval)
+			log.Warn().Str("app", appName).Int("count", i).Msgf("Will retry in %s", a.cfg.DiffRetryInterval)
 			time.Sleep(a.cfg.DiffRetryInterval)
 		}
 	}
