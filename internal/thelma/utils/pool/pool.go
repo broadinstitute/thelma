@@ -129,23 +129,23 @@ func (p *pool) spawnWorker(id int) {
 		for {
 			select {
 			case <-p.cancelCtx.Done():
-				logger.Debug().Msg("execution cancelled, returning")
+				logger.Trace().Msg("execution cancelled, returning")
 				return
 
 			case item, ok := <-p.queue:
 				if !ok {
-					logger.Debug().Msg("queue empty, returning")
+					logger.Trace().Msg("queue empty, returning")
 					return
 				}
 
 				itemLogger := logger.With().Str("job", item.getName()).Int("id", item.getId()).Logger()
-				itemLogger.Debug().Msg("starting job")
+				itemLogger.Trace().Msg("starting job")
 				item.execute()
-				itemLogger.Debug().Dur("duration", item.duration()).Str("result", item.getPhase().String()).Err(item.getErr()).Msgf("finished job")
+				itemLogger.Trace().Dur("duration", item.duration()).Str("result", item.getPhase().String()).Err(item.getErr()).Msgf("finished job")
 
 				if item.hasErr() {
 					if p.options.StopProcessingOnError {
-						logger.Debug().Msgf("cancelling pool")
+						logger.Trace().Msgf("error encountered; cancelling pool")
 						p.cancelFn()
 						return
 					}

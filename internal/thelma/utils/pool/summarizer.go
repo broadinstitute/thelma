@@ -7,15 +7,15 @@ import (
 	"time"
 )
 
-const elapsedTimeField = "time"
+const elapsedTimeField = "t"
 
 type SummarizerOptions struct {
 	// Enabled if true, print a periodic summary of pool status while items are being processed. For example:
 	//
 	// 2/5 items processed queued=1 running=2 success=1 error=1
-	// foo:    error   err="something bad happened" duration=2m30s
-	// bar:    running status="downloading file" duration=30s
-	// baz:    running status="uploading file" duration=1m53s
+	// foo:    error   err="something bad happened" dur=2m30s
+	// bar:    running status="downloading file" dur=30s
+	// baz:    running status="uploading file" dur=1m53s
 	// quux:   queued
 	// blergh: success status="finished transfer"
 	//

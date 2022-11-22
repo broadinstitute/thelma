@@ -118,7 +118,7 @@ type Resource struct {
 	Version   string
 	Namespace string
 	Status    SyncStatus
-	Health    struct {
+	Health    *struct {
 		Status  HealthStatus `yaml:",omitempty"`
 		Message string       `yaml:",omitempty"`
 	} `yaml:",omitempty"`

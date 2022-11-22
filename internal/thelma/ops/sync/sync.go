@@ -95,6 +95,9 @@ func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statu
 		return
 	}
 	updateStatus(lastStatus, statusReporter)
+	if lastStatus.IsHealthy() {
+		return
+	}
 
 	if maxWait == 0 {
 		log.Debug().Msgf("Not waiting for %s to be healthy", release.FullName())
