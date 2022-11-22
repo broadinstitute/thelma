@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	url "net/url"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -180,6 +180,11 @@ func BrowserLogin(thelmaConfig config.Config, shellRunner shell.Runner, iapToken
 
 // New return a new ArgoCD client
 func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (ArgoCD, error) {
+	return newArgocd(thelmaConfig, shellRunner, iapToken, vaultClient)
+}
+
+// private constructor used in tests
+func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (*argocd, error) {
 	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
 	if err != nil {
 		return nil, err
@@ -288,6 +293,9 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	// Sync the legacy configs app, if one exists
 	legacyConfigsWereSynced := false
 	if hasLegacyConfigsApp {
+		if err := a.setRef(legacyConfigsApp, release.FirecloudDevelopRef()); err != nil {
+			return err
+		}
 		syncResult, err := a.SyncApp(legacyConfigsApp, options...)
 		if err != nil {
 			return err
@@ -300,6 +308,9 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 		options.WaitHealthy = false
 	})
 
+	if err := a.setRef(primaryApp, release.TerraHelmfileRef()); err != nil {
+		return err
+	}
 	if _, err := a.SyncApp(primaryApp, optionsNoWaitHealthy...); err != nil {
 		return err
 	}
@@ -336,6 +347,14 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 func (a *argocd) HardRefresh(appName string) error {
 	_, err := a.diffWithRetries(appName, a.DefaultSyncOptions())
 	return err
+}
+
+func (a *argocd) AppStatus(appName string) (ApplicationStatus, error) {
+	app, err := a.getApplication(appName)
+	if err != nil {
+		return ApplicationStatus{}, err
+	}
+	return app.Status, nil
 }
 
 func (a *argocd) waitHealthy(appName string, timeoutSeconds int) error {
@@ -548,7 +567,7 @@ func (a *argocd) diffWithRetries(appName string, opts SyncOptions) (hasDifferenc
 		log.Warn().Str("app", appName).Int("count", i).Err(err).Msgf("attempt %d to diff %s returned error: %v", i, appName, err)
 
 		if i < a.cfg.DiffRetries {
-			log.Warn().Str("app", appName).Int("count", i).Msgf("Will retry in %d seconds", a.cfg.DiffRetryInterval)
+			log.Warn().Str("app", appName).Int("count", i).Msgf("Will retry in %s", a.cfg.DiffRetryInterval)
 			time.Sleep(a.cfg.DiffRetryInterval)
 		}
 	}
@@ -605,6 +624,34 @@ func (a *argocd) ensureLoggedIn() error {
 func (a *argocd) browserLogin() error {
 	log.Info().Msgf("Launching browser to authenticate Thelma to ArgoCD")
 	return a.runCommand([]string{"login", "--sso", a.cfg.Host})
+}
+
+// run `argocd app set <app-name> --revision=<ref>` to set an Argo app's git ref
+func (a *argocd) setRef(appName string, ref string) error {
+	err := a.runCommand([]string{"app", "set", appName, "--revision", ref})
+	if err != nil {
+		return fmt.Errorf("error setting %s to revision %q: %v", appName, ref, err)
+	}
+	return nil
+}
+
+// run `argocd app get <app-name>` to retrive an ArgoCD application's YAML definition
+func (a *argocd) getApplication(appName string) (application, error) {
+	var app application
+
+	buf := bytes.Buffer{}
+	err := a.runCommand([]string{"app", "get", appName, "-o", "yaml"}, func(options *shell.RunOptions) {
+		options.Stdout = &buf
+	})
+	if err != nil {
+		return app, err
+	}
+
+	if err = yaml.Unmarshal(buf.Bytes(), &app); err != nil {
+		return app, fmt.Errorf("error unmarshalling argo app %s: %v", appName, err)
+	}
+
+	return app, nil
 }
 
 func (a *argocd) runCommandAndParseYamlOutput(args []string, out interface{}) error {

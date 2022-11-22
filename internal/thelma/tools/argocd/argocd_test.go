@@ -3,6 +3,7 @@ package argocd
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,7 @@ import (
 )
 
 const fakeArgocdHost = "fake-argo.com"
+const fakeIapToken = "fake-iap-token"
 
 func Test_Login(t *testing.T) {
 	testCases := []struct {
@@ -147,4 +149,108 @@ func Test_releaseSelector(t *testing.T) {
 
 func Test_joinSelector(t *testing.T) {
 	assert.Equal(t, "a=b,c=d,x=y", joinSelector(map[string]string{"x": "y", "a": "b", "c": "d"}))
+}
+
+func Test_SyncRelease(t *testing.T) {
+	// TODO we should add more test cases with different options and config paramters
+	_mocks := setupMocks(t)
+	_argocd := _mocks.argocd
+
+	dev := statemocks.NewEnvironment(t)
+	dev.EXPECT().Name().Return("dev")
+
+	leonardoDev := statemocks.NewAppRelease(t)
+	leonardoDev.EXPECT().Destination().Return(dev)
+	leonardoDev.EXPECT().Name().Return("leonardo")
+	leonardoDev.EXPECT().IsAppRelease().Return(true)
+	leonardoDev.EXPECT().FirecloudDevelopRef().Return("dev")
+	leonardoDev.EXPECT().TerraHelmfileRef().Return("HEAD")
+
+	// check for legacy configs app
+	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
+		WithStdout("leonardo-configs-dev\nleonardo-dev\n")
+
+	// sync legacy configs app
+	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev")
+
+	_mocks.expectCmd("app", "diff", "leonardo-configs-dev", "--hard-refresh").Exits(1) // non-zero indicates a diff was detected
+
+	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--operation", "--timeout", "300")
+
+	_mocks.expectCmd("app", "sync", "leonardo-configs-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
+
+	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--timeout", "600", "--health")
+
+	// sync primary app
+	_mocks.expectCmd("app", "set", "leonardo-dev", "--revision", "HEAD")
+
+	_mocks.expectCmd("app", "diff", "leonardo-dev", "--hard-refresh").Exits(1) // non-zero indicates a diff was detected
+
+	_mocks.expectCmd("app", "wait", "leonardo-dev", "--operation", "--timeout", "300")
+
+	_mocks.expectCmd("app", "sync", "leonardo-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
+
+	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "600", "--health")
+
+	// restart deployments
+	_mocks.expectCmd("app", "actions", "list", "--kind=Deployment", "leonardo-dev")
+
+	_mocks.expectCmd("app", "actions", "run", "--kind=Deployment", "leonardo-dev", "restart", "--all")
+
+	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "600", "--health")
+
+	require.NoError(t, _argocd.SyncRelease(leonardoDev))
+}
+
+func Test_setRef(t *testing.T) {
+	_mocks := setupMocks(t)
+	_argocd := _mocks.argocd
+
+	_mocks.expectCmd("app", "set", "fake-app", "--revision", "main")
+	require.NoError(t, _argocd.setRef("fake-app", "main"))
+}
+
+type mocks struct {
+	fakeIapToken string
+	fakeHost     string
+	argocd       *argocd
+	runner       *shell.MockRunner
+}
+
+func (m *mocks) expectCmd(args ...string) *shell.Call {
+	_args := []string{"--header", "Proxy-Authorization: Bearer " + m.fakeIapToken, "--grpc-web"}
+	_args = append(_args, args...)
+
+	return m.runner.ExpectCmd(shell.Command{
+		Prog: prog,
+		Args: _args,
+		Env:  []string{envVars.server + "=" + m.fakeHost},
+	})
+}
+
+func setupMocks(t *testing.T) *mocks {
+	iapToken := fakeIapToken
+	host := fakeArgocdHost
+
+	testConfig, err := config.NewTestConfig(t, map[string]interface{}{
+		"argocd.host": host,
+	})
+	require.NoError(t, err)
+
+	mockRunner := shell.DefaultMockRunner()
+	mockRunner.ExpectCmd(shell.Command{
+		Prog: prog,
+		Args: []string{"--header", "Proxy-Authorization: Bearer " + iapToken, "--grpc-web", "account", "get-user-info", "--output", "yaml"},
+		Env:  []string{envVars.server + "=" + host},
+	}).WithStdout("loggedIn: true")
+
+	_argocd, err := newArgocd(testConfig, mockRunner, iapToken, nil)
+	require.NoError(t, err)
+
+	return &mocks{
+		fakeIapToken: iapToken,
+		fakeHost:     host,
+		argocd:       _argocd,
+		runner:       mockRunner,
+	}
 }
