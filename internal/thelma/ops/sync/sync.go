@@ -95,6 +95,13 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 	return statusMap, err
 }
 
+// waitHealthy waits for a release's primary ArgoCD application to be healthy. If:
+// an unknown error is encountered while generating the status report (because, say, ArgoCD is down):
+// .     we return nil + the underlying error
+// the application becomes healthy within the timeout:
+// .     we return the status report and nil error
+// the application does not become healthy within the timeout:
+// .     we return the status report + a timeout error
 func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statusReporter pool.StatusReporter) (*status.Status, error) {
 	lastStatus, err := s.status.Status(release)
 	if err != nil {
