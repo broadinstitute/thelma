@@ -12,8 +12,8 @@ import (
 )
 
 type Reporter interface {
-	Status(release terra.Release) (Status, error)
-	Statuses(releases []terra.Release) (map[terra.Release]Status, error)
+	Status(release terra.Release) (*Status, error)
+	Statuses(releases []terra.Release) (map[terra.Release]*Status, error)
 }
 
 func NewReporter(argocd argocd.ArgoCD, kubeclients k8sclients.Clients) Reporter {
@@ -28,23 +28,23 @@ type reporter struct {
 	kubeclients k8sclients.Clients
 }
 
-func (r *reporter) Status(release terra.Release) (Status, error) {
+func (r *reporter) Status(release terra.Release) (*Status, error) {
 	appStatus, err := r.argocd.AppStatus(argocdnames.ApplicationName(release))
 	if err != nil {
-		return errStatus(err)
+		return nil, err
 	}
 
 	status := Status{
-		Health:             &appStatus.Health.Status,
-		Sync:               &appStatus.Sync.Status,
+		Health:             appStatus.Health.Status,
+		Sync:               appStatus.Sync.Status,
 		UnhealthyResources: r.buildUnhealthyResourceList(appStatus, release),
 	}
 
-	return status, nil
+	return &status, nil
 }
 
-func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]Status, error) {
-	statuses := make(map[terra.Release]Status)
+func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]*Status, error) {
+	statuses := make(map[terra.Release]*Status)
 	var mutex sync.Mutex
 
 	var jobs []pool.Job
@@ -111,11 +111,4 @@ func (r *reporter) buildEventMatcher(release terra.Release) (*eventMatcher, erro
 		return nil, err
 	}
 	return newEventMatcher(apiClient, release.Namespace())
-}
-
-// indicates an error was encountered while retrieving the status
-func errStatus(err error) (Status, error) {
-	return Status{
-		Error: err.Error(),
-	}, err
 }
