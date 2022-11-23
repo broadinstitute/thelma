@@ -56,7 +56,7 @@ func DescribeBee(bee *bee.Bee) BeeWithOperationalDetails {
 }
 
 type DescribeOptions struct {
-	Status           map[terra.Release]status.Status
+	Status           map[terra.Release]*status.Status
 	ContainerLogsURL string
 }
 
@@ -72,8 +72,11 @@ func DescribeBeeWith(env terra.Environment, opts ...DescribeOption) BeeWithOpera
 
 	if options.Status != nil {
 		for release, _status := range options.Status {
+			if _status == nil {
+				continue
+			}
 			details := releaseDetails[release.Name()]
-			details.Status = &_status
+			details.Status = _status
 			releaseDetails[release.Name()] = details
 		}
 	}

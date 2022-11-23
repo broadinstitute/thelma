@@ -7,17 +7,13 @@ import (
 )
 
 type Status struct {
-	Health             *argocd.HealthStatus `yaml:",omitempty"`
-	Sync               *argocd.SyncStatus   `yaml:",omitempty"`
-	Error              string               `yaml:",omitempty"`
-	UnhealthyResources []Resource           `yaml:"resources,omitempty"`
+	Health             argocd.HealthStatus `yaml:",omitempty"`
+	Sync               argocd.SyncStatus   `yaml:",omitempty"`
+	UnhealthyResources []Resource          `yaml:"resources,omitempty"`
 }
 
 func (s Status) IsHealthy() bool {
-	if s.Health == nil {
-		return false
-	}
-	return *s.Health == argocd.Healthy
+	return s.Health == argocd.Healthy
 }
 
 type Resource struct {
@@ -34,14 +30,7 @@ type Event struct {
 	Type           string
 }
 
-func (s *Status) Headline() string {
-	if s.Error != "" {
-		return fmt.Sprintf("error: %v", s.Error)
-	}
-	if s.Health == nil {
-		return "Unknown"
-	}
-
+func (s Status) Headline() string {
 	if len(s.UnhealthyResources) == 0 {
 		return s.Health.String()
 	}
