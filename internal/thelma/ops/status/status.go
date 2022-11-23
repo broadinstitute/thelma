@@ -7,9 +7,9 @@ import (
 )
 
 type Status struct {
-	Health             argocd.HealthStatus `yaml:",omitempty"`
-	Sync               argocd.SyncStatus   `yaml:",omitempty"`
-	UnhealthyResources []Resource          `yaml:"resources,omitempty"`
+	Health             argocd.HealthStatus
+	Sync               argocd.SyncStatus
+	UnhealthyResources []Resource `yaml:"resources,omitempty"`
 }
 
 func (s Status) IsHealthy() bool {
