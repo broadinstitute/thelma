@@ -33,8 +33,8 @@ type Bees interface {
 	PinVersions(bee terra.Environment, overrides PinOptions) error
 	UnpinVersions(bee terra.Environment) error
 	SyncEnvironmentGenerator(env terra.Environment) error
-	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]status.Status, error)
-	ResetStatefulSets(env terra.Environment) (map[terra.Release]status.Status, error)
+	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
+	ResetStatefulSets(env terra.Environment) (map[terra.Release]*status.Status, error)
 	RefreshBeeGenerator() error
 }
 
@@ -80,7 +80,7 @@ type PinOptions struct {
 // Bee encapsulates operational information about a BEE
 type Bee struct {
 	Environment      terra.Environment
-	Status           map[terra.Release]status.Status
+	Status           map[terra.Release]*status.Status
 	ContainerLogsURL string
 }
 
@@ -197,7 +197,7 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 
 	if err != nil && options.ExportLogsOnFailure {
 		_, logErr := b.exportLogs(env)
-		if err != nil {
+		if logErr != nil {
 			log.Error().Err(logErr).Msgf("error exporting logs from %s: %v", env.Name(), logErr)
 		}
 		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
@@ -291,7 +291,7 @@ func (b *bees) SyncEnvironmentGenerator(env terra.Environment) error {
 	return err
 }
 
-func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]status.Status, error) {
+func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error) {
 	releases, err := b.state.Releases().Filter(filter.Releases().BelongsToEnvironment(env))
 	if err != nil {
 		return nil, err
@@ -407,7 +407,7 @@ func (b *bees) GetTemplate(name string) (terra.Environment, error) {
 	return nil, fmt.Errorf("no template by the name %q exists, valid templates are: %s", name, strings.Join(names, ", "))
 }
 
-func (b *bees) ResetStatefulSets(env terra.Environment) (map[terra.Release]status.Status, error) {
+func (b *bees) ResetStatefulSets(env terra.Environment) (map[terra.Release]*status.Status, error) {
 	var err error
 
 	if err = b.kubectl.ShutDown(env); err != nil {

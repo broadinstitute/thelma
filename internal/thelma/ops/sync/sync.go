@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
+	"sort"
 	"sync"
 	"time"
 )
@@ -16,7 +17,7 @@ const waitHealthyPollingInterval = 30 * time.Second
 type Sync interface {
 	// Sync will sync the Argo app(s) for a set of releases, wait for them to be healthy,
 	// and generate and return status reports (useful for understanding why a sync failed).
-	Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]status.Status, error)
+	Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
 }
 
 func New(argocd argocd.ArgoCD, status status.Reporter) Sync {
@@ -31,20 +32,19 @@ type syncer struct {
 	status status.Reporter
 }
 
-func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]status.Status, error) {
+// Sync a set of releases and return a status report indicating whether the release is healthy.
+func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error) {
 	var jobs []pool.Job
 
 	waitHealthyTimeout := s.extractWaitHealthy(options)
 
-	var optionsNoWaitHealthy []argocd.SyncOption
-	optionsNoWaitHealthy = append(optionsNoWaitHealthy, options...)
-	optionsNoWaitHealthy = append(optionsNoWaitHealthy, func(options *argocd.SyncOptions) {
+	optionsNoWaitHealthy := withOption(options, func(options *argocd.SyncOptions) {
 		options.WaitHealthy = false
 	})
 
 	destination, hasSingleDestination := checkIfSingleDestination(releases)
 
-	statusMap := make(map[terra.Release]status.Status)
+	statusMap := make(map[terra.Release]*status.Status)
 	var mutex sync.Mutex
 
 	for _, unsafe := range releases {
@@ -57,12 +57,15 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 
 		jobs = append(jobs, pool.Job{
 			Name: jobName,
-			Run: func(sr pool.StatusReporter) error {
-				if err := s.argocd.SyncRelease(release, optionsNoWaitHealthy...); err != nil {
+			Run: func(statusReporter pool.StatusReporter) error {
+				opts := withOption(optionsNoWaitHealthy, func(options *argocd.SyncOptions) {
+					options.StatusReporter = statusReporter
+				})
+				if err := s.argocd.SyncRelease(release, opts...); err != nil {
 					return err
 				}
 
-				_status, err := s.waitHealthy(release, waitHealthyTimeout, sr)
+				_status, err := s.waitHealthy(release, waitHealthyTimeout, statusReporter)
 
 				mutex.Lock()
 				statusMap[release] = _status
@@ -72,6 +75,10 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 			},
 		})
 	}
+
+	sort.Slice(jobs, func(i, j int) bool {
+		return jobs[i].Name < jobs[j].Name
+	})
 
 	_pool := pool.New(jobs, func(options *pool.Options) {
 		options.NumWorkers = maxParallel
@@ -88,16 +95,27 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 	return statusMap, err
 }
 
-func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statusReporter pool.StatusReporter) (lastStatus status.Status, err error) {
-	lastStatus, err = s.status.Status(release)
+// waitHealthy waits for a release's primary ArgoCD application to be healthy. If:
+// an unknown error is encountered while generating the status report (because, say, ArgoCD is down):
+// .     we return nil + the underlying error
+// the application becomes healthy within the timeout:
+// .     we return the status report and nil error
+// the application does not become healthy within the timeout:
+// .     we return the status report + a timeout error
+func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statusReporter pool.StatusReporter) (*status.Status, error) {
+	lastStatus, err := s.status.Status(release)
 	if err != nil {
-		return
+		// we failed to retrieve status, so return an error
+		return nil, err
 	}
 	updateStatus(lastStatus, statusReporter)
+	if lastStatus.IsHealthy() {
+		return lastStatus, nil
+	}
 
 	if maxWait == 0 {
 		log.Debug().Msgf("Not waiting for %s to be healthy", release.FullName())
-		return
+		return lastStatus, nil
 	}
 
 	for {
@@ -111,18 +129,18 @@ func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statu
 			case <-ticker.C:
 				lastStatus, err = s.status.Status(release)
 				if err != nil {
-					return
+					return nil, err
 				}
 				updateStatus(lastStatus, statusReporter)
 				if lastStatus.IsHealthy() {
-					return
+					return lastStatus, nil
 				}
 			}
 		}
 	}
 }
 
-func updateStatus(status status.Status, statusReporter pool.StatusReporter) {
+func updateStatus(status *status.Status, statusReporter pool.StatusReporter) {
 	statusReporter.Update(pool.Status{Message: status.Headline()})
 }
 
@@ -148,4 +166,11 @@ func (s *syncer) extractWaitHealthy(opts []argocd.SyncOption) time.Duration {
 		return 0
 	}
 	return time.Duration(options.WaitHealthyTimeoutSeconds) * time.Second
+}
+
+func withOption(opts []argocd.SyncOption, option ...argocd.SyncOption) []argocd.SyncOption {
+	var result []argocd.SyncOption
+	result = append(result, opts...)
+	result = append(result, option...)
+	return result
 }

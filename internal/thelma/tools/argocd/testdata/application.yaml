@@ -1,0 +1,649 @@
+# Sample argocd application yaml to test our serializers
+# Pulled from ArgoCD using `argocd app get <name> -o yaml`
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"argoproj.io/v1alpha1","kind":"Application","metadata":{"annotations":{},"finalizers":["resources-finalizer.argocd.argoproj.io"],"labels":{"app":"workspacemanager","argocd.argoproj.io/instance":"terra-staging-generator","cluster":"terra-qa-bees","env":"staging","has-legacy-configs":"false","jenkins-sync-enabled":"true","release":"workspacemanager","type":"app"},"name":"workspacemanager-staging","namespace":"ap-argocd"},"spec":{"destination":{"namespace":"terra-staging","server":"https://35.224.67.121"},"project":"terra-staging","source":{"path":".","plugin":{"env":[{"name":"TERRA_ENV","value":"staging"},{"name":"TERRA_RELEASE","value":"workspacemanager"},{"name":"THELMA_RENDER_MODE","value":""}],"name":"terra-helmfile-app"},"repoURL":"https://github.com/broadinstitute/terra-helmfile","targetRevision":"HEAD"}}}
+  creationTimestamp: "2022-06-06T22:06:32Z"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  generation: 49259
+  labels:
+    app: workspacemanager
+    argocd.argoproj.io/instance: terra-staging-generator
+    cluster: terra-qa-bees
+    env: staging
+    has-legacy-configs: "false"
+    jenkins-sync-enabled: "true"
+    release: workspacemanager
+    type: app
+  managedFields:
+  - apiVersion: argoproj.io/v1alpha1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        f:summary: {}
+    manager: argocd-server
+    operation: Update
+    time: "2022-08-11T20:59:59Z"
+  - apiVersion: argoproj.io/v1alpha1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:finalizers:
+          .: {}
+          v:"resources-finalizer.argocd.argoproj.io": {}
+        f:labels:
+          .: {}
+          f:app: {}
+          f:argocd.argoproj.io/instance: {}
+          f:cluster: {}
+          f:env: {}
+          f:has-legacy-configs: {}
+          f:jenkins-sync-enabled: {}
+          f:release: {}
+          f:type: {}
+      f:spec:
+        .: {}
+        f:destination:
+          .: {}
+          f:namespace: {}
+          f:server: {}
+        f:project: {}
+        f:source:
+          .: {}
+          f:path: {}
+          f:plugin:
+            .: {}
+            f:env: {}
+            f:name: {}
+          f:repoURL: {}
+          f:targetRevision: {}
+      f:status:
+        .: {}
+        f:health:
+          .: {}
+          f:status: {}
+        f:history: {}
+        f:operationState:
+          .: {}
+          f:finishedAt: {}
+          f:message: {}
+          f:operation:
+            .: {}
+            f:initiatedBy:
+              .: {}
+              f:username: {}
+            f:retry: {}
+            f:sync:
+              .: {}
+              f:revision: {}
+              f:syncOptions: {}
+              f:syncStrategy:
+                .: {}
+                f:hook: {}
+          f:phase: {}
+          f:startedAt: {}
+          f:syncResult:
+            .: {}
+            f:resources: {}
+            f:revision: {}
+            f:source:
+              .: {}
+              f:path: {}
+              f:plugin:
+                .: {}
+                f:env: {}
+                f:name: {}
+              f:repoURL: {}
+              f:targetRevision: {}
+        f:reconciledAt: {}
+        f:resources: {}
+        f:sourceType: {}
+        f:summary:
+          f:images: {}
+        f:sync:
+          .: {}
+          f:comparedTo:
+            .: {}
+            f:destination:
+              .: {}
+              f:namespace: {}
+              f:server: {}
+            f:source:
+              .: {}
+              f:path: {}
+              f:plugin:
+                .: {}
+                f:env: {}
+                f:name: {}
+              f:repoURL: {}
+              f:targetRevision: {}
+          f:revision: {}
+          f:status: {}
+    manager: argocd-application-controller
+    operation: Update
+    time: "2022-11-21T18:45:41Z"
+  name: workspacemanager-staging
+  namespace: ap-argocd
+  resourceVersion: "719759516"
+  uid: 6c2ded23-9f24-4e92-b9dd-71aceea52606
+spec:
+  destination:
+    namespace: terra-staging
+    server: https://35.224.67.121
+  project: terra-staging
+  source:
+    path: .
+    plugin:
+      env:
+      - name: TERRA_ENV
+        value: staging
+      - name: TERRA_RELEASE
+        value: workspacemanager
+      - name: THELMA_RENDER_MODE
+        value: ""
+      name: terra-helmfile-app
+    repoURL: https://github.com/broadinstitute/terra-helmfile
+    targetRevision: HEAD
+status:
+  health:
+    status: Degraded
+  history:
+  - deployStartedAt: "2022-06-06T22:06:50Z"
+    deployedAt: "2022-06-06T22:07:03Z"
+    id: 0
+    revision: 002f616e2d6385f466ebb7511faccd50fd8b598e
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: master
+  - deployStartedAt: "2022-06-10T17:27:39Z"
+    deployedAt: "2022-06-10T17:28:10Z"
+    id: 1
+    revision: cb03659bc713c2f678ced4b620b5902c520d5627
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: HEAD
+  - deployStartedAt: "2022-06-10T22:20:19Z"
+    deployedAt: "2022-06-10T22:20:44Z"
+    id: 2
+    revision: cea64210e84941e5dc8112927cbbd19fa187acc6
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: HEAD
+  - deployStartedAt: "2022-06-13T17:52:32Z"
+    deployedAt: "2022-06-13T17:52:35Z"
+    id: 3
+    revision: 05869a3f9f0380a535796f1527eb8275256aded4
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: master
+  - deployStartedAt: "2022-06-13T21:30:39Z"
+    deployedAt: "2022-06-13T21:30:42Z"
+    id: 4
+    revision: 7508604b200991654539e736e62e547b0dbb8a4f
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: master
+  - deployStartedAt: "2022-06-24T18:11:52Z"
+    deployedAt: "2022-06-24T18:11:55Z"
+    id: 5
+    revision: 00a5a6e0a3882949f295d571f32a8813ee5886ab
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: master
+  - deployStartedAt: "2022-07-06T20:23:49Z"
+    deployedAt: "2022-07-06T20:24:13Z"
+    id: 6
+    revision: f128018432d33025256909423dbc0853e0ea03dd
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: HEAD
+  - deployStartedAt: "2022-07-06T21:00:17Z"
+    deployedAt: "2022-07-06T21:00:42Z"
+    id: 7
+    revision: 4c6b214eb77642e0dad34e2402ab11e23092b465
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: HEAD
+  - deployStartedAt: "2022-08-11T20:59:59Z"
+    deployedAt: "2022-08-11T21:00:02Z"
+    id: 8
+    revision: 7465e91b9516c2af5020e117f5cb2908965cfc3a
+    source:
+      path: .
+      plugin:
+        env:
+        - name: TERRA_ENV
+          value: staging
+        - name: TERRA_RELEASE
+          value: workspacemanager
+        - name: THELMA_RENDER_MODE
+          value: ""
+        name: terra-helmfile-app
+      repoURL: https://github.com/broadinstitute/terra-helmfile
+      targetRevision: HEAD
+  operationState:
+    finishedAt: "2022-08-11T21:00:02Z"
+    message: successfully synced (all tasks run)
+    operation:
+      initiatedBy:
+        username: sergiy.getlin@gmail.com
+      retry: {}
+      sync:
+        revision: 7465e91b9516c2af5020e117f5cb2908965cfc3a
+        syncOptions:
+        - CreateNamespace=true
+        syncStrategy:
+          hook: {}
+    phase: Succeeded
+    startedAt: "2022-08-11T20:59:59Z"
+    syncResult:
+      resources:
+      - group: ""
+        hookPhase: Succeeded
+        kind: ServiceAccount
+        message: serviceaccount/workspacemanager-service-sa configured
+        name: workspacemanager-service-sa
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Succeeded
+        kind: Secret
+        message: secret/workspacemanager-db-creds configured
+        name: workspacemanager-db-creds
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Succeeded
+        kind: ConfigMap
+        message: configmap/workspacemanager-postgres-initdb configured
+        name: workspacemanager-postgres-initdb
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: rbac.authorization.k8s.io
+        hookPhase: Succeeded
+        kind: Role
+        message: role.rbac.authorization.k8s.io/workspacemanager-service-role reconciled.
+          role.rbac.authorization.k8s.io/workspacemanager-service-role configured
+        name: workspacemanager-service-role
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: rbac.authorization.k8s.io
+        hookPhase: Succeeded
+        kind: RoleBinding
+        message: rolebinding.rbac.authorization.k8s.io/workspacemanager-service-role-binding
+          reconciled. rolebinding.rbac.authorization.k8s.io/workspacemanager-service-role-binding
+          configured
+        name: workspacemanager-service-role-binding
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Succeeded
+        kind: Service
+        message: service/workspacemanager-postgres-service unchanged
+        name: workspacemanager-postgres-service
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: apps
+        hookPhase: Succeeded
+        kind: StatefulSet
+        message: 'partitioned roll out complete: 1 new pods have been updated...'
+        name: workspacemanager-postgres
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: policy
+        hookPhase: Running
+        kind: PodDisruptionBudget
+        message: poddisruptionbudget.policy/workspacemanager-pdb unchanged
+        name: workspacemanager-pdb
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1beta1
+      - group: ""
+        hookPhase: Running
+        kind: ConfigMap
+        message: configmap/workspacemanager-oauth2-configmap configured
+        name: workspacemanager-oauth2-configmap
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: ConfigMap
+        message: configmap/workspacemanager-prometheus-configmap configured
+        name: workspacemanager-prometheus-configmap
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: ConfigMap
+        message: configmap/workspacemanager-proxy-configmap configured
+        name: workspacemanager-proxy-configmap
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/workspacemanager-service configured
+        name: workspacemanager-service
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: apps
+        hookPhase: Running
+        kind: Deployment
+        message: deployment.apps/workspacemanager-deployment configured
+        name: workspacemanager-deployment
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: secrets-manager.tuenti.io
+        hookPhase: Running
+        kind: SecretDefinition
+        message: secretdefinition.secrets-manager.tuenti.io/workspacemanager-app-sa
+          configured
+        name: workspacemanager-app-sa
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      - group: secrets-manager.tuenti.io
+        hookPhase: Running
+        kind: SecretDefinition
+        message: secretdefinition.secrets-manager.tuenti.io/secretdefinition-wsm-azure-managed-app-creds
+          created
+        name: secretdefinition-wsm-azure-managed-app-creds
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      - group: cloud.google.com
+        hookPhase: Running
+        kind: BackendConfig
+        message: backendconfig.cloud.google.com/workspacemanager-ingress-backendconfig
+          configured
+        name: workspacemanager-ingress-backendconfig
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: monitoring.coreos.com
+        hookPhase: Running
+        kind: PodMonitor
+        message: podmonitor.monitoring.coreos.com/workspacemanager-jvm-monitor configured
+        name: workspacemanager-jvm-monitor
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: secrets-manager.tuenti.io
+        hookPhase: Running
+        kind: SecretDefinition
+        message: secretdefinition.secrets-manager.tuenti.io/workspacemanager-proxy-b2c-secrets
+          created
+        name: workspacemanager-proxy-b2c-secrets
+        namespace: terra-staging
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      revision: 7465e91b9516c2af5020e117f5cb2908965cfc3a
+      source:
+        path: .
+        plugin:
+          env:
+          - name: TERRA_ENV
+            value: staging
+          - name: TERRA_RELEASE
+            value: workspacemanager
+          - name: THELMA_RENDER_MODE
+            value: ""
+          name: terra-helmfile-app
+        repoURL: https://github.com/broadinstitute/terra-helmfile
+        targetRevision: HEAD
+  reconciledAt: "2022-11-21T19:13:03Z"
+  resources:
+  - kind: ConfigMap
+    name: workspacemanager-oauth2-configmap
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - kind: ConfigMap
+    name: workspacemanager-postgres-initdb
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - kind: ConfigMap
+    name: workspacemanager-prometheus-configmap
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - kind: ConfigMap
+    name: workspacemanager-proxy-configmap
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - kind: Secret
+    name: workspacemanager-db-creds
+    namespace: terra-staging
+    status: Synced
+    version: v1
+  - health:
+      status: Healthy
+    kind: Service
+    name: workspacemanager-postgres-service
+    namespace: terra-staging
+    status: Synced
+    version: v1
+  - health:
+      status: Healthy
+    kind: Service
+    name: workspacemanager-service
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - kind: ServiceAccount
+    name: workspacemanager-service-sa
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - group: apps
+    health:
+      message: Deployment "workspacemanager-deployment" exceeded its progress deadline
+      status: Degraded
+    kind: Deployment
+    name: workspacemanager-deployment
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - group: apps
+    health:
+      message: 'partitioned roll out complete: 1 new pods have been updated...'
+      status: Healthy
+    kind: StatefulSet
+    name: workspacemanager-postgres
+    namespace: terra-staging
+    status: Synced
+    version: v1
+  - group: cloud.google.com
+    kind: BackendConfig
+    name: workspacemanager-ingress-backendconfig
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - group: monitoring.coreos.com
+    kind: PodMonitor
+    name: workspacemanager-jvm-monitor
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - group: policy
+    health:
+      status: Missing
+    kind: PodDisruptionBudget
+    name: workspacemanager-pdb
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1beta1
+  - group: rbac.authorization.k8s.io
+    kind: Role
+    name: workspacemanager-service-role
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - group: rbac.authorization.k8s.io
+    kind: RoleBinding
+    name: workspacemanager-service-role-binding
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1
+  - group: secrets-manager.tuenti.io
+    kind: SecretDefinition
+    name: secretdefinition-wsm-azure-managed-app-creds
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1alpha1
+  - group: secrets-manager.tuenti.io
+    kind: SecretDefinition
+    name: workspacemanager-app-sa
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1alpha1
+  - group: secrets-manager.tuenti.io
+    kind: SecretDefinition
+    name: workspacemanager-proxy-b2c-secrets
+    namespace: terra-staging
+    status: OutOfSync
+    version: v1alpha1
+  sourceType: Plugin
+  summary:
+    images:
+    - alpine:3.12.0
+    - gcr.io/terra-kernel-k8s/terra-workspace-manager:0.254.343
+    - postgres:9.6
+    - us.gcr.io/broad-dsp-gcr-public/openidc-terra-proxy:v0.1.12
+  sync:
+    comparedTo:
+      destination:
+        namespace: terra-staging
+        server: https://35.224.67.121
+      source:
+        path: .
+        plugin:
+          env:
+          - name: TERRA_ENV
+            value: staging
+          - name: TERRA_RELEASE
+            value: workspacemanager
+          - name: THELMA_RENDER_MODE
+            value: ""
+          name: terra-helmfile-app
+        repoURL: https://github.com/broadinstitute/terra-helmfile
+        targetRevision: HEAD
+    revision: 8884fcce91ef53fe01e73224f8e49f5f039f0fc9
+    status: OutOfSync
