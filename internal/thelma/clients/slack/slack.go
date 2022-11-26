@@ -50,7 +50,7 @@ func (s *Slack) SendMessage(email string, markdown string) error {
 	if err != nil {
 		return fmt.Errorf("couldn't get user for %s: %v", email, err)
 	} else if user == nil {
-		return fmt.Errorf("couldn't get user for %s: Slack didn't error but didn't return a user object either")
+		return fmt.Errorf("couldn't get user for %s: Slack didn't error but didn't return a user object either", email)
 	}
 	channel, _, _, err := s.client.OpenConversation(&slack.OpenConversationParameters{
 		Users: []string{user.ID},

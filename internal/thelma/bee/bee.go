@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/ops"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"strings"
 
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
@@ -216,7 +216,7 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 					}
 				}
 				if err := b.slack.SendMessage(env.Owner(), markdown); err != nil {
-					log.Warn().Msgf("Wasn't able to notify %s: %v", err)
+					log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
 				}
 			} else {
 				log.Debug().Msgf("Would have tried to notify but Slack client wasn't present; perhaps it errored earlier")
