@@ -28,6 +28,8 @@ import (
 	charts_publish "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/logs"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/render"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/slack"
+	slack_notify "github.com/broadinstitute/thelma/internal/thelma/cli/commands/slack/notify"
 	states "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state"
 	state_export "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state/export"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/version"
@@ -75,6 +77,9 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("logs", logs.NewLogsCommand())
 
 	opts.AddCommand("render", render.NewRenderCommand())
+
+	opts.AddCommand("slack", slack.NewSlackCommand())
+	opts.AddCommand("slack notify", slack_notify.NewSlackNotifyCommand())
 
 	opts.AddCommand("state", states.NewStateCommand())
 	opts.AddCommand("state export", state_export.NewStateExportCommand())

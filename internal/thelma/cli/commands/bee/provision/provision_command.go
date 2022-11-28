@@ -27,6 +27,7 @@ var flagNames = struct {
 	waitHealthy               string
 	waitHealthyTimeoutSeconds string
 	seed                      string
+	notify                    string
 	exportLogsOnFailure       string
 }{
 	name:                      "name",
@@ -34,6 +35,7 @@ var flagNames = struct {
 	waitHealthy:               "wait-healthy",
 	waitHealthyTimeoutSeconds: "wait-healthy-timeout-seconds",
 	seed:                      "seed",
+	notify:                    "notify",
 	exportLogsOnFailure:       "export-logs-on-failure",
 }
 
@@ -65,6 +67,7 @@ func (cmd *provisionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().IntVar(&cmd.options.WaitHealthTimeoutSeconds, flagNames.waitHealthyTimeoutSeconds, 1200, "How long to wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
 	cobraCommand.Flags().BoolVar(&cmd.options.ExportLogsOnFailure, flagNames.exportLogsOnFailure, true, `Export container logs to GCS if BEE creation fails)`)
+	cobraCommand.Flags().BoolVar(&cmd.options.Notify, flagNames.notify, true, "Attempt to notify the owner via Slack upon success")
 
 	cmd.pinFlags.AddFlags(cobraCommand)
 	cmd.seedFlags.AddFlags(cobraCommand)

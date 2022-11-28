@@ -13,6 +13,7 @@ type environment struct {
 	baseDomain           string
 	namePrefixesDomain   bool
 	uniqueResourcePrefix string
+	owner                string
 	destination
 }
 
@@ -68,4 +69,8 @@ func (e *environment) NamePrefixesDomain() bool {
 
 func (e *environment) UniqueResourcePrefix() string {
 	return e.uniqueResourcePrefix
+}
+
+func (e *environment) Owner() string {
+	return e.owner
 }

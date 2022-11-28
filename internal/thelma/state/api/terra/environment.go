@@ -21,5 +21,8 @@ type Environment interface {
 	// Format: [a-z][a-z0-9]{3}
 	// Returns empty string for static / template environments
 	UniqueResourcePrefix() string
+	// Owner is an email address of the user or group responsible for this environment.
+	// May be empty if there's no owner or if the state provider doesn't track this information.
+	Owner() string
 	Destination
 }

@@ -346,6 +346,42 @@ func (_c *Environment_Namespace_Call) Return(_a0 string) *Environment_Namespace_
 	return _c
 }
 
+// Owner provides a mock function with given fields:
+func (_m *Environment) Owner() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// Environment_Owner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Owner'
+type Environment_Owner_Call struct {
+	*mock.Call
+}
+
+// Owner is a helper method to define mock.On call
+func (_e *Environment_Expecter) Owner() *Environment_Owner_Call {
+	return &Environment_Owner_Call{Call: _e.mock.On("Owner")}
+}
+
+func (_c *Environment_Owner_Call) Run(run func()) *Environment_Owner_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_Owner_Call) Return(_a0 string) *Environment_Owner_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // ReleaseType provides a mock function with given fields:
 func (_m *Environment) ReleaseType() terra.ReleaseType {
 	ret := _m.Called()

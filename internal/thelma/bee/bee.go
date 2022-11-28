@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/ops"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
@@ -58,6 +59,7 @@ type ProvisionOptions struct {
 	WaitHealthy              bool
 	WaitHealthTimeoutSeconds int
 	PinOptions               PinOptions
+	Notify                   bool
 	Seed                     bool
 	SeedOptions              seed.SeedOptions
 	ExportLogsOnFailure      bool
@@ -82,7 +84,7 @@ type Bee struct {
 	ContainerLogsURL string
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl, ops ops.Ops) (Bees, error) {
+func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl, ops ops.Ops, slack *slack.Slack) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -96,6 +98,7 @@ func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Se
 		cleanup:     cleanup,
 		kubectl:     kubectl,
 		ops:         ops,
+		slack:       slack,
 	}, nil
 }
 
@@ -108,6 +111,7 @@ type bees struct {
 	kubectl     kubectl.Kubectl
 	cleanup     cleanup.Cleanup
 	ops         ops.Ops
+	slack       *slack.Slack
 }
 
 func (b *bees) CreateWith(options CreateOptions) (*Bee, error) {
@@ -197,6 +201,29 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 			log.Error().Err(logErr).Msgf("error exporting logs from %s: %v", env.Name(), logErr)
 		}
 		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
+	}
+
+	if options.Notify {
+		if env.Owner() != "" {
+			if b.slack != nil {
+				log.Info().Msgf("Notifying %s", env.Owner())
+				markdown := fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is ready to go!", env.Name(), env.Name())
+				for _, release := range env.Releases() {
+					if release.IsAppRelease() && release.ChartName() == "terraui" {
+						if terraui, ok := release.(terra.AppRelease); ok {
+							markdown += fmt.Sprintf(" Terra's UI is at %s", terraui.URL())
+						}
+					}
+				}
+				if err := b.slack.SendMessage(env.Owner(), markdown); err != nil {
+					log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
+				}
+			} else {
+				log.Debug().Msgf("Would have tried to notify but Slack client wasn't present; perhaps it errored earlier")
+			}
+		} else {
+			log.Debug().Msgf("Wanted to notify but the environment lacked an owner")
+		}
 	}
 
 	return bee, err

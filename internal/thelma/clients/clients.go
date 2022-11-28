@@ -9,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -36,10 +37,11 @@ type Clients interface {
 	Kubernetes() kubernetes.Clients
 	// Sherlock returns a swagger API client for a sherlock server instance
 	Sherlock() (*sherlock.Client, error)
+	// Slack returns a wrapper around the official API client
+	Slack() (*slack.Slack, error)
 }
 
 func New(thelmaConfig config.Config, thelmaRoot root.Root, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
-
 	return &clients{
 		thelmaConfig: thelmaConfig,
 		thelmaRoot:   thelmaRoot,
@@ -130,4 +132,8 @@ func (c *clients) Kubernetes() kubernetes.Clients {
 	_kubernetes := kubernetes.New(c.thelmaRoot, c.runner, c.Google())
 	c.kubernetes = _kubernetes
 	return c.kubernetes
+}
+
+func (c *clients) Slack() (*slack.Slack, error) {
+	return slack.New(c.thelmaConfig, c.Vault)
 }
