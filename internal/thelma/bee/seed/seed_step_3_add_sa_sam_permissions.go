@@ -55,6 +55,21 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			log.Info().Msg("Import Service not present in environment, skipping")
 		}
 
+		if workspaceManager, workspaceManagerPresent := appReleases["workspacemanager"]; workspaceManagerPresent {
+			log.Info().Msgf("will add Workspace Manager SA permissions to %s", sam.Host())
+			googleClient, err := s.googleAuthAs(workspaceManager)
+			if err := opts.handleErrorWithForce(err); err != nil {
+				return err
+			}
+			terraClient, err := googleClient.Terra()
+			if err := opts.handleErrorWithForce(err); err != nil {
+				return err
+			}
+			emails = append(emails, terraClient.GoogleUserInfo().Email)
+		} else {
+			log.Info().Msg("Workspace Manager not present in environment, skipping")
+		}
+
 		googleClient, err := s.googleAuthAs(sam)
 		if err != nil {
 			return err
