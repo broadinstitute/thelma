@@ -27,7 +27,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 		Description:  description,
 	}
 	if lastVersion != "" {
-		chartVersion.ParentChartVersion = fmt.Sprintf("%s/%s", chartVersion, lastVersion)
+		chartVersion.ParentChartVersion = fmt.Sprintf("%s/%s", chartSelector, lastVersion)
 	}
 	_, _, err := c.client.ChartVersions.PostAPIV2ChartVersions(
 		chart_versions.NewPostAPIV2ChartVersionsParams().WithChartVersion(chartVersion))
