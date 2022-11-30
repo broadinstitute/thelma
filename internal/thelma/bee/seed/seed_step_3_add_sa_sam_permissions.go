@@ -64,7 +64,11 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			return err
 		}
 		emails = append(emails, terraClient.GoogleUserInfo().Email)
-		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails)
+		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "google")
+		if err != nil {
+			return err
+		}
+		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "azure")
 		if err != nil {
 			return err
 		}

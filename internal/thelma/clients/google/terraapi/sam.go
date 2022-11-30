@@ -9,7 +9,7 @@ import (
 )
 
 type SamClient interface {
-	FcServiceAccounts([]string) (*http.Response, string, error)
+	FcServiceAccounts([]string, string) (*http.Response, string, error)
 	AcceptToS() (*http.Response, string, error)
 	UnregisterUser(id string) (*http.Response, string, error)
 }
@@ -19,7 +19,7 @@ type samClient struct {
 	appRelease terra.AppRelease
 }
 
-func (c *samClient) FcServiceAccounts(memberEmails []string) (*http.Response, string, error) {
+func (c *samClient) FcServiceAccounts(memberEmails []string, cloud string) (*http.Response, string, error) {
 	bodyStruct := struct {
 		MemberEmails []string `json:"memberEmails"`
 		Actions      []string `json:"actions"`
@@ -33,7 +33,7 @@ func (c *samClient) FcServiceAccounts(memberEmails []string) (*http.Response, st
 	if err != nil {
 		return nil, "", err
 	}
-	return c.doJsonRequest(http.MethodPut, fmt.Sprintf("%s/api/resource/cloud-extension/google/policies/fc-service-accounts", c.appRelease.URL()), bytes.NewBuffer(body))
+	return c.doJsonRequest(http.MethodPut, fmt.Sprintf("%s/api/resource/cloud-extension/%s/policies/fc-service-accounts", c.appRelease.URL(), cloud), bytes.NewBuffer(body))
 }
 
 func (c *samClient) AcceptToS() (*http.Response, string, error) {
