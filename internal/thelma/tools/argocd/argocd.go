@@ -70,6 +70,8 @@ type SyncOptions struct {
 	HardRefresh bool
 	// SyncIfNoDiff if true, sync even if the hard refresh indicates there are no config differences
 	SyncIfNoDiff bool
+	// NeverSync if true, never actually sync apps to allow refresh-only behavior
+	NeverSync bool
 	// WaitHealthy if true, wait for the application to become healthy after syncing
 	WaitHealthy bool
 	// WaitHealthyTimeout how long to wait for the application to become healthy before giving up
@@ -254,10 +256,16 @@ func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, err
 	if !hasDifferences {
 		if opts.SyncIfNoDiff {
 			log.Debug().Msgf("%s is in sync, will sync anyway", appName)
+		} else if opts.NeverSync {
+			log.Debug().Msgf("%s is in sync, wouldn't sync due to options", appName)
+			return result, err
 		} else {
 			log.Debug().Msgf("%s is in sync, won't trigger a new sync", appName)
 			return result, err
 		}
+	} else if opts.NeverSync {
+		log.Debug().Msgf("%s is out of sync, won't sync due to options", appName)
+		return result, err
 	}
 
 	opts.reportStatus(fmt.Sprintf("Waiting in-progress %s", appName))

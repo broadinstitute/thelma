@@ -17,7 +17,7 @@ const waitHealthyPollingInterval = 30 * time.Second
 type Sync interface {
 	// Sync will sync the Argo app(s) for a set of releases, wait for them to be healthy,
 	// and generate and return status reports (useful for understanding why a sync failed).
-	Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
+	Sync(releases []terra.Release, maxParallel int, refreshOnly bool, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
 }
 
 func New(argocd argocd.ArgoCD, status status.Reporter) Sync {
@@ -33,13 +33,19 @@ type syncer struct {
 }
 
 // Sync a set of releases and return a status report indicating whether the release is healthy.
-func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error) {
+func (s *syncer) Sync(releases []terra.Release, maxParallel int, refreshOnly bool, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error) {
 	var jobs []pool.Job
 
 	waitHealthyTimeout := s.extractWaitHealthy(options)
 
-	optionsNoWaitHealthy := withOption(options, func(options *argocd.SyncOptions) {
+	commonOptions := withOption(options, func(options *argocd.SyncOptions) {
 		options.WaitHealthy = false
+	}, func(options *argocd.SyncOptions) {
+		if refreshOnly {
+			options.NeverSync = true
+			options.WaitHealthy = false
+			options.SkipLegacyConfigsRestart = true
+		}
 	})
 
 	destination, hasSingleDestination := checkIfSingleDestination(releases)
@@ -58,7 +64,7 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 		jobs = append(jobs, pool.Job{
 			Name: jobName,
 			Run: func(statusReporter pool.StatusReporter) error {
-				opts := withOption(optionsNoWaitHealthy, func(options *argocd.SyncOptions) {
+				opts := withOption(commonOptions, func(options *argocd.SyncOptions) {
 					options.StatusReporter = statusReporter
 				})
 				if err := s.argocd.SyncRelease(release, opts...); err != nil {
@@ -83,7 +89,11 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 	_pool := pool.New(jobs, func(options *pool.Options) {
 		options.NumWorkers = maxParallel
 		options.StopProcessingOnError = false
-		options.Summarizer.WorkDescription = "services synced"
+		if refreshOnly {
+			options.Summarizer.WorkDescription = "services refreshed"
+		} else {
+			options.Summarizer.WorkDescription = "services synced"
+		}
 
 		if hasSingleDestination {
 			options.Summarizer.Footer = fmt.Sprintf("Check status in ArgoCD at %s", s.argocd.DestinationURL(destination))
