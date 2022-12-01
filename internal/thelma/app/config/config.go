@@ -135,7 +135,6 @@ func (c *config) Unmarshal(configPrefix string, into interface{}) error {
 	if err := c.koanf.Unmarshal(configPrefix, into); err != nil {
 		return fmt.Errorf("error unmarshalling config key %s into struct: %v", configPrefix, err)
 	}
-
 	// Verify configuration passes validation constraints
 	return c.validateStruct(into, configPrefix)
 }

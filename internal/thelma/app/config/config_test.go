@@ -30,6 +30,7 @@ type testConfig struct {
 	Airports struct {
 		IataCodes map[string]Airport
 	}
+	Season Season
 }
 
 type HostAlias struct {
@@ -40,11 +41,53 @@ type HostAlias struct {
 type Airport struct {
 	Name     string
 	Location Location
+	Season   Season
 }
 
 type Location struct {
 	City    string
 	Country string `validate:"iso3166_1_alpha2"`
+}
+
+type Season int
+
+const (
+	Spring Season = iota
+	Summer
+	Fall
+	Winter
+)
+
+func (s Season) String() string {
+	switch s {
+	case Spring:
+		return "spring"
+	case Summer:
+		return "summer"
+	case Fall:
+		return "fall"
+	case Winter:
+		return "winter"
+	default:
+		panic(fmt.Errorf("unknown season: %#v", s))
+	}
+}
+
+func (s *Season) UnmarshalText(text []byte) error {
+	str := string(text)
+	switch str {
+	case "spring":
+		*s = Spring
+	case "summer":
+		*s = Summer
+	case "fall":
+		*s = Fall
+	case "winter":
+		*s = Winter
+	default:
+		return fmt.Errorf("invalid season: %q", str)
+	}
+	return nil
 }
 
 func TestConfig_Unmarshal_LogConfig(t *testing.T) {
@@ -184,6 +227,8 @@ func TestConfig_Unmarshal_LogConfig(t *testing.T) {
 						},
 					},
 				}
+
+				c.Season = Winter
 			},
 		},
 	}
