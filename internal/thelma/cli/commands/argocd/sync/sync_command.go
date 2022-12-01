@@ -63,7 +63,14 @@ func (cmd *syncCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 	var opts []argocd.SyncOption
-	statuses, err := _sync.Sync(selection.Releases, cmd.options.maxParallel, cmd.options.refreshOnly, opts...)
+	if cmd.options.refreshOnly {
+		opts = append(opts, func(options *argocd.SyncOptions) {
+			options.NeverSync = true
+			options.WaitHealthy = false
+			options.SkipLegacyConfigsRestart = true
+		})
+	}
+	statuses, err := _sync.Sync(selection.Releases, cmd.options.maxParallel, opts...)
 
 	rc.SetOutput(common.ReleaseMapToStructuredView(statuses))
 	return err
