@@ -202,6 +202,41 @@ func Test_SyncRelease(t *testing.T) {
 	require.NoError(t, _argocd.SyncRelease(leonardoDev))
 }
 
+func Test_RefreshRelease(t *testing.T) {
+	_mocks := setupMocks(t)
+	_argocd := _mocks.argocd
+
+	dev := statemocks.NewEnvironment(t)
+	dev.EXPECT().Name().Return("dev")
+
+	leonardoDev := statemocks.NewAppRelease(t)
+	leonardoDev.EXPECT().Destination().Return(dev)
+	leonardoDev.EXPECT().Name().Return("leonardo")
+	leonardoDev.EXPECT().IsAppRelease().Return(true)
+	leonardoDev.EXPECT().FirecloudDevelopRef().Return("dev")
+	leonardoDev.EXPECT().TerraHelmfileRef().Return("HEAD")
+
+	// check for legacy configs app
+	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
+		WithStdout("leonardo-configs-dev\nleonardo-dev\n")
+
+	// sync legacy configs app
+	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
+
+	_mocks.expectCmd("app", "diff", "leonardo-configs-dev", "--hard-refresh").Exits(1) // non-zero indicates a diff was detected
+
+	// sync primary app
+	_mocks.expectCmd("app", "set", "leonardo-dev", "--revision", "HEAD", "--validate=false")
+
+	_mocks.expectCmd("app", "diff", "leonardo-dev", "--hard-refresh").Exits(1) // non-zero indicates a diff was detected
+
+	require.NoError(t, _argocd.SyncRelease(leonardoDev, func(options *SyncOptions) {
+		options.NeverSync = true
+		options.WaitHealthy = false
+		options.SkipLegacyConfigsRestart = true
+	}))
+}
+
 func Test_setRef(t *testing.T) {
 	_mocks := setupMocks(t)
 	_argocd := _mocks.argocd

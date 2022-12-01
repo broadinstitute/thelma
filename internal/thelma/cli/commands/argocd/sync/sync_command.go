@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/common"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
+	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
 	"github.com/spf13/cobra"
 )
 
@@ -12,6 +13,7 @@ const helpMessage = `Sync a collection of ArgoCD application(s)`
 
 type syncOptions struct {
 	maxParallel int
+	refreshOnly bool
 }
 
 type syncCommand struct {
@@ -37,6 +39,7 @@ func (cmd *syncCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cmd.selector.AddFlags(cobraCommand)
 
 	cobraCommand.Flags().IntVarP(&cmd.options.maxParallel, "max-parallel", "p", 15, "Max number of ArgoCD apps to sync simultaneously")
+	cobraCommand.Flags().BoolVar(&cmd.options.refreshOnly, "refresh-only", false, "If set, only hard-refresh ArgoCD instead of also syncing it")
 }
 
 func (cmd *syncCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
@@ -59,7 +62,15 @@ func (cmd *syncCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	statuses, err := _sync.Sync(selection.Releases, cmd.options.maxParallel)
+	var opts []argocd.SyncOption
+	if cmd.options.refreshOnly {
+		opts = append(opts, func(options *argocd.SyncOptions) {
+			options.NeverSync = true
+			options.WaitHealthy = false
+			options.SkipLegacyConfigsRestart = true
+		})
+	}
+	statuses, err := _sync.Sync(selection.Releases, cmd.options.maxParallel, opts...)
 
 	rc.SetOutput(common.ReleaseMapToStructuredView(statuses))
 	return err
