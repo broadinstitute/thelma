@@ -116,11 +116,11 @@ func (w *workItemImpl) recordJobMetrics() {
 	}
 
 	itemName := w.getName()
-	metricName := "pool_" + w.metrics.PoolName
+	metricName := "pool_" + w.metrics.PoolName + "_item_processed"
 
 	_labels := map[string]string{
-		"pool": w.metrics.PoolName,
-		"job":  itemName,
+		"pool":      w.metrics.PoolName,
+		"item_name": itemName,
 	}
 
 	_labels = labels.Merge(_labels, w.job.Labels)
