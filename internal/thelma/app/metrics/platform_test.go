@@ -9,7 +9,6 @@ import (
 )
 
 func Test_Platform_Serializers(t *testing.T) {
-
 	testCases := []struct {
 		input     string
 		expected  Platform

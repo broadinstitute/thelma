@@ -33,8 +33,8 @@ type ThelmaBuilder interface {
 	SetConfigOverride(key string, value interface{}) ThelmaBuilder
 	// SetConfigOption (FOR USE IN UNIT TESTS ONLY) customizes configuration behavior for the Thelma app. (see config.Load for more info)
 	SetConfigOption(option config.Option) ThelmaBuilder
-	// SetMetrics (FOR USE IN UNIT TESTS ONLY) supplies a custom metrics instance to the Thelma app
-	SetMetrics(metrics.Metrics) ThelmaBuilder
+	// NoInitSingletons (FOR USE IN UNIT TESTS ONLY) prevent this builder from initializing singletons
+	NoManageSingletons() ThelmaBuilder
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
 	SetShellRunner(shell.Runner) ThelmaBuilder
 	// UseStateFixture (FOR USE IN UNIT TESTS ONLY) configures Thelma to use a state fixture instead of a "real" terra.State
@@ -42,10 +42,10 @@ type ThelmaBuilder interface {
 }
 
 type thelmaBuilder struct {
-	configOptions []config.Option
-	metrics       metrics.Metrics
-	shellRunner   shell.Runner
-	stateFixture  struct {
+	configOptions    []config.Option
+	manageSingletons bool
+	shellRunner      shell.Runner
+	stateFixture     struct {
 		enabled bool
 		name    statefixtures.FixtureName
 		t       *testing.T
@@ -68,11 +68,14 @@ type StateLoaderConfig struct {
 
 func NewBuilder() ThelmaBuilder {
 	return &thelmaBuilder{
-		configOptions: make([]config.Option, 0),
+		configOptions:    []config.Option{},
+		manageSingletons: true,
 	}
 }
 
 func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
+	b.NoManageSingletons()
+
 	// Set thelma root to empty temp directory
 	b.SetRootDir(t.TempDir())
 
@@ -82,12 +85,14 @@ func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
 	// Use mock shell runner
 	b.SetShellRunner(shell.DefaultMockRunner())
 
-	// Use noop metrics
-	b.SetMetrics(metrics.Noop())
-
 	// Use state loader filled with fake/pre-populated data
 	b.UseStateFixture(statefixtures.Default, t)
 
+	return b
+}
+
+func (b *thelmaBuilder) NoManageSingletons() ThelmaBuilder {
+	b.manageSingletons = false
 	return b
 }
 
@@ -108,11 +113,6 @@ func (b *thelmaBuilder) SetConfigOverride(key string, value interface{}) ThelmaB
 
 func (b *thelmaBuilder) SetConfigOption(option config.Option) ThelmaBuilder {
 	b.configOptions = append(b.configOptions, option)
-	return b
-}
-
-func (b *thelmaBuilder) SetMetrics(m metrics.Metrics) ThelmaBuilder {
-	b.metrics = m
 	return b
 }
 
@@ -149,8 +149,10 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize logging
-	if err := logging.InitializeLogging(cfg, thelmaRoot); err != nil {
-		return nil, err
+	if b.manageSingletons {
+		if err := logging.Initialize(cfg, thelmaRoot); err != nil {
+			return nil, err
+		}
 	}
 
 	_credentials, err := credentials.New(cfg, thelmaRoot)
@@ -170,15 +172,13 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
-	// Initialize metrics instance
-	_metrics := b.metrics
-	if _metrics == nil {
+	// Initialize metrics
+	if b.manageSingletons {
 		iapToken, err := _clients.IAPToken()
 		if err != nil {
 			return nil, err
 		}
-		_metrics, err = metrics.New(cfg, iapToken)
-		if err != nil {
+		if err := metrics.Initialize(cfg, iapToken); err != nil {
 			return nil, err
 		}
 	}
@@ -189,7 +189,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize app
-	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader, _metrics)
+	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader, b.manageSingletons)
 }
 
 func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Runner, clients clients.Clients) (terra.StateLoader, error) {

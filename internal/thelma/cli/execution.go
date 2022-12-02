@@ -5,7 +5,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/rs/zerolog/log"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -99,18 +98,16 @@ func (e *execution) postRun() {
 }
 
 func (e *execution) recordExecutionMetrics() {
-	m := e.app.Metrics().WithLabels(map[string]string{
-		"ok":      strconv.FormatBool(!e.errorRecorder.hasErrors()),
-		"command": strings.Join(e.runContext.commandKey.nameComponents, "_"),
-	})
+	err := e.errorRecorder.error()
+	duration := time.Since(e.startTime)
 
-	m.Counter(metrics.Options{
-		Name: "run_count",
-		Help: "Incremented every time a Thelma command is run",
-	}).Inc()
+	opts := metrics.Options{
+		Name: "run",
+		Help: "Thelma command run",
+		Labels: map[string]string{
+			"command": strings.Join(e.runContext.commandKey.nameComponents, "_"),
+		},
+	}
 
-	m.Gauge(metrics.Options{
-		Name: "run_duration_seconds",
-		Help: "Represents how long it took a thelma command to run",
-	}).Set(time.Since(e.startTime).Seconds())
+	metrics.TaskCompletion(opts, duration, err)
 }

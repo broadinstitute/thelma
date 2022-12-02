@@ -34,8 +34,6 @@ type ThelmaApp interface {
 	Config() config.Config
 	// Credentials returns credential manager object for this ThelmaApp
 	Credentials() credentials.Credentials
-	// Metrics returns a metrics instance for this ThelmaApp
-	Metrics() metrics.Metrics
 	// Ops returns the Ops interface for this ThelmaApp
 	Ops() ops.Ops
 	// Paths returns Paths for this ThelmaApp
@@ -53,7 +51,7 @@ type ThelmaApp interface {
 }
 
 // New constructs a new ThelmaApp
-func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, shellRunner shell.Runner, stateLoader terra.StateLoader, metrics metrics.Metrics) (ThelmaApp, error) {
+func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, shellRunner shell.Runner, stateLoader terra.StateLoader, manageSingletons bool) (ThelmaApp, error) {
 	app := &thelmaApp{}
 
 	// Initialize paths
@@ -70,26 +68,26 @@ func New(cfg config.Config, creds credentials.Credentials, clients clients.Clien
 	}
 
 	return &thelmaApp{
-		clients:     clients,
-		config:      cfg,
-		credentials: creds,
-		metrics:     metrics,
-		paths:       _paths,
-		scratch:     _scratch,
-		shellRunner: shellRunner,
-		stateLoader: stateLoader,
+		clients:          clients,
+		config:           cfg,
+		credentials:      creds,
+		paths:            _paths,
+		scratch:          _scratch,
+		shellRunner:      shellRunner,
+		stateLoader:      stateLoader,
+		manageSingletons: manageSingletons,
 	}, nil
 }
 
 type thelmaApp struct {
-	clients     clients.Clients
-	config      config.Config
-	credentials credentials.Credentials
-	metrics     metrics.Metrics
-	paths       paths.Paths
-	scratch     scratch.Scratch
-	shellRunner shell.Runner
-	stateLoader terra.StateLoader
+	clients          clients.Clients
+	config           config.Config
+	credentials      credentials.Credentials
+	paths            paths.Paths
+	scratch          scratch.Scratch
+	shellRunner      shell.Runner
+	stateLoader      terra.StateLoader
+	manageSingletons bool
 }
 
 func (t *thelmaApp) Clients() clients.Clients {
@@ -102,10 +100,6 @@ func (t *thelmaApp) Config() config.Config {
 
 func (t *thelmaApp) Credentials() credentials.Credentials {
 	return t.credentials
-}
-
-func (t *thelmaApp) Metrics() metrics.Metrics {
-	return t.metrics
 }
 
 func (t *thelmaApp) Ops() ops.Ops {
@@ -133,8 +127,10 @@ func (t *thelmaApp) StateLoader() terra.StateLoader {
 }
 
 func (t *thelmaApp) Close() error {
-	if err := metrics.Push(t.metrics); err != nil {
-		log.Warn().Err(err).Msgf("error uploading metrics: %v", err)
+	if t.manageSingletons {
+		if err := metrics.Push(); err != nil {
+			log.Warn().Err(err).Msg("error pushing metrics")
+		}
 	}
 	return t.scratch.Cleanup()
 }

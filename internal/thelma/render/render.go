@@ -4,13 +4,14 @@ package render
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
+	"strconv"
 )
 
 // Options encapsulates CLI options for a render
@@ -29,7 +30,6 @@ type Options struct {
 type multiRender struct {
 	options    *Options             // Options global render options
 	state      terra.State          // state terra state provider for looking up environments, clusters, and releases
-	metrics    metrics.Metrics      // metrics client for recording job metrics
 	configRepo *helmfile.ConfigRepo // configRepo reference to use for executing `helmfile template`
 }
 
@@ -72,8 +72,6 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 		return nil, err
 	}
 	r.state = state
-
-	r.metrics = app.Metrics()
 
 	chartCacheDir, err := app.Scratch().Mkdir("chart-cache")
 	if err != nil {
@@ -124,7 +122,6 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 		}
 
 		options.Metrics.Enabled = true
-		options.Metrics.Client = r.metrics
 		options.Metrics.PoolName = "render"
 	})
 
@@ -136,14 +133,19 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 	var jobs []pool.Job
 
+	extraLabels := map[string]string{
+		"argocd_mode": strconv.FormatBool(helmfileArgs.ArgocdMode),
+	}
+
 	if r.options.Scope != scope.Destination {
-		for _, release := range r.options.Releases {
-			_r := release
+		for _, unsafe := range r.options.Releases {
+			release := unsafe
 			jobs = append(jobs, pool.Job{
-				Name: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
+				Name: release.FullName(),
 				Run: func(_ pool.StatusReporter) error {
-					return r.configRepo.RenderForRelease(_r, helmfileArgs)
+					return r.configRepo.RenderForRelease(release, helmfileArgs)
 				},
+				Labels: labels.Merge(labels.ForRelease(release), extraLabels),
 			})
 		}
 	}
@@ -163,10 +165,11 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 		for _, _destination := range destinations {
 			d := _destination
 			jobs = append(jobs, pool.Job{
-				Name: fmt.Sprintf("global resources for %s %s", d.Type(), d.Name()),
+				Name: fmt.Sprintf("%s-%s", d.Type(), d.Name()),
 				Run: func(_ pool.StatusReporter) error {
 					return r.configRepo.RenderForDestination(d, helmfileArgs)
 				},
+				Labels: labels.Merge(labels.ForDestination(_destination), extraLabels),
 			})
 		}
 	}

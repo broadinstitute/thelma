@@ -3,7 +3,7 @@ package pool
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
-	"strconv"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
 	"sync"
 	"time"
 )
@@ -106,33 +106,31 @@ func (w *workItemImpl) recordStop(err error) {
 	}
 	w.mutex.Unlock()
 
-	recordJobMetrics(w.metrics, w.getName(), w.duration(), err)
-
+	w.recordJobMetrics()
 	w.statusReporter.stop()
 }
 
-func recordJobMetrics(opts MetricsOptions, itemName string, duration time.Duration, err error) {
-	if !opts.Enabled {
+func (w *workItemImpl) recordJobMetrics() {
+	if !w.metrics.Enabled {
 		return
 	}
 
-	metricName := "pool_" + opts.PoolName + "_" + itemName
+	itemName := w.getName()
+	metricName := "pool_" + w.metrics.PoolName
 
-	labels := map[string]string{
-		"pool": opts.PoolName,
+	_labels := map[string]string{
+		"pool": w.metrics.PoolName,
 		"job":  itemName,
-		"ok":   strconv.FormatBool(err == nil),
 	}
 
-	opts.Client.Gauge(metrics.Options{
-		Name:   metricName + "_count",
-		Labels: labels,
-	}).Set(duration.Seconds())
+	_labels = labels.Merge(_labels, w.job.Labels)
 
-	opts.Client.Gauge(metrics.Options{
-		Name:   metricName + "_duration_seconds",
-		Labels: labels,
-	}).Set(duration.Seconds())
+	opts := metrics.Options{
+		Name:   metricName,
+		Labels: _labels,
+	}
+
+	metrics.TaskCompletion(opts, w.duration(), w.getErr())
 }
 
 // return time the item has been running or total time spent processing, if complete

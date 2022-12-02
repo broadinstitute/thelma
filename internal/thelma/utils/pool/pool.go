@@ -4,7 +4,6 @@ package pool
 import (
 	"context"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"runtime"
@@ -30,8 +29,6 @@ type Options struct {
 type MetricsOptions struct {
 	// Enabled if true, record metrics
 	Enabled bool
-	// Client metrics client that should be used to record metrics
-	Client metrics.Metrics
 	// PoolName optional name prefix for job metrics
 	PoolName string
 }
@@ -42,6 +39,8 @@ type Job struct {
 	Name string
 	// Run function that performs work
 	Run func(StatusReporter) error
+	// Labels optional set of metric labels to add to job metrics
+	Labels map[string]string
 }
 
 // Pool implements the worker pool pattern for concurrent processing
@@ -66,7 +65,6 @@ func New(jobs []Job, options ...Option) Pool {
 		},
 		Metrics: MetricsOptions{
 			Enabled:  false,
-			Client:   metrics.Noop(),
 			PoolName: "unknown",
 		},
 	}

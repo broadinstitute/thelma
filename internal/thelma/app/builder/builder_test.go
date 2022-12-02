@@ -2,10 +2,8 @@ package builder
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -67,13 +65,4 @@ func TestSetShellRunner(t *testing.T) {
 	})
 
 	assert.Same(t, runner, _app.ShellRunner())
-}
-
-func TestSetMetrics(t *testing.T) {
-	builder := NewBuilder().WithTestDefaults(t)
-	m := metrics.Noop()
-	builder.SetMetrics(m)
-	_app, err := builder.Build()
-	require.NoError(t, err)
-	assert.Same(t, m, _app.Metrics())
 }

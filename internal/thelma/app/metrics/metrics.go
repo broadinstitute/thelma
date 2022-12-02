@@ -2,12 +2,14 @@ package metrics
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
 	"github.com/broadinstitute/thelma/internal/thelma/app/version"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/prometheus/common/expfmt"
 	"github.com/rs/zerolog/log"
+	"strconv"
+	"sync"
 	"time"
 )
 
@@ -15,16 +17,27 @@ const metricNamespace = "thelma"
 const jobId = "thelma"
 const configKey = "metrics"
 
+// Metrics is for aggregating metrics
 type Metrics interface {
-	Gauge(opts Options) Gauge
-	Counter(opts Options) Counter
+	// Gauge returns a new Gauge metric. Gauges should be used for values that fluctuate over time (for example, duration of a task)
+	Gauge(opts Options) GaugeMetric
+	// Counter returns a new Counter metric. Counters should be used for values that accumulate over time (for example, number of times a task is executed)
+	Counter(opts Options) CounterMetric
+	// TaskCompletion is a convenience function that records the completion of as task as both a counter
+	// (indicating the task completed) and a gauge (representing how long the task took to complete):
+	// <name>_counter
+	// <name>_duration_seconds
+	// Both metrics will include an "ok" label that will be "true" if err is nil, "false" otherwise
+	TaskCompletion(opts Options, duration time.Duration, err error)
+	// WithLabels returns a copy of this Metrics instance with an additional set of configured labels
 	WithLabels(map[string]string) Metrics
+	// push will upload metrics to Prometheus Gateway. Panics if metrics have already been pushed.
 	push() error
 }
 
 // Options options for a metric
 type Options struct {
-	// Name name of the metric -- will be automatically prefixed with thelma_
+	// Name of the metric -- will be automatically prefixed with "thelma_"
 	Name string
 	// Help optional help text for the metric
 	Help string
@@ -32,14 +45,16 @@ type Options struct {
 	Labels map[string]string
 }
 
-type Counter interface {
+// CounterMetric represents a Counter metric
+type CounterMetric interface {
 	// Inc increments the counter
 	Inc()
 	// Add adds to the counter
 	Add(float64)
 }
 
-type Gauge interface {
+// GaugeMetric represents a Gauge metric
+type GaugeMetric interface {
 	// Set sets the gauge to the given value
 	Set(float64)
 }
@@ -87,23 +102,22 @@ func New(thelmaConfig config.Config, iapToken string) (Metrics, error) {
 
 // Noop returns a metrics instance that won't actually push metrics anywhere
 func Noop() Metrics {
-	return &metrics{
-		pusher: nil,
-		labels: make(map[string]string),
-	}
+	return &metrics{}
 }
 
 type metrics struct {
 	pusher *push.Pusher
 	labels map[string]string
+	mutex  sync.Mutex
+	pushed bool
 }
 
-func (m *metrics) Gauge(opts Options) Gauge {
+func (m *metrics) Gauge(opts Options) GaugeMetric {
 	gauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:        opts.Name,
 		Namespace:   metricNamespace,
 		Help:        opts.Help,
-		ConstLabels: merge(m.labels, opts.Labels),
+		ConstLabels: m.mergeAndNormalize(opts.Labels),
 	})
 	if m.pusher != nil {
 		m.pusher.Collector(gauge)
@@ -111,12 +125,12 @@ func (m *metrics) Gauge(opts Options) Gauge {
 	return gauge
 }
 
-func (m *metrics) Counter(opts Options) Counter {
+func (m *metrics) Counter(opts Options) CounterMetric {
 	counter := prometheus.NewCounter(prometheus.CounterOpts{
 		Name:        opts.Name,
 		Namespace:   metricNamespace,
 		Help:        opts.Help,
-		ConstLabels: merge(m.labels, opts.Labels),
+		ConstLabels: m.mergeAndNormalize(opts.Labels),
 	})
 	if m.pusher != nil {
 		m.pusher.Collector(counter)
@@ -124,67 +138,56 @@ func (m *metrics) Counter(opts Options) Counter {
 	return counter
 }
 
-func (m *metrics) WithLabels(labels map[string]string) Metrics {
+func (m *metrics) TaskCompletion(opts Options, duration time.Duration, err error) {
+	okLabel := map[string]string{
+		"ok": strconv.FormatBool(err == nil),
+	}
+
+	m.Counter(Options{
+		Name:   opts.Name + "_count",
+		Help:   opts.Help,
+		Labels: labels.Merge(opts.Labels, okLabel),
+	}).Inc()
+
+	m.Gauge(Options{
+		Name:   opts.Name + "_duration_seconds",
+		Help:   opts.Help,
+		Labels: labels.Merge(opts.Labels, okLabel),
+	}).Set(duration.Seconds())
+}
+
+func (m *metrics) WithLabels(_labels map[string]string) Metrics {
 	return &metrics{
 		pusher: m.pusher,
-		labels: merge(m.labels, labels),
+		labels: m.mergeAndNormalize(_labels),
 	}
+}
+
+// merge and normalize the given labels with this instance's default labels
+func (m *metrics) mergeAndNormalize(extraLabels ...map[string]string) map[string]string {
+	toMerge := []map[string]string{m.labels}
+	toMerge = append(toMerge, extraLabels...)
+	merged := labels.Merge(toMerge...)
+	return labels.Normalize(merged)
 }
 
 func (m *metrics) push() error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	if m.pusher == nil {
 		return nil
 	}
+	if m.pushed {
+		panic("metrics have already been pushed")
+	}
 	start := time.Now()
 	err := m.pusher.Push()
+	if err != nil {
+		return err
+	}
+
+	m.pushed = true
 	duration := time.Since(start)
 	log.Debug().Dur("duration", duration).Msgf("Uploaded metrics to prometheus gateway in %s", duration)
-	return err
-}
-
-// Push pushes all metrics recorded by this metrics' pusher to the Thelma
-// metrics gateway.
-// This should ONLY be called once per Thelma run, by the Thelma root command.
-func Push(m Metrics) error {
-	return m.push()
-}
-
-// LabelsForRelease returns a standard set of labels for a chart release
-func LabelsForRelease(release terra.Release) map[string]string {
-	labels := make(map[string]string)
-	labels["release"] = release.Name()
-	labels["release_key"] = release.FullName()
-	labels["release_type"] = release.Type().String()
-	labels["chart"] = release.ChartName()
-	labels["cluster"] = release.Cluster().Name()
-	return merge(LabelsForDestination(release.Destination()), labels)
-}
-
-// LabelsForDestination returns a standard set of labels for a destination
-func LabelsForDestination(dest terra.Destination) map[string]string {
-	labels := make(map[string]string)
-	labels["destination_type"] = dest.Type().String()
-	labels["destination_name"] = dest.Name()
-	if dest.IsEnvironment() {
-		labels["env"] = dest.Name()
-	}
-	if dest.IsCluster() {
-		labels["cluster"] = dest.Name()
-	}
-	return labels
-}
-
-// merge N maps into a single map (last takes precedence)
-func merge(maps ...map[string]string) map[string]string {
-	result := make(map[string]string)
-	for _, m := range maps {
-		if m == nil {
-			// ignore nil maps
-			continue
-		}
-		for k, v := range m {
-			result[k] = v
-		}
-	}
-	return result
+	return nil
 }

@@ -88,6 +88,9 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 		if hasSingleDestination {
 			options.Summarizer.Footer = fmt.Sprintf("Check status in ArgoCD at %s", s.argocd.DestinationURL(destination))
 		}
+
+		options.Metrics.Enabled = true
+		options.Metrics.PoolName = "ops_sync"
 	})
 
 	err := _pool.Execute()
