@@ -4,6 +4,7 @@ package pool
 import (
 	"context"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"runtime"
@@ -20,8 +21,19 @@ type Options struct {
 	NumWorkers int
 	// StopProcessingOnError whether to stop processing work items in the event a job returns an error
 	StopProcessingOnError bool
-	// Summarizer options for printing periodict processing summaries to the log
+	// Summarizer options for printing periodic processing summaries to the log
 	Summarizer SummarizerOptions
+	// Metrics options for recording metrics
+	Metrics MetricsOptions
+}
+
+type MetricsOptions struct {
+	// Enabled if true, record metrics
+	Enabled bool
+	// Client metrics client that should be used to record metrics
+	Client metrics.Metrics
+	// PoolName optional name prefix for job metrics
+	PoolName string
 }
 
 // Job a unit of work that can be executed by a Pool
@@ -52,6 +64,11 @@ func New(jobs []Job, options ...Option) Pool {
 			Footer:          "",
 			MaxLineItems:    50,
 		},
+		Metrics: MetricsOptions{
+			Enabled:  false,
+			Client:   metrics.Noop(),
+			PoolName: "unknown",
+		},
 	}
 
 	for _, option := range options {
@@ -60,7 +77,7 @@ func New(jobs []Job, options ...Option) Pool {
 
 	var items []workItem
 	for i, job := range jobs {
-		items = append(items, newWorkItem(job, i))
+		items = append(items, newWorkItem(job, i, opts.Metrics))
 	}
 
 	cancelCtx, cancelFn := context.WithCancel(context.Background())

@@ -2,11 +2,13 @@ package pool
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
+	"strconv"
 	"sync"
 	"time"
 )
 
-func newWorkItem(job Job, id int) workItem {
+func newWorkItem(job Job, id int, metrics MetricsOptions) workItem {
 	// set a default name "job-<id>" if one is not supplied by user
 	description := job.Name
 	if description == "" {
@@ -19,6 +21,7 @@ func newWorkItem(job Job, id int) workItem {
 		job:            job,
 		phase:          Queued,
 		statusReporter: newStatusReporter(),
+		metrics:        metrics,
 	}
 }
 
@@ -39,6 +42,7 @@ type workItemImpl struct {
 	name           string
 	id             int
 	statusReporter *statusReporter
+	metrics        MetricsOptions
 	phase          Phase
 	startTime      time.Time
 	endTime        time.Time
@@ -102,7 +106,33 @@ func (w *workItemImpl) recordStop(err error) {
 	}
 	w.mutex.Unlock()
 
+	recordJobMetrics(w.metrics, w.getName(), w.duration(), err)
+
 	w.statusReporter.stop()
+}
+
+func recordJobMetrics(opts MetricsOptions, itemName string, duration time.Duration, err error) {
+	if !opts.Enabled {
+		return
+	}
+
+	metricName := "pool_" + opts.PoolName + "_" + itemName
+
+	labels := map[string]string{
+		"pool": opts.PoolName,
+		"job":  itemName,
+		"ok":   strconv.FormatBool(err == nil),
+	}
+
+	opts.Client.Gauge(metrics.Options{
+		Name:   metricName + "_count",
+		Labels: labels,
+	}).Set(duration.Seconds())
+
+	opts.Client.Gauge(metrics.Options{
+		Name:   metricName + "_duration_seconds",
+		Labels: labels,
+	}).Set(duration.Seconds())
 }
 
 // return time the item has been running or total time spent processing, if complete

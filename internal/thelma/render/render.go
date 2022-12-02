@@ -4,6 +4,7 @@ package render
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
@@ -28,6 +29,7 @@ type Options struct {
 type multiRender struct {
 	options    *Options             // Options global render options
 	state      terra.State          // state terra state provider for looking up environments, clusters, and releases
+	metrics    metrics.Metrics      // metrics client for recording job metrics
 	configRepo *helmfile.ConfigRepo // configRepo reference to use for executing `helmfile template`
 }
 
@@ -70,6 +72,8 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 		return nil, err
 	}
 	r.state = state
+
+	r.metrics = app.Metrics()
 
 	chartCacheDir, err := app.Scratch().Mkdir("chart-cache")
 	if err != nil {
@@ -114,9 +118,14 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 
 	_pool := pool.New(jobs, func(options *pool.Options) {
 		options.Summarizer.Enabled = false
+
 		if r.options.ParallelWorkers >= 1 {
 			options.NumWorkers = r.options.ParallelWorkers
 		}
+
+		options.Metrics.Enabled = true
+		options.Metrics.Client = r.metrics
+		options.Metrics.PoolName = "render"
 	})
 
 	log.Info().Msgf("Rendering %d release(s) with %d worker(s)", len(jobs), _pool.NumWorkers())

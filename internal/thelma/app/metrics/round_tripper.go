@@ -9,6 +9,16 @@ type bearerRoundTripper struct {
 	inner http.RoundTripper
 }
 
+func newHttpClientWithBearerToken(token string) *http.Client {
+	transport := bearerRoundTripper{
+		token: token,
+		inner: http.DefaultTransport,
+	}
+	return &http.Client{
+		Transport: transport,
+	}
+}
+
 func (rt bearerRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
 	r.Header.Add("Authorization", "Bearer "+rt.token)

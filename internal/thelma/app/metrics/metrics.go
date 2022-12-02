@@ -7,37 +7,72 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/prometheus/common/expfmt"
-	"net/http"
+	"github.com/rs/zerolog/log"
+	"time"
 )
 
 const metricNamespace = "thelma"
 const jobId = "thelma"
 const configKey = "metrics"
 
+type Metrics interface {
+	Gauge(opts Options) Gauge
+	Counter(opts Options) Counter
+	WithLabels(map[string]string) Metrics
+	push() error
+}
+
+// Options options for a metric
+type Options struct {
+	// Name name of the metric -- will be automatically prefixed with thelma_
+	Name string
+	// Help optional help text for the metric
+	Help string
+	// Labels optional set of labels to apply to the metric
+	Labels map[string]string
+}
+
+type Counter interface {
+	// Inc increments the counter
+	Inc()
+	// Add adds to the counter
+	Add(float64)
+}
+
+type Gauge interface {
+	// Set sets the gauge to the given value
+	Set(float64)
+}
+
 type metricsConfig struct {
-	Enabled  bool     `default:"false"`
+	Enabled  bool     `default:"true"`
 	PushAddr string   `default:"https://prometheus-gateway.dsp-devops.broadinstitute.org"`
 	Platform Platform `default:"unknown"`
 }
 
+// New returns a new Metrics instance
 func New(thelmaConfig config.Config, iapToken string) (Metrics, error) {
 	var cfg metricsConfig
 	if err := thelmaConfig.Unmarshal(configKey, &cfg); err != nil {
 		return nil, err
 	}
 
-	transport := bearerRoundTripper{
-		token: iapToken,
-		inner: http.DefaultTransport,
-	}
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   0,
+	_platform := cfg.Platform
+	if _platform == Unknown {
+		_platform = guessPlatform()
 	}
 
 	var pusher *push.Pusher
 	if cfg.Enabled {
-		pusher = push.New(cfg.PushAddr, jobId).Format(expfmt.FmtText).Client(client)
+		log.Debug().Msgf("metrics will be pushed to %s (platform: %s)", cfg.PushAddr, _platform)
+		client := newHttpClientWithBearerToken(iapToken)
+
+		// note we use text format because it's the only kind that works with the prometheus aggregation
+		// gateway
+		// https://github.com/weaveworks/prom-aggregation-gateway/issues/48#issue-733152797
+		pusher = push.New(cfg.PushAddr, jobId).Client(client).Format(expfmt.FmtText)
+	} else {
+		log.Debug().Msgf("metrics pushing is disabled")
 	}
 
 	return &metrics{
@@ -45,9 +80,17 @@ func New(thelmaConfig config.Config, iapToken string) (Metrics, error) {
 		// root labels added to all metrics
 		labels: map[string]string{
 			"thelma_version":  version.Version,
-			"thelma_platform": cfg.Platform.String(),
+			"thelma_platform": _platform.String(),
 		},
 	}, nil
+}
+
+// Noop returns a metrics instance that won't actually push metrics anywhere
+func Noop() Metrics {
+	return &metrics{
+		pusher: nil,
+		labels: make(map[string]string),
+	}
 }
 
 type metrics struct {
@@ -92,30 +135,11 @@ func (m *metrics) push() error {
 	if m.pusher == nil {
 		return nil
 	}
-	return m.pusher.Push()
-}
-
-type Options struct {
-	Name   string
-	Help   string
-	Labels map[string]string
-}
-
-type Counter interface {
-	// Inc increments the counter
-	Inc()
-}
-
-type Gauge interface {
-	// Set sets the gauge to the given value
-	Set(float64)
-}
-
-type Metrics interface {
-	Gauge(opts Options) Gauge
-	Counter(opts Options) Counter
-	WithLabels(map[string]string) Metrics
-	push() error
+	start := time.Now()
+	err := m.pusher.Push()
+	duration := time.Since(start)
+	log.Debug().Dur("duration", duration).Msgf("Uploaded metrics to prometheus gateway in %s", duration)
+	return err
 }
 
 // Push pushes all metrics recorded by this metrics' pusher to the Thelma

@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -32,6 +33,8 @@ type ThelmaBuilder interface {
 	SetConfigOverride(key string, value interface{}) ThelmaBuilder
 	// SetConfigOption (FOR USE IN UNIT TESTS ONLY) customizes configuration behavior for the Thelma app. (see config.Load for more info)
 	SetConfigOption(option config.Option) ThelmaBuilder
+	// SetMetrics (FOR USE IN UNIT TESTS ONLY) supplies a custom metrics instance to the Thelma app
+	SetMetrics(metrics.Metrics) ThelmaBuilder
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
 	SetShellRunner(shell.Runner) ThelmaBuilder
 	// UseStateFixture (FOR USE IN UNIT TESTS ONLY) configures Thelma to use a state fixture instead of a "real" terra.State
@@ -40,6 +43,7 @@ type ThelmaBuilder interface {
 
 type thelmaBuilder struct {
 	configOptions []config.Option
+	metrics       metrics.Metrics
 	shellRunner   shell.Runner
 	stateFixture  struct {
 		enabled bool
@@ -78,6 +82,9 @@ func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
 	// Use mock shell runner
 	b.SetShellRunner(shell.DefaultMockRunner())
 
+	// Use noop metrics
+	b.SetMetrics(metrics.Noop())
+
 	// Use state loader filled with fake/pre-populated data
 	b.UseStateFixture(statefixtures.Default, t)
 
@@ -101,6 +108,11 @@ func (b *thelmaBuilder) SetConfigOverride(key string, value interface{}) ThelmaB
 
 func (b *thelmaBuilder) SetConfigOption(option config.Option) ThelmaBuilder {
 	b.configOptions = append(b.configOptions, option)
+	return b
+}
+
+func (b *thelmaBuilder) SetMetrics(m metrics.Metrics) ThelmaBuilder {
+	b.metrics = m
 	return b
 }
 
@@ -158,13 +170,26 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
+	// Initialize metrics instance
+	_metrics := b.metrics
+	if _metrics == nil {
+		iapToken, err := _clients.IAPToken()
+		if err != nil {
+			return nil, err
+		}
+		_metrics, err = metrics.New(cfg, iapToken)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	stateLoader, err := b.buildStateLoader(cfg, shellRunner, _clients)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing state loader: %v", err)
 	}
 
 	// Initialize app
-	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader)
+	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader, _metrics)
 }
 
 func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Runner, clients clients.Clients) (terra.StateLoader, error) {

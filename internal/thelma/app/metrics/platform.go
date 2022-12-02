@@ -2,6 +2,10 @@ package metrics
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
+	"os"
+	"os/user"
+	"runtime"
 	"strings"
 )
 
@@ -16,6 +20,51 @@ const (
 	GithubActions
 	Jenkins
 )
+
+// local username of whoever invoked the legacy thelma docker wrapper
+const wrapperUserEnvVar = "LEGACY_WRAPPER_USER"
+
+// local username that processes run as in ArgoCD containers
+const argocdUser = "argocd"
+
+// local username that Jenkins nodes run as
+const jenkinsUser = "jenkins"
+
+// name an environment variable set in GitHub actions
+// https://docs.github.com/en/actions/learn-github-actions/environment-variables
+const githubWorkflowEnvVar = "GITHUB_WORKFLOW"
+
+// best-effort attempt to guess platform based on the environment thelma is running in
+func guessPlatform() Platform {
+	if runtime.GOOS == "darwin" {
+		return Local
+	}
+
+	u, err := user.Current()
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to identify process owner")
+		return Unknown
+	}
+
+	// ArgoCD containers run as the ArgoCD user
+	// https://github.com/argoproj/argo-cd/blob/master/Dockerfile#L76
+	if u.Username == argocdUser {
+		return ArgoCD
+	}
+
+	// GitHub sets the following environment variables when running containers in Actions
+	// https://docs.github.com/en/actions/learn-github-actions/environment-variables
+	if os.Getenv(githubWorkflowEnvVar) != "" {
+		return GithubActions
+	}
+
+	// Jenkins runs thelma using the legacy docker wrapper in terra-helmfile
+	if os.Getenv(wrapperUserEnvVar) == jenkinsUser {
+		return Jenkins
+	}
+
+	return Unknown
+}
 
 // String implement fmt.Stringer interface
 func (p Platform) String() string {

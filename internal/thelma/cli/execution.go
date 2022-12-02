@@ -3,7 +3,11 @@ package cli
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/rs/zerolog/log"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // executionOptions options for an execution
@@ -18,6 +22,7 @@ type execution struct {
 	app           app.ThelmaApp
 	runContext    *runContext
 	errorRecorder *errorRecorder
+	startTime     time.Time
 }
 
 // newExecution is a constructor for an execution
@@ -38,15 +43,18 @@ func newExecution(options *executionOptions, leafNode *node, builder builder.The
 // execute runs a Thelma command, including pre and post run hooks.
 // all errors are aggregated into a RunError
 func (e *execution) execute() error {
+	e.startTime = time.Now()
 	e.preRun()
 	e.run()
 	e.postRun()
+	e.recordExecutionMetrics()
 
-	if e.errorRecorder.hasErrors() {
-		return e.errorRecorder.error()
+	closeErr := e.app.Close()
+	if closeErr != nil {
+		log.Warn().Err(closeErr).Msgf("error cleaning up thelma: %v", closeErr)
 	}
 
-	return e.app.Close()
+	return e.errorRecorder.error()
 }
 
 // preRun executes pre-run phase of a Thelma command execution
@@ -88,4 +96,21 @@ func (e *execution) postRun() {
 			// keep executing in event of an error. (post-run hooks are always guaranteed to run)
 		}
 	}
+}
+
+func (e *execution) recordExecutionMetrics() {
+	m := e.app.Metrics().WithLabels(map[string]string{
+		"ok":      strconv.FormatBool(!e.errorRecorder.hasErrors()),
+		"command": strings.Join(e.runContext.commandKey.nameComponents, "_"),
+	})
+
+	m.Counter(metrics.Options{
+		Name: "run_count",
+		Help: "Incremented every time a Thelma command is run",
+	}).Inc()
+
+	m.Gauge(metrics.Options{
+		Name: "run_duration_seconds",
+		Help: "Represents how long it took a thelma command to run",
+	}).Set(time.Since(e.startTime).Seconds())
 }

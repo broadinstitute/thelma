@@ -20,7 +20,7 @@ func newErrorRecorder(key commandKey) *errorRecorder {
 	}
 }
 
-func (r *errorRecorder) error() *RunError {
+func (r *errorRecorder) error() error {
 	if !r.hasErrors() {
 		return nil
 	}

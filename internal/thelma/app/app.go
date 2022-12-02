@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	_ "github.com/broadinstitute/thelma/internal/thelma/app/logging" // import logging for side effects (trigger bootstrapping)
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
@@ -12,6 +13,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/rs/zerolog/log"
 )
 
 // Options for a thelmaApp
@@ -32,14 +34,16 @@ type ThelmaApp interface {
 	Config() config.Config
 	// Credentials returns credential manager object for this ThelmaApp
 	Credentials() credentials.Credentials
-	// ShellRunner returns ShellRunner for this ThelmaApp
-	ShellRunner() shell.Runner
+	// Metrics returns a metrics instance for this ThelmaApp
+	Metrics() metrics.Metrics
 	// Ops returns the Ops interface for this ThelmaApp
 	Ops() ops.Ops
 	// Paths returns Paths for this ThelmaApp
 	Paths() paths.Paths
 	// Scratch returns the Scratch instance for this ThelmaApp
 	Scratch() scratch.Scratch
+	// ShellRunner returns ShellRunner for this ThelmaApp
+	ShellRunner() shell.Runner
 	// State returns a new terra.State instance for this ThelmaApp
 	State() (terra.State, error)
 	// StateLoader returns the terra.StateLoader instance for this ThelmaApp
@@ -49,7 +53,7 @@ type ThelmaApp interface {
 }
 
 // New constructs a new ThelmaApp
-func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, shellRunner shell.Runner, stateLoader terra.StateLoader) (ThelmaApp, error) {
+func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, shellRunner shell.Runner, stateLoader terra.StateLoader, metrics metrics.Metrics) (ThelmaApp, error) {
 	app := &thelmaApp{}
 
 	// Initialize paths
@@ -69,10 +73,11 @@ func New(cfg config.Config, creds credentials.Credentials, clients clients.Clien
 		clients:     clients,
 		config:      cfg,
 		credentials: creds,
+		metrics:     metrics,
+		paths:       _paths,
+		scratch:     _scratch,
 		shellRunner: shellRunner,
 		stateLoader: stateLoader,
-		scratch:     _scratch,
-		paths:       _paths,
 	}, nil
 }
 
@@ -80,9 +85,10 @@ type thelmaApp struct {
 	clients     clients.Clients
 	config      config.Config
 	credentials credentials.Credentials
-	shellRunner shell.Runner
+	metrics     metrics.Metrics
 	paths       paths.Paths
 	scratch     scratch.Scratch
+	shellRunner shell.Runner
 	stateLoader terra.StateLoader
 }
 
@@ -98,8 +104,8 @@ func (t *thelmaApp) Credentials() credentials.Credentials {
 	return t.credentials
 }
 
-func (t *thelmaApp) ShellRunner() shell.Runner {
-	return t.shellRunner
+func (t *thelmaApp) Metrics() metrics.Metrics {
+	return t.metrics
 }
 
 func (t *thelmaApp) Ops() ops.Ops {
@@ -114,6 +120,10 @@ func (t *thelmaApp) Scratch() scratch.Scratch {
 	return t.scratch
 }
 
+func (t *thelmaApp) ShellRunner() shell.Runner {
+	return t.shellRunner
+}
+
 func (t *thelmaApp) State() (terra.State, error) {
 	return t.stateLoader.Load()
 }
@@ -123,5 +133,8 @@ func (t *thelmaApp) StateLoader() terra.StateLoader {
 }
 
 func (t *thelmaApp) Close() error {
+	if err := metrics.Push(t.metrics); err != nil {
+		log.Warn().Err(err).Msgf("error uploading metrics: %v", err)
+	}
 	return t.scratch.Cleanup()
 }
