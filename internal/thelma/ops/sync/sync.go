@@ -2,6 +2,7 @@ package sync
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
@@ -73,6 +74,7 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 
 				return err
 			},
+			Labels: labels.ForRelease(release),
 		})
 	}
 
