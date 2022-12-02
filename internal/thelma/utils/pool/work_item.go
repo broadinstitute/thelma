@@ -106,7 +106,7 @@ func (w *workItemImpl) recordStop(err error) {
 	}
 	w.mutex.Unlock()
 
-	w.recordJobMetrics()
+	w.recordItemMetrics()
 	w.statusReporter.stop()
 }
 

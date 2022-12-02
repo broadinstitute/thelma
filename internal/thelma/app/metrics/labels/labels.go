@@ -11,11 +11,9 @@ var reservedLabelNames = set.NewStringSet("job")
 func ForRelease(release terra.Release) map[string]string {
 	labels := make(map[string]string)
 	labels["release_name"] = release.Name()
-	labels["release_key"] = release.FullName()
+	labels["release_full"] = release.FullName()
 	labels["release_type"] = release.Type().String()
-	labels["release_chart"] = release.ChartName()
 	labels["release_cluster"] = release.Cluster().Name()
-	labels["release_namespace"] = release.Namespace()
 	if release.Destination().IsEnvironment() {
 		labels["release_env"] = release.Destination().Name()
 	}
