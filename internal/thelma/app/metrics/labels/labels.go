@@ -14,16 +14,16 @@ var reservedLabelNames = set.NewStringSet("job")
 
 // ForReleaseOrDestination is for metrics that could apply to either a release or a destination.
 // (manifest rendering jobs are probably the only use case for this).
-func ForReleaseOrDestination(t interface{}, extra ...map[string]string) map[string]string {
+func ForReleaseOrDestination(value interface{}, extra ...map[string]string) map[string]string {
 	var labels map[string]string
 
-	switch t.(type) {
+	switch t := value.(type) {
 	case terra.Release:
-		labels = ForRelease(t.(terra.Release))
+		labels = ForRelease(t)
 	case terra.Destination:
 		labels = Merge(
 			map[string]string{"release": ""},
-			ForDestination(t.(terra.Destination)),
+			ForDestination(t),
 		)
 	default:
 		panic(fmt.Errorf("unexpected type: %#v", t))
