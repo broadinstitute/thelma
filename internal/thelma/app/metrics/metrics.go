@@ -93,7 +93,7 @@ func New(thelmaConfig config.Config, iapToken string) (Metrics, error) {
 		pusher: pusher,
 		// root labels added to all metrics
 		labels: map[string]string{
-			"thelma_platform": _platform.String(),
+			"platform": _platform.String(),
 		},
 	}, nil
 }

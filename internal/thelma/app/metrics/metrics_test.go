@@ -33,7 +33,7 @@ func Test_Metrics(t *testing.T) {
 			expected: `
 # HELP thelma_basic_counter A test counter
 # TYPE thelma_basic_counter counter
-thelma_basic_counter{thelma_platform="jenkins"} 42`,
+thelma_basic_counter{platform="jenkins"} 42`,
 		},
 		{
 			name: "basic gauge with custom label",
@@ -46,7 +46,7 @@ thelma_basic_counter{thelma_platform="jenkins"} 42`,
 			expected: `
 # HELP thelma_basic_gauge 
 # TYPE thelma_basic_gauge gauge
-thelma_basic_gauge{foo="bar",thelma_platform="jenkins"} 100`,
+thelma_basic_gauge{foo="bar",platform="jenkins"} 100`,
 		},
 		{
 			name: "inherit labels",
@@ -68,10 +68,10 @@ thelma_basic_gauge{foo="bar",thelma_platform="jenkins"} 100`,
 			expected: `
 # HELP thelma_inherit_counter 
 # TYPE thelma_inherit_counter counter
-thelma_inherit_counter{a="1",b="43",baz="quux",c="3",thelma_platform="jenkins"} 24
+thelma_inherit_counter{a="1",b="43",baz="quux",c="3",platform="jenkins"} 24
 # HELP thelma_inherit_gauge 
 # TYPE thelma_inherit_gauge gauge
-thelma_inherit_gauge{a="1",b="2",c="3",thelma_platform="jenkins"} -100`,
+thelma_inherit_gauge{a="1",b="2",c="3",platform="jenkins"} -100`,
 		},
 		{
 			name: "mutate metrics",
@@ -93,10 +93,10 @@ thelma_inherit_gauge{a="1",b="2",c="3",thelma_platform="jenkins"} -100`,
 			expected: `
 # HELP thelma_incremented_counter 
 # TYPE thelma_incremented_counter counter
-thelma_incremented_counter{thelma_platform="jenkins"} 3
+thelma_incremented_counter{platform="jenkins"} 3
 # HELP thelma_updated_gauge 
 # TYPE thelma_updated_gauge gauge
-thelma_updated_gauge{thelma_platform="jenkins"} 0.3`,
+thelma_updated_gauge{platform="jenkins"} 0.3`,
 		},
 		{
 			name: "reserved label should be normalized",
@@ -109,7 +109,7 @@ thelma_updated_gauge{thelma_platform="jenkins"} 0.3`,
 			expected: `
 # HELP thelma_counter 
 # TYPE thelma_counter counter
-thelma_counter{_job="fixme",a="1",b="2",thelma_platform="jenkins"} 123
+thelma_counter{_job="fixme",a="1",b="2",platform="jenkins"} 123
 `,
 		},
 		{
@@ -133,12 +133,12 @@ thelma_counter{_job="fixme",a="1",b="2",thelma_platform="jenkins"} 123
 			},
 			expected: `# HELP thelma_fake_task_count A fake task
 # TYPE thelma_fake_task_count counter
-thelma_fake_task_count{id="23",ok="false",thelma_platform="jenkins"} 1
-thelma_fake_task_count{id="23",ok="true",thelma_platform="jenkins"} 1
+thelma_fake_task_count{id="23",ok="false",platform="jenkins"} 1
+thelma_fake_task_count{id="23",ok="true",platform="jenkins"} 1
 # HELP thelma_fake_task_duration_seconds A fake task
 # TYPE thelma_fake_task_duration_seconds gauge
-thelma_fake_task_duration_seconds{id="23",ok="false",thelma_platform="jenkins"} 1.8
-thelma_fake_task_duration_seconds{id="23",ok="true",thelma_platform="jenkins"} 1.2
+thelma_fake_task_duration_seconds{id="23",ok="false",platform="jenkins"} 1.8
+thelma_fake_task_duration_seconds{id="23",ok="true",platform="jenkins"} 1.2
 `,
 		},
 	}
