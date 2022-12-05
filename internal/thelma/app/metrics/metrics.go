@@ -3,7 +3,6 @@ package metrics
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
-	"github.com/broadinstitute/thelma/internal/thelma/app/version"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/prometheus/common/expfmt"
@@ -94,7 +93,6 @@ func New(thelmaConfig config.Config, iapToken string) (Metrics, error) {
 		pusher: pusher,
 		// root labels added to all metrics
 		labels: map[string]string{
-			"thelma_version":  version.Version,
 			"thelma_platform": _platform.String(),
 		},
 	}, nil

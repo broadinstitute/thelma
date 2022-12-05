@@ -4,6 +4,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
+	"github.com/broadinstitute/thelma/internal/thelma/app/version"
 	"github.com/rs/zerolog/log"
 	"strings"
 	"time"
@@ -110,4 +111,12 @@ func (e *execution) recordExecutionMetrics() {
 	}
 
 	metrics.TaskCompletion(opts, duration, err)
+
+	metrics.Counter(metrics.Options{
+		Name: "version",
+		Help: "Records the version of Thelma used for a given Thelma run",
+		Labels: map[string]string{
+			"version": version.Version,
+		},
+	}).Inc()
 }
