@@ -2,11 +2,12 @@ package pool
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"sync"
 	"time"
 )
 
-func newWorkItem(job Job, id int) workItem {
+func newWorkItem(job Job, id int, metrics MetricsOptions) workItem {
 	// set a default name "job-<id>" if one is not supplied by user
 	description := job.Name
 	if description == "" {
@@ -19,6 +20,7 @@ func newWorkItem(job Job, id int) workItem {
 		job:            job,
 		phase:          Queued,
 		statusReporter: newStatusReporter(),
+		metrics:        metrics,
 	}
 }
 
@@ -39,6 +41,7 @@ type workItemImpl struct {
 	name           string
 	id             int
 	statusReporter *statusReporter
+	metrics        MetricsOptions
 	phase          Phase
 	startTime      time.Time
 	endTime        time.Time
@@ -102,7 +105,24 @@ func (w *workItemImpl) recordStop(err error) {
 	}
 	w.mutex.Unlock()
 
+	w.recordJobMetrics()
 	w.statusReporter.stop()
+}
+
+func (w *workItemImpl) recordJobMetrics() {
+	if !w.metrics.Enabled {
+		return
+	}
+
+	metricName := "pool_" + w.metrics.PoolName + "_job_run"
+
+	opts := metrics.Options{
+		Name:   metricName,
+		Help:   "Information about the pool's execution of a job",
+		Labels: w.job.Labels,
+	}
+
+	metrics.TaskCompletion(opts, w.duration(), w.getErr())
 }
 
 // return time the item has been running or total time spent processing, if complete

@@ -55,9 +55,9 @@ func MaskSecret(secret ...string) {
 	globalWriter.MaskSecrets(secret...)
 }
 
-// InitializeLogging updates the global Zerolog logger to match Thelma's configuration.
+// Initialize updates the global Zerolog logger to match Thelma's configuration.
 // It should be called once during Thelma initialization.
-func InitializeLogging(thelmaConfig config.Config, thelmaRoot root.Root) error {
+func Initialize(thelmaConfig config.Config, thelmaRoot root.Root) error {
 	cfg, err := loadConfig(thelmaConfig, thelmaRoot)
 	if err != nil {
 		return fmt.Errorf("logging initialization failed: %v", err)

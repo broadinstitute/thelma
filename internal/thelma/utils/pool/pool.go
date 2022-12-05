@@ -20,8 +20,17 @@ type Options struct {
 	NumWorkers int
 	// StopProcessingOnError whether to stop processing work items in the event a job returns an error
 	StopProcessingOnError bool
-	// Summarizer options for printing periodict processing summaries to the log
+	// Summarizer options for printing periodic processing summaries to the log
 	Summarizer SummarizerOptions
+	// Metrics options for recording metrics
+	Metrics MetricsOptions
+}
+
+type MetricsOptions struct {
+	// Enabled if true, record metrics
+	Enabled bool
+	// PoolName optional name prefix for job metrics
+	PoolName string
 }
 
 // Job a unit of work that can be executed by a Pool
@@ -30,6 +39,8 @@ type Job struct {
 	Name string
 	// Run function that performs work
 	Run func(StatusReporter) error
+	// Labels optional set of metric labels to add to job metrics
+	Labels map[string]string
 }
 
 // Pool implements the worker pool pattern for concurrent processing
@@ -52,6 +63,10 @@ func New(jobs []Job, options ...Option) Pool {
 			Footer:          "",
 			MaxLineItems:    50,
 		},
+		Metrics: MetricsOptions{
+			Enabled:  false,
+			PoolName: "unknown",
+		},
 	}
 
 	for _, option := range options {
@@ -60,7 +75,7 @@ func New(jobs []Job, options ...Option) Pool {
 
 	var items []workItem
 	for i, job := range jobs {
-		items = append(items, newWorkItem(job, i))
+		items = append(items, newWorkItem(job, i, opts.Metrics))
 	}
 
 	cancelCtx, cancelFn := context.WithCancel(context.Background())

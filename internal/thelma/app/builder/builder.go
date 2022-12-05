@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -32,6 +33,8 @@ type ThelmaBuilder interface {
 	SetConfigOverride(key string, value interface{}) ThelmaBuilder
 	// SetConfigOption (FOR USE IN UNIT TESTS ONLY) customizes configuration behavior for the Thelma app. (see config.Load for more info)
 	SetConfigOption(option config.Option) ThelmaBuilder
+	// NoManageSingletons (FOR USE IN UNIT TESTS ONLY) prevent this builder from initializing singletons
+	NoManageSingletons() ThelmaBuilder
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
 	SetShellRunner(shell.Runner) ThelmaBuilder
 	// UseStateFixture (FOR USE IN UNIT TESTS ONLY) configures Thelma to use a state fixture instead of a "real" terra.State
@@ -39,9 +42,10 @@ type ThelmaBuilder interface {
 }
 
 type thelmaBuilder struct {
-	configOptions []config.Option
-	shellRunner   shell.Runner
-	stateFixture  struct {
+	configOptions    []config.Option
+	manageSingletons bool
+	shellRunner      shell.Runner
+	stateFixture     struct {
 		enabled bool
 		name    statefixtures.FixtureName
 		t       *testing.T
@@ -64,11 +68,14 @@ type StateLoaderConfig struct {
 
 func NewBuilder() ThelmaBuilder {
 	return &thelmaBuilder{
-		configOptions: make([]config.Option, 0),
+		configOptions:    []config.Option{},
+		manageSingletons: true,
 	}
 }
 
 func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
+	b.NoManageSingletons()
+
 	// Set thelma root to empty temp directory
 	b.SetRootDir(t.TempDir())
 
@@ -81,6 +88,11 @@ func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
 	// Use state loader filled with fake/pre-populated data
 	b.UseStateFixture(statefixtures.Default, t)
 
+	return b
+}
+
+func (b *thelmaBuilder) NoManageSingletons() ThelmaBuilder {
+	b.manageSingletons = false
 	return b
 }
 
@@ -137,8 +149,10 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize logging
-	if err := logging.InitializeLogging(cfg, thelmaRoot); err != nil {
-		return nil, err
+	if b.manageSingletons {
+		if err := logging.Initialize(cfg, thelmaRoot); err != nil {
+			return nil, err
+		}
 	}
 
 	_credentials, err := credentials.New(cfg, thelmaRoot)
@@ -158,13 +172,24 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
+	// Initialize metrics
+	if b.manageSingletons {
+		iapToken, err := _clients.IAPToken()
+		if err != nil {
+			return nil, err
+		}
+		if err := metrics.Initialize(cfg, iapToken); err != nil {
+			return nil, err
+		}
+	}
+
 	stateLoader, err := b.buildStateLoader(cfg, shellRunner, _clients)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing state loader: %v", err)
 	}
 
 	// Initialize app
-	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader)
+	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader, b.manageSingletons)
 }
 
 func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Runner, clients clients.Clients) (terra.StateLoader, error) {

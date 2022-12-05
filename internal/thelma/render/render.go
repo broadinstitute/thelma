@@ -4,12 +4,14 @@ package render
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
+	"strconv"
 )
 
 // Options encapsulates CLI options for a render
@@ -114,9 +116,13 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 
 	_pool := pool.New(jobs, func(options *pool.Options) {
 		options.Summarizer.Enabled = false
+
 		if r.options.ParallelWorkers >= 1 {
 			options.NumWorkers = r.options.ParallelWorkers
 		}
+
+		options.Metrics.Enabled = true
+		options.Metrics.PoolName = "render"
 	})
 
 	log.Info().Msgf("Rendering %d release(s) with %d worker(s)", len(jobs), _pool.NumWorkers())
@@ -127,14 +133,19 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 	var jobs []pool.Job
 
+	extraLabels := map[string]string{
+		"argocd_mode": strconv.FormatBool(helmfileArgs.ArgocdMode),
+	}
+
 	if r.options.Scope != scope.Destination {
-		for _, release := range r.options.Releases {
-			_r := release
+		for _, unsafe := range r.options.Releases {
+			release := unsafe
 			jobs = append(jobs, pool.Job{
-				Name: fmt.Sprintf("release %s in %s %s", _r.Name(), _r.Destination().Type(), _r.Destination().Name()),
+				Name: release.FullName(),
 				Run: func(_ pool.StatusReporter) error {
-					return r.configRepo.RenderForRelease(_r, helmfileArgs)
+					return r.configRepo.RenderForRelease(release, helmfileArgs)
 				},
+				Labels: labels.ForReleaseOrDestination(release, extraLabels),
 			})
 		}
 	}
@@ -151,13 +162,14 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 		}
 
 		// for each unique destination, make a job to render global resources for it
-		for _, _destination := range destinations {
-			d := _destination
+		for _, unsafe := range destinations {
+			destination := unsafe
 			jobs = append(jobs, pool.Job{
-				Name: fmt.Sprintf("global resources for %s %s", d.Type(), d.Name()),
+				Name: fmt.Sprintf("%s-%s", destination.Type(), destination.Name()),
 				Run: func(_ pool.StatusReporter) error {
-					return r.configRepo.RenderForDestination(d, helmfileArgs)
+					return r.configRepo.RenderForDestination(destination, helmfileArgs)
 				},
+				Labels: labels.ForReleaseOrDestination(destination, extraLabels),
 			})
 		}
 	}

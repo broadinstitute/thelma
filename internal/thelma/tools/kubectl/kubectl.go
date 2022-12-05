@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -228,6 +229,8 @@ func joinSelectorLabels(labels map[string]string) string {
 	for k, v := range labels {
 		pairs = append(pairs, k+"="+v)
 	}
+
+	sort.Strings(pairs)
 
 	return strings.Join(pairs, ",")
 }
