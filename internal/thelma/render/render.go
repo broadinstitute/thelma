@@ -145,7 +145,7 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 				Run: func(_ pool.StatusReporter) error {
 					return r.configRepo.RenderForRelease(release, helmfileArgs)
 				},
-				Labels: labels.Merge(labels.ForRelease(release), extraLabels),
+				Labels: labels.ForReleaseOrDestination(release, extraLabels),
 			})
 		}
 	}
@@ -162,14 +162,14 @@ func (r *multiRender) getJobs(helmfileArgs *helmfile.Args) ([]pool.Job, error) {
 		}
 
 		// for each unique destination, make a job to render global resources for it
-		for _, _destination := range destinations {
-			d := _destination
+		for _, unsafe := range destinations {
+			destination := unsafe
 			jobs = append(jobs, pool.Job{
-				Name: fmt.Sprintf("%s-%s", d.Type(), d.Name()),
+				Name: fmt.Sprintf("%s-%s", destination.Type(), destination.Name()),
 				Run: func(_ pool.StatusReporter) error {
-					return r.configRepo.RenderForDestination(d, helmfileArgs)
+					return r.configRepo.RenderForDestination(destination, helmfileArgs)
 				},
-				Labels: labels.Merge(labels.ForDestination(_destination), extraLabels),
+				Labels: labels.ForReleaseOrDestination(destination, extraLabels),
 			})
 		}
 	}

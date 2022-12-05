@@ -1,30 +1,83 @@
+// Package labels contains utility functions for generating a standard set of labels for terra.State objects
+// Note that you cannot record two metrics with the same name and a different set of labels; if you do, the
+// prometheus client library will panic.
+// For that reason, we supply empty labels ("env": "") where labels don't apply.
 package labels
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 )
 
 var reservedLabelNames = set.NewStringSet("job")
 
-// ForRelease returns a standard set of labels for a chart release
-func ForRelease(release terra.Release) map[string]string {
-	labels := make(map[string]string)
-	labels["release_name"] = release.Name()
-	labels["release_full"] = release.FullName()
-	labels["release_type"] = release.Type().String()
-	labels["release_cluster"] = release.Cluster().Name()
-	if release.Destination().IsEnvironment() {
-		labels["release_env"] = release.Destination().Name()
+// ForReleaseOrDestination is for metrics that could apply to either a release or a destination.
+// (manifest rendering jobs are probably the only use case for this).
+func ForReleaseOrDestination(t interface{}, extra ...map[string]string) map[string]string {
+	var labels map[string]string
+
+	switch t.(type) {
+	case terra.Release:
+		labels = ForRelease(t.(terra.Release))
+	case terra.Destination:
+		labels = Merge(
+			map[string]string{"release": ""},
+			ForDestination(t.(terra.Destination)),
+		)
+	default:
+		panic(fmt.Errorf("unexpected type: %#v", t))
 	}
-	return Merge(ForDestination(release.Destination()), labels)
+
+	var all []map[string]string
+	all = append(all, labels)
+	all = append(all, extra...)
+	return Merge(all...)
 }
 
-// ForDestination returns a standard set of labels for a destination
+// ForRelease returns a standard set of labels for a chart release.
+// For example:
+//
+//	{
+//	  "release": "leonardo",
+//	  "env": "dev",
+//	  "cluster": "terra-dev",
+//	}
+func ForRelease(release terra.Release) map[string]string {
+	labels := make(map[string]string)
+	labels["release"] = release.Name()
+	labels["cluster"] = release.Cluster().Name()
+	if release.Destination().IsEnvironment() {
+		labels["env"] = release.Destination().Name()
+	} else {
+		labels["env"] = ""
+	}
+	return labels
+}
+
+// ForDestination returns a standard set of labels for a destination.
+// For example, for the dev env:
+//
+//	{
+//	  "env": "dev",
+//	  "cluster": "",
+//	}
+//
+// For the terra-dev-cluster:
+//
+//	{
+//	  "env": "",
+//	  "cluster": "terra-dev",
+//	}
 func ForDestination(dest terra.Destination) map[string]string {
 	labels := make(map[string]string)
-	labels["destination_type"] = dest.Type().String()
-	labels["destination_name"] = dest.Name()
+	if dest.IsCluster() {
+		labels["cluster"] = dest.Name()
+		labels["env"] = ""
+	} else if dest.IsEnvironment() {
+		labels["cluster"] = ""
+		labels["env"] = dest.Name()
+	}
 	return labels
 }
 

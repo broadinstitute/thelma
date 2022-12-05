@@ -3,7 +3,6 @@ package pool
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
-	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
 	"sync"
 	"time"
 )
@@ -115,19 +114,12 @@ func (w *workItemImpl) recordJobMetrics() {
 		return
 	}
 
-	itemName := w.getName()
-	metricName := "pool_" + w.metrics.PoolName + "_item_processed"
-
-	_labels := map[string]string{
-		"pool":      w.metrics.PoolName,
-		"item_name": itemName,
-	}
-
-	_labels = labels.Merge(_labels, w.job.Labels)
+	metricName := "pool_" + w.metrics.PoolName + "_job_run"
 
 	opts := metrics.Options{
 		Name:   metricName,
-		Labels: _labels,
+		Help:   "Information about the pool's execution of a job",
+		Labels: w.job.Labels,
 	}
 
 	metrics.TaskCompletion(opts, w.duration(), w.getErr())
