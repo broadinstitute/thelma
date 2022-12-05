@@ -33,7 +33,7 @@ type ThelmaBuilder interface {
 	SetConfigOverride(key string, value interface{}) ThelmaBuilder
 	// SetConfigOption (FOR USE IN UNIT TESTS ONLY) customizes configuration behavior for the Thelma app. (see config.Load for more info)
 	SetConfigOption(option config.Option) ThelmaBuilder
-	// NoInitSingletons (FOR USE IN UNIT TESTS ONLY) prevent this builder from initializing singletons
+	// NoManageSingletons (FOR USE IN UNIT TESTS ONLY) prevent this builder from initializing singletons
 	NoManageSingletons() ThelmaBuilder
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
 	SetShellRunner(shell.Runner) ThelmaBuilder
