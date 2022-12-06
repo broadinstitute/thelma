@@ -22,7 +22,8 @@ const approleRoleIdEnvVar = "VAULT_ROLE_ID"
 const approleSecretIdEnvVar = "VAULT_SECRET_ID"
 
 type vaultConfig struct {
-	Addr string `default:"https://clotho.broadinstitute.org:8200"`
+	Addr            string `default:"https://clotho.broadinstitute.org:8200"`
+	ManageUserToken bool   `default:"true"`
 }
 
 type ClientOptions struct {
@@ -38,7 +39,10 @@ type ClientOption func(*ClientOptions)
 
 // NewClient returns a new authenticated vault client
 func NewClient(thelmaConfig config.Config, creds credentials.Credentials, clientOptions ...ClientOption) (*vaultapi.Client, error) {
-	options := aggregateOptions(clientOptions...)
+	options, err := buildClientOptions(thelmaConfig, clientOptions...)
+	if err != nil {
+		return nil, err
+	}
 
 	client, err := newUnauthenticatedClient(thelmaConfig, options)
 	if err != nil {
@@ -56,7 +60,10 @@ func NewClient(thelmaConfig config.Config, creds credentials.Credentials, client
 
 // TokenProvider returns a new credentials.TokenProvider that provides a Vault token
 func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, clientOptions ...ClientOption) (credentials.TokenProvider, error) {
-	options := aggregateOptions(clientOptions...)
+	options, err := buildClientOptions(thelmaConfig, clientOptions...)
+	if err != nil {
+		return nil, err
+	}
 
 	client, err := newUnauthenticatedClient(thelmaConfig, options)
 	if err != nil {
@@ -66,18 +73,24 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, cl
 	return buildVaultTokenProvider(client, creds, options), nil
 }
 
-func aggregateOptions(clientOptions ...ClientOption) *ClientOptions {
-	var opts ClientOptions
+func buildClientOptions(thelmaConfig config.Config, clientOptions ...ClientOption) (*ClientOptions, error) {
+	vaultCfg, err := loadConfig(thelmaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	options := new(ClientOptions)
+
+	if vaultCfg.ManageUserToken {
+		// if we're managing the user vault token (~/.vault-token), pass in our custom token store.
+		options.CredentialStore = NewVaultTokenStore()
+	}
 
 	for _, clientOption := range clientOptions {
-		clientOption(&opts)
+		clientOption(options)
 	}
 
-	if opts.CredentialStore == nil {
-		opts.CredentialStore = NewVaultTokenStore()
-	}
-
-	return &opts
+	return options, nil
 }
 
 func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.Credentials, opts *ClientOptions) credentials.TokenProvider {

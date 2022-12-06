@@ -26,3 +26,7 @@ logging:
   file:
     # disable file logging
     enabled: false
+
+vault:
+  # do not manage ~/.vault-token in ArgoCD/Jenkins/GitHub actions, treat vault token like a regular credential
+  manageusertoken: false
