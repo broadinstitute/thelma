@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	container "google.golang.org/genproto/googleapis/container/v1"
+	container "cloud.google.com/go/container/apiv1/containerpb"
 
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 
@@ -54,8 +54,8 @@ type ClusterManagerServer_CancelOperation_Call struct {
 }
 
 // CancelOperation is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.CancelOperationRequest
+//   - _a0 context.Context
+//   - _a1 *container.CancelOperationRequest
 func (_e *ClusterManagerServer_Expecter) CancelOperation(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_CancelOperation_Call {
 	return &ClusterManagerServer_CancelOperation_Call{Call: _e.mock.On("CancelOperation", _a0, _a1)}
 }
@@ -101,8 +101,8 @@ type ClusterManagerServer_CompleteIPRotation_Call struct {
 }
 
 // CompleteIPRotation is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.CompleteIPRotationRequest
+//   - _a0 context.Context
+//   - _a1 *container.CompleteIPRotationRequest
 func (_e *ClusterManagerServer_Expecter) CompleteIPRotation(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_CompleteIPRotation_Call {
 	return &ClusterManagerServer_CompleteIPRotation_Call{Call: _e.mock.On("CompleteIPRotation", _a0, _a1)}
 }
@@ -148,8 +148,8 @@ type ClusterManagerServer_CompleteNodePoolUpgrade_Call struct {
 }
 
 // CompleteNodePoolUpgrade is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.CompleteNodePoolUpgradeRequest
+//   - _a0 context.Context
+//   - _a1 *container.CompleteNodePoolUpgradeRequest
 func (_e *ClusterManagerServer_Expecter) CompleteNodePoolUpgrade(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_CompleteNodePoolUpgrade_Call {
 	return &ClusterManagerServer_CompleteNodePoolUpgrade_Call{Call: _e.mock.On("CompleteNodePoolUpgrade", _a0, _a1)}
 }
@@ -195,8 +195,8 @@ type ClusterManagerServer_CreateCluster_Call struct {
 }
 
 // CreateCluster is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.CreateClusterRequest
+//   - _a0 context.Context
+//   - _a1 *container.CreateClusterRequest
 func (_e *ClusterManagerServer_Expecter) CreateCluster(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_CreateCluster_Call {
 	return &ClusterManagerServer_CreateCluster_Call{Call: _e.mock.On("CreateCluster", _a0, _a1)}
 }
@@ -242,8 +242,8 @@ type ClusterManagerServer_CreateNodePool_Call struct {
 }
 
 // CreateNodePool is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.CreateNodePoolRequest
+//   - _a0 context.Context
+//   - _a1 *container.CreateNodePoolRequest
 func (_e *ClusterManagerServer_Expecter) CreateNodePool(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_CreateNodePool_Call {
 	return &ClusterManagerServer_CreateNodePool_Call{Call: _e.mock.On("CreateNodePool", _a0, _a1)}
 }
@@ -289,8 +289,8 @@ type ClusterManagerServer_DeleteCluster_Call struct {
 }
 
 // DeleteCluster is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.DeleteClusterRequest
+//   - _a0 context.Context
+//   - _a1 *container.DeleteClusterRequest
 func (_e *ClusterManagerServer_Expecter) DeleteCluster(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_DeleteCluster_Call {
 	return &ClusterManagerServer_DeleteCluster_Call{Call: _e.mock.On("DeleteCluster", _a0, _a1)}
 }
@@ -336,8 +336,8 @@ type ClusterManagerServer_DeleteNodePool_Call struct {
 }
 
 // DeleteNodePool is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.DeleteNodePoolRequest
+//   - _a0 context.Context
+//   - _a1 *container.DeleteNodePoolRequest
 func (_e *ClusterManagerServer_Expecter) DeleteNodePool(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_DeleteNodePool_Call {
 	return &ClusterManagerServer_DeleteNodePool_Call{Call: _e.mock.On("DeleteNodePool", _a0, _a1)}
 }
@@ -383,8 +383,8 @@ type ClusterManagerServer_GetCluster_Call struct {
 }
 
 // GetCluster is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.GetClusterRequest
+//   - _a0 context.Context
+//   - _a1 *container.GetClusterRequest
 func (_e *ClusterManagerServer_Expecter) GetCluster(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_GetCluster_Call {
 	return &ClusterManagerServer_GetCluster_Call{Call: _e.mock.On("GetCluster", _a0, _a1)}
 }
@@ -430,8 +430,8 @@ type ClusterManagerServer_GetJSONWebKeys_Call struct {
 }
 
 // GetJSONWebKeys is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.GetJSONWebKeysRequest
+//   - _a0 context.Context
+//   - _a1 *container.GetJSONWebKeysRequest
 func (_e *ClusterManagerServer_Expecter) GetJSONWebKeys(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_GetJSONWebKeys_Call {
 	return &ClusterManagerServer_GetJSONWebKeys_Call{Call: _e.mock.On("GetJSONWebKeys", _a0, _a1)}
 }
@@ -477,8 +477,8 @@ type ClusterManagerServer_GetNodePool_Call struct {
 }
 
 // GetNodePool is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.GetNodePoolRequest
+//   - _a0 context.Context
+//   - _a1 *container.GetNodePoolRequest
 func (_e *ClusterManagerServer_Expecter) GetNodePool(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_GetNodePool_Call {
 	return &ClusterManagerServer_GetNodePool_Call{Call: _e.mock.On("GetNodePool", _a0, _a1)}
 }
@@ -524,8 +524,8 @@ type ClusterManagerServer_GetOperation_Call struct {
 }
 
 // GetOperation is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.GetOperationRequest
+//   - _a0 context.Context
+//   - _a1 *container.GetOperationRequest
 func (_e *ClusterManagerServer_Expecter) GetOperation(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_GetOperation_Call {
 	return &ClusterManagerServer_GetOperation_Call{Call: _e.mock.On("GetOperation", _a0, _a1)}
 }
@@ -571,8 +571,8 @@ type ClusterManagerServer_GetServerConfig_Call struct {
 }
 
 // GetServerConfig is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.GetServerConfigRequest
+//   - _a0 context.Context
+//   - _a1 *container.GetServerConfigRequest
 func (_e *ClusterManagerServer_Expecter) GetServerConfig(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_GetServerConfig_Call {
 	return &ClusterManagerServer_GetServerConfig_Call{Call: _e.mock.On("GetServerConfig", _a0, _a1)}
 }
@@ -618,8 +618,8 @@ type ClusterManagerServer_ListClusters_Call struct {
 }
 
 // ListClusters is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.ListClustersRequest
+//   - _a0 context.Context
+//   - _a1 *container.ListClustersRequest
 func (_e *ClusterManagerServer_Expecter) ListClusters(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_ListClusters_Call {
 	return &ClusterManagerServer_ListClusters_Call{Call: _e.mock.On("ListClusters", _a0, _a1)}
 }
@@ -665,8 +665,8 @@ type ClusterManagerServer_ListNodePools_Call struct {
 }
 
 // ListNodePools is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.ListNodePoolsRequest
+//   - _a0 context.Context
+//   - _a1 *container.ListNodePoolsRequest
 func (_e *ClusterManagerServer_Expecter) ListNodePools(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_ListNodePools_Call {
 	return &ClusterManagerServer_ListNodePools_Call{Call: _e.mock.On("ListNodePools", _a0, _a1)}
 }
@@ -712,8 +712,8 @@ type ClusterManagerServer_ListOperations_Call struct {
 }
 
 // ListOperations is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.ListOperationsRequest
+//   - _a0 context.Context
+//   - _a1 *container.ListOperationsRequest
 func (_e *ClusterManagerServer_Expecter) ListOperations(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_ListOperations_Call {
 	return &ClusterManagerServer_ListOperations_Call{Call: _e.mock.On("ListOperations", _a0, _a1)}
 }
@@ -759,8 +759,8 @@ type ClusterManagerServer_ListUsableSubnetworks_Call struct {
 }
 
 // ListUsableSubnetworks is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.ListUsableSubnetworksRequest
+//   - _a0 context.Context
+//   - _a1 *container.ListUsableSubnetworksRequest
 func (_e *ClusterManagerServer_Expecter) ListUsableSubnetworks(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_ListUsableSubnetworks_Call {
 	return &ClusterManagerServer_ListUsableSubnetworks_Call{Call: _e.mock.On("ListUsableSubnetworks", _a0, _a1)}
 }
@@ -806,8 +806,8 @@ type ClusterManagerServer_RollbackNodePoolUpgrade_Call struct {
 }
 
 // RollbackNodePoolUpgrade is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.RollbackNodePoolUpgradeRequest
+//   - _a0 context.Context
+//   - _a1 *container.RollbackNodePoolUpgradeRequest
 func (_e *ClusterManagerServer_Expecter) RollbackNodePoolUpgrade(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_RollbackNodePoolUpgrade_Call {
 	return &ClusterManagerServer_RollbackNodePoolUpgrade_Call{Call: _e.mock.On("RollbackNodePoolUpgrade", _a0, _a1)}
 }
@@ -853,8 +853,8 @@ type ClusterManagerServer_SetAddonsConfig_Call struct {
 }
 
 // SetAddonsConfig is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetAddonsConfigRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetAddonsConfigRequest
 func (_e *ClusterManagerServer_Expecter) SetAddonsConfig(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetAddonsConfig_Call {
 	return &ClusterManagerServer_SetAddonsConfig_Call{Call: _e.mock.On("SetAddonsConfig", _a0, _a1)}
 }
@@ -900,8 +900,8 @@ type ClusterManagerServer_SetLabels_Call struct {
 }
 
 // SetLabels is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetLabelsRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetLabelsRequest
 func (_e *ClusterManagerServer_Expecter) SetLabels(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetLabels_Call {
 	return &ClusterManagerServer_SetLabels_Call{Call: _e.mock.On("SetLabels", _a0, _a1)}
 }
@@ -947,8 +947,8 @@ type ClusterManagerServer_SetLegacyAbac_Call struct {
 }
 
 // SetLegacyAbac is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetLegacyAbacRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetLegacyAbacRequest
 func (_e *ClusterManagerServer_Expecter) SetLegacyAbac(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetLegacyAbac_Call {
 	return &ClusterManagerServer_SetLegacyAbac_Call{Call: _e.mock.On("SetLegacyAbac", _a0, _a1)}
 }
@@ -994,8 +994,8 @@ type ClusterManagerServer_SetLocations_Call struct {
 }
 
 // SetLocations is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetLocationsRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetLocationsRequest
 func (_e *ClusterManagerServer_Expecter) SetLocations(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetLocations_Call {
 	return &ClusterManagerServer_SetLocations_Call{Call: _e.mock.On("SetLocations", _a0, _a1)}
 }
@@ -1041,8 +1041,8 @@ type ClusterManagerServer_SetLoggingService_Call struct {
 }
 
 // SetLoggingService is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetLoggingServiceRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetLoggingServiceRequest
 func (_e *ClusterManagerServer_Expecter) SetLoggingService(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetLoggingService_Call {
 	return &ClusterManagerServer_SetLoggingService_Call{Call: _e.mock.On("SetLoggingService", _a0, _a1)}
 }
@@ -1088,8 +1088,8 @@ type ClusterManagerServer_SetMaintenancePolicy_Call struct {
 }
 
 // SetMaintenancePolicy is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetMaintenancePolicyRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetMaintenancePolicyRequest
 func (_e *ClusterManagerServer_Expecter) SetMaintenancePolicy(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetMaintenancePolicy_Call {
 	return &ClusterManagerServer_SetMaintenancePolicy_Call{Call: _e.mock.On("SetMaintenancePolicy", _a0, _a1)}
 }
@@ -1135,8 +1135,8 @@ type ClusterManagerServer_SetMasterAuth_Call struct {
 }
 
 // SetMasterAuth is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetMasterAuthRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetMasterAuthRequest
 func (_e *ClusterManagerServer_Expecter) SetMasterAuth(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetMasterAuth_Call {
 	return &ClusterManagerServer_SetMasterAuth_Call{Call: _e.mock.On("SetMasterAuth", _a0, _a1)}
 }
@@ -1182,8 +1182,8 @@ type ClusterManagerServer_SetMonitoringService_Call struct {
 }
 
 // SetMonitoringService is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetMonitoringServiceRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetMonitoringServiceRequest
 func (_e *ClusterManagerServer_Expecter) SetMonitoringService(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetMonitoringService_Call {
 	return &ClusterManagerServer_SetMonitoringService_Call{Call: _e.mock.On("SetMonitoringService", _a0, _a1)}
 }
@@ -1229,8 +1229,8 @@ type ClusterManagerServer_SetNetworkPolicy_Call struct {
 }
 
 // SetNetworkPolicy is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetNetworkPolicyRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetNetworkPolicyRequest
 func (_e *ClusterManagerServer_Expecter) SetNetworkPolicy(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetNetworkPolicy_Call {
 	return &ClusterManagerServer_SetNetworkPolicy_Call{Call: _e.mock.On("SetNetworkPolicy", _a0, _a1)}
 }
@@ -1276,8 +1276,8 @@ type ClusterManagerServer_SetNodePoolAutoscaling_Call struct {
 }
 
 // SetNodePoolAutoscaling is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetNodePoolAutoscalingRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetNodePoolAutoscalingRequest
 func (_e *ClusterManagerServer_Expecter) SetNodePoolAutoscaling(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetNodePoolAutoscaling_Call {
 	return &ClusterManagerServer_SetNodePoolAutoscaling_Call{Call: _e.mock.On("SetNodePoolAutoscaling", _a0, _a1)}
 }
@@ -1323,8 +1323,8 @@ type ClusterManagerServer_SetNodePoolManagement_Call struct {
 }
 
 // SetNodePoolManagement is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetNodePoolManagementRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetNodePoolManagementRequest
 func (_e *ClusterManagerServer_Expecter) SetNodePoolManagement(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetNodePoolManagement_Call {
 	return &ClusterManagerServer_SetNodePoolManagement_Call{Call: _e.mock.On("SetNodePoolManagement", _a0, _a1)}
 }
@@ -1370,8 +1370,8 @@ type ClusterManagerServer_SetNodePoolSize_Call struct {
 }
 
 // SetNodePoolSize is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.SetNodePoolSizeRequest
+//   - _a0 context.Context
+//   - _a1 *container.SetNodePoolSizeRequest
 func (_e *ClusterManagerServer_Expecter) SetNodePoolSize(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_SetNodePoolSize_Call {
 	return &ClusterManagerServer_SetNodePoolSize_Call{Call: _e.mock.On("SetNodePoolSize", _a0, _a1)}
 }
@@ -1417,8 +1417,8 @@ type ClusterManagerServer_StartIPRotation_Call struct {
 }
 
 // StartIPRotation is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.StartIPRotationRequest
+//   - _a0 context.Context
+//   - _a1 *container.StartIPRotationRequest
 func (_e *ClusterManagerServer_Expecter) StartIPRotation(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_StartIPRotation_Call {
 	return &ClusterManagerServer_StartIPRotation_Call{Call: _e.mock.On("StartIPRotation", _a0, _a1)}
 }
@@ -1464,8 +1464,8 @@ type ClusterManagerServer_UpdateCluster_Call struct {
 }
 
 // UpdateCluster is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.UpdateClusterRequest
+//   - _a0 context.Context
+//   - _a1 *container.UpdateClusterRequest
 func (_e *ClusterManagerServer_Expecter) UpdateCluster(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_UpdateCluster_Call {
 	return &ClusterManagerServer_UpdateCluster_Call{Call: _e.mock.On("UpdateCluster", _a0, _a1)}
 }
@@ -1511,8 +1511,8 @@ type ClusterManagerServer_UpdateMaster_Call struct {
 }
 
 // UpdateMaster is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.UpdateMasterRequest
+//   - _a0 context.Context
+//   - _a1 *container.UpdateMasterRequest
 func (_e *ClusterManagerServer_Expecter) UpdateMaster(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_UpdateMaster_Call {
 	return &ClusterManagerServer_UpdateMaster_Call{Call: _e.mock.On("UpdateMaster", _a0, _a1)}
 }
@@ -1558,8 +1558,8 @@ type ClusterManagerServer_UpdateNodePool_Call struct {
 }
 
 // UpdateNodePool is a helper method to define mock.On call
-//  - _a0 context.Context
-//  - _a1 *container.UpdateNodePoolRequest
+//   - _a0 context.Context
+//   - _a1 *container.UpdateNodePoolRequest
 func (_e *ClusterManagerServer_Expecter) UpdateNodePool(_a0 interface{}, _a1 interface{}) *ClusterManagerServer_UpdateNodePool_Call {
 	return &ClusterManagerServer_UpdateNodePool_Call{Call: _e.mock.On("UpdateNodePool", _a0, _a1)}
 }

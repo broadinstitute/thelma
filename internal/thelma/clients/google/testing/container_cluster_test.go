@@ -2,10 +2,11 @@ package testing
 
 import (
 	"context"
+	"testing"
+
+	"cloud.google.com/go/container/apiv1/containerpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	containerpb "google.golang.org/genproto/googleapis/container/v1"
-	"testing"
 )
 
 func Test_ClusterManager(t *testing.T) {

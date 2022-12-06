@@ -1,6 +1,9 @@
 package cleanup
 
 import (
+	"testing"
+
+	"cloud.google.com/go/pubsub/apiv1/pubsubpb"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/mocks"
 	googletesting "github.com/broadinstitute/thelma/internal/thelma/clients/google/testing"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -8,8 +11,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/genproto/googleapis/pubsub/v1"
-	"testing"
 )
 
 func Test_Cleanup(t *testing.T) {
@@ -27,7 +28,7 @@ func Test_Cleanup(t *testing.T) {
 
 	// 1 topic, 3 subscriptions
 	psMocks, psClient := googletesting.NewMockPubSubServerAndClient(t, "bee-project")
-	psMocks.ExpectGetTopic("leonardo-pubsub-fake-bee", &pubsub.Topic{
+	psMocks.ExpectGetTopic("leonardo-pubsub-fake-bee", &pubsubpb.Topic{
 		Name: "leonardo-pubsub-fake-bee",
 	}, nil)
 	psMocks.ExpectListTopicSubscriptions("leonardo-pubsub-fake-bee", []string{
@@ -37,7 +38,7 @@ func Test_Cleanup(t *testing.T) {
 	}, nil)
 
 	// pretend sam-group-sync-fake-bee exists but has no subscriptions
-	psMocks.ExpectGetTopic("sam-group-sync-fake-bee", &pubsub.Topic{
+	psMocks.ExpectGetTopic("sam-group-sync-fake-bee", &pubsubpb.Topic{
 		Name: "sam-group-sync-fake-bee",
 	}, nil)
 	psMocks.ExpectListTopicSubscriptions("sam-group-sync-fake-bee", []string{}, nil)
@@ -46,7 +47,7 @@ func Test_Cleanup(t *testing.T) {
 	psMocks.ExpectGetTopic("rawls-async-import-topic-fake-bee", nil, googletesting.NotFoundError())
 
 	// 1 topic, 1 subscription
-	psMocks.ExpectGetTopic("terra-fake-bee-stairwaycluster-workqueue", &pubsub.Topic{
+	psMocks.ExpectGetTopic("terra-fake-bee-stairwaycluster-workqueue", &pubsubpb.Topic{
 		Name: "terra-fake-bee-stairwaycluster-workqueue",
 	}, nil)
 	psMocks.ExpectListTopicSubscriptions("terra-fake-bee-stairwaycluster-workqueue", []string{
@@ -54,7 +55,7 @@ func Test_Cleanup(t *testing.T) {
 	}, nil)
 
 	// 1 topic, 1 subscription
-	psMocks.ExpectGetTopic("workbench-notifications-fake-bee", &pubsub.Topic{
+	psMocks.ExpectGetTopic("workbench-notifications-fake-bee", &pubsubpb.Topic{
 		Name: "workbench-notifications-fake-bee",
 	}, nil)
 	psMocks.ExpectListTopicSubscriptions("workbench-notifications-fake-bee", []string{
