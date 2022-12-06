@@ -2,16 +2,17 @@ package kubecfg
 
 import (
 	"encoding/base64"
+	"os"
+	"path"
+	"testing"
+
+	"cloud.google.com/go/container/apiv1/containerpb"
 	googletesting "github.com/broadinstitute/thelma/internal/thelma/clients/google/testing"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
-	containerpb "google.golang.org/genproto/googleapis/container/v1"
-	"os"
-	"path"
-	"testing"
 )
 
 type fakeTokenSource struct {

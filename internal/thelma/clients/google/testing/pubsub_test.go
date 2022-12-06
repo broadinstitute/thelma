@@ -1,13 +1,14 @@
 package testing
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
+	"testing"
+
+	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/apiv1/pubsubpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/iterator"
-	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
-	"testing"
 )
 
 func Test_PubSub(t *testing.T) {

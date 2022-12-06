@@ -2,12 +2,12 @@ package testing
 
 import (
 	container "cloud.google.com/go/container/apiv1"
+	"cloud.google.com/go/container/apiv1/containerpb"
 	"context"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/testing/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	containerpb "google.golang.org/genproto/googleapis/container/v1"
 	"google.golang.org/grpc"
 	"testing"
 )
