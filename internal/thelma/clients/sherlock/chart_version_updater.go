@@ -102,7 +102,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 		}
 	}
 
-	if len(chartReleaseSelectors) > 0 {
+	if len(chartReleasesToRefresh) > 0 {
 		var chartReleaseEntriesToRefresh []*models.V2controllersChangesetPlanRequestChartReleaseEntry
 		for _, chartReleaseSelector := range chartReleasesToRefresh {
 			chartReleaseEntriesToRefresh = append(chartReleaseEntriesToRefresh, &models.V2controllersChangesetPlanRequestChartReleaseEntry{
