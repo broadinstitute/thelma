@@ -102,21 +102,25 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 		}
 	}
 
-	var chartReleaseEntriesToRefresh []*models.V2controllersChangesetPlanRequestChartReleaseEntry
-	for _, chartReleaseSelector := range chartReleasesToRefresh {
-		chartReleaseEntriesToRefresh = append(chartReleaseEntriesToRefresh, &models.V2controllersChangesetPlanRequestChartReleaseEntry{
-			ChartRelease: chartReleaseSelector,
-		})
-	}
-	changesetPlanRequest = &models.V2controllersChangesetPlanRequest{
-		ChartReleases: chartReleaseEntriesToRefresh,
-	}
-	_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
-		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
-	if err != nil {
-		return fmt.Errorf("error from Sherlock refreshing template chart releases to reflect new version %s/%s: %v", chartSelector, newVersion, err)
+	if len(chartReleasesToRefresh) > 0 {
+		var chartReleaseEntriesToRefresh []*models.V2controllersChangesetPlanRequestChartReleaseEntry
+		for _, chartReleaseSelector := range chartReleasesToRefresh {
+			chartReleaseEntriesToRefresh = append(chartReleaseEntriesToRefresh, &models.V2controllersChangesetPlanRequestChartReleaseEntry{
+				ChartRelease: chartReleaseSelector,
+			})
+		}
+		changesetPlanRequest = &models.V2controllersChangesetPlanRequest{
+			ChartReleases: chartReleaseEntriesToRefresh,
+		}
+		_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
+			changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
+		if err != nil {
+			return fmt.Errorf("error from Sherlock refreshing template chart releases to reflect new version %s/%s: %v", chartSelector, newVersion, err)
+		} else {
+			log.Info().Msgf("refreshed template chart releases in Sherlock to reflect new version %s/%s: %v", chartSelector, newVersion, chartReleasesToRefresh)
+		}
 	} else {
-		log.Info().Msgf("refreshed template chart releases in Sherlock to reflect new version %s/%s: %v", chartSelector, newVersion, chartReleaseSelectors)
+		log.Info().Msg("no template chart releases to refresh")
 	}
 
 	return nil
