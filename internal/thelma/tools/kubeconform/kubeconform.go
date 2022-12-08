@@ -5,6 +5,7 @@ import (
 
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const prog = "kubeconform"
@@ -22,11 +23,13 @@ func New(runner shell.Runner) *kubeconform {
 }
 
 func (k *kubeconform) ValidateDir(path string) error {
+	log.Info().Msgf("Validating rendered manifests in %s", path)
 	return k.Run(shell.Command{
 		Prog: prog,
 		Args: []string{
 			"-summary",
 			"-ignore-missing-schemas",
+			"-strict",
 			path,
 		},
 	}, func(opts *shell.RunOptions) {
