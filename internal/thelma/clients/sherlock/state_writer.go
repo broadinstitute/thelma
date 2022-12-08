@@ -3,6 +3,7 @@ package sherlock
 import (
 	"fmt"
 	"github.com/broadinstitute/sherlock/clients/go/client/changesets"
+	"github.com/go-openapi/strfmt"
 	"strings"
 
 	"github.com/broadinstitute/sherlock/clients/go/client/chart_releases"
@@ -204,6 +205,10 @@ func (c *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
 func (c *Client) WriteClusters(cls []terra.Cluster) error {
 	for _, cluster := range cls {
 		log.Info().Msgf("exporting state for cluster: %s", cluster.Name())
+		if cluster.Name() == "dsp-tools-az" {
+			log.Warn().Msgf("skipping dsp-tools-az as Thelma does not have support yet")
+			continue
+		}
 		newCluster := toModelCreatableCluster(cluster)
 		newClusterRequestParams := clusters.NewPostAPIV2ClustersParams().
 			WithCluster(newCluster)
@@ -303,6 +308,15 @@ func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplat
 		HelmfileRef:               utils.Nullable(helmfileRef),
 		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
 		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
+		PreventDeletion:           utils.Nullable(env.PreventDeletion()),
+		AutoDelete: struct {
+			models.EnvironmentAutoDelete
+		}{
+			models.EnvironmentAutoDelete{
+				Enabled: utils.Nullable(env.AutoDelete().Enabled()),
+				After:   strfmt.DateTime(env.AutoDelete().After()),
+			},
+		},
 	}
 }
 

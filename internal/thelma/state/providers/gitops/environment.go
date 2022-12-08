@@ -3,6 +3,7 @@ package gitops
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"time"
 )
 
 const envNamespacePrefix = "terra-"
@@ -102,9 +103,34 @@ func (e *environment) UniqueResourcePrefix() string {
 	return e.uniqueResourcePrefix
 }
 
-func (t *environment) Owner() string {
+func (e *environment) Owner() string {
 	// Gitops doesn't track owner
 	return ""
+}
+
+// Now that the gitops state provider is no longer used except in tests, we're adding some dummy implementations here
+// to keep tests compiling until it can be ripped out
+
+func (e *environment) CreatedAt() time.Time {
+	return time.Now()
+}
+
+func (e *environment) PreventDeletion() bool {
+	return true
+}
+
+func (e *environment) AutoDelete() terra.AutoDelete {
+	return autoDelete{}
+}
+
+type autoDelete struct{}
+
+func (a autoDelete) After() time.Time {
+	return time.Now()
+}
+
+func (a autoDelete) Enabled() bool {
+	return false
 }
 
 // environmentNamespace return environment namespace for a given environment name

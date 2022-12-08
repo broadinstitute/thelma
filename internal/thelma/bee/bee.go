@@ -240,6 +240,9 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (*Bee, error) {
 	if err != nil {
 		return nil, err
 	}
+	if env.PreventDeletion() {
+		return nil, fmt.Errorf("won't delete environment %s, deletion protection is enabled", env.Name())
+	}
 
 	bee := &Bee{
 		Environment: env,

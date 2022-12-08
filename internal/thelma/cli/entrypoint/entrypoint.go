@@ -1,16 +1,18 @@
 package entrypoint
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/status"
+	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/rs/zerolog/log"
 	"os"
 
-	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
+
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
 	auth_argocd "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/argocd"
 	auth_iap "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/iap"
 	auth_vault "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/vault"
+
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
 	bee_create "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/create"
 	bee_delete "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/delete"
@@ -23,6 +25,10 @@ import (
 	bee_unseed "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed/unseed"
 	bee_unpin "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/unpin"
 	bee_vars "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/vars"
+
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bees"
+	bees_delete "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bees/delete"
+
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts"
 	charts_import "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/import"
 	charts_publish "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/publish"
@@ -32,8 +38,8 @@ import (
 	slack_notify "github.com/broadinstitute/thelma/internal/thelma/cli/commands/slack/notify"
 	states "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state"
 	state_export "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state/export"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/status"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/version"
-	"github.com/rs/zerolog/log"
 )
 
 // Note: this code lives outside the `cli` package in order to avoid a dependency cycle (packages under `cli/commands` depend on the `cli` package)
@@ -69,6 +75,9 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("bee unseed", bee_unseed.NewBeeUnseedCommand())
 	opts.AddCommand("bee unpin", bee_unpin.NewBeeUnpinCommand())
 	opts.AddCommand("bee vars", bee_vars.NewBeeVarsCommand())
+
+	opts.AddCommand("bees", bees.NewBeesCommand())
+	opts.AddCommand("bees delete", bees_delete.NewBeesDeleteCommand())
 
 	opts.AddCommand("charts", charts.NewChartsCommand())
 	opts.AddCommand("charts import", charts_import.NewChartsImportCommand())

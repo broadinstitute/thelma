@@ -67,7 +67,7 @@ func (cmd *resetCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 
 	statuses, err := bees.ResetStatefulSets(env)
-	rc.SetOutput(views.DescribeBeeWith(env, func(options *views.DescribeOptions) {
+	rc.SetOutput(views.DescribeBeeEnv(env, func(options *views.DescribeOptions) {
 		options.Status = statuses
 	}))
 	return err

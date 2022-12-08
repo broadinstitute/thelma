@@ -1,5 +1,7 @@
 package terra
 
+import "time"
+
 type Environment interface {
 	// DefaultCluster Returns the default cluster for this environment.
 	DefaultCluster() Cluster
@@ -24,5 +26,12 @@ type Environment interface {
 	// Owner is an email address of the user or group responsible for this environment.
 	// May be empty if there's no owner or if the state provider doesn't track this information.
 	Owner() string
+	// PreventDeletion if true, the environment should not be automatically deleted under any circumstances.
+	// Applies to dynamic environments only (Thelma only supports deletion of dynamic environments).
+	PreventDeletion() bool
+	// AutoDelete automatic deletion settings for this environment. Applies to dynamic environments only.
+	AutoDelete() AutoDelete
+	// CreatedAt returns the timestamp at which this environment was created in state
+	CreatedAt() time.Time
 	Destination
 }

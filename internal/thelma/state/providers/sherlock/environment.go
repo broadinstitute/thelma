@@ -2,9 +2,11 @@ package sherlock
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"time"
 )
 
 type environment struct {
+	createdAt            time.Time
 	defaultCluster       terra.Cluster
 	defaultNamespace     string
 	releases             map[string]*appRelease
@@ -14,6 +16,8 @@ type environment struct {
 	namePrefixesDomain   bool
 	uniqueResourcePrefix string
 	owner                string
+	preventDeletion      bool
+	autoDelete           autoDelete
 	destination
 }
 
@@ -25,6 +29,10 @@ func (e *environment) Releases() []terra.Release {
 		}
 	}
 	return result
+}
+
+func (e *environment) CreatedAt() time.Time {
+	return e.createdAt
 }
 
 func (e *environment) DefaultCluster() terra.Cluster {
@@ -73,4 +81,12 @@ func (e *environment) UniqueResourcePrefix() string {
 
 func (e *environment) Owner() string {
 	return e.owner
+}
+
+func (e *environment) PreventDeletion() bool {
+	return e.preventDeletion
+}
+
+func (e *environment) AutoDelete() terra.AutoDelete {
+	return e.autoDelete
 }

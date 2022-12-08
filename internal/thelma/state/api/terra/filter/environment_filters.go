@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"strings"
+	"time"
 )
 
 func Environments() EnvironmentFilters {
@@ -26,6 +27,10 @@ type EnvironmentFilters interface {
 	HasTemplateName(templateNames ...string) terra.EnvironmentFilter
 	// NameIncludes returns environments with names that include the given substring
 	NameIncludes(substring string) terra.EnvironmentFilter
+	// OlderThan returns environments that are older than a given duration
+	OlderThan(dur time.Duration) terra.EnvironmentFilter
+	// AutoDeletable returns environments that can be automatically deleted
+	AutoDeletable() terra.EnvironmentFilter
 	// Or returns a filter that matches environments that match _any_ of the given filters
 	Or(filters ...terra.EnvironmentFilter) terra.EnvironmentFilter
 	//And returns a filter that matches environments that match _all_ of the given filters
@@ -113,6 +118,28 @@ func (e environmentFilters) NameIncludes(substring string) terra.EnvironmentFilt
 		string: fmt.Sprintf("nameIncludes(%q)", substring),
 		matcher: func(environment terra.Environment) bool {
 			return strings.Contains(environment.Name(), substring)
+		},
+	}
+}
+
+func (e environmentFilters) OlderThan(dur time.Duration) terra.EnvironmentFilter {
+	return environmentFilter{
+		string: fmt.Sprintf("olderThan(%s)", dur),
+		matcher: func(environment terra.Environment) bool {
+			cutoffTime := time.Now().Add(-dur)
+			return environment.CreatedAt().Before(cutoffTime)
+		},
+	}
+}
+
+func (e environmentFilters) AutoDeletable() terra.EnvironmentFilter {
+	return environmentFilter{
+		string: "autoDeletable()",
+		matcher: func(environment terra.Environment) bool {
+			return environment.Lifecycle() == terra.Dynamic &&
+				!environment.PreventDeletion() &&
+				environment.AutoDelete().Enabled() &&
+				environment.AutoDelete().After().Before(time.Now())
 		},
 	}
 }
