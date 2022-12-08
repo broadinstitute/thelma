@@ -24,6 +24,7 @@ import (
 const prog = `argocd`
 const configPrefix = `argocd`
 const yamlFormat = "yaml"
+const applicationNamespace = "ap-argocd"
 
 // envVars holds names of environment variables we pass to the `argocd` cli
 var envVars = struct {
@@ -518,7 +519,7 @@ func (a *argocd) hasLegacyConfigsApp(release terra.Release) (bool, error) {
 
 	legacyConfigsName := naming.LegacyConfigsApplicationName(release)
 	for _, line := range lines {
-		if strings.TrimSpace(line) == legacyConfigsName {
+		if strings.TrimSpace(line) == fmt.Sprintf("%s/%s", applicationNamespace, legacyConfigsName) {
 			return true, nil
 		}
 	}

@@ -1,23 +1,24 @@
 package kubecfg
 
 import (
-	container "cloud.google.com/go/container/apiv1"
 	"context"
 	"encoding/base64"
 	"fmt"
+	"path"
+	"sort"
+	"sync"
+	"time"
+
+	container "cloud.google.com/go/container/apiv1"
+	"cloud.google.com/go/container/apiv1/containerpb"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/flock"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
-	containerpb "google.golang.org/genproto/googleapis/container/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"path"
-	"sort"
-	"sync"
-	"time"
 )
 
 // defaultAuthInfo name of AuthInfo inside kube config file to use for authentication to non-prod clusters

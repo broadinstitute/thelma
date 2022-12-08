@@ -1,16 +1,17 @@
 package testing
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"fmt"
+	"testing"
+
+	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/apiv1/pubsubpb"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/testing/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"testing"
 )
 
 type PubSubMocks struct {

@@ -152,7 +152,7 @@ func Test_joinSelector(t *testing.T) {
 }
 
 func Test_SyncRelease(t *testing.T) {
-	// TODO we should add more test cases with different options and config paramters
+	// TODO we should add more test cases with different options and config parameters
 	_mocks := setupMocks(t)
 	_argocd := _mocks.argocd
 
@@ -168,7 +168,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	// check for legacy configs app
 	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
-		WithStdout("leonardo-configs-dev\nleonardo-dev\n")
+		WithStdout("ap-argocd/leonardo-configs-dev\nap-argocd/leonardo-dev\n")
 
 	// sync legacy configs app
 	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
@@ -218,7 +218,7 @@ func Test_RefreshRelease(t *testing.T) {
 
 	// check for legacy configs app
 	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
-		WithStdout("leonardo-configs-dev\nleonardo-dev\n")
+		WithStdout("ap-argocd/leonardo-configs-dev\nap-argocd/leonardo-dev\n")
 
 	// sync legacy configs app
 	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
