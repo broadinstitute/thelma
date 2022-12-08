@@ -1,6 +1,11 @@
 package kubeconform
 
-import "github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+import (
+	"os"
+
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/rs/zerolog"
+)
 
 const prog = "kubeconform"
 
@@ -21,8 +26,12 @@ func (k *kubeconform) ValidateDir(path string) error {
 		Prog: prog,
 		Args: []string{
 			"-summary",
-			"-n 16", // number of parallel workers to use for validation
-			"path",
+			"-ignore-missing-schemas",
+			path,
 		},
+	}, func(opts *shell.RunOptions) {
+		opts.LogLevel = zerolog.DebugLevel
+		opts.Stdout = os.Stdout
+		opts.Stderr = os.Stderr
 	})
 }
