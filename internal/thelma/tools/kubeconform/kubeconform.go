@@ -30,6 +30,8 @@ func (k *kubeconform) ValidateDir(path string) error {
 			"-summary",
 			"-ignore-missing-schemas",
 			"-strict",
+			"-output",
+			"json",
 			path,
 		},
 	}, func(opts *shell.RunOptions) {
