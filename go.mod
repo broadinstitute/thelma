@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/pubsub v1.28.0
 	cloud.google.com/go/storage v1.27.0
 	github.com/alecthomas/chroma v0.10.0
-	github.com/broadinstitute/sherlock v0.0.96
+	github.com/broadinstitute/sherlock v0.0.97-0.20221208190556-f03a4dd78457
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-openapi/strfmt v0.21.3
