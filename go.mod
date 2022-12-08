@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/pubsub v1.3.1
 	cloud.google.com/go/storage v1.27.0
 	github.com/alecthomas/chroma v0.10.0
-	github.com/broadinstitute/sherlock v0.0.81-0.20221031204150-118922ad16fd
+	github.com/broadinstitute/sherlock v0.0.91-0.20221207155356-00e6659b7878
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-openapi/runtime v0.24.2
 	github.com/go-openapi/strfmt v0.21.3
@@ -22,6 +22,7 @@ require (
 	github.com/muesli/termenv v0.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.13.0
+	github.com/prometheus/common v0.37.0
 	github.com/rs/zerolog v1.28.0
 	github.com/slack-go/slack v0.11.4
 	github.com/spf13/cobra v1.6.0
@@ -128,7 +129,6 @@ require (
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
-	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
