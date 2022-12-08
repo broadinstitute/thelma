@@ -12,6 +12,7 @@ YQ_VERSION=4.11.2
 HELM_DOCS_VERSION=1.5.0
 ARGOCD_VERSION=2.5.3
 KUBECTL_VERSION=1.24.0
+KUBECONFORM_VERSION=0.5.0
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
@@ -146,6 +147,15 @@ install_kubectl() {
     mv ./kubectl "${INSTALL_DIR}/kubectl"
 }
 
+install_kubeconform() {
+  URL="https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-${OS}-${ARCH}.tar.gz"
+  echo "Downloading kubeconform from ${URL}"
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
+    tar -xz && \
+    testexec ./kubeconform -v && \
+    mv ./kubeconform "${INSTALL_DIR}/kubeconform"
+}
+
 mkdir -p "${INSTALL_DIR}"
 mkdir -p "${SCRATCH_DIR}"
 
@@ -199,6 +209,14 @@ fi
 if [[ ! -f "${INSTALL_DIR}/kubectl" ]]; then
   if ! install_kubectl; then
     echo "kubectl install failed!" >&2
+    exit 1
+  fi
+fi
+
+# Install kubeconform
+if [[ ! -f "${INSTALL_DIR}/kubeconform" ]]; then
+  if ! install_kubeconform; then
+    echo "kubeconform install failed!" >&2
     exit 1
   fi
 fi
