@@ -9,7 +9,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/views"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -25,7 +24,6 @@ type options struct {
 	bucketName       string
 	dryRun           bool
 	charts           []string
-	gitops           bool
 	sherlock         []string
 	softFailSherlock []string
 	description      string
@@ -35,7 +33,6 @@ var flagNames = struct {
 	chartDir         string
 	bucketName       string
 	dryRun           string
-	gitops           string
 	sherlock         string
 	softFailSherlock string
 	description      string
@@ -43,7 +40,6 @@ var flagNames = struct {
 	chartDir:         "chart-dir",
 	bucketName:       "bucket",
 	dryRun:           "dry-run",
-	gitops:           "gitops",
 	sherlock:         "sherlock",
 	softFailSherlock: "soft-fail-sherlock",
 	description:      "description",
@@ -67,7 +63,6 @@ func (cmd *publishCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.chartDir, flagNames.chartDir, "path/to/charts", "Publish charts from custom directory")
 	cobraCommand.Flags().StringVar(&cmd.options.bucketName, flagNames.bucketName, defaultBucketName, "Publish charts to custom GCS bucket")
 	cobraCommand.Flags().BoolVarP(&cmd.options.dryRun, flagNames.dryRun, "n", false, "Dry run (don't actually update Helm repo or release to any versioning systems)")
-	cobraCommand.Flags().BoolVar(&cmd.options.gitops, flagNames.gitops, true, "Use terra-helmfile gitops as one of the versioning systems to release to")
 	cobraCommand.Flags().StringSliceVar(&cmd.options.sherlock, flagNames.sherlock, []string{sherlockProdURL}, "Sherlock servers to use as versioning systems to release to")
 	cobraCommand.Flags().StringSliceVar(&cmd.options.softFailSherlock, flagNames.softFailSherlock, []string{sherlockDevURL}, "Sherlock server to use as versioning systems to release to, always using soft-fail behavior")
 	cobraCommand.Flags().StringVarP(&cmd.options.description, flagNames.description, "d", "", "The description to use for these version bumps on any Sherlock versioning systems")
@@ -141,13 +136,6 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	autoreleaser := &source.AutoReleaser{}
 	// If we're dry-running, the autoreleaser will be empty so we don't mutate anything.
 	if !options.dryRun {
-		if options.gitops {
-			gitopsVersions, err := gitops.NewVersions(app.Config().Home(), app.ShellRunner())
-			if err != nil {
-				return nil, err
-			}
-			autoreleaser.GitopsUpdaters = []gitops.Versions{gitopsVersions}
-		}
 		if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
 			iapIdToken, err := app.Clients().IAPToken()
 			if err != nil {
