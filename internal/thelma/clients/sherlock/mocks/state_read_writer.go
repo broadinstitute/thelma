@@ -66,20 +66,20 @@ func (_c *StateReadWriter_Clusters_Call) Return(_a0 sherlock.Clusters, _a1 error
 	return _c
 }
 
-// CreateEnvironmentFromTemplate provides a mock function with given fields: templateName, desiredNamePrefix, desiredName, desiredOwnerEmail
-func (_m *StateReadWriter) CreateEnvironmentFromTemplate(templateName string, desiredNamePrefix string, desiredName string, desiredOwnerEmail string) (string, error) {
-	ret := _m.Called(templateName, desiredNamePrefix, desiredName, desiredOwnerEmail)
+// CreateEnvironmentFromTemplate provides a mock function with given fields: templateName, options
+func (_m *StateReadWriter) CreateEnvironmentFromTemplate(templateName string, options terra.CreateOptions) (string, error) {
+	ret := _m.Called(templateName, options)
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func(string, string, string, string) string); ok {
-		r0 = rf(templateName, desiredNamePrefix, desiredName, desiredOwnerEmail)
+	if rf, ok := ret.Get(0).(func(string, terra.CreateOptions) string); ok {
+		r0 = rf(templateName, options)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, string) error); ok {
-		r1 = rf(templateName, desiredNamePrefix, desiredName, desiredOwnerEmail)
+	if rf, ok := ret.Get(1).(func(string, terra.CreateOptions) error); ok {
+		r1 = rf(templateName, options)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -94,16 +94,14 @@ type StateReadWriter_CreateEnvironmentFromTemplate_Call struct {
 
 // CreateEnvironmentFromTemplate is a helper method to define mock.On call
 //   - templateName string
-//   - desiredNamePrefix string
-//   - desiredName string
-//   - desiredOwnerEmail string
-func (_e *StateReadWriter_Expecter) CreateEnvironmentFromTemplate(templateName interface{}, desiredNamePrefix interface{}, desiredName interface{}, desiredOwnerEmail interface{}) *StateReadWriter_CreateEnvironmentFromTemplate_Call {
-	return &StateReadWriter_CreateEnvironmentFromTemplate_Call{Call: _e.mock.On("CreateEnvironmentFromTemplate", templateName, desiredNamePrefix, desiredName, desiredOwnerEmail)}
+//   - options terra.CreateOptions
+func (_e *StateReadWriter_Expecter) CreateEnvironmentFromTemplate(templateName interface{}, options interface{}) *StateReadWriter_CreateEnvironmentFromTemplate_Call {
+	return &StateReadWriter_CreateEnvironmentFromTemplate_Call{Call: _e.mock.On("CreateEnvironmentFromTemplate", templateName, options)}
 }
 
-func (_c *StateReadWriter_CreateEnvironmentFromTemplate_Call) Run(run func(templateName string, desiredNamePrefix string, desiredName string, desiredOwnerEmail string)) *StateReadWriter_CreateEnvironmentFromTemplate_Call {
+func (_c *StateReadWriter_CreateEnvironmentFromTemplate_Call) Run(run func(templateName string, options terra.CreateOptions)) *StateReadWriter_CreateEnvironmentFromTemplate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(string), args[1].(terra.CreateOptions))
 	})
 	return _c
 }

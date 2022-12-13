@@ -44,17 +44,12 @@ type DeleteOptions struct {
 }
 
 type CreateOptions struct {
-	NamePrefix   string
-	Owner        string
-	GenerateName bool
-	Template     string
+	Template string
+	terra.CreateOptions
 	ProvisionOptions
 }
 
 type ProvisionOptions struct {
-	// Name within the context of ProvisionOptions is just the name of the environment.
-	// In the context of CreateOptions, it means the name of the environment *to create*.
-	Name                     string
 	SyncGeneratorOnly        bool
 	WaitHealthy              bool
 	WaitHealthTimeoutSeconds int
@@ -121,12 +116,7 @@ func (b *bees) CreateWith(options CreateOptions) (*Bee, error) {
 		return nil, err
 	}
 
-	var envName string
-	if options.GenerateName {
-		envName, err = b.state.Environments().CreateFromTemplateGenerateName(options.NamePrefix, template, options.Owner)
-	} else {
-		envName, err = b.state.Environments().CreateFromTemplate(options.Name, template, options.Owner)
-	}
+	envName, err := b.state.Environments().CreateFromTemplate(template, options.CreateOptions)
 	if err != nil {
 		return nil, err
 	}

@@ -10,8 +10,11 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"strings"
+	"sync"
 )
 
 const helpMessage = `Bulk-delete BEEs`
@@ -70,8 +73,6 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		beeFilter = beeFilter.And(filter.Environments().AutoDeletable())
 	}
 
-	log.Info().Msgf("Filter: %s", beeFilter.String())
-
 	matchingBees, err := bees.FilterBees(beeFilter)
 	if err != nil {
 		return err
@@ -93,19 +94,45 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	for _, env := range matchingBees {
 		names = append(names, env.Name())
 	}
-	log.Info().Msgf("Preparing to delete %d BEEs: %#v", len(matchingBees), views.SummarizeBees(matchingBees))
+	log.Info().Msgf("Preparing to delete %d BEEs: %#v", len(matchingBees), strings.Join(names, ", "))
 
 	var deleted []terra.Environment
-	for _, env := range matchingBees {
-		log.Info().Msgf("Deleting %s", env.Name())
-		_, err := bees.DeleteWith(env.Name(), bee.DeleteOptions{
-			Unseed:     true,
-			ExportLogs: true,
+	var mutex sync.Mutex
+
+	var jobs []pool.Job
+	for _, unsafe := range matchingBees {
+		env := unsafe
+		jobs = append(jobs, pool.Job{
+			Name: env.Name(),
+			Run: func(reporter pool.StatusReporter) error {
+				log.Info().Msgf("Deleting %s", env.Name())
+				_, err := bees.DeleteWith(env.Name(), bee.DeleteOptions{
+					Unseed:     true,
+					ExportLogs: true,
+				})
+				if err != nil {
+					return fmt.Errorf("error deleting %s: %v", env.Name(), err)
+				}
+				mutex.Lock()
+				deleted = append(deleted, env)
+				mutex.Unlock()
+				return nil
+			},
+			Labels: map[string]string{
+				"env": env.Name(),
+			},
 		})
-		if err != nil {
-			return fmt.Errorf("error deleting %s: %v", env.Name(), err)
-		}
-		deleted = append(deleted, env)
+	}
+
+	err = pool.New(jobs, func(o *pool.Options) {
+		o.NumWorkers = 5
+		o.Summarizer.Enabled = true
+		o.Metrics.Enabled = true
+		o.Metrics.PoolName = "bee_bulk_delete"
+	}).Execute()
+
+	if err != nil {
+		return err
 	}
 
 	log.Info().Msgf("The following BEEs were deleted:")

@@ -10,13 +10,9 @@ type Environments interface {
 	Get(name string) (Environment, error)
 	// Exists returns true if an environment by the given name exists
 	Exists(name string) (bool, error)
-	// CreateFromTemplate creates a new environment with the given name from the given template.
-	// Should panic if the template environment's lifecycle is not "template".
-	CreateFromTemplate(name string, template Environment, owner string) (string, error)
-	// CreateFromTemplateGenerateName creates a new environment from the given template, generating
-	// a unique, fiab-style name.
-	// Should panic if the template environment's lifecycle is not "template".
-	CreateFromTemplateGenerateName(namePrefix string, template Environment, owner string) (string, error)
+	// CreateFromTemplate creates a new environment with the given options from the given template.
+	// Must panic if the template environment's lifecycle is not "template".
+	CreateFromTemplate(template Environment, opts CreateOptions) (string, error)
 	// EnableRelease enables a release in an environment
 	// TODO this should move to Environment at some point
 	EnableRelease(environmentName string, releaseName string) error

@@ -11,6 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/validate"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 const helpMessage = `Create a new BEE (Branch Engineering Environment) from a template
@@ -36,6 +37,7 @@ var flagNames = struct {
 	seed                      string
 	notify                    string
 	exportLogsOnFailure       string
+	deleteAfter               string
 }{
 	name:                      "name",
 	namePrefix:                "name-prefix",
@@ -48,10 +50,16 @@ var flagNames = struct {
 	seed:                      "seed",
 	notify:                    "notify",
 	exportLogsOnFailure:       "export-logs-on-failure",
+	deleteAfter:               "delete-after",
+}
+
+type options struct {
+	bee.CreateOptions
+	deleteAfter time.Duration
 }
 
 type createCommand struct {
-	options   bee.CreateOptions
+	options   options
 	pinFlags  pinflags.PinFlags
 	seedFlags seedflags.SeedFlags
 }
@@ -82,6 +90,7 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.options.Seed, flagNames.seed, true, `Seed BEE after creation (run "thelma bee seed -h" for more info)`)
 	cobraCommand.Flags().BoolVar(&cmd.options.ExportLogsOnFailure, flagNames.exportLogsOnFailure, true, `Export container logs to GCS if BEE creation fails)`)
 	cobraCommand.Flags().BoolVar(&cmd.options.Notify, flagNames.notify, true, "Attempt to notify the owner via Slack upon success")
+	cobraCommand.Flags().DurationVar(&cmd.options.deleteAfter, flagNames.deleteAfter, 0, "Automatically delete this BEE after a period of time (eg. 4h)")
 
 	cmd.pinFlags.AddFlags(cobraCommand)
 	cmd.seedFlags.AddFlags(cobraCommand)
@@ -99,6 +108,11 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 			return fmt.Errorf("--%s: %q is not a valid environment name prefix: %v", flagNames.namePrefix, cmd.options.NamePrefix, err)
 		}
 		cmd.options.GenerateName = true
+	}
+
+	if ctx.CobraCommand().Flags().Changed(flagNames.deleteAfter) {
+		cmd.options.AutoDelete.Enabled = true
+		cmd.options.AutoDelete.After = time.Now().Add(cmd.options.deleteAfter)
 	}
 
 	// validate --template
@@ -133,7 +147,7 @@ func (cmd *createCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	_bee, err := bees.CreateWith(cmd.options)
+	_bee, err := bees.CreateWith(cmd.options.CreateOptions)
 
 	if _bee != nil {
 		ctx.SetOutput(views.DescribeBee(_bee))
