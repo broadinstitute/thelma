@@ -2,22 +2,24 @@ package render
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"regexp"
+	"testing"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/render"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
+	"github.com/broadinstitute/thelma/internal/thelma/render/validator"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	tsort "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	. "github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"path"
-	"regexp"
-	"testing"
 )
 
 const stateFixture = statefixtures.Default
@@ -181,6 +183,11 @@ func TestRenderArgParsing(t *testing.T) {
 			description:   "--exact-release ALL invalid",
 			arguments:     Args("render --exact-release ALL"),
 			expectedError: regexp.MustCompile("--exact-release cannot be used with ALL"),
+		},
+		{
+			description:   "--validate invalid arg",
+			arguments:     Args("render --validate foo ALL"),
+			expectedError: regexp.MustCompile("--validate: invalid validate mode.*"),
 		},
 		{
 			description: "config repo path must be set",
@@ -430,6 +437,38 @@ func TestRenderArgParsing(t *testing.T) {
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("leonardo", "dev"),
 				}
+				return nil
+			},
+		},
+		{
+			description: "--validate should default to skip",
+			arguments:   Args("render ALL"),
+			setupFn: func(tc *testConfig) error {
+				tc.expected.renderOptions.Validate = validator.Skip
+				return nil
+			},
+		},
+		{
+			description: "--validate with explicit skip",
+			arguments:   Args("render --validate skip ALL"),
+			setupFn: func(tc *testConfig) error {
+				tc.expected.renderOptions.Validate = validator.Skip
+				return nil
+			},
+		},
+		{
+			description: "--validate with warn mode",
+			arguments:   Args("render --validate warn ALL"),
+			setupFn: func(tc *testConfig) error {
+				tc.expected.renderOptions.Validate = validator.Warn
+				return nil
+			},
+		},
+		{
+			description: "--validate with fail mode",
+			arguments:   Args("render --validate fail ALL"),
+			setupFn: func(tc *testConfig) error {
+				tc.expected.renderOptions.Validate = validator.Fail
 				return nil
 			},
 		},

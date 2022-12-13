@@ -3,15 +3,17 @@ package render
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
+	"github.com/broadinstitute/thelma/internal/thelma/render/validator"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
-	"strconv"
 )
 
 // Options encapsulates CLI options for a render
@@ -24,6 +26,7 @@ type Options struct {
 	ChartSourceDir  string          // ChartSourceDir path on filesystem where chart sources live
 	ResolverMode    resolver.Mode   // ResolverMode resolver mode
 	ParallelWorkers int             // ParallelWorkers number of parallel workers
+	Validate        validator.Mode  // Validate post-render manifest validation mode
 }
 
 // multiRender renders manifests for multiple environments and clusters
@@ -31,6 +34,7 @@ type multiRender struct {
 	options    *Options             // Options global render options
 	state      terra.State          // state terra state provider for looking up environments, clusters, and releases
 	configRepo *helmfile.ConfigRepo // configRepo reference to use for executing `helmfile template`
+	validator  validator.Validator  // Validator to use for post-render manifest validation if enabled
 }
 
 // prefix for configuration settings
@@ -58,6 +62,13 @@ func DoRender(app app.ThelmaApp, globalOptions *Options, helmfileArgs *helmfile.
 	}
 	if err = r.renderAll(helmfileArgs); err != nil {
 		return err
+	}
+
+	if r.validator.GetMode() != validator.Skip {
+		err := r.validator.ValidateDir(globalOptions.OutputDir)
+		if r.validator.GetMode() == validator.Fail {
+			return err
+		}
 	}
 	return nil
 }
@@ -100,6 +111,8 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 		ScratchDir:       scratchDir,
 		ShellRunner:      app.ShellRunner(),
 	})
+
+	r.validator = validator.New(options.Validate)
 
 	return r, nil
 }

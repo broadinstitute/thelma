@@ -2,6 +2,9 @@ package render
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
@@ -9,12 +12,11 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/render/scope"
+	"github.com/broadinstitute/thelma/internal/thelma/render/validator"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"path"
-	"path/filepath"
 )
 
 const helpMessage = `Renders Terra Kubernetes manifests
@@ -68,6 +70,7 @@ var flagNames = struct {
 	apps            string
 	chartDir        string
 	scope           string
+	validate        string
 }{
 	argocd:          "argocd",
 	chartDir:        "chart-dir",
@@ -81,6 +84,7 @@ var flagNames = struct {
 	mode:            "mode",
 	apps:            "apps",
 	scope:           "scope",
+	validate:        "validate",
 }
 
 // flagValues is a struct for capturing flag values that are parsed by Cobra.
@@ -97,6 +101,7 @@ type flagValues struct {
 	apps            string
 	chartDir        string
 	scope           string
+	validate        string
 }
 
 // NewRenderCommand constructs a new renderCommand
@@ -131,6 +136,7 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().IntVar(&cmd.flagVals.parallelWorkers, flagNames.parallelWorkers, 1, "Number of parallel workers to launch when rendering")
 	cobraCommand.Flags().StringVar(&cmd.flagVals.mode, flagNames.mode, "development", `Either "development" (render from chart source directory) or "deploy" (render using released chart versions). Defaults to "development"`)
 	cobraCommand.Flags().StringVar(&cmd.flagVals.scope, flagNames.scope, "all", `One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types)`)
+	cobraCommand.Flags().StringVar(&cmd.flagVals.validate, flagNames.validate, "skip", `One of "skip" (no validation on render output), "warn" (print validation of render output but don't fail), or "fail" (exit with error if render output validation fails)`)
 
 	// Single-chart flags -- these can only be used for renders of a single chart
 	cobraCommand.Flags().StringVar(&cmd.flagVals.chartVersion, flagNames.chartVersion, "", "Override chart version")
@@ -263,6 +269,13 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 	default:
 		return fmt.Errorf(`invalid value for --%s (must be "development" or "deploy"): %v`, flagNames.mode, flagVals.mode)
 	}
+
+	// validate mode
+	validateMode, err := validator.FromString(flagVals.validate)
+	if err != nil {
+		return fmt.Errorf("--%s: invalid validate mode: %q", flagNames.validate, flagVals.validate)
+	}
+	renderOptions.Validate = validateMode
 
 	return nil
 }
