@@ -34,7 +34,7 @@ type multiRender struct {
 	options    *Options             // Options global render options
 	state      terra.State          // state terra state provider for looking up environments, clusters, and releases
 	configRepo *helmfile.ConfigRepo // configRepo reference to use for executing `helmfile template`
-	validator  validator.Validator
+	validator  validator.Validator  // Validator to use for post-render manifest validation if enabled
 }
 
 // prefix for configuration settings
