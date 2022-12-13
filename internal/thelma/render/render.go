@@ -34,7 +34,7 @@ type multiRender struct {
 	options    *Options             // Options global render options
 	state      terra.State          // state terra state provider for looking up environments, clusters, and releases
 	configRepo *helmfile.ConfigRepo // configRepo reference to use for executing `helmfile template`
-	validator  *validator.Validator
+	validator  validator.Validator
 }
 
 // prefix for configuration settings
@@ -64,9 +64,9 @@ func DoRender(app app.ThelmaApp, globalOptions *Options, helmfileArgs *helmfile.
 		return err
 	}
 
-	if r.validator.Mode != validator.Skip {
+	if r.validator.GetMode() != validator.Skip {
 		err := r.validator.ValidateDir(globalOptions.OutputDir)
-		if r.validator.Mode == validator.Fail {
+		if r.validator.GetMode() == validator.Fail {
 			return err
 		}
 	}

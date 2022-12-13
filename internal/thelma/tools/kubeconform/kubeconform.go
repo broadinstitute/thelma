@@ -10,10 +10,6 @@ import (
 
 const prog = "kubeconform"
 
-type Kubeconform interface {
-	ValidateDir(path string) error
-}
-
 type kubeconform struct {
 	shell.Runner
 }
@@ -29,9 +25,7 @@ func (k *kubeconform) ValidateDir(path string) error {
 		Args: []string{
 			"-summary",
 			"-ignore-missing-schemas",
-			"-strict",
-			"-output",
-			"json",
+			// "-strict",
 			path,
 		},
 	}, func(opts *shell.RunOptions) {

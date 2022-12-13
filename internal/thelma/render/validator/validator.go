@@ -44,11 +44,24 @@ func (m Mode) String() string {
 	}
 }
 
-type Validator struct {
-	kubeconform.Kubeconform
+type Validator interface {
+	dirValidator
+	GetMode() Mode
+}
+
+type dirValidator interface {
+	ValidateDir(path string) error
+}
+
+type validator struct {
+	dirValidator
 	Mode Mode
 }
 
-func New(mode Mode) *Validator {
-	return &Validator{kubeconform.New(shell.NewRunner()), mode}
+func (v validator) GetMode() Mode {
+	return v.Mode
+}
+
+func New(mode Mode) validator {
+	return validator{kubeconform.New(shell.NewRunner()), mode}
 }
