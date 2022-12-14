@@ -132,6 +132,7 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					RequiresSuitability: utils.Nullable(false),
 					NamePrefixesDomain:  utils.Nullable(true),
 					HelmfileRef:         utils.Nullable("HEAD"),
+					PreventDeletion:     utils.Nullable(false),
 				},
 			},
 			sherlock.Environment{
@@ -145,6 +146,7 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					RequiresSuitability: utils.Nullable(true),
 					NamePrefixesDomain:  utils.Nullable(false),
 					HelmfileRef:         utils.Nullable("HEAD"),
+					PreventDeletion:     utils.Nullable(false),
 				},
 			},
 		}, nil,
