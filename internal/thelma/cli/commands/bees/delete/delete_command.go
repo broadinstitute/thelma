@@ -22,15 +22,18 @@ const helpMessage = `Bulk-delete BEEs`
 type options struct {
 	autoDeleteOnly bool
 	dryRun         bool
+	maxParallel    int
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
 	autoDeleteOnly string
 	dryRun         string
+	maxParallel    string
 }{
 	autoDeleteOnly: "auto-delete-only",
 	dryRun:         "dry-run",
+	maxParallel:    "max-parallel",
 }
 
 type command struct {
@@ -51,6 +54,7 @@ func (cmd *command) ConfigureCobra(cobraCommand *cobra.Command) {
 
 	cobraCommand.Flags().BoolVar(&cmd.options.dryRun, flagNames.dryRun, true, "Print the names of the BEEs that would be deleted without deleting them")
 	cobraCommand.Flags().BoolVar(&cmd.options.autoDeleteOnly, flagNames.autoDeleteOnly, true, "Only include BEEs that are ready for automatic deletion")
+	cobraCommand.Flags().IntVar(&cmd.options.maxParallel, flagNames.maxParallel, 1, "Number of BEEs to delete in parallel")
 
 	cmd.fflags.AddFlags(cobraCommand)
 }
@@ -125,10 +129,10 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 
 	err = pool.New(jobs, func(o *pool.Options) {
-		o.NumWorkers = 5
+		o.NumWorkers = cmd.options.maxParallel
 		o.Summarizer.Enabled = true
 		o.Metrics.Enabled = true
-		o.Metrics.PoolName = "bee_bulk_delete"
+		o.Metrics.PoolName = "bees_bulk_delete"
 	}).Execute()
 
 	if err != nil {
