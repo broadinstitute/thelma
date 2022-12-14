@@ -54,13 +54,16 @@ func (e *environments) Exists(name string) (bool, error) {
 // this environment then.
 // This slightly-roundabout mechanism is here because it makes a ton of sense for Sherlock, which does all its logic
 // in the side-effect step here and has a very thin "get" step later after Thelma reloads.
-func (e *environments) CreateFromTemplate(name string, template terra.Environment, _ string) (string, error) {
-	exists, err := e.Exists(name)
+func (e *environments) CreateFromTemplate(template terra.Environment, options terra.CreateOptions) (string, error) {
+	exists, err := e.Exists(options.Name)
+	if options.Name == "" {
+		return "", fmt.Errorf("generating names not supported")
+	}
 	if err != nil {
 		return "", fmt.Errorf("error checking for environment name conflict: %v", err)
 	}
 	if exists {
-		return "", fmt.Errorf("can't create environment %s: an environment by that name already exists", name)
+		return "", fmt.Errorf("can't create environment %s: an environment by that name already exists", options.Name)
 	}
 
 	if !template.Lifecycle().IsTemplate() {
@@ -68,7 +71,7 @@ func (e *environments) CreateFromTemplate(name string, template terra.Environmen
 	}
 
 	var env statebucket.DynamicEnvironment
-	env.Name = name
+	env.Name = options.Name
 	env.Template = template.Name()
 
 	env, err = e.state.statebucket.Add(env)
@@ -76,19 +79,6 @@ func (e *environments) CreateFromTemplate(name string, template terra.Environmen
 		return "", err
 	}
 
-	return env.Name, nil
-}
-
-func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment, _ string) (string, error) {
-	if !template.Lifecycle().IsTemplate() {
-		return "", fmt.Errorf("can't create from template: environment %s is not a template", template.Name())
-	}
-	var env statebucket.DynamicEnvironment
-	env.Template = template.Name()
-	env, err := e.state.statebucket.AddGenerateName(namePrefix, env)
-	if err != nil {
-		return "", err
-	}
 	return env.Name, nil
 }
 

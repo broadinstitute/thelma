@@ -228,7 +228,9 @@ func TestUpdateState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, missingEnv)
 
-	_, err = state.Environments().CreateFromTemplate("sam-ci-003", template, "")
+	_, err = state.Environments().CreateFromTemplate(template, terra.CreateOptions{
+		Name: "sam-ci-003",
+	})
 	require.NoError(t, err)
 
 	state, err = app.StateLoader().Reload() // reload state

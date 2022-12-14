@@ -32,7 +32,7 @@ func (opts *Options) AddCommand(name string, cmd ThelmaCommand) {
 	opts.commands[name] = cmd
 }
 
-// ConfigureThelma add a configration hook for Thelma
+// ConfigureThelma add a configuration hook for Thelma
 func (opts *Options) ConfigureThelma(hook func(builder.ThelmaBuilder)) {
 	opts.thelmaConfigHook = hook
 }

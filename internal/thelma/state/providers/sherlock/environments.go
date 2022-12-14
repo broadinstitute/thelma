@@ -48,12 +48,8 @@ func (e *environments) Exists(name string) (bool, error) {
 	return exists, nil
 }
 
-func (e *environments) CreateFromTemplate(name string, template terra.Environment, owner string) (string, error) {
-	return e.state.sherlock.CreateEnvironmentFromTemplate(template.Name(), "", name, owner)
-}
-
-func (e *environments) CreateFromTemplateGenerateName(namePrefix string, template terra.Environment, owner string) (string, error) {
-	return e.state.sherlock.CreateEnvironmentFromTemplate(template.Name(), namePrefix, "", owner)
+func (e *environments) CreateFromTemplate(template terra.Environment, options terra.CreateOptions) (string, error) {
+	return e.state.sherlock.CreateEnvironmentFromTemplate(template.Name(), options)
 }
 
 func (e *environments) EnableRelease(environmentName string, releaseName string) error {

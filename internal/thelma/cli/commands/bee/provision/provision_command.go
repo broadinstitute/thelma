@@ -40,6 +40,7 @@ var flagNames = struct {
 }
 
 type provisionCommand struct {
+	name      string
 	options   bee.ProvisionOptions
 	pinFlags  pinflags.PinFlags
 	seedFlags seedflags.SeedFlags
@@ -61,7 +62,7 @@ func (cmd *provisionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Short = "Provision and sync the resources for a newly-created BEE"
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.options.Name, flagNames.name, "n", "NAME", "Name of the newly-created BEE to provision")
+	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "NAME", "Name of the newly-created BEE to provision")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().IntVar(&cmd.options.WaitHealthTimeoutSeconds, flagNames.waitHealthyTimeoutSeconds, 1200, "How long to wait for BEE's Argo apps to become healthy after syncing")
@@ -77,7 +78,7 @@ func (cmd *provisionCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error
 	if !ctx.CobraCommand().Flags().Changed(flagNames.name) {
 		return fmt.Errorf("no environment name specified; --%s is required", flagNames.name)
 	}
-	if strings.TrimSpace(cmd.options.Name) == "" {
+	if strings.TrimSpace(cmd.name) == "" {
 		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
 		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
@@ -102,7 +103,7 @@ func (cmd *provisionCommand) Run(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 	if err != nil {
 		return err
 	}
-	_bee, err := bees.ProvisionWith(cmd.options.Name, cmd.options)
+	_bee, err := bees.ProvisionWith(cmd.name, cmd.options)
 	if _bee != nil {
 		ctx.SetOutput(views.DescribeBee(_bee))
 	}

@@ -29,17 +29,17 @@ func AsOptions(opts []Option) Options {
 // * flag name is prefixed with the given Prefix
 // * flag name's shorthand flag is removed if NoShortHand is true
 // * flag is hidden if Hidden is true
-func (f Options) Apply(original *pflag.FlagSet, addFn func(set *pflag.FlagSet)) {
-	empty := new(pflag.FlagSet)
-	addFn(empty)
-	empty.VisitAll(func(flag *pflag.Flag) {
+func (f Options) Apply(addTo *pflag.FlagSet, flagBuilder func(set *pflag.FlagSet)) {
+	flagSet := new(pflag.FlagSet)
+	flagBuilder(flagSet)
+	flagSet.VisitAll(func(flag *pflag.Flag) {
 		flag.Name = f.NormalizedFlagName(flag.Name)
 		if f.NoShortHand {
 			flag.Shorthand = ""
 		}
 		flag.Hidden = f.Hidden
 	})
-	original.AddFlagSet(empty)
+	addTo.AddFlagSet(flagSet)
 }
 
 // NormalizedFlagName given a flag name, apply prefix if one was configured

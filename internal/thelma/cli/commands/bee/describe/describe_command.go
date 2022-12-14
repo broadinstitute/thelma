@@ -6,8 +6,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
 	"github.com/spf13/cobra"
 )
 
@@ -64,37 +62,11 @@ func (cmd *describeCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	dynEnv, err := getDynamicEnvironment(app, bee)
-	if err != nil {
-		return err
-	}
-
-	view := views.DescribeBeeWithReleaseOverrides(bee, dynEnv)
+	view := views.DescribeBeeEnv(bee)
 
 	rc.SetOutput(view)
 
 	return nil
-}
-
-func getDynamicEnvironment(thelmaApp app.ThelmaApp, bee terra.Environment) (statebucket.DynamicEnvironment, error) {
-	var empty statebucket.DynamicEnvironment
-
-	sb, err := statebucket.New(thelmaApp.Config(), thelmaApp.Clients().Google())
-	if err != nil {
-		return empty, err
-	}
-	dynEnvs, err := sb.Environments()
-	if err != nil {
-		return empty, err
-	}
-
-	for _, d := range dynEnvs {
-		if d.Name == bee.Name() {
-			return d, nil
-		}
-	}
-
-	return empty, fmt.Errorf("no dynamic environment with name %q", bee.Name())
 }
 
 func (cmd *describeCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

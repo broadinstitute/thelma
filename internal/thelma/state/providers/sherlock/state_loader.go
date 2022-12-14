@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
+	"time"
 )
 
 type stateLoader struct {
@@ -82,7 +83,14 @@ retry:
 			if err := lifecycle.FromString(*stateEnvironment.Lifecycle); err != nil {
 				return nil, err
 			}
+			var envAutoDelete autoDelete
+			if stateEnvironment.AutoDelete.Enabled != nil {
+				envAutoDelete.enabled = *stateEnvironment.AutoDelete.Enabled
+			}
+			envAutoDelete.after = time.Time(stateEnvironment.AutoDelete.After)
+
 			_environments[stateEnvironment.Name] = &environment{
+				createdAt:            time.Time(stateEnvironment.CreatedAt),
 				defaultCluster:       _clusters[stateEnvironment.DefaultCluster],
 				defaultNamespace:     stateEnvironment.DefaultNamespace,
 				releases:             make(map[string]*appRelease),
@@ -92,6 +100,8 @@ retry:
 				namePrefixesDomain:   *stateEnvironment.NamePrefixesDomain,
 				uniqueResourcePrefix: stateEnvironment.UniqueResourcePrefix,
 				owner:                stateEnvironment.Owner,
+				preventDeletion:      *stateEnvironment.PreventDeletion,
+				autoDelete:           envAutoDelete,
 				destination: destination{
 					name:             stateEnvironment.Name,
 					base:             stateEnvironment.Base,

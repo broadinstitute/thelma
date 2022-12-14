@@ -3,8 +3,6 @@ package sherlock
 import (
 	"fmt"
 	"github.com/broadinstitute/sherlock/clients/go/client/changesets"
-	"strings"
-
 	"github.com/broadinstitute/sherlock/clients/go/client/chart_releases"
 	"github.com/broadinstitute/sherlock/clients/go/client/charts"
 	"github.com/broadinstitute/sherlock/clients/go/client/clusters"
@@ -12,8 +10,24 @@ import (
 	"github.com/broadinstitute/sherlock/clients/go/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/go-openapi/strfmt"
 	"github.com/rs/zerolog/log"
+	"strings"
+	"time"
 )
+
+func init() {
+	// This function automatically converts times to UTC when serializing.
+	// Without it, time.Time instances that Thelma sends to Sherlock will be stripped of their timezones,
+	// meaning that if the local system sends a time set to 3pm EST, the sherlock will receive a timestamp
+	// set to 3pm UTC.
+	// This is especially relevant to Thelma because it runs on laptops which are set to local time, not UTC.
+	// Further reading:
+	// https://github.com/go-openapi/strfmt/issues/72
+	strfmt.NormalizeTimeForMarshal = func(t time.Time) time.Time {
+		return t.UTC()
+	}
+}
 
 type StateWriter interface {
 	terra.StateWriter
@@ -24,7 +38,7 @@ type StateWriter interface {
 	// The name of the new environment is returned.
 	// Of note here is that calling this function doesn't touch Thelma's in-memory state, only Sherlock's state.
 	// Thelma's in-memory state will need to be reloaded to work with the newly-created environment.
-	CreateEnvironmentFromTemplate(templateName string, desiredNamePrefix string, desiredName string, desiredOwnerEmail string) (string, error)
+	CreateEnvironmentFromTemplate(templateName string, options terra.CreateOptions) (string, error)
 
 	// PinEnvironmentVersions adapts Thelma's pin-override pattern to Sherlock's changeset pattern to apply specific
 	// versions to chart releases in an environment.
@@ -47,18 +61,29 @@ type StateWriter interface {
 	ResetEnvironmentAndPinToDev(environment terra.Environment) error
 }
 
-func (c *Client) CreateEnvironmentFromTemplate(templateName string, desiredNamePrefix string, desiredName string, desiredOwnerEmail string) (string, error) {
+func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terra.CreateOptions) (string, error) {
 	creatableEnvironment := &models.V2controllersCreatableEnvironment{
 		TemplateEnvironment: templateName,
 	}
-	if desiredNamePrefix != "" {
-		creatableEnvironment.NamePrefix = desiredNamePrefix
+
+	if options.Name != "" {
+		creatableEnvironment.Name = options.Name
 	}
-	if desiredName != "" {
-		creatableEnvironment.Name = desiredName
+	if options.GenerateName && options.NamePrefix != "" {
+		creatableEnvironment.NamePrefix = options.NamePrefix
 	}
-	if desiredOwnerEmail != "" {
-		creatableEnvironment.Owner = desiredOwnerEmail
+	if options.Owner != "" {
+		creatableEnvironment.Owner = options.Owner
+	}
+	if options.AutoDelete.Enabled {
+		creatableEnvironment.AutoDelete = struct {
+			models.EnvironmentAutoDelete
+		}{
+			models.EnvironmentAutoDelete{
+				After:   strfmt.DateTime(options.AutoDelete.After),
+				Enabled: &options.AutoDelete.Enabled,
+			},
+		}
 	}
 	existing, created, err := c.client.Environments.PostAPIV2Environments(
 		environments.NewPostAPIV2EnvironmentsParams().WithEnvironment(creatableEnvironment))
@@ -204,6 +229,10 @@ func (c *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
 func (c *Client) WriteClusters(cls []terra.Cluster) error {
 	for _, cluster := range cls {
 		log.Info().Msgf("exporting state for cluster: %s", cluster.Name())
+		if cluster.Name() == "dsp-tools-az" {
+			log.Warn().Msgf("skipping dsp-tools-az as Thelma does not have support yet")
+			continue
+		}
 		newCluster := toModelCreatableCluster(cluster)
 		newClusterRequestParams := clusters.NewPostAPIV2ClustersParams().
 			WithCluster(newCluster)
@@ -303,6 +332,15 @@ func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplat
 		HelmfileRef:               utils.Nullable(helmfileRef),
 		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
 		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
+		PreventDeletion:           utils.Nullable(env.PreventDeletion()),
+		AutoDelete: struct {
+			models.EnvironmentAutoDelete
+		}{
+			models.EnvironmentAutoDelete{
+				Enabled: utils.Nullable(env.AutoDelete().Enabled()),
+				After:   strfmt.DateTime(env.AutoDelete().After()),
+			},
+		},
 	}
 }
 
