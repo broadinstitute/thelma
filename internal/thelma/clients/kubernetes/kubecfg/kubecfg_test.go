@@ -2,6 +2,7 @@ package kubecfg
 
 import (
 	"encoding/base64"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"os"
 	"path"
 	"testing"
@@ -12,16 +13,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/oauth2"
 )
-
-type fakeTokenSource struct {
-	fakeToken string
-}
-
-func (f *fakeTokenSource) Token() (*oauth2.Token, error) {
-	return &oauth2.Token{AccessToken: f.fakeToken}, nil
-}
 
 func Test_Kubecfg(t *testing.T) {
 	cluster1 := mocks.NewCluster(t)
@@ -94,9 +86,7 @@ func Test_Kubecfg(t *testing.T) {
 
 	// write kubecfg to temporary file
 	file := path.Join(t.TempDir(), "kubecfg")
-	tokenSource := &fakeTokenSource{
-		fakeToken: "fake-token",
-	}
+	tokenSource := testutils.NewFakeTokenSource("fake-token")
 	kubecfg := New(file, gkeClient, tokenSource)
 
 	// get kubecfg for release1
