@@ -76,13 +76,9 @@ func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terr
 		creatableEnvironment.Owner = options.Owner
 	}
 	if options.AutoDelete.Enabled {
-		creatableEnvironment.AutoDelete = struct {
-			models.EnvironmentAutoDelete
-		}{
-			models.EnvironmentAutoDelete{
-				After:   strfmt.DateTime(options.AutoDelete.After),
-				Enabled: &options.AutoDelete.Enabled,
-			},
+		creatableEnvironment.AutoDelete = &models.EnvironmentAutoDelete{
+			After:   strfmt.DateTime(options.AutoDelete.After),
+			Enabled: utils.Nullable(options.AutoDelete.Enabled),
 		}
 	}
 	existing, created, err := c.client.Environments.PostAPIV2Environments(
@@ -319,6 +315,13 @@ func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplat
 	} else {
 		helmfileRef = env.TerraHelmfileRef()
 	}
+	var autoDelete *models.EnvironmentAutoDelete
+	if env.AutoDelete().Enabled() {
+		autoDelete = &models.EnvironmentAutoDelete{
+			Enabled: utils.Nullable(env.AutoDelete().Enabled()),
+			After:   strfmt.DateTime(env.AutoDelete().After()),
+		}
+	}
 	return &models.V2controllersCreatableEnvironment{
 		Base:                      env.Base(),
 		BaseDomain:                utils.Nullable(env.BaseDomain()),
@@ -333,14 +336,7 @@ func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplat
 		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
 		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
 		PreventDeletion:           utils.Nullable(env.PreventDeletion()),
-		AutoDelete: struct {
-			models.EnvironmentAutoDelete
-		}{
-			models.EnvironmentAutoDelete{
-				Enabled: utils.Nullable(env.AutoDelete().Enabled()),
-				After:   strfmt.DateTime(env.AutoDelete().After()),
-			},
-		},
+		AutoDelete:                autoDelete,
 	}
 }
 
