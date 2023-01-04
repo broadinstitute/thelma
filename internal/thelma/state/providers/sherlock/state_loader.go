@@ -84,10 +84,12 @@ retry:
 				return nil, err
 			}
 			var envAutoDelete autoDelete
-			if stateEnvironment.AutoDelete.Enabled != nil {
-				envAutoDelete.enabled = *stateEnvironment.AutoDelete.Enabled
+			if stateEnvironment.AutoDelete != nil {
+				if stateEnvironment.AutoDelete.Enabled != nil {
+					envAutoDelete.enabled = *stateEnvironment.AutoDelete.Enabled
+				}
+				envAutoDelete.after = time.Time(stateEnvironment.AutoDelete.After)
 			}
-			envAutoDelete.after = time.Time(stateEnvironment.AutoDelete.After)
 
 			_environments[stateEnvironment.Name] = &environment{
 				createdAt:            time.Time(stateEnvironment.CreatedAt),
