@@ -25,8 +25,8 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 		var body string
 
 		if requestCount > 3 {
-			status = http.StatusOK
-			body = `this is ignored`
+			status = http.StatusInternalServerError
+			body = `this error does not match our retryable list, so should not cause a retry`
 		} else {
 			status = http.StatusInternalServerError
 			body = `error connecting to thurloe: java.net.UnknownHostException`
@@ -59,6 +59,7 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 		"None", "None", "None",
 		"None", "None",
 	)
-	require.NoError(t, err)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "does not match our retryable list")
 	assert.Equal(t, 4, requestCount)
 }
