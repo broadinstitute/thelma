@@ -116,17 +116,23 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 		return err
 	}
 
+	var count int
 	if retryErr := retry.Do(
 		requestFn,
 		retry.Attempts(retryAttempts),
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(retryDelay),
 		retry.OnRetry(func(n uint, err error) {
+			count++
 			log.Warn().Err(err).Msgf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
 		}),
 		retry.RetryIf(isRetryableError),
 	); retryErr != nil {
 		return nil, "", retryErr
+	}
+
+	if count > 0 {
+		log.Info().Msgf("%s %s succeeded after %d retries", method, url, count)
 	}
 
 	return resp, responseBody, nil
