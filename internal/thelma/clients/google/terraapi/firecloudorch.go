@@ -25,6 +25,7 @@ const defaultRetryDelay = 30 * time.Second
 var retryableErrors = []*regexp.Regexp{
 	regexp.MustCompile(`java\.net\.SocketTimeoutException`),
 	regexp.MustCompile(`java\.net\.UnknownHostException`),
+	regexp.MustCompile(`akka\.http\.impl\.engine\.client\.OutgoingConnectionBlueprint\$UnexpectedConnectionClosureException`),
 }
 
 type FirecloudOrchClient interface {
