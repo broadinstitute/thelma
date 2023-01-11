@@ -57,7 +57,7 @@ func (cmd *notifyCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	return slack.SendMessage(cmd.options.userEmail, cmd.options.markdown)
+	return slack.SendDirectMessage(cmd.options.userEmail, cmd.options.markdown)
 }
 
 func (cmd *notifyCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {

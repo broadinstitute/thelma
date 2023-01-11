@@ -8,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/filterflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
@@ -94,6 +95,11 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return nil
 	}
 
+	slackClient, err := app.Clients().Slack()
+	if err != nil {
+		return fmt.Errorf("failed to construct Slack client: %v", err)
+	}
+
 	var names []string
 	for _, env := range matchingBees {
 		names = append(names, env.Name())
@@ -108,15 +114,19 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		env := unsafe
 		jobs = append(jobs, pool.Job{
 			Name: env.Name(),
-			Run: func(reporter pool.StatusReporter) error {
+			Run: func(_ pool.StatusReporter) error {
 				log.Info().Msgf("Deleting %s", env.Name())
 				_, err := bees.DeleteWith(env.Name(), bee.DeleteOptions{
 					Unseed:     true,
 					ExportLogs: true,
 				})
+
+				sendSlackMessage(slackClient, env.Name(), err)
+
 				if err != nil {
-					return fmt.Errorf("error deleting %s: %v", env.Name(), err)
+					return err
 				}
+
 				mutex.Lock()
 				deleted = append(deleted, env)
 				mutex.Unlock()
@@ -142,9 +152,23 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	log.Info().Msgf("The following BEEs were deleted:")
 	view := views.SummarizeBees(deleted)
 	rc.SetOutput(view)
+
 	return nil
 }
 
 func (cmd *command) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	return nil
+}
+
+func sendSlackMessage(slackClient *slack.Slack, name string, err error) {
+	var markdown string
+	if err == nil {
+		markdown = fmt.Sprintf("Orphaned BEE %s was automatically deleted", name)
+	} else {
+		markdown = fmt.Sprintf("Failed to deleted orphaned BEE %s: %v", name, err)
+	}
+
+	if slackErr := slackClient.SendDevopsAlert("Bee Cleanup", markdown, err == nil); slackErr != nil {
+		log.Warn().Err(slackErr).Msgf("error posting Slack alert: %v", slackErr)
+	}
 }

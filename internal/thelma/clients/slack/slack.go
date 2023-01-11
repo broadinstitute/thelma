@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
+	"github.com/broadinstitute/thelma/internal/thelma/app/platform"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 	"github.com/slack-go/slack"
 )
 
 const configPrefix = "slack"
+
+// Red hex code for setting red background in messages
+const colorRed = "#b20000"
+
+// Green hex code for setting green background in messages
+const colorGreen = "#33cc33"
 
 type slackConfig struct {
 	// Vault is the only (current) mechanism to obtain Slack credentials, since we want to always authenticate as
@@ -18,6 +25,9 @@ type slackConfig struct {
 		Enabled bool   `default:"true"`
 		Path    string `default:"secret/suitable/beehive/prod/slack"`
 		Key     string `default:"bot-user-oauth-token"`
+	}
+	ChannelIDs struct {
+		DevopsAlerts string `default:"C011NQS8Q2Z"` // Devops alerts channel: #ap-k8s-monitor
 	}
 }
 
@@ -42,7 +52,36 @@ func New(thelmaConfig config.Config, vaultClientFactory func() (*vaultapi.Client
 	}, nil
 }
 
-func (s *Slack) SendMessage(email string, markdown string) error {
+// SendDevopsAlert posts a message to the configured DevOps alert channel
+func (s *Slack) SendDevopsAlert(title string, text string, ok bool) error {
+	if err := s.requireClient(); err != nil {
+		return err
+	}
+
+	channelId := s.cfg.ChannelIDs.DevopsAlerts
+
+	var color string
+	if ok {
+		color = colorGreen
+	} else {
+		color = colorRed
+	}
+
+	_, _, err := s.client.PostMessage(channelId, slack.MsgOptionAttachments(slack.Attachment{
+		Color:     color,
+		Title:     title,
+		TitleLink: platform.Lookup().Link(),
+		Text:      text,
+	}))
+
+	if err != nil {
+		return fmt.Errorf("couldn't send message to channel %s: %v", channelId, err)
+	}
+	return nil
+}
+
+// SendDirectMessage send a direct message to a user, by email
+func (s *Slack) SendDirectMessage(email string, markdown string) error {
 	if err := s.requireClient(); err != nil {
 		return err
 	}
