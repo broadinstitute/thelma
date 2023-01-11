@@ -3,6 +3,7 @@ package metrics
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
+	"github.com/broadinstitute/thelma/internal/thelma/app/platform"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/prometheus/common/expfmt"
@@ -59,9 +60,9 @@ type GaugeMetric interface {
 }
 
 type metricsConfig struct {
-	Enabled  bool     `default:"true"`
-	PushAddr string   `default:"https://prometheus-gateway.dsp-devops.broadinstitute.org"`
-	Platform Platform `default:"unknown"`
+	Enabled  bool              `default:"true"`
+	PushAddr string            `default:"https://prometheus-gateway.dsp-devops.broadinstitute.org"`
+	Platform platform.Platform `default:"unknown"`
 }
 
 // New returns a new Metrics instance
@@ -72,8 +73,8 @@ func New(thelmaConfig config.Config, iapToken string) (Metrics, error) {
 	}
 
 	_platform := cfg.Platform
-	if _platform == Unknown {
-		_platform = guessPlatform()
+	if _platform == platform.Unknown {
+		_platform = platform.Lookup()
 	}
 
 	var pusher *push.Pusher

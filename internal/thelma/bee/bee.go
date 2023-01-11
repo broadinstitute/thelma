@@ -205,7 +205,7 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 						}
 					}
 				}
-				if err := b.slack.SendMessage(env.Owner(), markdown); err != nil {
+				if err := b.slack.SendDirectMessage(env.Owner(), markdown); err != nil {
 					log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
 				}
 			} else {

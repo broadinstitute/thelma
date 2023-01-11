@@ -1,4 +1,4 @@
-package metrics
+package platform
 
 import (
 	"fmt"
@@ -34,8 +34,8 @@ const jenkinsUser = "jenkins"
 // https://docs.github.com/en/actions/learn-github-actions/environment-variables
 const githubWorkflowEnvVar = "GITHUB_WORKFLOW"
 
-// best-effort attempt to guess platform based on the environment thelma is running in
-func guessPlatform() Platform {
+// Lookup best-effort attempt to guess platform based on the environment thelma is running in
+func Lookup() Platform {
 	if runtime.GOOS == "darwin" {
 		return Local
 	}
@@ -81,6 +81,17 @@ func (p Platform) String() string {
 		return "jenkins"
 	}
 	panic(fmt.Errorf("unrecognized platform: %#v", p))
+}
+
+// Link returns a link to the CI/CD logs for this Thelma run, if applicable
+func (p Platform) Link() string {
+	if p == GithubActions {
+		// ref: https://docs.github.com/en/actions/learn-github-actions/variables
+		// $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+		return fmt.Sprintf("%s/%s/actions/runs/%s", os.Getenv("GITHUB_SERVER_URL"), os.Getenv("GITHUB_REPOSITORY"), os.Getenv("GITHUB_RUN_ID"))
+	}
+	// TODO - return Jenkins and ArgoCD links at some point?
+	return ""
 }
 
 // UnmarshalText implement encoding.TextUnmarshaler interface so platform can be deserialized from config
