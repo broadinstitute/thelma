@@ -16,7 +16,7 @@ const configPrefix = "slack"
 const colorRed = "#b20000"
 
 // Green hex code for setting green background in messages
-const colorGreen = "#6aa84f"
+const colorGreen = "#33cc33"
 
 type slackConfig struct {
 	// Vault is the only (current) mechanism to obtain Slack credentials, since we want to always authenticate as
