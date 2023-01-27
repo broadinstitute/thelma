@@ -83,7 +83,9 @@ func (s *Slack) SendDevopsAlert(title string, text string, ok bool) error {
 // SendDirectMessage send a direct message to a user, by email
 func (s *Slack) SendDirectMessage(email string, markdown string) error {
 	if err := s.requireClient(); err != nil {
-		return err
+		log.Info().Msg("will continue without sending Slack messages; enable debug logging for more information")
+		log.Debug().Msgf("failed to initialize Slack client: %v", err)
+		return nil
 	}
 	user, err := s.client.GetUserByEmail(email)
 	if err != nil {
