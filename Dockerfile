@@ -22,4 +22,4 @@ RUN rm ${THELMA_LINUX_RELEASE}
 ENV PATH="/thelma/bin:/thelma/tools/bin:${PATH}"
 
 # Make sure thelma executes
-RUN /thelma/bin/thelma --help
+RUN thelma --help
