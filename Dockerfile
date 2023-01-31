@@ -19,7 +19,7 @@ RUN mkdir /thelma && tar -xvf ${THELMA_LINUX_RELEASE} -C /thelma
 # Remove the copied tarball
 RUN rm ${THELMA_LINUX_RELEASE}
 
-ENV PATH="/thelma/bin:${PATH}"
+ENV PATH="/thelma/bin:/thelma/tools/bin:${PATH}"
 
 # Make sure thelma executes
 RUN /thelma/bin/thelma --help
