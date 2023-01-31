@@ -116,7 +116,7 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
 	mkdir -p ${RELEASE_ARCHIVE_DIR}
 
     # Copy runtime dependencies into staging dir
-	mkdir -p ${RUNTIME_DEPS_BIN_DIR}/tools/bin
+	mkdir -p ${RELEASE_STAGING_DIR}/tools/bin
 	cp -r ${RUNTIME_DEPS_BIN_DIR}/. ${RELEASE_STAGING_DIR}/tools/bin
 
     # Copy compiled thelma binary into staging dir
