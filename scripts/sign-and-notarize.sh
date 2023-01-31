@@ -48,6 +48,7 @@ CMD_AUTH_FLAGS="--apple-id ${APPLE_ID} --password ${THELMA_MACOS_APP_PWD} --team
 
 # Sign one file
 sign() {
+  echo "Signing ${1}..."
 	codesign -f -o runtime,library --timestamp -s "${SECURITY_ID}" "${1}"
 }
 
@@ -163,6 +164,7 @@ notarize() {
 
 # Check the notarization status of the given file
 verify() {
+  echo "Verifying ${1}..."
 	_not_info=$(codesign -vvvv -R="notarized" --check-notarization "${1}" 2>&1)
 	if echo "${_not_info}" | tr '\n' ' ' | grep -Eq 'valid on disk.*satisfies its Designated Requirement.*explicit requirement satisfied'; then
 		echo "${1} was successfully notarized!"
@@ -184,7 +186,7 @@ tar -xf "${RELEASE_TARBALL}" -C "${untar_dir}"
 
 # Sign each binary
 echo -n "Signing binaries..."
-for bin in "${untar_dir}"/bin/*
+for bin in "${untar_dir}"/bin/* "${untar_dir}"/tools/bin/*
 do
 	sign "${bin}"
 done
@@ -204,7 +206,7 @@ notarize "$(archive "${untar_dir}")"
 #       that Apple registers the binaries as "safe" and then lets users computers
 #       do a check later when they're run....or something. This is all very opaque
 #       and the process is unclear.
-for bin in "${untar_dir}"/bin/*
+for bin in "${untar_dir}"/bin/* "${untar_dir}"/tools/bin/*
 do
 	verify "${bin}"
 done
