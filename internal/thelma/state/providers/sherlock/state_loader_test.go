@@ -63,12 +63,14 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 
 	onlineBeeEnv, err := _environments.Get("bee-online")
 	suite.Assert().NoError(err)
+	suite.Assert().False(onlineBeeEnv.Offline())
 	for _, release := range onlineBeeEnv.Releases() {
 		suite.Assert().Len(release.HelmfileOverlays(), 0)
 	}
 
 	offlineBeeEnv, err := _environments.Get("bee-offline")
 	suite.Assert().NoError(err)
+	suite.Assert().True(offlineBeeEnv.Offline())
 	for _, release := range offlineBeeEnv.Releases() {
 		suite.Assert().Equal([]string{"offline"}, release.HelmfileOverlays())
 	}
