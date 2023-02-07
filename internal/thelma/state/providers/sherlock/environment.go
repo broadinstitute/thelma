@@ -18,6 +18,7 @@ type environment struct {
 	owner                string
 	preventDeletion      bool
 	autoDelete           autoDelete
+	offline              bool
 	destination
 }
 
@@ -89,4 +90,8 @@ func (e *environment) PreventDeletion() bool {
 
 func (e *environment) AutoDelete() terra.AutoDelete {
 	return e.autoDelete
+}
+
+func (e *environment) Offline() bool {
+	return e.offline
 }

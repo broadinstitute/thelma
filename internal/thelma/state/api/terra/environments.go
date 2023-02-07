@@ -30,4 +30,6 @@ type Environments interface {
 	PinEnvironmentToTerraHelmfileRef(environmentName string, terraHelmfileRef string) error
 	// Delete deletes the environment with the given name
 	Delete(name string) error
+	// SetOffline controls whether an environment is meant to be online or offline.
+	SetOffline(name string, offline bool) error
 }

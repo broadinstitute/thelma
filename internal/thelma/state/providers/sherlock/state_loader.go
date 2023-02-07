@@ -90,6 +90,10 @@ retry:
 				}
 				envAutoDelete.after = time.Time(stateEnvironment.AutoDelete.After)
 			}
+			var offline bool
+			if stateEnvironment.Offline != nil {
+				offline = *stateEnvironment.Offline
+			}
 
 			_environments[stateEnvironment.Name] = &environment{
 				createdAt:            time.Time(stateEnvironment.CreatedAt),
@@ -104,6 +108,7 @@ retry:
 				owner:                stateEnvironment.Owner,
 				preventDeletion:      *stateEnvironment.PreventDeletion,
 				autoDelete:           envAutoDelete,
+				offline:              offline,
 				destination: destination{
 					name:             stateEnvironment.Name,
 					base:             stateEnvironment.Base,
@@ -143,6 +148,10 @@ retry:
 					},
 				}
 			case "environment":
+				var helmfileOverlays []string
+				if e, present := _environments[stateRelease.Environment]; present && e.offline {
+					helmfileOverlays = []string{"offline"}
+				}
 				_environments[stateRelease.Environment].releases[stateRelease.Name] = &appRelease{
 					appVersion: stateRelease.AppVersionExact,
 					subdomain:  stateRelease.Subdomain,
@@ -160,6 +169,7 @@ retry:
 						destination:         _environments[stateRelease.Environment],
 						helmfileRef:         *stateRelease.HelmfileRef,
 						firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
+						helmfileOverlays:    helmfileOverlays,
 					},
 				}
 			default:

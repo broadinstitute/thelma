@@ -137,3 +137,7 @@ func (a autoDelete) Enabled() bool {
 func environmentNamespace(envName string) string {
 	return fmt.Sprintf("%s%s", envNamespacePrefix, envName)
 }
+
+func (e *environment) Offline() bool {
+	return false
+}

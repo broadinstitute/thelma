@@ -33,5 +33,7 @@ type Environment interface {
 	AutoDelete() AutoDelete
 	// CreatedAt returns the timestamp at which this environment was created in state
 	CreatedAt() time.Time
+	// Offline returns whether this environment should be currently offline
+	Offline() bool
 	Destination
 }

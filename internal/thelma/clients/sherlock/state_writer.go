@@ -59,6 +59,11 @@ type StateWriter interface {
 	// think about adding this to Sherlock in the future, because it does have some default-version mechanisms, they're
 	// just not exposed in the API like how unpinning would expect.
 	ResetEnvironmentAndPinToDev(environment terra.Environment) error
+
+	// SetEnvironmentOffline controls the "offline" flag on a given environment.
+	// Of note here is that calling this function doesn't touch Thelma's in-memory state, only Sherlock's state.
+	// Thelma's in-memory state will need to be reloaded to work with the mutated environment.
+	SetEnvironmentOffline(environmentName string, offline bool) error
 }
 
 func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terra.CreateOptions) (string, error) {
@@ -178,6 +183,15 @@ func (c *Client) ResetEnvironmentAndPinToDev(environment terra.Environment) erro
 		return fmt.Errorf("error from Sherlock pinning environment '%s' to dev: %v", environment.Name(), err)
 	}
 	return nil
+}
+
+func (c *Client) SetEnvironmentOffline(environmentName string, offline bool) error {
+	editableEnvironment := &models.V2controllersEditableEnvironment{
+		Offline: &offline,
+	}
+	_, err := c.client.Environments.PatchAPIV2EnvironmentsSelector(
+		environments.NewPatchAPIV2EnvironmentsSelectorParams().WithSelector(environmentName).WithEnvironment(editableEnvironment))
+	return err
 }
 
 // WriteEnvironments will take a list of terra.Environment interfaces them and issue POST requests

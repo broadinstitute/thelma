@@ -17,4 +17,5 @@ type Release interface {
 	Destination() Destination
 	TerraHelmfileRef() string
 	FirecloudDevelopRef() string
+	HelmfileOverlays() []string
 }
