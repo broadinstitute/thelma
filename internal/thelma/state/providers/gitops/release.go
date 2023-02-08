@@ -81,3 +81,7 @@ func (r *release) TerraHelmfileRef() string {
 func (r *release) FirecloudDevelopRef() string {
 	return r.firecloudDevelopRef
 }
+
+func (r *release) HelmfileOverlays() []string {
+	return nil
+}

@@ -42,11 +42,11 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 
 	environments, err := _environments.All()
 	suite.Assert().NoError(err)
-	suite.Assert().Equal(2, len(environments))
+	suite.Assert().Equal(4, len(environments))
 
 	clusters, err := _clusters.All()
 	suite.Assert().NoError(err)
-	suite.Assert().Equal(2, len(clusters))
+	suite.Assert().Equal(3, len(clusters))
 
 	suite.Assert().Equal(1, len(clusters[0].Releases()))
 	suite.Assert().Equal(1, len(environments[1].Releases()))
@@ -60,6 +60,20 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	suite.Assert().NoError(err)
 	prodClusterReleases := prodCluster.Releases()
 	suite.Assert().Equal("sam-prod", prodClusterReleases[0].Name())
+
+	onlineBeeEnv, err := _environments.Get("bee-online")
+	suite.Assert().NoError(err)
+	suite.Assert().False(onlineBeeEnv.Offline())
+	for _, release := range onlineBeeEnv.Releases() {
+		suite.Assert().Len(release.HelmfileOverlays(), 0)
+	}
+
+	offlineBeeEnv, err := _environments.Get("bee-offline")
+	suite.Assert().NoError(err)
+	suite.Assert().True(offlineBeeEnv.Offline())
+	for _, release := range offlineBeeEnv.Releases() {
+		suite.Assert().Equal([]string{"offline"}, release.HelmfileOverlays())
+	}
 
 	// Calling Load() is cached
 	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 1)
@@ -116,6 +130,17 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					HelmfileRef:         utils.Nullable("HEAD"),
 				},
 			},
+			sherlock.Cluster{
+				&models.V2controllersCluster{
+					Name:                "terra-qa-bees",
+					GoogleProject:       "broad-dsde-qa",
+					Address:             "10.10.10.12",
+					RequiresSuitability: utils.Nullable(false),
+					Provider:            utils.Nullable("google"),
+					Location:            utils.Nullable("us-central-1"),
+					HelmfileRef:         utils.Nullable("HEAD"),
+				},
+			},
 		}, nil,
 	)
 
@@ -147,6 +172,35 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					NamePrefixesDomain:  utils.Nullable(false),
 					HelmfileRef:         utils.Nullable("HEAD"),
 					PreventDeletion:     utils.Nullable(false),
+				},
+			},
+			sherlock.Environment{
+				&models.V2controllersEnvironment{
+					Name:                "bee-online",
+					Base:                "bee",
+					BaseDomain:          utils.Nullable("bee.envs-terra.bio"),
+					DefaultCluster:      "terra-qa-bees",
+					DefaultNamespace:    "terra-bee-online",
+					Lifecycle:           utils.Nullable("dynamic"),
+					RequiresSuitability: utils.Nullable(false),
+					NamePrefixesDomain:  utils.Nullable(true),
+					HelmfileRef:         utils.Nullable("HEAD"),
+					PreventDeletion:     utils.Nullable(false),
+				},
+			},
+			sherlock.Environment{
+				&models.V2controllersEnvironment{
+					Name:                "bee-offline",
+					Base:                "bee",
+					BaseDomain:          utils.Nullable("bee.envs-terra.bio"),
+					DefaultCluster:      "terra-qa-bees",
+					DefaultNamespace:    "terra-bee-offline",
+					Lifecycle:           utils.Nullable("dynamic"),
+					RequiresSuitability: utils.Nullable(false),
+					NamePrefixesDomain:  utils.Nullable(true),
+					HelmfileRef:         utils.Nullable("HEAD"),
+					PreventDeletion:     utils.Nullable(false),
+					Offline:             utils.Nullable(true),
 				},
 			},
 		}, nil,
@@ -218,6 +272,40 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 					Environment:         "prod",
 					Name:                "datarepo-prod",
 					Namespace:           "terra-prod",
+					HelmfileRef:         utils.Nullable("wlekjerw"),
+					FirecloudDevelopRef: "",
+				},
+			},
+			sherlock.Release{
+				&models.V2controllersChartRelease{
+					DestinationType:   "environment",
+					AppVersionExact:   "1.0.1",
+					Chart:             "sam",
+					ChartVersionExact: "0.43.0",
+					Cluster:           "terra-qa-bees",
+					ChartInfo: &models.V2controllersChart{
+						ChartRepo: utils.Nullable(""),
+					},
+					Environment:         "bee-online",
+					Name:                "sam-bee-online",
+					Namespace:           "terra-bee-online",
+					HelmfileRef:         utils.Nullable("wlekjerw"),
+					FirecloudDevelopRef: "",
+				},
+			},
+			sherlock.Release{
+				&models.V2controllersChartRelease{
+					DestinationType:   "environment",
+					AppVersionExact:   "1.0.1",
+					Chart:             "sam",
+					ChartVersionExact: "0.43.0",
+					Cluster:           "terra-qa-bees",
+					ChartInfo: &models.V2controllersChart{
+						ChartRepo: utils.Nullable(""),
+					},
+					Environment:         "bee-offline",
+					Name:                "sam-bee-offline",
+					Namespace:           "terra-bee-offline",
 					HelmfileRef:         utils.Nullable("wlekjerw"),
 					FirecloudDevelopRef: "",
 				},

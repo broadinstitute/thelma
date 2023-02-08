@@ -104,3 +104,7 @@ func (e *environments) Delete(name string) error {
 	_, err = e.state.sherlock.DeleteEnvironments([]terra.Environment{env})
 	return err
 }
+
+func (e *environments) SetOffline(name string, offline bool) error {
+	return e.state.sherlock.SetEnvironmentOffline(name, offline)
+}

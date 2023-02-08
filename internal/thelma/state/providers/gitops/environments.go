@@ -105,3 +105,7 @@ func (e *environments) UnpinVersions(environmentName string) (map[string]terra.V
 func (e *environments) Delete(name string) error {
 	return e.state.statebucket.Delete(name)
 }
+
+func (e *environments) SetOffline(_ string, _ bool) error {
+	return nil
+}

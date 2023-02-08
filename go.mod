@@ -7,7 +7,8 @@ require (
 	cloud.google.com/go/pubsub v1.28.0
 	cloud.google.com/go/storage v1.27.0
 	github.com/alecthomas/chroma v0.10.0
-	github.com/broadinstitute/sherlock v0.0.112-0.20230104162320-27654c6a78c3
+	github.com/avast/retry-go v3.0.0+incompatible
+	github.com/broadinstitute/sherlock v0.1.6-0.20230206171243-9a3edaf79a5a
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-openapi/strfmt v0.21.3
@@ -50,7 +51,6 @@ require (
 	github.com/armon/go-metrics v0.3.9 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
-	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

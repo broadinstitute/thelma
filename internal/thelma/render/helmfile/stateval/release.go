@@ -14,6 +14,8 @@ type Release struct {
 	Namespace string `yaml:"Namespace"`
 	// AppVersion version of the application that's being deployed (only included for app releases)
 	AppVersion string `yaml:"AppVersion,omitempty"`
+	// Overlays representing other sets of values files that should be included
+	Overlays []string `yaml:"Overlays,omitempty"`
 }
 
 func forRelease(release terra.Release) Release {
@@ -29,5 +31,6 @@ func forRelease(release terra.Release) Release {
 		Type:       release.Type().String(),
 		Namespace:  release.Namespace(),
 		AppVersion: appVersion,
+		Overlays:   release.HelmfileOverlays(),
 	}
 }

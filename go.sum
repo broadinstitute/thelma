@@ -105,8 +105,8 @@ github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+Ce
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
-github.com/broadinstitute/sherlock v0.0.112-0.20230104162320-27654c6a78c3 h1:lVPcc1jLQ/+oHsEP/SnWxl6Ljq2SAE7qrpC7qj4NfNg=
-github.com/broadinstitute/sherlock v0.0.112-0.20230104162320-27654c6a78c3/go.mod h1:Llt7BsHnRZlY7TYxqJDx1FfnJ4oMA2PevtV0FICiuso=
+github.com/broadinstitute/sherlock v0.1.6-0.20230206171243-9a3edaf79a5a h1:aL1jhWzu8+dKmHzLbLh4s/3AgFh6PV2D/StXQH4cKUg=
+github.com/broadinstitute/sherlock v0.1.6-0.20230206171243-9a3edaf79a5a/go.mod h1:HsGkeVIWZIlMYJMAwkdBQELSInUtZn3DWUllWnDhW+c=
 github.com/cenkalti/backoff/v3 v3.0.0 h1:ske+9nBpD9qZsTBoF41nW5L+AIuFBKMeze18XQ3eG1c=
 github.com/cenkalti/backoff/v3 v3.0.0/go.mod h1:cIeZDE3IrqwwJl6VUwCN6trj1oXrTS4rc0ij+ULvLYs=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

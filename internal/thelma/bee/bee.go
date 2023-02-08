@@ -26,6 +26,7 @@ type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (*Bee, error)
 	CreateWith(options CreateOptions) (*Bee, error)
 	ProvisionWith(name string, options ProvisionOptions) (*Bee, error)
+	StartStopWith(name string, offline bool, options StartStopOptions) (*Bee, error)
 	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
 	Seeder() seed.Seeder
@@ -70,6 +71,11 @@ type PinOptions struct {
 	}
 	// FileOverrides holds overrides for individual releases, loaded from a YAML or JSON file
 	FileOverrides map[string]terra.VersionOverride
+}
+
+type StartStopOptions struct {
+	Notify bool
+	Sync   bool
 }
 
 // Bee encapsulates operational information about a BEE
@@ -274,6 +280,53 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (*Bee, error) {
 		return bee, err
 	}
 
+	return bee, nil
+}
+
+func (b *bees) StartStopWith(name string, offline bool, options StartStopOptions) (*Bee, error) {
+	var stateDescription string
+	if offline {
+		stateDescription = "stopped"
+	} else {
+		stateDescription = "started"
+	}
+
+	if err := b.state.Environments().SetOffline(name, offline); err != nil {
+		return nil, err
+	}
+	if err := b.reloadState(); err != nil {
+		return nil, err
+	}
+
+	env, err := b.state.Environments().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	if env == nil {
+		// don't think this could ever happen, but let's provide a useful error anyway
+		return nil, fmt.Errorf("error re-loading environment %q: missing from state", env.Name())
+	}
+
+	bee := &Bee{
+		Environment: env,
+	}
+
+	if options.Sync {
+		statuses, err := b.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
+			options.SkipLegacyConfigsRestart = true
+		})
+		bee.Status = statuses
+		if err != nil {
+			return bee, err
+		}
+	}
+	if options.Notify && env.Owner() != "" && b.slack != nil {
+		markdown := fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is has been %s", env.Name(), env.Name(), stateDescription)
+		if err := b.slack.SendDirectMessage(env.Owner(), markdown); err != nil {
+			log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
+		}
+	}
+	log.Info().Msgf("%s (https://broad.io/beehive/r/environment/%s) is now %s", env.Name(), env.Name(), stateDescription)
 	return bee, nil
 }
 

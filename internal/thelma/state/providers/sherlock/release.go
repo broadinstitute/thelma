@@ -19,6 +19,7 @@ type release struct {
 	destination         terra.Destination
 	helmfileRef         string
 	firecloudDevelopRef string
+	helmfileOverlays    []string
 }
 
 // FullName provides the entire name of the chart release, globally unique as enforced by Sherlock. Name provides
@@ -87,4 +88,8 @@ func (r *release) TerraHelmfileRef() string {
 
 func (r *release) FirecloudDevelopRef() string {
 	return r.firecloudDevelopRef
+}
+
+func (r *release) HelmfileOverlays() []string {
+	return r.helmfileOverlays
 }
