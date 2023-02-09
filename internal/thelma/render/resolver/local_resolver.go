@@ -2,10 +2,13 @@ package resolver
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"os"
 	"path"
+
+	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/rs/zerolog/log"
 )
 
 // LocalResolver is for resolving charts in local directory of chart sources.
@@ -74,7 +77,8 @@ func (r *localResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChart
 	if err != nil {
 		return nil, err
 	}
-
+	dgraph := r.buildDependencyGraph(chart)
+	log.Info().Msgf("Testing Dgraph: %#v", dgraph)
 	err = chart.UpdateDependencies()
 	if err != nil {
 		return nil, fmt.Errorf("error updating chart source directory %s: %v", chart.Path(), err)
@@ -95,4 +99,28 @@ func (r *localResolverImpl) getChart(chartName string) (source.Chart, error) {
 // Returns the path to chart source directory
 func (r *localResolverImpl) chartSourcePath(chartName string) string {
 	return path.Join(r.sourceDir, chartName)
+}
+
+func (r *localResolverImpl) buildDependencyGraph(chart source.Chart) []string {
+	dependencies := make(map[string][]string)
+	dependencies[chart.Name()] = chart.LocalDependencies()
+	chartsToProcess := make([]string, 0)
+	chartsToProcess = append(chartsToProcess, chart.LocalDependencies()...)
+
+	// BFS tree traversal of dependencies for a single chart
+	for len(chartsToProcess) != 0 {
+		currentChartName := chartsToProcess[0]
+		chartsToProcess = chartsToProcess[1:]
+
+		currentChart, _ := r.getChart(currentChartName)
+		dependencies[currentChart.Name()] = currentChart.LocalDependencies()
+		chartsToProcess = append(chartsToProcess, currentChart.LocalDependencies()...)
+	}
+	dependencyGraph, _ := dependency.NewGraph(dependencies)
+	dependenciesToUpdate := make([]string, 0)
+	for chart := range dependencies {
+		dependenciesToUpdate = append(dependenciesToUpdate, chart)
+	}
+	dependencyGraph.TopoSort(dependenciesToUpdate)
+	return dependenciesToUpdate
 }
