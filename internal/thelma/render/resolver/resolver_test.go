@@ -2,18 +2,25 @@ package resolver
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 const chartSourceDir = "testdata/charts"
 const fakeChartName = "fakechart"
 const fakeChartVersion = "0.10.0"
 const fakeChartRepo = "terra-helm"
+
+var fakeChartDependencyTopographicOrder = []string{
+	"fakechartdep2",
+	"fakechartdep1",
+	"fakechart",
+}
 
 type testCfg struct {
 	srcDir     string
@@ -168,15 +175,17 @@ func TestResolver(t *testing.T) {
 }
 
 func (tc *testCfg) expectHelmDependencyUpdate() {
-	tc.mockRunner.ExpectCmd(shell.Command{
-		Prog: "helm",
-		Args: []string{
-			"dependency",
-			"update",
-			"--skip-refresh",
-		},
-		Dir: path.Join(chartSourceDir, tc.input.Name),
-	})
+	for _, chartName := range fakeChartDependencyTopographicOrder {
+		tc.mockRunner.ExpectCmd(shell.Command{
+			Prog: "helm",
+			Args: []string{
+				"dependency",
+				"update",
+				"--skip-refresh",
+			},
+			Dir: path.Join(chartSourceDir, chartName),
+		})
+	}
 }
 
 func (tc *testCfg) expectHelmFetch(success bool) {

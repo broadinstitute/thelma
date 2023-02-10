@@ -1,0 +1,5 @@
+apiVersion: v2
+name: fakechartdep2
+version: 0.7.0
+description: Fake chart for testing resolver
+type: application
