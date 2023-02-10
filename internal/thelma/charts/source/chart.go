@@ -47,9 +47,6 @@ type Chart interface {
 	BumpChartVersion(latestPublishedVersion string) (string, error)
 	// UpdateDependencies runs `helm dependency update` on the local copy of the chart.
 	UpdateDependencies() error
-	// UpdateDependenciesRecursive is the same as update dependencies but recurses through all
-	// local deps and runs helm dependency update in topological order
-	UpdateDependenciesRecursive() error
 	// PackageChart runs `helm package` to package a chart
 	PackageChart(destPath string) error
 	// GenerateDocs re-generates README documentation for the given chart
@@ -125,15 +122,6 @@ func (c *chart) UpdateDependencies() error {
 		Dir: c.path,
 	}
 	return c.shellRunner.Run(cmd)
-}
-
-func (c *chart) UpdateDependenciesRecursive() error {
-	// construct depedency graph
-
-	// toposort dependencies
-
-	// helm dependency update on deps in sorted order
-	return nil
 }
 
 // PackageChart runs `helm package` to package a chart
