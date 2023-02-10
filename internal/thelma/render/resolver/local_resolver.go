@@ -76,7 +76,7 @@ func (r *localResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChart
 	if err != nil {
 		return nil, err
 	}
-	chartsToUpdate, err := r.determineDepedenciesToUpdate(chart)
+	chartsToUpdate, err := r.determineDependenciesToUpdate(chart)
 	if err != nil {
 		return nil, fmt.Errorf("error determining charts to run helm dependency update on: %v", err)
 	}
@@ -104,10 +104,10 @@ func (r *localResolverImpl) chartSourcePath(chartName string) string {
 	return path.Join(r.sourceDir, chartName)
 }
 
-// determineDependenciesToUpdate is used to add support for lack of handling for multi-layer depedencies
+// determineDependenciesToUpdate is used to add support for lack of handling for multi-layer dependencies
 // in helm upgrade. It performs a BFS traversal of the dependency graph for a given chart and outputs
-// a topologically sorted list of charts to run helm depedency update upon
-func (r *localResolverImpl) determineDepedenciesToUpdate(chart source.Chart) ([]source.Chart, error) {
+// a topologically sorted list of charts to run helm dependency update upon
+func (r *localResolverImpl) determineDependenciesToUpdate(chart source.Chart) ([]source.Chart, error) {
 	dependencies := make(map[string][]string)
 	dependencies[chart.Name()] = chart.LocalDependencies()
 	chartsToProcess := make([]string, 0)
