@@ -3,12 +3,9 @@ package root
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/env"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/helm"
-	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
-	"path/filepath"
 )
 
 //
@@ -123,38 +120,6 @@ func (r root) ToolsDir() (ToolsDir, error) {
 	return toolsDir{
 		dir: dir,
 	}, nil
-}
-
-func (r root) findToolsDirRelativeToExe() (string, error) {
-	exepath, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
-
-	exepath, err = filepath.EvalSymlinks(exepath)
-	if err != nil {
-		return "", err
-	}
-
-	toolsdir := filepath.Clean(path.Join(exepath, "..", "tools", "bin"))
-
-	if err = r.validateToolsDir(toolsdir); err != nil {
-		return "", err
-	}
-	return toolsdir, nil
-}
-
-func (r root) validateToolsDir(toolsdir string) error {
-	// make sure a helm executable exists in the tools dir
-	helmpath := path.Join(toolsdir, helm.ProgName)
-	exists, err := utils.FileExists(helmpath)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("tools dir not found; %s does not exist", helmpath)
-	}
-	return nil
 }
 
 func (r root) CreateDirectories() error {
