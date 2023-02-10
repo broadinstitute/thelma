@@ -3,3 +3,7 @@ name: fakechart
 version: 0.10.0
 description: Fake chart for testing resolver
 type: application
+dependencies:
+  - name: fakechartdep1
+    repository: file://../fakechartdep1
+    version: 0.2.0

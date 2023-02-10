@@ -2,10 +2,12 @@ package resolver
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"os"
 	"path"
+
+	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 
 // LocalResolver is for resolving charts in local directory of chart sources.
@@ -74,10 +76,15 @@ func (r *localResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChart
 	if err != nil {
 		return nil, err
 	}
-
-	err = chart.UpdateDependencies()
+	chartsToUpdate, err := r.determineDependenciesToUpdate(chart)
 	if err != nil {
-		return nil, fmt.Errorf("error updating chart source directory %s: %v", chart.Path(), err)
+		return nil, fmt.Errorf("error determining charts to run helm dependency update on: %v", err)
+	}
+	for _, chart := range chartsToUpdate {
+		err = chart.UpdateDependencies()
+		if err != nil {
+			return nil, fmt.Errorf("error updating chart source directory %s: %v", chart.Path(), err)
+		}
 	}
 
 	return NewResolvedChart(chart.Path(), chart.ManifestVersion(), Local, chartRelease), nil
@@ -95,4 +102,54 @@ func (r *localResolverImpl) getChart(chartName string) (source.Chart, error) {
 // Returns the path to chart source directory
 func (r *localResolverImpl) chartSourcePath(chartName string) string {
 	return path.Join(r.sourceDir, chartName)
+}
+
+// determineDependenciesToUpdate is used to add support for lack of handling for multi-layer dependencies
+// in helm upgrade. It performs a BFS traversal of the dependency graph for a given chart and outputs
+// a topologically sorted list of charts to run helm dependency update upon
+func (r *localResolverImpl) determineDependenciesToUpdate(chart source.Chart) ([]source.Chart, error) {
+	dependencies := make(map[string][]string)
+	dependencies[chart.Name()] = chart.LocalDependencies()
+	chartsToProcess := make([]string, 0)
+	chartsToProcess = append(chartsToProcess, chart.LocalDependencies()...)
+
+	// BFS tree traversal of dependencies for a single chart
+	for len(chartsToProcess) != 0 {
+		currentChartName := chartsToProcess[0]
+		chartsToProcess = chartsToProcess[1:]
+
+		currentChart, err := r.getChart(currentChartName)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error finding chart source locally while calculating depedencies. parent chart: %s, %v",
+				chart.Name(), err,
+			)
+		}
+
+		dependencies[currentChart.Name()] = currentChart.LocalDependencies()
+		chartsToProcess = append(chartsToProcess, currentChart.LocalDependencies()...)
+	}
+
+	dependencyGraph, err := dependency.NewGraph(dependencies)
+	if err != nil {
+		return nil, fmt.Errorf("error constructing depdency graph in local resolver: %v", err)
+	}
+
+	dependenciesToUpdate := make([]string, 0)
+	// dependency map keys need to be transferred into a slice in order to use Topo sort
+	for chart := range dependencies {
+		dependenciesToUpdate = append(dependenciesToUpdate, chart)
+	}
+	dependencyGraph.TopoSort(dependenciesToUpdate)
+
+	// convert to domain type
+	var chartsToUpdate []source.Chart
+	for _, chart := range dependenciesToUpdate {
+		sourceChart, err := r.getChart(chart)
+		if err != nil {
+			return nil, fmt.Errorf("error finding local source for chart: %s, %v", chart, err)
+		}
+		chartsToUpdate = append(chartsToUpdate, sourceChart)
+	}
+	return chartsToUpdate, nil
 }

@@ -2,15 +2,16 @@ package source
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/broadinstitute/thelma/internal/thelma/charts/semver"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/tools/yq"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path"
-	"strings"
 )
 
 // initial version that is assigned to brand-new charts

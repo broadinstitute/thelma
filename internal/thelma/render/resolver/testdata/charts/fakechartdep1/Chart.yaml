@@ -1,0 +1,9 @@
+apiVersion: v2
+name: fakechartdep1
+version: 0.2.0
+description: Fake chart for testing resolver
+type: application
+dependencies:
+  - name: fakechartdep2
+    repository: file://../fakechartdep2
+    version: 0.7.0
