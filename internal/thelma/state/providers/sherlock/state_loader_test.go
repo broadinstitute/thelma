@@ -8,7 +8,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -26,8 +25,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	setStateExpectations(stateSource)
 
 	thelmaHome := suite.T().TempDir()
-	runner := shell.DefaultMockRunner()
-	s := NewStateLoader(thelmaHome, runner, stateSource)
+	s := NewStateLoader(thelmaHome, stateSource)
 	state, err := s.Load()
 
 	suite.Assert().NoError(err)
@@ -96,8 +94,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
 	stateSource.On("Clusters").Return(nil, fmt.Errorf(errMsg))
 
 	thelmaHome := suite.T().TempDir()
-	runner := shell.DefaultMockRunner()
-	s := NewStateLoader(thelmaHome, runner, stateSource)
+	s := NewStateLoader(thelmaHome, stateSource)
 	state, err := s.Load()
 	suite.Assert().Error(err)
 	suite.Assert().ErrorContains(err, errMsg)

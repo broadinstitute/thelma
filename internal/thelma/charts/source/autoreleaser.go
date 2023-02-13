@@ -59,15 +59,6 @@ func (a *AutoReleaser) UpdateReleaseVersion(chart Chart, newVersion string, last
 		return nil
 	}
 
-	for index, gitopsUpdater := range a.GitopsUpdaters {
-		err := gitopsUpdater.
-			GetSnapshot(cfg.Release.Type, targetVersionSet).
-			UpdateChartVersionIfDefined(cfg.Release.Name, newVersion)
-		if err != nil {
-			return fmt.Errorf("autorelease error on gitops updater %d: %v", index, err)
-		}
-	}
-
 	var sherlockTargetChartReleases []string
 	var sherlockCanAlwaysSoftFail bool
 	if len(cfg.Sherlock.ChartReleasesToUseLatest) > 0 {

@@ -4,23 +4,20 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"time"
 )
 
 type stateLoader struct {
-	sherlock    sherlock.StateReadWriter
-	shellRunner shell.Runner
-	thelmaHome  string
-	cached      terra.State
+	sherlock   sherlock.StateReadWriter
+	thelmaHome string
+	cached     terra.State
 }
 
-func NewStateLoader(thelmaHome string, shellRunner shell.Runner, sherlock sherlock.StateReadWriter) terra.StateLoader {
+func NewStateLoader(thelmaHome string, sherlock sherlock.StateReadWriter) terra.StateLoader {
 	return &stateLoader{
-		thelmaHome:  thelmaHome,
-		shellRunner: shellRunner,
-		sherlock:    sherlock,
+		thelmaHome: thelmaHome,
+		sherlock:   sherlock,
 	}
 }
 

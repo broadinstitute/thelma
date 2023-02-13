@@ -112,7 +112,7 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 		ShellRunner:      app.ShellRunner(),
 	})
 
-	r.validator = validator.New(options.Validate)
+	r.validator = validator.New(options.Validate, app.ShellRunner())
 
 	return r, nil
 }

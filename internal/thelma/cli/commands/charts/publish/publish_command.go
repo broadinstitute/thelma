@@ -142,7 +142,7 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	// If we're dry-running, the autoreleaser will be empty so we don't mutate anything.
 	if !options.dryRun {
 		if options.gitops {
-			gitopsVersions, err := gitops.NewVersions(app.Config().Home(), app.ShellRunner())
+			gitopsVersions, err := gitops.NewVersions(app.Config().Home())
 			if err != nil {
 				return nil, err
 			}

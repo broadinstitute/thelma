@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"testing"
 )
 
@@ -17,7 +16,7 @@ type Fixture interface {
 }
 
 func LoadFixture(name FixtureName, t *testing.T) Fixture {
-	loader, err := NewFakeStateLoader(name, t, t.TempDir(), shell.NewRunner())
+	loader, err := NewFakeStateLoader(name, t, t.TempDir())
 	if err != nil {
 		panic(err)
 	}
