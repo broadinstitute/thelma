@@ -36,8 +36,10 @@ type Root interface {
 	CredentialsDir() string
 	// ConfigDir returns the path to Thelma config directory
 	ConfigDir() string
-	// InstallDir returns the Thelma installation directory ($ROOT/install)
-	InstallDir() string
+	// ReleasesDir returns the Thelma installation directory ($ROOT/releases)
+	ReleasesDir() ReleasesDir
+	// ToolsDir returns the path to Thelma's bundled third-party tool binaries, such as Helm, Helmfile, etc.
+	ToolsDir() (ToolsDir, error)
 	// CreateDirectories create directories if they do not exist. Will be called as part of Thelma initialization
 	CreateDirectories() error
 }
@@ -100,12 +102,24 @@ func (r root) CredentialsDir() string {
 	return path.Join(r.Dir(), "credentials")
 }
 
-func (r root) InstallDir() string {
-	return path.Join(r.Dir(), "install")
-}
-
 func (r root) ConfigDir() string {
 	return path.Join(r.Dir(), "config")
+}
+
+func (r root) ReleasesDir() ReleasesDir {
+	return releasesDir{
+		dir: path.Join(r.Dir(), "releases"),
+	}
+}
+
+func (r root) ToolsDir() (ToolsDir, error) {
+	dir, err := findToolsDir(r.ReleasesDir())
+	if err != nil {
+		return nil, err
+	}
+	return toolsDir{
+		dir: dir,
+	}, nil
 }
 
 func (r root) CreateDirectories() error {
@@ -114,12 +128,13 @@ func (r root) CreateDirectories() error {
 		r.CredentialsDir(),
 		r.ConfigDir(),
 		r.LogDir(),
-		r.InstallDir(),
+		r.ReleasesDir().Root(),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			return fmt.Errorf("error creating directory %s: %v", dir, err)
 		}
 	}
+
 	return nil
 }

@@ -45,7 +45,10 @@ OUTPUT_DIR=./output
 # BIN_DIR location where compiled binaries are generated
 BIN_DIR=${OUTPUT_DIR}/bin
 
-# RUNTIME_DEPS_BIN_DIR location where 3rd-party runtime dependency binaries are downloaded
+# TOOLS_BIN_DIR symlink to 3rd-party tools binaries (helm, kubectl, etc)
+TOOLS_BIN_DIR=${OUTPUT_DIR}/tools/bin
+
+# RUNTIME_DEPS_BIN_DIR location where 3rd-party tools dependency binaries are downloaded
 RUNTIME_DEPS_BIN_DIR=${OUTPUT_DIR}/runtime-deps/${TARGET_OS}/${TARGET_ARCH}/bin
 
 # RELEASE_STAGING_DIR directory where release archive is staged before assembly
@@ -61,7 +64,7 @@ RELEASE_ARCHIVE_DIR=${OUTPUT_DIR}/releases
 COVERAGE_DIR=${OUTPUT_DIR}/coverage
 
 # Add runtime dependencies to PATH
-export PATH := $(shell pwd)/${RUNTIME_DEPS_BIN_DIR}:$(PATH)
+export PATH := $(shell pwd)/${TOOLS_BIN_DIR}:$(PATH)
 
 # Self-documenting help target copied from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 # NOTE:
@@ -96,10 +99,23 @@ echo-vars: # Echo makefile variables for debugging purposes
 init: echo-vars # Initialization steps for build & other targets
 	mkdir -p ${OUTPUT_DIR}
 
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+RELATIVE_PREFIX := $(subst $(SPACE),/,$(patsubst %,..,$(subst /, ,$(subst ${OUTPUT_DIR},,${TOOLS_BIN_DIR}))))
+
 runtime-deps: init # Download runtime binary dependencies, such as helm, helmfile, and so on, to output directory
 	env OS=${TARGET_OS} ARCH=${TARGET_ARCH} SCRATCH_DIR=${OUTPUT_DIR}/downloads TESTEXEC=${RUNTIME_DEPS_TESTEXEC} ./scripts/install-runtime-deps.sh ${RUNTIME_DEPS_BIN_DIR}
 
-build: init ## Compile thelma into output directory
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+runtime-deps-symlink: # Create symlink from ${TOOLS_BIN_DIR} to ${RUNTIME_DEPS_BIN_DIR} so compiled thelma can find its tools
+	mkdir -p $(dir ${TOOLS_BIN_DIR})
+	# "fun" hack to compute relative path --
+	# all the gnarly pattern substitution does is add the appropriate number of
+	# "../"'s to the runtime deps directory for symlinking
+	ln -sfn $(subst $(SPACE),/,$(patsubst %,..,$(subst /,$(SPACE),$(subst ${OUTPUT_DIR},,${TOOLS_BIN_DIR}))))/${RUNTIME_DEPS_BIN_DIR} ${TOOLS_BIN_DIR}
+
+build: init runtime-deps runtime-deps-symlink ## Compile thelma into output directory
 	CGO_ENABLED=0 \
 	GO111MODULE=on \
 	GOBIN=${BIN_DIR} \
@@ -116,7 +132,8 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
 	mkdir -p ${RELEASE_ARCHIVE_DIR}
 
     # Copy runtime dependencies into staging dir
-	cp -r ${RUNTIME_DEPS_BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
+	mkdir -p ${RELEASE_STAGING_DIR}/tools/bin
+	cp -r ${RUNTIME_DEPS_BIN_DIR}/. ${RELEASE_STAGING_DIR}/tools/bin
 
     # Copy compiled thelma binary into staging dir
 	cp -r ${BIN_DIR}/. ${RELEASE_STAGING_DIR}/bin
