@@ -15,8 +15,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	argocd_names "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/rs/zerolog/log"
 )
 

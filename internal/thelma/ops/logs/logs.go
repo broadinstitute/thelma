@@ -7,7 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
 	"strings"

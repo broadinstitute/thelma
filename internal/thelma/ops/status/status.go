@@ -2,7 +2,7 @@ package status
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"time"
 )
 

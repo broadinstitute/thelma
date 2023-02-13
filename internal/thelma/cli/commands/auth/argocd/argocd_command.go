@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )

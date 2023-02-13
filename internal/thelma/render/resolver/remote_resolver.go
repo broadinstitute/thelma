@@ -2,7 +2,7 @@ package resolver
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/helm"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"os"

@@ -2,7 +2,7 @@ package root
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/version"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/helm"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
