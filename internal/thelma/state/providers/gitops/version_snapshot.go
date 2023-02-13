@@ -60,16 +60,6 @@ func (s *snapshot) AppVersion(releaseName string) string {
 	return s.data.Releases[releaseName].AppVersion
 }
 
-// Reload snapshot data from disk
-func (s *snapshot) reload() error {
-	data, err := readSnapshotFile(s.filePath)
-	if err != nil {
-		return fmt.Errorf("error reloading snapshot: %v", err)
-	}
-	s.data = data
-	return nil
-}
-
 // Unmarshal the snapshot at the given filePath into a struct
 func readSnapshotFile(filePath string) (*snapshotData, error) {
 	content, err := os.ReadFile(filePath)
