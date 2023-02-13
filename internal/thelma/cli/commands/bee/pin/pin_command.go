@@ -6,7 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pinflags"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"

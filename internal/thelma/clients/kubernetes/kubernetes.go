@@ -5,7 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/kubectl"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	k8s "k8s.io/client-go/kubernetes"

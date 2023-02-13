@@ -3,7 +3,7 @@ package validator
 import (
 	"fmt"
 
-	"github.com/broadinstitute/thelma/internal/thelma/tools/kubeconform"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubeconform"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 

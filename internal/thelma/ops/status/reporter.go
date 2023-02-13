@@ -5,7 +5,7 @@ import (
 	k8sclients "github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	argocdnames "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/rs/zerolog/log"
 	"sync"
