@@ -2,13 +2,14 @@ package source
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
+	"strings"
+
 	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 // ChartsDir represents a directory of Helm chart sources on the local filesystem.
@@ -83,6 +84,8 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 	for _, chartName := range chartsToPublish {
 		_chart := d.charts[chartName]
 
+		dependenciesToUpdate := d.determineDependenciesToUpdate(_chart)
+
 		if err := _chart.GenerateDocs(); err != nil {
 			return nil, err
 		}
@@ -94,9 +97,13 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 		if err := d.updateDependentVersionConstraints(chartName, newVersion); err != nil {
 			return nil, err
 		}
-		if err := _chart.UpdateDependencies(); err != nil {
-			return nil, err
+		for _, chartToUpdate := range dependenciesToUpdate {
+			_chartToUpdate := d.charts[chartToUpdate]
+			if err := _chartToUpdate.UpdateDependencies(); err != nil {
+				return nil, err
+			}
 		}
+
 		if err := _chart.PackageChart(d.publisher.ChartDir()); err != nil {
 			return nil, err
 		}
@@ -184,4 +191,27 @@ func loadCharts(sourceDir string, shellRunner shell.Runner) (map[string]Chart, e
 	}
 
 	return charts, nil
+}
+
+func (d *chartsDir) determineDependenciesToUpdate(chart Chart) []string {
+	localDependencies := make(map[string][]string)
+	localDependencies[chart.Name()] = chart.LocalDependencies()
+	chartsToProcess := make([]string, 0)
+	chartsToProcess = append(chartsToProcess, chart.LocalDependencies()...)
+
+	for len(chartsToProcess) != 0 {
+		currentChartName := chartsToProcess[0]
+		chartsToProcess = chartsToProcess[1:]
+		currentChart := d.charts[currentChartName]
+		localDependencies[currentChart.Name()] = currentChart.LocalDependencies()
+		chartsToProcess = append(chartsToProcess, currentChart.LocalDependencies()...)
+	}
+
+	dependenciesToUpdate := make([]string, 0)
+	for _chart := range localDependencies {
+		dependenciesToUpdate = append(dependenciesToUpdate, _chart)
+	}
+	d.dependencyGraph.TopoSort(dependenciesToUpdate)
+
+	return dependenciesToUpdate
 }
