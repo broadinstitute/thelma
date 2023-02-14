@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	sherlockmocks "github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -34,8 +33,6 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 		{
 			name: "No config file should default to enabled + app release type",
 			setupMocks: func(m mocks) {
-				m.versions.On("GetSnapshot", terra.AppReleaseType, gitops.Dev).Return(m.snapshot, nil)
-				m.snapshot.On("UpdateChartVersionIfDefined", chartName, newVersion).Return(nil)
 				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
 					fmt.Sprintf("%s/%s", gitops.Dev.String(), chartName)).Return(nil)
 			},
@@ -48,8 +45,6 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			name:          "Should support release name overriding",
 			configContent: `release: {name: foo}`,
 			setupMocks: func(m mocks) {
-				m.versions.On("GetSnapshot", terra.AppReleaseType, gitops.Dev).Return(m.snapshot, nil)
-				m.snapshot.On("UpdateChartVersionIfDefined", "foo", newVersion).Return(nil)
 				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
 					fmt.Sprintf("%s/%s", gitops.Dev.String(), "foo")).Return(nil)
 			},
@@ -58,8 +53,6 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			name:          "Should support release type overriding",
 			configContent: `release: {type: cluster}`,
 			setupMocks: func(m mocks) {
-				m.versions.On("GetSnapshot", terra.ClusterReleaseType, gitops.Dev).Return(m.snapshot, nil)
-				m.snapshot.On("UpdateChartVersionIfDefined", chartName, newVersion).Return(nil)
 				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
 					fmt.Sprintf("%s/%s", gitops.Dev.String(), chartName)).Return(nil)
 			},
@@ -75,8 +68,6 @@ sherlock:
     - terra-dev/default/baz
 `,
 			setupMocks: func(m mocks) {
-				m.versions.On("GetSnapshot", terra.AppReleaseType, gitops.Dev).Return(m.snapshot, nil)
-				m.snapshot.On("UpdateChartVersionIfDefined", "foo", newVersion).Return(nil)
 				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
 					"dev/bar", "terra-dev/default/baz").Return(nil)
 			},

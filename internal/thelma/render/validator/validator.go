@@ -69,6 +69,6 @@ func (v validator) GetMode() Mode {
 }
 
 // New returns a new instance of a kubeconform Validator
-func New(mode Mode) validator {
-	return validator{kubeconform.New(shell.NewRunner()), mode}
+func New(mode Mode, shellRunner shell.Runner) validator {
+	return validator{kubeconform.New(shellRunner), mode}
 }

@@ -2,7 +2,9 @@ package shell
 
 import (
 	"bytes"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
 	"path"
 	"testing"
@@ -12,7 +14,7 @@ import (
 func TestRunSuccess(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=foo"}
@@ -37,7 +39,7 @@ func TestRunSuccess(t *testing.T) {
 func TestSubprocessSuccess(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=bar"}
@@ -68,7 +70,7 @@ func TestSubprocessSuccess(t *testing.T) {
 func TestSubprocessDuplicateTermination(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=baz"}
@@ -107,7 +109,7 @@ func TestSubprocessDuplicateTermination(t *testing.T) {
 func TestSubprocessUnawaitedTermination(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=boo"}
@@ -138,7 +140,7 @@ func TestSubprocessUnawaitedTermination(t *testing.T) {
 }
 
 func TestRunFailed(t *testing.T) {
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Args = []string{"-c", "echo oops >&2 && exit 42"}
@@ -153,12 +155,12 @@ func TestRunFailed(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, "Command \"sh -c echo oops >&2 && exit 42\" exited with status 42:\noops\n", exitErr.Error())
-	assert.Equal(t, "oops\n", string(exitErr.Stderr))
+	assert.Equal(t, "oops\n", exitErr.Stderr)
 	assert.Equal(t, 42, exitErr.ExitCode)
 }
 
 func TestRunError(t *testing.T) {
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "echo"
 	cmd.Args = []string{"a", "b"}
@@ -176,7 +178,7 @@ func TestRunError(t *testing.T) {
 }
 
 func TestRunWithOptions(t *testing.T) {
-	runner := NewRunner()
+	runner := newRunner(t)
 	var err error
 
 	stdout := bytes.NewBuffer([]byte{})
@@ -205,4 +207,34 @@ func TestRunWithOptions(t *testing.T) {
 	)
 	assert.Error(t, err)
 	assert.Regexp(t, "does-not-exist.*No such file or directory", stderr.String())
+}
+
+func TestRunExpandsPathToToolbox(t *testing.T) {
+	// create an alternative `ls` implementation in the toolbox and make sure it is executed instead of real `ls`
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(path.Join(dir, "ls"), []byte("#!/bin/bash\necho 1234567890\n"), 0755))
+	_toolbox, err := toolbox.New(dir)
+	require.NoError(t, err)
+	runner := NewRunner(_toolbox)
+
+	var buf bytes.Buffer
+
+	err = runner.Run(
+		Command{
+			Prog: "ls",
+		},
+		func(opts *RunOptions) {
+			opts.Stdout = &buf
+		},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, "1234567890\n", buf.String())
+}
+
+func newRunner(t *testing.T) Runner {
+	dir := t.TempDir()
+	_toolbox, err := toolbox.New(dir)
+	require.NoError(t, err)
+	return NewRunner(_toolbox)
 }

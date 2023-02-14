@@ -19,6 +19,8 @@ func Test_Summarizer(t *testing.T) {
 	require.NoError(t, err)
 	logger := zerolog.New(writer)
 
+	baseInterval := 10 * time.Millisecond
+
 	carrot := Job{
 		Name: "carrot",
 		Run: func(s StatusReporter) error {
@@ -28,7 +30,7 @@ func Test_Summarizer(t *testing.T) {
 					"name": "peter",
 				},
 			})
-			time.Sleep(8 * time.Millisecond)
+			time.Sleep(8 * baseInterval)
 			s.Update(Status{
 				Message: "rabbit full",
 				Context: map[string]interface{}{
@@ -46,15 +48,15 @@ func Test_Summarizer(t *testing.T) {
 			s.Update(Status{
 				Message: "1% complete",
 			})
-			time.Sleep(2 * time.Millisecond)
+			time.Sleep(2 * baseInterval)
 			s.Update(Status{
 				Message: "12% complete",
 			})
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(5 * baseInterval)
 			s.Update(Status{
 				Message: "67% complete",
 			})
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(5 * baseInterval)
 			s.Update(Status{
 				Message: "100% complete",
 			})
@@ -68,7 +70,7 @@ func Test_Summarizer(t *testing.T) {
 			s.Update(Status{
 				Message: "onion pending",
 			})
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(5 * baseInterval)
 			return fmt.Errorf("whoopsies")
 		},
 	}
@@ -76,7 +78,7 @@ func Test_Summarizer(t *testing.T) {
 	_pool := New([]Job{carrot, celery, onion}, func(options *Options) {
 		options.NumWorkers = 2
 		options.Summarizer.Enabled = true
-		options.Summarizer.Interval = 5 * time.Millisecond
+		options.Summarizer.Interval = 5 * baseInterval
 		options.Summarizer.WorkDescription = "veggies eaten"
 		options.Summarizer.Footer = "check https://veggies.broadinstitute.org for updates"
 		options.Summarizer.LogLevel = zerolog.WarnLevel

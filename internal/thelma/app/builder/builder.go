@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -160,10 +161,9 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
-	// Initialize shell runner
-	shellRunner := b.shellRunner
-	if shellRunner == nil {
-		shellRunner = shell.NewRunner()
+	shellRunner, err := b.buildShellRunner(thelmaRoot)
+	if err != nil {
+		return nil, err
 	}
 
 	// Initialize client factory
@@ -183,7 +183,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		}
 	}
 
-	stateLoader, err := b.buildStateLoader(cfg, shellRunner, _clients)
+	stateLoader, err := b.buildStateLoader(cfg, _clients)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing state loader: %v", err)
 	}
@@ -192,9 +192,25 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader, b.manageSingletons)
 }
 
-func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Runner, clients clients.Clients) (terra.StateLoader, error) {
+func (b *thelmaBuilder) buildShellRunner(thelmaRoot root.Root) (shell.Runner, error) {
+	if b.shellRunner != nil {
+		return b.shellRunner, nil
+	}
+	_toolsdir, err := thelmaRoot.ToolsDir()
+	if err != nil {
+		return nil, err
+	}
+	_toolbox, err := toolbox.New(_toolsdir.Bin())
+	if err != nil {
+		return nil, err
+	}
+
+	return shell.NewRunner(_toolbox), nil
+}
+
+func (b *thelmaBuilder) buildStateLoader(cfg config.Config, clients clients.Clients) (terra.StateLoader, error) {
 	if b.stateFixture.enabled {
-		return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, cfg.Home(), shellRunner)
+		return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, cfg.Home())
 	}
 
 	stateLoaderType, err := getStateLoaderType(cfg)
@@ -207,13 +223,13 @@ func (b *thelmaBuilder) buildStateLoader(cfg config.Config, shellRunner shell.Ru
 		if err != nil {
 			return nil, err
 		}
-		return gitops.NewStateLoader(cfg.Home(), shellRunner, sb), nil
+		return gitops.NewStateLoader(cfg.Home(), sb), nil
 	} else if stateLoaderType == sherlockStateLoader {
 		sherlock, err := clients.Sherlock()
 		if err != nil {
 			return nil, err
 		}
-		return sherlockState.NewStateLoader(cfg.Home(), shellRunner, sherlock), nil
+		return sherlockState.NewStateLoader(cfg.Home(), sherlock), nil
 	}
 
 	return nil, fmt.Errorf("received an undefined state loader source: valid options gitops or sherlock")

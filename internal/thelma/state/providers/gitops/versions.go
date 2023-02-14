@@ -3,7 +3,6 @@ package gitops
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"path"
 )
 
@@ -17,22 +16,20 @@ type Versions interface {
 
 // Implements public Versions interface
 type versions struct {
-	thelmaHome  string
-	shellRunner shell.Runner
-	snapshots   map[terra.ReleaseType]map[VersionSet]VersionSnapshot
+	thelmaHome string
+	snapshots  map[terra.ReleaseType]map[VersionSet]VersionSnapshot
 }
 
 // NewVersions returns a new Versions instance
-func NewVersions(thelmaHome string, shellRunner shell.Runner) (Versions, error) {
-	snapshots, err := loadSnapshots(thelmaHome, shellRunner)
+func NewVersions(thelmaHome string) (Versions, error) {
+	snapshots, err := loadSnapshots(thelmaHome)
 	if err != nil {
 		return nil, err
 	}
 
 	return &versions{
-		thelmaHome:  thelmaHome,
-		shellRunner: shellRunner,
-		snapshots:   snapshots,
+		thelmaHome: thelmaHome,
+		snapshots:  snapshots,
 	}, nil
 }
 
@@ -46,7 +43,7 @@ func snapshotPath(thelmaHome string, releaseType terra.ReleaseType, set VersionS
 	return path.Join(thelmaHome, versionsDir, releaseType.String(), fileName)
 }
 
-func loadSnapshots(thelmaHome string, shellRunner shell.Runner) (map[terra.ReleaseType]map[VersionSet]VersionSnapshot, error) {
+func loadSnapshots(thelmaHome string) (map[terra.ReleaseType]map[VersionSet]VersionSnapshot, error) {
 	snapshots := make(map[terra.ReleaseType]map[VersionSet]VersionSnapshot)
 
 	for _, releaseType := range terra.ReleaseTypes() {
@@ -57,7 +54,7 @@ func loadSnapshots(thelmaHome string, shellRunner shell.Runner) (map[terra.Relea
 
 		for _, versionSet := range VersionSets() {
 			fileName := snapshotPath(thelmaHome, releaseType, versionSet)
-			snap, err := loadSnapshot(fileName, shellRunner)
+			snap, err := loadSnapshot(fileName)
 			if err != nil {
 				return nil, fmt.Errorf("error loading %s %s snapshot from %s: %v", releaseType, versionSet, fileName, err)
 			}

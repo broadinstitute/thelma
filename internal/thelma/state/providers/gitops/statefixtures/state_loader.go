@@ -7,7 +7,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"io/fs"
 	"os"
 	"path"
@@ -28,7 +27,7 @@ var fixtureDirs = struct {
 var fixturesFS embed.FS
 
 // NewFakeStateLoader (FOR USE IN TESTS ONLY) returns a state loader that loads fake state from test fixtures.
-func NewFakeStateLoader(fixture FixtureName, t *testing.T, thelmaHome string, shellRunner shell.Runner) (terra.StateLoader, error) {
+func NewFakeStateLoader(fixture FixtureName, t *testing.T, thelmaHome string) (terra.StateLoader, error) {
 	// copy fixture files into state bucket dir and thelma home
 	statebucketDir := t.TempDir()
 	if err := copyFixture(fixture, fixtureDirs.statebucket, statebucketDir); err != nil {
@@ -45,7 +44,7 @@ func NewFakeStateLoader(fixture FixtureName, t *testing.T, thelmaHome string, sh
 	}
 
 	// create new underlying loader
-	loader := gitops.NewStateLoader(thelmaHome, shellRunner, sb)
+	loader := gitops.NewStateLoader(thelmaHome, sb)
 
 	if err != nil {
 		return nil, err

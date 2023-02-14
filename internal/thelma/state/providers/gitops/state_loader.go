@@ -6,7 +6,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/deepmerge"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/serializers"
 	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path"
@@ -32,10 +31,9 @@ const envConfigDir = "environments"
 // clusterConfigDir is the subdirectory in terra-helmfile to search for cluster config files
 const clusterConfigDir = "clusters"
 
-func NewStateLoader(thelmaHome string, shellRunner shell.Runner, statebucket statebucket.StateBucket) terra.StateLoader {
+func NewStateLoader(thelmaHome string, statebucket statebucket.StateBucket) terra.StateLoader {
 	return &stateLoader{
 		thelmaHome:  thelmaHome,
-		shellRunner: shellRunner,
 		statebucket: statebucket,
 	}
 }
@@ -44,7 +42,6 @@ func NewStateLoader(thelmaHome string, shellRunner shell.Runner, statebucket sta
 type stateLoader struct {
 	statebucket statebucket.StateBucket
 	thelmaHome  string
-	shellRunner shell.Runner
 	cached      terra.State
 }
 
@@ -57,7 +54,7 @@ func (s *stateLoader) Load() (terra.State, error) {
 }
 
 func (s *stateLoader) Reload() (terra.State, error) {
-	_versions, err := NewVersions(s.thelmaHome, s.shellRunner)
+	_versions, err := NewVersions(s.thelmaHome)
 	if err != nil {
 		return nil, err
 	}
