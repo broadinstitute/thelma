@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/app/name"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing/format"
 	"github.com/rs/zerolog/log"
@@ -10,8 +11,8 @@ import (
 	"os"
 )
 
-// commandKey key of the thelma tool
-const thelmaCommandName = "thelma"
+// thelmaCommandName command name for the thelma tool
+const thelmaCommandName = name.Name
 
 // globalUsage common usage string printed for all subcommands
 const globalUsage = `CLI tools for interacting with Terra's Helm charts`

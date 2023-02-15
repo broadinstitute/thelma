@@ -195,6 +195,11 @@ func TestWithLockReturnsCallbackError(t *testing.T) {
 	assert.Equal(t, "fake error from callback", err.Error())
 }
 
+func TestPath(t *testing.T) {
+	file := path.Join(t.TempDir(), "test.lk")
+	assert.Equal(t, file, NewLocker(file).Path())
+}
+
 func testLocker(t *testing.T, lockRetryInterval time.Duration, lockTimeout time.Duration) Locker {
 	return NewLocker(path.Join(t.TempDir(), "lock"), func(options *Options) {
 		options.RetryInterval = lockRetryInterval

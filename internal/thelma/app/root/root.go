@@ -3,6 +3,7 @@ package root
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/env"
+	"github.com/broadinstitute/thelma/internal/thelma/app/name"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -23,7 +24,7 @@ import (
 const envVarSuffix = "ROOT"
 
 // Name of the directory inside user's home directory
-const dirName = ".thelma"
+const dirName = "." + name.Name
 
 type Root interface {
 	// Dir returns the Thelma installation root directory, usually ~/.thelma
@@ -128,7 +129,7 @@ func (r root) CreateDirectories() error {
 		r.CredentialsDir(),
 		r.ConfigDir(),
 		r.LogDir(),
-		r.ReleasesDir().Root(),
+		r.ReleasesDir().ReleasesRoot(),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0700); err != nil {

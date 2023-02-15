@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog"
 	"io"
+	"os/exec"
 	"strings"
 )
 
@@ -33,6 +34,8 @@ type RunOptions struct {
 	Stderr io.Writer
 	// if false, do not send stdout to logging system
 	LogStdout bool
+	// callback for extensive customization of exec.Cmd object
+	CustomizeExecCmd func(cmd *exec.Cmd)
 }
 
 // RunOption can be used to configure RunOptions for a Run invocation

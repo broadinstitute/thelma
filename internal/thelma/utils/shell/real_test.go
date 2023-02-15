@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
+	"os/exec"
 	"path"
 	"testing"
 	"time"
@@ -230,6 +231,30 @@ func TestRunExpandsPathToToolbox(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "1234567890\n", buf.String())
+}
+
+func TestRunCustomizesExecCommand(t *testing.T) {
+	runner := newRunner(t)
+	var err error
+	var buf bytes.Buffer
+
+	err = runner.Run(
+		Command{
+			Prog: "ls",
+		},
+		func(options *RunOptions) {
+			options.Stdout = &buf
+			// it's an antipattern to use CustomizeExecCmd to override the command name
+			// (it should be used to set low-level attributes like OpenFiles or SysProcAttr)
+			// but we do it here as a simple way to prove that CustomizeExecCmd actually works
+			options.CustomizeExecCmd = func(cmd *exec.Cmd) {
+				cmd.Path = "/bin/echo"
+				cmd.Args = []string{"/bin/echo", "nonsense"}
+			}
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "nonsense\n", buf.String())
 }
 
 func newRunner(t *testing.T) Runner {

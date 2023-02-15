@@ -2,6 +2,7 @@ package entrypoint
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/update"
 	"github.com/rs/zerolog/log"
 	"os"
 
@@ -98,6 +99,8 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("state export", state_export.NewStateExportCommand())
 
 	opts.AddCommand("status", status.NewStatusCommand())
+
+	opts.AddCommand("update", update.NewUpdateCommand())
 
 	opts.AddCommand("version", version.NewVersionCommand())
 }

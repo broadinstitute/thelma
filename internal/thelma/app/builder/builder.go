@@ -2,7 +2,9 @@ package builder
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/installer"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
+	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"testing"
 
@@ -172,6 +174,17 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
+	// Initialize scratch
+	_scratch, err := scratch.NewScratch(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	_installer, err := installer.New(cfg, _clients.Google(), thelmaRoot, shellRunner, _scratch)
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialize metrics
 	if b.manageSingletons {
 		iapToken, err := _clients.IAPToken()
@@ -189,7 +202,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize app
-	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader, b.manageSingletons)
+	return app.New(cfg, _credentials, _clients, _installer, _scratch, shellRunner, stateLoader, b.manageSingletons)
 }
 
 func (b *thelmaBuilder) buildShellRunner(thelmaRoot root.Root) (shell.Runner, error) {

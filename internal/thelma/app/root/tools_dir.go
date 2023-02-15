@@ -33,7 +33,7 @@ func findToolsDir(releasesDir ReleasesDir) (string, error) {
 		return toolsdir, nil
 	}
 
-	log.Warn().Err(err).Msgf("error identifying path to thelma executable; will search %s for bundled tools", releasesDir.Root())
+	log.Warn().Err(err).Msgf("error identifying path to thelma executable; will search %s for bundled tools", releasesDir.ReleasesRoot())
 
 	toolsdir = path.Join(releasesDir.ForCurrentVersion(), toolsdirname)
 	if err = validateToolsDir(toolsdir); err != nil {
