@@ -6,7 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const helpMessage = `Update Thelma.
+const helpMessage = `
+Update Thelma
 
 By default, updates to latest version of Thelma, but can
 be run with --version to install a specific version if desired.
