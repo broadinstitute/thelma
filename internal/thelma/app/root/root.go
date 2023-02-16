@@ -39,32 +39,34 @@ type Root interface {
 	ConfigDir() string
 	// ReleasesDir returns the Thelma installation directory ($ROOT/releases)
 	ReleasesDir() ReleasesDir
+	// ShellDir path where Thelma generates shell scripts and utilities ($ROOT/shell)
+	ShellDir() string
 	// ToolsDir returns the path to Thelma's bundled third-party tool binaries, such as Helm, Helmfile, etc.
 	ToolsDir() (ToolsDir, error)
 	// CreateDirectories create directories if they do not exist. Will be called as part of Thelma initialization
 	CreateDirectories() error
 }
 
-// Default returns a Root instance rooted at the default directory returned by DefaultDir
-func Default() Root {
+// New returns a new Root instance rooted at the directory returned by Lookup
+func New() Root {
 	return root{
-		dir: DefaultDir(),
+		dir: Lookup(),
 	}
 }
 
-// New (FOR TESTING ONLY) returns a Root instance rooted at the given directory
-func New(dir string) Root {
+// NewAt (FOR TESTING ONLY) returns a Root instance rooted at the given directory
+func NewAt(dir string) Root {
 	return root{
 		dir: dir,
 	}
 }
 
-// DefaultDir derives the default Thelma root directory. It will be:
+// Lookup derives the Thelma root directory. It will be:
 // * The value of the THELMA_ROOT env var, if set
 // * If a valid home directory exists for current user, it will be $HOME/.thelma
 // * Else, /tmp/.thelma.<pid> (worst-case fallback option in weird environments)
 // Note that this function identifies the root directory path, but does NOT create the root directory; it may or may not exist.
-func DefaultDir() string {
+func Lookup() string {
 	dir, exists := os.LookupEnv(env.WithEnvPrefix(envVarSuffix))
 	if exists {
 		return dir
@@ -113,6 +115,10 @@ func (r root) ReleasesDir() ReleasesDir {
 	}
 }
 
+func (r root) ShellDir() string {
+	return path.Join(r.Dir(), "shell")
+}
+
 func (r root) ToolsDir() (ToolsDir, error) {
 	dir, err := findToolsDir(r.ReleasesDir())
 	if err != nil {
@@ -130,6 +136,7 @@ func (r root) CreateDirectories() error {
 		r.ConfigDir(),
 		r.LogDir(),
 		r.ReleasesDir().ReleasesRoot(),
+		r.ShellDir(),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0700); err != nil {

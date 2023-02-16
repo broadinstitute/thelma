@@ -9,7 +9,7 @@ import (
 
 func TestReleasesDir(t *testing.T) {
 	dir := t.TempDir()
-	_root := New(dir)
+	_root := NewAt(dir)
 	_releasesDir := _root.ReleasesDir()
 	assert.Equal(t, path.Join(dir, "releases"), _releasesDir.ReleasesRoot())
 	assert.Equal(t, path.Join(dir, "releases", "current"), _releasesDir.CurrentSymlink())

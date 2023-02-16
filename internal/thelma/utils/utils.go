@@ -4,6 +4,8 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -71,4 +73,17 @@ func FileExists(file string) (bool, error) {
 // Nullable is a utility to turn a value into a pointer to that value
 func Nullable[T any](val T) *T {
 	return &val
+}
+
+// CloseWarn gracefully handle Close() error when a prior error is more salient
+func CloseWarn(closer io.Closer, err error) error {
+	closeErr := closer.Close()
+	if err == nil {
+		return closeErr
+	}
+	if closeErr == nil {
+		return err
+	}
+	log.Error().Err(closeErr).Msg("close error")
+	return err
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/broadinstitute/thelma/internal/thelma/app/installer/bootstrap"
 	"github.com/broadinstitute/thelma/internal/thelma/app/name"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
@@ -70,23 +71,27 @@ func New(thelmaConfig config.Config, bucketFactory api.BucketFactory, root root.
 		options.RetryInterval = 10 * time.Second
 	})
 
+	bootstrapper := bootstrap.NewBootstrapper(root, thelmaConfig, runner)
+
 	return &installer{
-		config:      cfg,
-		bucket:      _bucket,
-		releasesDir: root.ReleasesDir(),
-		shellRunner: runner,
-		locker:      locker,
-		scratch:     scratch,
+		config:       cfg,
+		bucket:       _bucket,
+		releasesDir:  root.ReleasesDir(),
+		shellRunner:  runner,
+		locker:       locker,
+		scratch:      scratch,
+		bootstrapper: bootstrapper,
 	}, nil
 }
 
 type installer struct {
-	config      updateConfig
-	bucket      bucket.Bucket
-	shellRunner shell.Runner
-	releasesDir root.ReleasesDir
-	locker      flock.Locker
-	scratch     scratch.Scratch
+	config       updateConfig
+	bucket       bucket.Bucket
+	shellRunner  shell.Runner
+	releasesDir  root.ReleasesDir
+	locker       flock.Locker
+	scratch      scratch.Scratch
+	bootstrapper bootstrap.Bootstrapper
 }
 
 func (a *installer) Update() error {
@@ -138,14 +143,10 @@ func (a *installer) StartBackgroundUpdateIfEnabled() error {
 
 	// launch a `thelma update` command in the background
 	// ref: https://groups.google.com/g/golang-nuts/c/shST-SDqIp4
-	executable, err := os.Executable()
+	executable, err := bootstrap.PathToRunningThelmaBinary()
 	if err != nil {
-		return fmt.Errorf("error finding path to currently running executable: %v", err)
+		return err
 	}
-	if path.Base(executable) != name.Name {
-		return fmt.Errorf("currently running executable is not a thelma command: %s", executable)
-	}
-
 	proc := a.shellRunner.PrepareSubprocess(shell.Command{
 		Prog: executable,
 		Args: []string{updateCommandName},
@@ -156,7 +157,6 @@ func (a *installer) StartBackgroundUpdateIfEnabled() error {
 			cmd.SysProcAttr.Setpgid = true
 		}
 	})
-
 	if err = proc.Start(); err != nil {
 		return fmt.Errorf("error starting background update process: %v", err)
 	}
@@ -164,8 +164,7 @@ func (a *installer) StartBackgroundUpdateIfEnabled() error {
 }
 
 func (a *installer) Bootstrap() error {
-	//TODO implement me
-	panic("implement me")
+	return a.bootstrapper.Bootstrap()
 }
 
 // perform a Thelma update, obtaining a file lock first so multiple processes don't
@@ -228,7 +227,7 @@ func (a *installer) updateThelmaUnsafe(versionOrTag string) error {
 
 	priorVersion, err := a.currentVersion()
 	if err != nil {
-		log.Warn().Err(err).Msgf("Could not identify current installed version of Thelma")
+		log.Debug().Err(err).Msgf("Could not identify current installed version of Thelma; is this a fresh install?")
 		priorVersion = "unknown"
 	}
 	log.Info().Msgf("Updating Thelma from %s to %s...", priorVersion, targetVersion)
@@ -391,7 +390,8 @@ func computeSha256Sum(file string) (string, error) {
 	}
 
 	h := sha256.New()
-	if _, err = io.Copy(h, f); err != nil {
+	_, err = io.Copy(h, f)
+	if err != nil {
 		return "", fmt.Errorf("error computing sha256sum for %s: %v", file, err)
 	}
 

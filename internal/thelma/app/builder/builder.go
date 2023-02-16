@@ -134,9 +134,9 @@ func (b *thelmaBuilder) UseStateFixture(name statefixtures.FixtureName, t *testi
 func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	rootDir := b.rootDir
 	if rootDir == "" {
-		rootDir = root.DefaultDir()
+		rootDir = root.Lookup()
 	}
-	thelmaRoot := root.New(rootDir)
+	thelmaRoot := root.NewAt(rootDir)
 	if err := thelmaRoot.CreateDirectories(); err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@ import (
 
 func Test_ToolsDir(t *testing.T) {
 	rootdir := t.TempDir()
-	_root := New(rootdir)
+	_root := NewAt(rootdir)
 	_, err := _root.ToolsDir()
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "tools/bin/helm does not exist")

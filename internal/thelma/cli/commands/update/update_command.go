@@ -14,13 +14,16 @@ be run with --version to install a specific version if desired.
 `
 
 var flagNames = struct {
-	version string
+	version   string
+	bootstrap string
 }{
-	version: "version",
+	version:   "version",
+	bootstrap: "bootstrap",
 }
 
 type updateCommand struct {
-	version string
+	version   string
+	bootstrap bool
 }
 
 func NewUpdateCommand() cli.ThelmaCommand {
@@ -33,6 +36,7 @@ func (cmd *updateCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.version, flagNames.version, "v", "", `Thelma semantic version or tag to update to (eg. "v1.2.3", "latest")`)
+	cobraCommand.Flags().BoolVar(&cmd.bootstrap, flagNames.bootstrap, false, `Configure a new installation of Thelma`)
 }
 
 func (cmd *updateCommand) PreRun(app app.ThelmaApp, _ cli.RunContext) error {
@@ -40,10 +44,22 @@ func (cmd *updateCommand) PreRun(app app.ThelmaApp, _ cli.RunContext) error {
 }
 
 func (cmd *updateCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
+	if err := cmd.update(app, rc); err != nil {
+		return err
+	}
+	if cmd.bootstrap {
+		return app.Installer().Bootstrap()
+	}
+	return nil
+}
+
+func (cmd *updateCommand) update(app app.ThelmaApp, rc cli.RunContext) error {
 	if rc.CobraCommand().Flags().Changed(flagNames.version) {
 		return app.Installer().UpdateTo(cmd.version)
+	} else {
+		// update to the latest version of the user's configured tag
+		return app.Installer().Update()
 	}
-	return app.Installer().Update()
 }
 
 func (cmd *updateCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
