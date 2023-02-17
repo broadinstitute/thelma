@@ -49,9 +49,7 @@ type Root interface {
 
 // New returns a new Root instance rooted at the directory returned by Lookup
 func New() Root {
-	return root{
-		dir: Lookup(),
-	}
+	return NewAt(Lookup())
 }
 
 // NewAt (FOR TESTING ONLY) returns a Root instance rooted at the given directory

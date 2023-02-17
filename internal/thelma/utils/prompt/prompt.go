@@ -10,29 +10,38 @@ import (
 )
 
 type Prompt interface {
-	Confirm(message string, defaultValue bool) (bool, error)
+	// Confirm prompts a user for confirmation, returning true if they answer "y" or "yes"
+	// and false otherwise.
+	//
+	// The default answer (controlled by the defaultYes parameter) will be returned if
+	// they hit enter without answering yes or no.
+	//
+	// Loops until a valid value is supplied.
+	Confirm(message string, defaultYes bool) (bool, error)
 }
 
-// Return a new prompt instance.
-func New() (Prompt, error) {
-	if !utils.Interactive() {
-		return nil, fmt.Errorf("can't prompt for input; try re-running in an interactive shell")
-	}
+// New return a new Prompt instance.
+func New() Prompt {
 	return &prompt{
-		in:  os.Stdin,
-		out: os.Stdout,
-	}, nil
+		in:                os.Stdin,
+		out:               os.Stdout,
+		ensureInteractive: true,
+	}
 }
 
 type prompt struct {
-	in  io.Reader
-	out io.Writer
+	in                io.Reader
+	out               io.Writer
+	ensureInteractive bool
 }
 
-// Confirm prompts a user for confirmation
-func (p *prompt) Confirm(message string, defaultValue bool) (bool, error) {
+func (p *prompt) Confirm(message string, defaultYes bool) (bool, error) {
+	if err := p.verifyInteractive(); err != nil {
+		return false, err
+	}
+
 	suffix := "[Y/n]"
-	if defaultValue == false {
+	if !defaultYes {
 		suffix = "[y/N]"
 	}
 
@@ -51,7 +60,7 @@ func (p *prompt) Confirm(message string, defaultValue bool) (bool, error) {
 		input = strings.ToLower(input)
 
 		if len(input) == 0 { // user hit enter
-			return defaultValue, nil
+			return defaultYes, nil
 		}
 		if input == "y" || input == "yes" {
 			return true, nil
@@ -64,4 +73,14 @@ func (p *prompt) Confirm(message string, defaultValue bool) (bool, error) {
 			return false, fmt.Errorf("error prompting for user input: %v", err)
 		}
 	}
+}
+
+func (p *prompt) verifyInteractive() error {
+	if !p.ensureInteractive {
+		return nil
+	}
+	if !utils.Interactive() {
+		return fmt.Errorf("can't prompt for input; try re-running in an interactive shell")
+	}
+	return nil
 }

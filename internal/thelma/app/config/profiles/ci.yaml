@@ -1,5 +1,9 @@
 # this file contains configuration defaults for Thelma when it is run in CI and other non-interactive environments
 
+autoupdate:
+  # we never want auto-update enabled in CI environments
+  enabled: false
+
 argocd:
   # pull token from Vault instead of local user credentials
   vault:

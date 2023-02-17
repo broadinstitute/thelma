@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/installer/bootstrap"
-	"github.com/broadinstitute/thelma/internal/thelma/app/name"
+	"github.com/broadinstitute/thelma/internal/thelma/app/installer/spawn"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
@@ -20,8 +20,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 	"io"
+	"k8s.io/utils/strings/slices"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -29,14 +29,14 @@ import (
 	"time"
 )
 
-const configKey = "installer"
+const configKey = "autoupdate"
 const tagsFile = "tags.json"
 const buildManifest = "build.json"
 const releasesObjectPrefix = "releases"
 const updateCommandName = "update"
 
 type updateConfig struct {
-	Enabled bool   `default:"false"`           // if false, do not perform automatic updates
+	Enabled bool   `default:"true"`            // if false, do not perform automatic updates
 	Tag     string `default:"latest"`          // which Thelma build tag to follow for auto-updates
 	Bucket  string `default:"thelma-releases"` // name of GCS bucket that contains Thelma releases
 }
@@ -71,7 +71,7 @@ func New(thelmaConfig config.Config, bucketFactory api.BucketFactory, root root.
 		options.RetryInterval = 10 * time.Second
 	})
 
-	bootstrapper := bootstrap.NewBootstrapper(root, thelmaConfig, runner)
+	bootstrapper := bootstrap.New(root, thelmaConfig, runner)
 
 	return &installer{
 		config:       cfg,
@@ -123,12 +123,18 @@ func (a *installer) UpdateTo(versionOrTag string) error {
 }
 
 func (a *installer) StartBackgroundUpdateIfEnabled() error {
-	if isCurrentProcessAThelmaUpdateCommand() {
-		// never start a background update for a `thelma update` command
+	if !a.config.Enabled {
 		return nil
 	}
 
-	if !a.config.Enabled {
+	_spawn := spawn.New()
+	if _spawn.CurrentProcessIsSpawn() {
+		// never start a background process from a background process (infinite loops are bad)
+		return nil
+	}
+
+	if currentProcessIsThelmaUpdateCommand() {
+		// don't trigger a background update from a manually-run `thelma update` command
 		return nil
 	}
 
@@ -141,26 +147,8 @@ func (a *installer) StartBackgroundUpdateIfEnabled() error {
 		return nil
 	}
 
-	// launch a `thelma update` command in the background
-	// ref: https://groups.google.com/g/golang-nuts/c/shST-SDqIp4
-	executable, err := bootstrap.PathToRunningThelmaBinary()
-	if err != nil {
-		return err
-	}
-	proc := a.shellRunner.PrepareSubprocess(shell.Command{
-		Prog: executable,
-		Args: []string{updateCommandName},
-	}, func(options *shell.RunOptions) {
-		options.CustomizeExecCmd = func(cmd *exec.Cmd) {
-			// make sure sub-process is not part of this process group, so that if this
-			// process dies, the background process continues executing
-			cmd.SysProcAttr.Setpgid = true
-		}
-	})
-	if err = proc.Start(); err != nil {
-		return fmt.Errorf("error starting background update process: %v", err)
-	}
-	return nil
+	// launch "thelma update" in the background
+	return _spawn.Spawn(updateCommandName)
 }
 
 func (a *installer) Bootstrap() error {
@@ -220,7 +208,7 @@ func (a *installer) updateThelmaUnsafe(versionOrTag string) error {
 		return nil
 	}
 
-	targetVersion, err := a.expandTagToVersion(versionOrTag)
+	targetVersion, err := a.resolveTagToVersion(versionOrTag)
 	if err != nil {
 		return err
 	}
@@ -231,7 +219,7 @@ func (a *installer) updateThelmaUnsafe(versionOrTag string) error {
 		priorVersion = "unknown"
 	}
 	log.Info().Msgf("Updating Thelma from %s to %s...", priorVersion, targetVersion)
-
+	time.Sleep(30 * time.Second)
 	scratchDir, err := a.scratch.Mkdir("installer")
 	if err != nil {
 		return err
@@ -428,7 +416,6 @@ func (a *installer) getReleaseArchiveSha256Sum(version string) (string, error) {
 			return strings.Fields(line)[0], nil
 		}
 	}
-
 	return "", fmt.Errorf("found no matching checksum for %s in gs://%s/%s", archiveFile, a.bucket.Name(), checksumsObject)
 }
 
@@ -441,7 +428,7 @@ func (a *installer) isUpdateNeeded() (bool, error) {
 // return true if an update is required (i.e., the current installed
 // version of Thelma does not match the given version or tag string)
 func (a *installer) isUpdateNeededFor(versionOrTag string) (bool, error) {
-	_version, err := a.expandTagToVersion(versionOrTag)
+	_version, err := a.resolveTagToVersion(versionOrTag)
 	if err != nil {
 		return false, err
 	}
@@ -477,8 +464,8 @@ func (a *installer) currentVersion() (string, error) {
 	return path.Base(resolved), nil
 }
 
-// expand tag into a version string (eg. "latest" -> "v1.2.3")
-func (a *installer) expandTagToVersion(versionOrTag string) (string, error) {
+// resolve tag into a version string (eg. "latest" -> "v1.2.3")
+func (a *installer) resolveTagToVersion(versionOrTag string) (string, error) {
 	tags, err := a.fetchTags()
 	if err != nil {
 		return "", err
@@ -524,20 +511,14 @@ func releaseArchiveSha256SumObject(version string) string {
 	return path.Join(releasesObjectPrefix, version, fmt.Sprintf("thelma_%s_SHA256SUMS", version))
 }
 
-func isCurrentProcessAThelmaUpdateCommand() bool {
-	return argsMatchThelmaUpdateCommand(os.Args)
-}
-
-func argsMatchThelmaUpdateCommand(args []string) bool {
-	if len(args) < 2 {
+func currentProcessIsThelmaUpdateCommand() bool {
+	args := os.Args
+	withoutFlags := slices.Filter(nil, args, func(s string) bool {
+		return !strings.HasPrefix(s, "-")
+	})
+	if len(withoutFlags) < 2 {
+		// not sure what we're doing but it ain't "thelma update"
 		return false
 	}
-	if path.Base(args[0]) != name.Name {
-		// not a `thelma` command - maybe `go test` or similar
-		return false
-	}
-	if args[1] != updateCommandName {
-		return false
-	}
-	return true
+	return withoutFlags[1] == updateCommandName
 }

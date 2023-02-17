@@ -180,9 +180,17 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
+	// Initialize installer
 	_installer, err := installer.New(cfg, _clients.Google(), thelmaRoot, shellRunner, _scratch)
 	if err != nil {
 		return nil, err
+	}
+
+	// start backgrond update, if enabled
+	if b.manageSingletons {
+		if err = _installer.StartBackgroundUpdateIfEnabled(); err != nil {
+			return nil, err
+		}
 	}
 
 	// Initialize metrics

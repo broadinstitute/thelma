@@ -183,4 +183,5 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/clients/sherlock --name StateReadWriter --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename state_read_writer.go
 	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubeconfig --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubecfg.go
 	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubectx --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubectx.go
+	mockery --dir ./internal/thelma/utils/prompt --name Prompt --output=./internal/thelma/utils/prompt/mocks --outpkg mocks --filename prompt.go
 	go generate /Users/chelsea/scratch/thelma-merge/thelma/internal/thelma/clients/google/testing/generators/generators.go

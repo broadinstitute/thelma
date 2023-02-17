@@ -13,6 +13,31 @@ import (
 const toolsdirname = "tools"
 const bindirname = "bin"
 
+// PathToRunningThelmaExecutable returns the path to the currently-running
+// Thelma binary executable.
+// Note that this could be _outside_ Thelma's configured root directory
+// (i.e., not ~/.thelma/releases/current/bin).
+// For example:
+//   - During initial installation, Thelma is run out of Thelma release archive
+//     that is unpacked into a temp directory.
+//   - In CI pipelines, Thelma is run out of a well-known path on it's Docker image
+//     /thelma/bin/thelma
+//   - When Thelma is built locally during development, it is run out of the build
+//     output directory, ./output/bin/thelma
+func PathToRunningThelmaExecutable() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("error finding path to currently running executable: %v", err)
+	}
+
+	executable, err = filepath.EvalSymlinks(executable)
+	if err != nil {
+		return "", fmt.Errorf("error finding path to currently running executable: %v", err)
+	}
+
+	return executable, nil
+}
+
 // ToolsDir path on disk where Thelma's bundled tools, such as `kubectl`, `helm`, etc live
 type ToolsDir interface {
 	// Bin subdir within tools dir that includes tool binaries
@@ -43,12 +68,8 @@ func findToolsDir(releasesDir ReleasesDir) (string, error) {
 }
 
 // try to expand ../../tools relative to $0
-// we make it possible to pass in a fake path for testing
 func findToolsDirRelativeToThelmaExecutable() (string, error) {
-	// use os lib to find executable that launched the process.
-	// Note that in the real world, this should always be the THelma binary, but in
-	// tests it will be a `go test` command
-	exepath, err := os.Executable()
+	exepath, err := PathToRunningThelmaExecutable()
 	if err != nil {
 		return "", err
 	}

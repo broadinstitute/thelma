@@ -338,6 +338,10 @@ type mockSubprocess struct {
 	runner *MockRunner
 }
 
+func (s *mockSubprocess) Detach() error {
+	return nil
+}
+
 func (s *mockSubprocess) Start() error {
 	// we synchronize Run calls on the mock because testify mock isn't safe for concurrent access, and neither are our
 	// order verification callback hooks
