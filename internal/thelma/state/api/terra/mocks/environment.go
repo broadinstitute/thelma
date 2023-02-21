@@ -458,6 +458,186 @@ func (_c *Environment_Offline_Call) Return(_a0 bool) *Environment_Offline_Call {
 	return _c
 }
 
+// OfflineScheduleBeginEnabled provides a mock function with given fields:
+func (_m *Environment) OfflineScheduleBeginEnabled() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// Environment_OfflineScheduleBeginEnabled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OfflineScheduleBeginEnabled'
+type Environment_OfflineScheduleBeginEnabled_Call struct {
+	*mock.Call
+}
+
+// OfflineScheduleBeginEnabled is a helper method to define mock.On call
+func (_e *Environment_Expecter) OfflineScheduleBeginEnabled() *Environment_OfflineScheduleBeginEnabled_Call {
+	return &Environment_OfflineScheduleBeginEnabled_Call{Call: _e.mock.On("OfflineScheduleBeginEnabled")}
+}
+
+func (_c *Environment_OfflineScheduleBeginEnabled_Call) Run(run func()) *Environment_OfflineScheduleBeginEnabled_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_OfflineScheduleBeginEnabled_Call) Return(_a0 bool) *Environment_OfflineScheduleBeginEnabled_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// OfflineScheduleBeginTime provides a mock function with given fields:
+func (_m *Environment) OfflineScheduleBeginTime() time.Time {
+	ret := _m.Called()
+
+	var r0 time.Time
+	if rf, ok := ret.Get(0).(func() time.Time); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(time.Time)
+	}
+
+	return r0
+}
+
+// Environment_OfflineScheduleBeginTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OfflineScheduleBeginTime'
+type Environment_OfflineScheduleBeginTime_Call struct {
+	*mock.Call
+}
+
+// OfflineScheduleBeginTime is a helper method to define mock.On call
+func (_e *Environment_Expecter) OfflineScheduleBeginTime() *Environment_OfflineScheduleBeginTime_Call {
+	return &Environment_OfflineScheduleBeginTime_Call{Call: _e.mock.On("OfflineScheduleBeginTime")}
+}
+
+func (_c *Environment_OfflineScheduleBeginTime_Call) Run(run func()) *Environment_OfflineScheduleBeginTime_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_OfflineScheduleBeginTime_Call) Return(_a0 time.Time) *Environment_OfflineScheduleBeginTime_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// OfflineScheduleEndEnabled provides a mock function with given fields:
+func (_m *Environment) OfflineScheduleEndEnabled() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// Environment_OfflineScheduleEndEnabled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OfflineScheduleEndEnabled'
+type Environment_OfflineScheduleEndEnabled_Call struct {
+	*mock.Call
+}
+
+// OfflineScheduleEndEnabled is a helper method to define mock.On call
+func (_e *Environment_Expecter) OfflineScheduleEndEnabled() *Environment_OfflineScheduleEndEnabled_Call {
+	return &Environment_OfflineScheduleEndEnabled_Call{Call: _e.mock.On("OfflineScheduleEndEnabled")}
+}
+
+func (_c *Environment_OfflineScheduleEndEnabled_Call) Run(run func()) *Environment_OfflineScheduleEndEnabled_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_OfflineScheduleEndEnabled_Call) Return(_a0 bool) *Environment_OfflineScheduleEndEnabled_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// OfflineScheduleEndTime provides a mock function with given fields:
+func (_m *Environment) OfflineScheduleEndTime() time.Time {
+	ret := _m.Called()
+
+	var r0 time.Time
+	if rf, ok := ret.Get(0).(func() time.Time); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(time.Time)
+	}
+
+	return r0
+}
+
+// Environment_OfflineScheduleEndTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OfflineScheduleEndTime'
+type Environment_OfflineScheduleEndTime_Call struct {
+	*mock.Call
+}
+
+// OfflineScheduleEndTime is a helper method to define mock.On call
+func (_e *Environment_Expecter) OfflineScheduleEndTime() *Environment_OfflineScheduleEndTime_Call {
+	return &Environment_OfflineScheduleEndTime_Call{Call: _e.mock.On("OfflineScheduleEndTime")}
+}
+
+func (_c *Environment_OfflineScheduleEndTime_Call) Run(run func()) *Environment_OfflineScheduleEndTime_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_OfflineScheduleEndTime_Call) Return(_a0 time.Time) *Environment_OfflineScheduleEndTime_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// OfflineScheduleEndWeekends provides a mock function with given fields:
+func (_m *Environment) OfflineScheduleEndWeekends() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// Environment_OfflineScheduleEndWeekends_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OfflineScheduleEndWeekends'
+type Environment_OfflineScheduleEndWeekends_Call struct {
+	*mock.Call
+}
+
+// OfflineScheduleEndWeekends is a helper method to define mock.On call
+func (_e *Environment_Expecter) OfflineScheduleEndWeekends() *Environment_OfflineScheduleEndWeekends_Call {
+	return &Environment_OfflineScheduleEndWeekends_Call{Call: _e.mock.On("OfflineScheduleEndWeekends")}
+}
+
+func (_c *Environment_OfflineScheduleEndWeekends_Call) Run(run func()) *Environment_OfflineScheduleEndWeekends_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_OfflineScheduleEndWeekends_Call) Return(_a0 bool) *Environment_OfflineScheduleEndWeekends_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // Owner provides a mock function with given fields:
 func (_m *Environment) Owner() string {
 	ret := _m.Called()

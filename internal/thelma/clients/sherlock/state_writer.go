@@ -86,6 +86,15 @@ func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terr
 			Enabled: utils.Nullable(options.AutoDelete.Enabled),
 		}
 	}
+	if options.StopSchedule.Enabled {
+		creatableEnvironment.OfflineScheduleBeginEnabled = true
+		creatableEnvironment.OfflineScheduleBeginTime = strfmt.DateTime(options.StopSchedule.RepeatingTime)
+	}
+	if options.StartSchedule.Enabled {
+		creatableEnvironment.OfflineScheduleEndEnabled = true
+		creatableEnvironment.OfflineScheduleEndTime = strfmt.DateTime(options.StartSchedule.RepeatingTime)
+		creatableEnvironment.OfflineScheduleEndWeekends = options.StartSchedule.Weekends
+	}
 	existing, created, err := c.client.Environments.PostAPIV2Environments(
 		environments.NewPostAPIV2EnvironmentsParams().WithEnvironment(creatableEnvironment))
 	if err != nil {
