@@ -321,7 +321,7 @@ func (c *Client) DisableRelease(envName, releaseName string) error {
 	return err
 }
 
-func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplate bool) *models.V2controllersCreatableEnvironment {
+func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartReleases bool) *models.V2controllersCreatableEnvironment {
 	// if Helmfile ref isn't set it should default to head
 	var helmfileRef string
 	if env.TerraHelmfileRef() == "" {
@@ -347,7 +347,7 @@ func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplat
 		RequiresSuitability:       utils.Nullable(env.RequireSuitable()),
 		TemplateEnvironment:       env.Template(),
 		HelmfileRef:               utils.Nullable(helmfileRef),
-		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
+		AutoPopulateChartReleases: &autoPopulateChartReleases,
 		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
 		PreventDeletion:           utils.Nullable(env.PreventDeletion()),
 		AutoDelete:                autoDelete,
