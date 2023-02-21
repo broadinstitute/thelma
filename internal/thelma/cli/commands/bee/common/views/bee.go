@@ -19,6 +19,8 @@ type BeeDetail struct {
 	Template             string                   `json:"template"`
 	PreventDeletion      bool                     `json:"preventDeletion,omitempty" yaml:"preventDeletion,omitempty"`
 	DeleteAfter          time.Time                `json:"deleteAfter,omitempty" yaml:"deleteAfter,omitempty"`
+	StopSchedule         ScheduleDetail           `json:"stopSchedule,omitempty" yaml:"stopSchedule,omitempty"`
+	StartSchedule        ScheduleDetail           `json:"startSchedule,omitempty" yaml:"startSchedule,omitempty"`
 	TerraHelmfileRef     string                   `json:"terraHelmfileRef,omitempty" yaml:"terraHelmfileRef,omitempty"`
 	UniqueResourcePrefix string                   `json:"uniqueResourcePrefix" yaml:"uniqueResourcePrefix"`
 	Versions             map[string]string        `json:"overrides,omitempty" yaml:",omitempty"`
@@ -36,6 +38,12 @@ type ReleaseDetail struct {
 	AppVersion       string         `yaml:"appVersion,omitempty" json:"appVersion,omitempty"`
 	ChartVersion     string         `yaml:"chartVersion,omitempty" json:"chartVersion,omitempty"`
 	TerraHelmfileRef string         `yaml:"terraHelmfileRef,omitempty" json:"terraHelmfileRef,omitempty"`
+}
+
+type ScheduleDetail struct {
+	Enabled       bool      `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	RepeatingTime time.Time `yaml:"repeatingTime,omitempty" json:"repeatingTime,omitempty"`
+	Weekends      bool      `yaml:"weekends,omitempty" json:"weekends,omitempty"`
 }
 
 type DescribeOptions struct {
@@ -86,11 +94,21 @@ func DescribeBeeEnv(bee terra.Environment, opts ...DescribeOption) BeeDetail {
 	}
 
 	return BeeDetail{
-		Name:                 bee.Name(),
-		Running:              !bee.Offline(),
-		Template:             bee.Template(),
-		PreventDeletion:      bee.PreventDeletion(),
-		DeleteAfter:          toDeleteAfter(bee.AutoDelete()),
+		Name:            bee.Name(),
+		Running:         !bee.Offline(),
+		Template:        bee.Template(),
+		PreventDeletion: bee.PreventDeletion(),
+		DeleteAfter:     timeIfEnabled(bee.AutoDelete().After(), bee.AutoDelete().Enabled()),
+		StopSchedule: ScheduleDetail{
+			Enabled:       bee.OfflineScheduleBeginEnabled(),
+			RepeatingTime: timeIfEnabled(bee.OfflineScheduleBeginTime(), bee.OfflineScheduleBeginEnabled()),
+			Weekends:      bee.OfflineScheduleBeginEnabled(), // Stop schedule always applies on weekends if it is enabled
+		},
+		StartSchedule: ScheduleDetail{
+			Enabled:       bee.OfflineScheduleEndEnabled(),
+			RepeatingTime: timeIfEnabled(bee.OfflineScheduleEndTime(), bee.OfflineScheduleEndEnabled()),
+			Weekends:      bee.OfflineScheduleEndEnabled() && bee.OfflineScheduleEndWeekends(),
+		},
 		TerraHelmfileRef:     bee.TerraHelmfileRef(),
 		UniqueResourcePrefix: bee.UniqueResourcePrefix(),
 		Services:             releaseDetails,
@@ -108,10 +126,10 @@ func SummarizeBees(bees []terra.Environment) []BeeSummary {
 	return result
 }
 
-func toDeleteAfter(a terra.AutoDelete) time.Time {
-	var t time.Time
-	if !a.Enabled() {
+func timeIfEnabled(internalTime time.Time, enabled bool) time.Time {
+	if !enabled {
+		var t time.Time
 		return t
 	}
-	return a.After()
+	return internalTime
 }
