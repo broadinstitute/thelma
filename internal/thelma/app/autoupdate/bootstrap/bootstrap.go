@@ -168,7 +168,6 @@ func (b *bootstrapper) writeThelmaShellCompletionFile() error {
 	if err != nil {
 		return fmt.Errorf("error generating shell completion file %s: %v", file, err)
 	}
-	// okay so - what to do here? option 1:
 
 	log.Info().Msgf("Writing shell completion script to %s...", file)
 	err = b.shellRunner.Run(shell.Command{
