@@ -5,6 +5,7 @@ package spawn
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -77,18 +78,22 @@ func (suite *SpawnSuite) Test_Spawn_PanicsOnRecursion() {
 }
 
 func (suite *SpawnSuite) AssertFileExistsWithinDuration(file string, duration time.Duration) {
+	assertFileExistsWithinDuration(suite.T(), file, duration)
+}
+
+func assertFileExistsWithinDuration(t *testing.T, file string, duration time.Duration) {
 	stopAt := time.Now().Add(duration)
 	for time.Now().Before(stopAt) {
 		exists, err := utils.FileExists(file)
-		require.NoError(suite.T(), err)
+		require.NoError(t, err)
 		if exists {
-			assert.FileExists(suite.T(), file, "file %s must exist within %s", file, duration)
+			assert.FileExists(t, file, "file %s must exist within %s", file, duration)
 			return
 		}
 		time.Sleep(sleepInterval)
 	}
 
-	assert.FileExists(suite.T(), file, "file %s must exist within %s", file, duration)
+	assert.FileExists(t, file, "file %s must exist within %s", file, duration)
 }
 
 func (suite *SpawnSuite) ReadStdoutForSpawnedCommand() string {
@@ -119,11 +124,17 @@ func (suite *SpawnSuite) RunSpawnTester(args ...string) {
 	require.NoError(suite.T(), err)
 }
 
-// okay so-
-// - compile the spawn tester
-// - to test:
-//   - success for short subprocess
-//   - success for longer subprocess
-//   - panic on recursion
-// - also, should probably tag this as a smoke test
-// - make sure it executes the subprocess
+func TestSpawn_InProcessForCoverage(t *testing.T) {
+	fakeRoot := root.NewAt(t.TempDir())
+	require.NoError(t, fakeRoot.CreateDirectories())
+
+	_spawn := New(fakeRoot, func(options *Options) {
+		options.CustomExecutable = "touch"
+		options.LogFileName = logFileName
+	})
+
+	testfile := path.Join(t.TempDir(), "testfile")
+	assert.False(t, _spawn.CurrentProcessIsSpawn())
+	require.NoError(t, _spawn.Spawn(testfile))
+	assertFileExistsWithinDuration(t, testfile, 5*time.Second)
+}
