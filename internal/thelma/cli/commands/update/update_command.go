@@ -48,17 +48,17 @@ func (cmd *updateCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 	if cmd.bootstrap {
-		return app.Installer().Bootstrap()
+		return app.AutoUpdate().Bootstrap()
 	}
 	return nil
 }
 
 func (cmd *updateCommand) update(app app.ThelmaApp, rc cli.RunContext) error {
 	if rc.CobraCommand().Flags().Changed(flagNames.version) {
-		return app.Installer().UpdateTo(cmd.version)
+		return app.AutoUpdate().UpdateTo(cmd.version)
 	} else {
 		// update to the latest version of the user's configured tag
-		return app.Installer().Update()
+		return app.AutoUpdate().Update()
 	}
 }
 

@@ -2,7 +2,7 @@ package spawn
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
@@ -40,7 +40,7 @@ func (s *spawn) Spawn(args ...string) error {
 
 	// launch a `thelma update` command in the background
 	// ref: https://groups.google.com/g/golang-nuts/c/shST-SDqIp4
-	executable, err := root.PathToRunningThelmaExecutable()
+	executable, err := utils.PathToRunningThelmaExecutable()
 	if err != nil {
 		return err
 	}

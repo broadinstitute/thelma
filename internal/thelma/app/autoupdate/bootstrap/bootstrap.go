@@ -23,6 +23,7 @@ package bootstrap
 import (
 	_ "embed"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/releases"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
@@ -147,7 +148,7 @@ func (b *bootstrapper) writeThelmaInitFile(opts options) error {
 	ctx := thelmaInitTemplateContext{
 		AddToolsToPath:        opts.addToolsToPath,
 		EnableShellCompletion: opts.enableShellCompletion,
-		CurrentReleaseSymlink: b.root.ReleasesDir().CurrentSymlink(),
+		CurrentReleaseSymlink: releases.CurrentReleaseSymlink(b.root),
 		ShellCompletionFile:   b.completionFile,
 	}
 	log.Info().Msgf("Writing shell init script to %s...", b.initFile)
@@ -163,7 +164,7 @@ func (b *bootstrapper) writeThelmaShellCompletionFile() error {
 		return fmt.Errorf("error generating shell complation file %s: %v", file, err)
 	}
 
-	executable, err := root.PathToRunningThelmaExecutable()
+	executable, err := utils.PathToRunningThelmaExecutable()
 	if err != nil {
 		return fmt.Errorf("error generating shell completion file %s: %v", file, err)
 	}

@@ -17,20 +17,20 @@ func (_m *Prompt) EXPECT() *Prompt_Expecter {
 	return &Prompt_Expecter{mock: &_m.Mock}
 }
 
-// Confirm provides a mock function with given fields: message, defaultValue
-func (_m *Prompt) Confirm(message string, defaultValue bool) (bool, error) {
-	ret := _m.Called(message, defaultValue)
+// Confirm provides a mock function with given fields: message, defaultYes
+func (_m *Prompt) Confirm(message string, defaultYes bool) (bool, error) {
+	ret := _m.Called(message, defaultYes)
 
 	var r0 bool
 	if rf, ok := ret.Get(0).(func(string, bool) bool); ok {
-		r0 = rf(message, defaultValue)
+		r0 = rf(message, defaultYes)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(string, bool) error); ok {
-		r1 = rf(message, defaultValue)
+		r1 = rf(message, defaultYes)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -45,12 +45,12 @@ type Prompt_Confirm_Call struct {
 
 // Confirm is a helper method to define mock.On call
 //   - message string
-//   - defaultValue bool
-func (_e *Prompt_Expecter) Confirm(message interface{}, defaultValue interface{}) *Prompt_Confirm_Call {
-	return &Prompt_Confirm_Call{Call: _e.mock.On("Confirm", message, defaultValue)}
+//   - defaultYes bool
+func (_e *Prompt_Expecter) Confirm(message interface{}, defaultYes interface{}) *Prompt_Confirm_Call {
+	return &Prompt_Confirm_Call{Call: _e.mock.On("Confirm", message, defaultYes)}
 }
 
-func (_c *Prompt_Confirm_Call) Run(run func(message string, defaultValue bool)) *Prompt_Confirm_Call {
+func (_c *Prompt_Confirm_Call) Run(run func(message string, defaultYes bool)) *Prompt_Confirm_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(bool))
 	})

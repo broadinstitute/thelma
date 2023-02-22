@@ -15,13 +15,13 @@ import (
 
 // RealRunner is an implementation of the Runner interface that actually executes shell commands
 type RealRunner struct {
-	toolbox toolbox.Toolbox
+	toolFinder toolbox.ToolFinder
 }
 
 // NewRunner constructs a new Runner
-func NewRunner(toolbox toolbox.Toolbox) Runner {
+func NewRunner(toolFinder toolbox.ToolFinder) Runner {
 	return &RealRunner{
-		toolbox: toolbox,
+		toolFinder: toolFinder,
 	}
 }
 
@@ -77,7 +77,7 @@ func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cm
 	stderr = NewLoggingWriter(opts.OutputLogLevel, logger.With().Str("stream", "stderr").Logger(), "[err] ", errWriter)
 
 	// Convert our command arguments to exec.Cmd struct
-	prog := r.toolbox.ExpandPath(cmd.Prog)
+	prog := r.toolFinder.ExpandPath(cmd.Prog)
 	execCmd := exec.Command(prog, cmd.Args...)
 	execCmd.Dir = cmd.Dir
 	if !cmd.PristineEnv {

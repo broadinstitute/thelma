@@ -38,11 +38,9 @@ type Root interface {
 	// ConfigDir returns the path to Thelma config directory
 	ConfigDir() string
 	// ReleasesDir returns the Thelma installation directory ($ROOT/releases)
-	ReleasesDir() ReleasesDir
+	ReleasesDir() string
 	// ShellDir path where Thelma generates shell scripts and utilities ($ROOT/shell)
 	ShellDir() string
-	// ToolsDir returns the path to Thelma's bundled third-party tool binaries, such as Helm, Helmfile, etc.
-	ToolsDir() (ToolsDir, error)
 	// CreateDirectories create directories if they do not exist. Will be called as part of Thelma initialization
 	CreateDirectories() error
 }
@@ -107,24 +105,12 @@ func (r root) ConfigDir() string {
 	return path.Join(r.Dir(), "config")
 }
 
-func (r root) ReleasesDir() ReleasesDir {
-	return releasesDir{
-		dir: path.Join(r.Dir(), "releases"),
-	}
+func (r root) ReleasesDir() string {
+	return path.Join(r.Dir(), "releases")
 }
 
 func (r root) ShellDir() string {
 	return path.Join(r.Dir(), "shell")
-}
-
-func (r root) ToolsDir() (ToolsDir, error) {
-	dir, err := findToolsDir(r.ReleasesDir())
-	if err != nil {
-		return nil, err
-	}
-	return toolsDir{
-		dir: dir,
-	}, nil
 }
 
 func (r root) CreateDirectories() error {
@@ -133,7 +119,7 @@ func (r root) CreateDirectories() error {
 		r.CredentialsDir(),
 		r.ConfigDir(),
 		r.LogDir(),
-		r.ReleasesDir().ReleasesRoot(),
+		r.ReleasesDir(),
 		r.ShellDir(),
 	}
 	for _, dir := range dirs {

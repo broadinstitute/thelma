@@ -4,6 +4,7 @@ import (
 	"fmt"
 	config "github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/prompt/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
@@ -15,9 +16,6 @@ import (
 	"testing"
 )
 
-// Define the suite, and absorb the built-in basic suite
-// functionality from testify - including a T() method which
-// returns the current testing context
 type BootstrapSuite struct {
 	suite.Suite
 	root                      root.Root
@@ -31,8 +29,10 @@ type BootstrapSuite struct {
 	initScriptPath            string
 }
 
-// Make sure that VariableThatShouldStartAtFive is set to five
-// before each test
+func TestBootstrapper(t *testing.T) {
+	suite.Run(t, new(BootstrapSuite))
+}
+
 func (suite *BootstrapSuite) SetupTest() {
 	var err error
 
@@ -162,12 +162,6 @@ func (suite *BootstrapSuite) TestBootstrapBacksUpZshrc() {
 	suite.assertFileContent(backupFile, "A fake zshrc with stuff in it\n")
 }
 
-// In order for 'go test' to run this suite, we need to create
-// a normal test function and pass our suite to suite.Run
-func TestBootstrapper(t *testing.T) {
-	suite.Run(t, new(BootstrapSuite))
-}
-
 func (suite *BootstrapSuite) setUserInputShellCompletion(shellCompletion bool) {
 	suite.prompt.EXPECT().Confirm(enableShellCompletionPrompt, true).Return(shellCompletion, nil)
 }
@@ -177,7 +171,7 @@ func (suite *BootstrapSuite) setUserInputAddToolsToPath(addToolsToPath bool) {
 }
 
 func (suite *BootstrapSuite) expectShellCompletionCommand(output string) {
-	executable, err := root.PathToRunningThelmaExecutable()
+	executable, err := utils.PathToRunningThelmaExecutable()
 	require.NoError(suite.T(), err)
 	suite.runner.ExpectCmd(shell.Command{
 		Prog: executable,

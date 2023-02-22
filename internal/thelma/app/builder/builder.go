@@ -2,7 +2,7 @@ package builder
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app/installer"
+	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
@@ -181,7 +181,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize installer
-	_installer, err := installer.New(cfg, _clients.Google(), thelmaRoot, shellRunner, _scratch)
+	_installer, err := autoupdate.New(cfg, _clients.Google(), thelmaRoot, shellRunner, _scratch)
 	if err != nil {
 		return nil, err
 	}
@@ -217,16 +217,12 @@ func (b *thelmaBuilder) buildShellRunner(thelmaRoot root.Root) (shell.Runner, er
 	if b.shellRunner != nil {
 		return b.shellRunner, nil
 	}
-	_toolsdir, err := thelmaRoot.ToolsDir()
-	if err != nil {
-		return nil, err
-	}
-	_toolbox, err := toolbox.New(_toolsdir.Bin())
+	finder, err := toolbox.NewToolFinder()
 	if err != nil {
 		return nil, err
 	}
 
-	return shell.NewRunner(_toolbox), nil
+	return shell.NewRunner(finder), nil
 }
 
 func (b *thelmaBuilder) buildStateLoader(cfg config.Config, clients clients.Clients) (terra.StateLoader, error) {
