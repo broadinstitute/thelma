@@ -123,7 +123,7 @@ build: init runtime-deps runtime-deps-symlink ## Compile thelma into output dire
 	GOARCH=${TARGET_ARCH} \
 	go build \
 	-ldflags="-X '${VERSION_IMPORT_PATH}.Version=${VERSION}' -X '${VERSION_IMPORT_PATH}.GitSha=${GIT_SHA}' -X '${VERSION_IMPORT_PATH}.BuildTimestamp=${BUILD_TIMESTAMP}'" \
-	-o ${BIN_DIR}/ ./...
+	-o ${BIN_DIR}/ ./cmd/thelma
 
 release: runtime-deps build ## Assemble thelma binary + runtime dependencies into a tarball distribution. Set OS and ARCH to desired platform.
 	# Clean staging dir

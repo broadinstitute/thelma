@@ -60,10 +60,16 @@ func New(thelmaConfig config.Config, bucketFactory api.BucketFactory, root root.
 		return installer.New(releasesDir, releasesBucket), nil
 	})
 
+	_spawn := spawn.New(root, func(options *spawn.Options) {
+		// write spawned update process logs to ~/.thelma/logs/update.out and ~/.thelma/logs/update.err
+		options.LogFileName = updateCommandName
+	})
+
 	return &autoupdate{
 		config:       cfg,
 		installer:    _installer,
 		bootstrapper: bootstrapper,
+		spawn:        _spawn,
 	}, nil
 }
 
@@ -71,6 +77,7 @@ type autoupdate struct {
 	config       updateConfig
 	installer    lazy.LazyE[installer.Installer]
 	bootstrapper bootstrap.Bootstrapper
+	spawn        spawn.Spawn
 }
 
 func (a *autoupdate) Update() error {
@@ -92,8 +99,7 @@ func (a *autoupdate) StartBackgroundUpdateIfEnabled() error {
 		return nil
 	}
 
-	_spawn := spawn.New()
-	if _spawn.CurrentProcessIsSpawn() {
+	if a.spawn.CurrentProcessIsSpawn() {
 		// never start a background process from a background process (infinite loops are bad)
 		return nil
 	}
@@ -116,7 +122,7 @@ func (a *autoupdate) StartBackgroundUpdateIfEnabled() error {
 	}
 
 	// launch "thelma update" in the background
-	return _spawn.Spawn(updateCommandName)
+	return a.spawn.Spawn(updateCommandName)
 }
 
 func (a *autoupdate) Bootstrap() error {
