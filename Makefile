@@ -169,6 +169,8 @@ export MOCKERY_WITH_EXPECTER=true
 
 mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/app/scratch --name Scratch --output=./internal/thelma/app/scratch/mocks --outpkg mocks --filename scratch.go
+	mockery --dir ./internal/thelma/app/autoupdate/releasebucket --name ReleaseBucket --output=./internal/thelma/app/autoupdate/releasebucket/mocks --outpkg mocks --filename release_bucket.go
+	mockery --dir ./internal/thelma/app/autoupdate/releases --name Dir --output=./internal/thelma/app/autoupdate/releases/mocks --outpkg mocks --filename dir.go
 	mockery --dir ./internal/thelma/cli --name RunContext --output=./internal/thelma/cli/mocks --outpkg mocks --filename run_context.go
 	mockery --dir ./internal/thelma/clients/google --name Clients --output=./internal/thelma/clients/google/mocks --outpkg mocks --filename clients.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Bucket --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename bucket.go
