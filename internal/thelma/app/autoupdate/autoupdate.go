@@ -23,9 +23,10 @@ const configKey = "autoupdate"
 const updateCommandName = "update"
 
 type updateConfig struct {
-	Enabled bool   `default:"true"`            // if false, do not perform automatic updates
-	Tag     string `default:"latest"`          // which Thelma build tag to follow for auto-updates
-	Bucket  string `default:"thelma-releases"` // name of GCS bucket that contains Thelma releases
+	Enabled      bool   `default:"true"`            // if false, do not perform automatic updates
+	Tag          string `default:"latest"`          // which Thelma build tag to follow for auto-updates
+	Bucket       string `default:"thelma-releases"` // name of GCS bucket that contains Thelma releases
+	KeepReleases int    `default:"10"`              // number of old Thelma releases to keep around in the ~/.releases dir
 }
 
 type AutoUpdate interface {
@@ -57,7 +58,9 @@ func New(thelmaConfig config.Config, bucketFactory api.BucketFactory, root root.
 
 		releasesDir := releases.NewDir(root.ReleasesDir(), scratch)
 
-		return installer.New(releasesDir, releasesBucket), nil
+		return installer.New(releasesDir, releasesBucket, func(options *installer.Options) {
+			options.KeepReleases = cfg.KeepReleases
+		}), nil
 	})
 
 	_spawn := spawn.New(root, func(options *spawn.Options) {

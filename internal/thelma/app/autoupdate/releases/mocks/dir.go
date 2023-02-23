@@ -17,6 +17,43 @@ func (_m *Dir) EXPECT() *Dir_Expecter {
 	return &Dir_Expecter{mock: &_m.Mock}
 }
 
+// CleanupOldReleases provides a mock function with given fields: keepReleases
+func (_m *Dir) CleanupOldReleases(keepReleases int) error {
+	ret := _m.Called(keepReleases)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(int) error); ok {
+		r0 = rf(keepReleases)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Dir_CleanupOldReleases_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOldReleases'
+type Dir_CleanupOldReleases_Call struct {
+	*mock.Call
+}
+
+// CleanupOldReleases is a helper method to define mock.On call
+//   - keepReleases int
+func (_e *Dir_Expecter) CleanupOldReleases(keepReleases interface{}) *Dir_CleanupOldReleases_Call {
+	return &Dir_CleanupOldReleases_Call{Call: _e.mock.On("CleanupOldReleases", keepReleases)}
+}
+
+func (_c *Dir_CleanupOldReleases_Call) Run(run func(keepReleases int)) *Dir_CleanupOldReleases_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *Dir_CleanupOldReleases_Call) Return(_a0 error) *Dir_CleanupOldReleases_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // CopyUnpackedArchive provides a mock function with given fields: unpackDir
 func (_m *Dir) CopyUnpackedArchive(unpackDir string) error {
 	ret := _m.Called(unpackDir)

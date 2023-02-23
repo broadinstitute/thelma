@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"os"
 	"path"
+	"sort"
 	"testing"
 )
 
@@ -121,6 +122,103 @@ func (suite *DirSuite) TestWithInstallerLock() {
 	require.NoError(suite.T(), err)
 	pid := os.Getpid()
 	assert.Equal(suite.T(), fmt.Sprintf("%d", pid), string(content))
+}
+
+func (suite *DirSuite) TestCleanupOldReleases() {
+	testCases := []struct {
+		name            string
+		localVersions   []string
+		currentVersion  string
+		keepReleases    int
+		expectRemaining []string
+	}{
+		{
+			name: "empty case",
+		},
+		{
+			name:            "current version should not be deleted even if keep == 0",
+			localVersions:   []string{"v1.2.3"},
+			currentVersion:  "v1.2.3",
+			keepReleases:    0,
+			expectRemaining: []string{"v1.2.3"},
+		},
+		{
+			name:            "5 versions, all should be deleted if keep == 0 and no current version",
+			localVersions:   []string{"v1.2.3", "v1.2.4", "v1.2.5", "v1.2.6", "v1.2.7"},
+			currentVersion:  "",
+			keepReleases:    0,
+			expectRemaining: []string{},
+		},
+		{
+			name:            "3 versions, keep releases = 1, should delete 1 release",
+			localVersions:   []string{"v1.2.3", "v1.2.4", "v1.2.5"},
+			currentVersion:  "v1.2.5",
+			keepReleases:    1,
+			expectRemaining: []string{"v1.2.4", "v1.2.5"},
+		},
+		{
+			name:            "should skip current even if not most recent release",
+			localVersions:   []string{"v1.2.3", "v1.2.4", "v1.2.5", "v1.2.6", "v1.2.7"},
+			currentVersion:  "v1.2.4",
+			keepReleases:    2,
+			expectRemaining: []string{"v1.2.4", "v1.2.6", "v1.2.7"},
+		},
+		{
+			name:            "5 versions, keep releases = 4, should keep all",
+			localVersions:   []string{"v1.2.3", "v1.2.4", "v1.2.5", "v1.2.6", "v1.2.7"},
+			currentVersion:  "v1.2.3",
+			keepReleases:    4,
+			expectRemaining: []string{"v1.2.3", "v1.2.4", "v1.2.5", "v1.2.6", "v1.2.7"},
+		},
+		{
+			name:            "should ignore invalid dirs",
+			localVersions:   []string{"v1.2.3", "wtf", "ignoreme", "v1.2.6", "v1.2.7", "v1.2.8"},
+			currentVersion:  "v1.2.6",
+			keepReleases:    2,
+			expectRemaining: []string{"wtf", "ignoreme", "v1.2.6", "v1.2.7", "v1.2.8"},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			require.NoError(suite.T(), os.RemoveAll(suite.dirPath))
+			require.NoError(suite.T(), os.MkdirAll(suite.dirPath, 0755))
+
+			for _, version := range tc.localVersions {
+				suite.CreateReleaseDir(version)
+			}
+			if tc.currentVersion != "" {
+				suite.SetCurrentSymlink(tc.currentVersion)
+			}
+			require.NoError(suite.T(), suite.dir.CleanupOldReleases(tc.keepReleases))
+
+			var remainingDirs []string
+			entries, err := os.ReadDir(suite.dirPath)
+			require.NoError(suite.T(), err)
+
+			for _, entry := range entries {
+				if !entry.IsDir() {
+					continue
+				}
+				remainingDirs = append(remainingDirs, entry.Name())
+			}
+
+			if tc.currentVersion != "" {
+				// make sure cleanup did not remove the current symlink
+				assert.True(suite.T(), suite.dir.CurrentVersionMatches(tc.currentVersion))
+			}
+
+			if len(tc.expectRemaining) == 0 {
+				// separate check for len 0 to avoid nil/empty slice comparison failing assert.Equal
+				assert.Empty(suite.T(), remainingDirs)
+				return
+			}
+
+			sort.Strings(tc.expectRemaining)
+			sort.Strings(remainingDirs)
+			assert.Equal(suite.T(), tc.expectRemaining, remainingDirs)
+		})
+	}
 }
 
 func (suite *DirSuite) CreateFakeUnpackedReleaseArchive(version string) string {

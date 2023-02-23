@@ -115,3 +115,12 @@ func PathToRunningThelmaExecutable() (string, error) {
 
 	return executable, nil
 }
+
+// CollateOptions utility for collating option functions into a struct
+func CollateOptions[T any](optFns ...func(*T)) T {
+	var options T
+	for _, optFn := range optFns {
+		optFn(&options)
+	}
+	return options
+}

@@ -11,6 +11,8 @@ import (
 	"testing"
 )
 
+const keepReleases = 8
+
 type InstallerSuite struct {
 	suite.Suite
 	bucket    *releasebucketmocks.ReleaseBucket
@@ -27,11 +29,13 @@ func (suite *InstallerSuite) SetupTest() {
 
 	bucket := releasebucketmocks.NewReleaseBucket(t)
 	dir := releasesmocks.NewDir(t)
-	installer := New(dir, bucket)
+	_installer := New(dir, bucket, func(options *Options) {
+		options.KeepReleases = keepReleases
+	})
 
 	suite.bucket = bucket
 	suite.dir = dir
-	suite.installer = installer
+	suite.installer = _installer
 }
 
 func (suite *InstallerSuite) Test_ResolveVersions_UpdatedNeeded() {
@@ -76,6 +80,8 @@ func (suite *InstallerSuite) Test_UpdateThelma() {
 	suite.dir.EXPECT().CopyUnpackedArchive(tmpdir).Return(nil)
 
 	suite.dir.EXPECT().UpdateCurrentReleaseSymlink("v2.0.0").Return(nil)
+
+	suite.dir.EXPECT().CleanupOldReleases(keepReleases).Return(nil)
 
 	require.NoError(suite.T(), suite.installer.UpdateThelma("latest"))
 }

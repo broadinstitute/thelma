@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/releasebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/releases"
+	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,16 +33,23 @@ type Installer interface {
 	UpdateThelma(versionOrTag string) error
 }
 
-func New(releasesDir releases.Dir, bucket releasebucket.ReleaseBucket) Installer {
+type Options struct {
+	// KeepReleases number of old releases to keep in ~/.thelma/releases directory
+	KeepReleases int
+}
+
+func New(releasesDir releases.Dir, bucket releasebucket.ReleaseBucket, options ...func(*Options)) Installer {
 	return &installer{
-		dir:    releasesDir,
-		bucket: bucket,
+		dir:     releasesDir,
+		bucket:  bucket,
+		options: utils.CollateOptions(options...),
 	}
 }
 
 type installer struct {
-	dir    releases.Dir
-	bucket releasebucket.ReleaseBucket
+	dir     releases.Dir
+	bucket  releasebucket.ReleaseBucket
+	options Options
 }
 
 func (i *installer) ResolveVersions(versionOrTag string) (ResolvedVersions, error) {
@@ -113,6 +121,10 @@ func (i *installer) updateThelmaUnsafe(versionOrTag string) error {
 
 	if err = i.dir.UpdateCurrentReleaseSymlink(targetVersion); err != nil {
 		return fmt.Errorf("error installing Thelma %s: %v", targetVersion, err)
+	}
+
+	if err = i.dir.CleanupOldReleases(i.options.KeepReleases); err != nil {
+		return fmt.Errorf("error cleaning up release directory: %v", err)
 	}
 
 	log.Info().Msgf("Thelma has been updated to %s", targetVersion)

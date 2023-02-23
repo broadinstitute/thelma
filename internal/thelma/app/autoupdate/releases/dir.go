@@ -8,9 +8,11 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/flock"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/mod/semver"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -39,6 +41,8 @@ type Dir interface {
 	CopyUnpackedArchive(unpackDir string) error
 	// WithInstallerLock executes a callback function while holding the release installer lock
 	WithInstallerLock(fn func() error) error
+	// CleanupOldReleases cleans up all but N most recent releases
+	CleanupOldReleases(keepReleases int) error
 }
 
 func NewDir(dir string, scratch scratch.Scratch) Dir {
@@ -122,6 +126,59 @@ func (r *releasesDir) CopyUnpackedArchive(unpackDir string) error {
 
 	if err = os.Rename(unpackDir, targetDir); err != nil {
 		return fmt.Errorf("error moving unpacked release archive %s to release directory %s: %v", unpackDir, targetDir, err)
+	}
+
+	return nil
+}
+
+func (r *releasesDir) CleanupOldReleases(keepReleases int) error {
+	entries, err := os.ReadDir(r.dir)
+	if err != nil {
+		return fmt.Errorf("error cleaning up old Thelma releases: %v", err)
+	}
+
+	currentVersion, err := r.CurrentVersion()
+	if err != nil {
+		log.Debug().Err(err).Msgf("error resolving current version of Thelma")
+	}
+
+	var versions []string
+	for _, entry := range entries {
+		if entry.Name() == currentSymlink {
+			continue
+		}
+		if entry.Name() == currentVersion {
+			continue
+		}
+		if !entry.IsDir() {
+			log.Debug().Msgf("won't cleanup unexpected file in releases dir: %s", entry.Name())
+			continue
+		}
+		if !semver.IsValid(entry.Name()) {
+			log.Debug().Msgf("won't cleanup unexpected dir in releases dir: %s", entry.Name())
+			continue
+		}
+		versions = append(versions, entry.Name())
+	}
+
+	// sort versions in order of increasing semantic versions (older versions first)
+	sort.Slice(versions, func(i, j int) bool {
+		return semver.Compare(versions[i], versions[j]) < 0
+	})
+
+	if len(versions) <= keepReleases {
+		// no versions to delete
+		return nil
+	}
+
+	toDelete := len(versions) - keepReleases
+	for i := 0; i < toDelete; i++ {
+		version := versions[i]
+		targetDir := r.pathForVersion(version)
+		log.Info().Msgf("Deleting old Thelma release directory: %s", targetDir)
+		if err = os.RemoveAll(targetDir); err != nil {
+			return fmt.Errorf("error cleaning up old Thelma releases: %v", err)
+		}
 	}
 
 	return nil
