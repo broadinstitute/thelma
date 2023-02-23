@@ -12,15 +12,15 @@ func Test_Confirm(t *testing.T) {
 	testCases := []struct {
 		name           string
 		question       string
-		defaultValue   bool
+		defaultYes     bool
 		inputLines     []string
 		expectedAnswer bool
 		expectedOutput string
 	}{
 		{
-			name:         "default false",
-			question:     "Do the thing?",
-			defaultValue: false,
+			name:       "default false",
+			question:   "Do the thing?",
+			defaultYes: false,
 			inputLines: []string{
 				"\n",
 			},
@@ -29,9 +29,9 @@ func Test_Confirm(t *testing.T) {
 Do the thing? [y/N] `,
 		},
 		{
-			name:         "default true",
-			question:     "Do the thing?",
-			defaultValue: true,
+			name:       "default true",
+			question:   "Do the thing?",
+			defaultYes: true,
 			inputLines: []string{
 				"\n",
 			},
@@ -40,9 +40,9 @@ Do the thing? [y/N] `,
 Do the thing? [Y/n] `,
 		},
 		{
-			name:         "input matches default true",
-			question:     "Do the thing?",
-			defaultValue: true,
+			name:       "input matches default true",
+			question:   "Do the thing?",
+			defaultYes: true,
 			inputLines: []string{
 				"YES\n",
 			},
@@ -51,9 +51,9 @@ Do the thing? [Y/n] `,
 Do the thing? [Y/n] `,
 		},
 		{
-			name:         "non-default false - NO",
-			question:     "Do the thing?",
-			defaultValue: true,
+			name:       "non-default false - NO",
+			question:   "Do the thing?",
+			defaultYes: true,
 			inputLines: []string{
 				"NO\n",
 			},
@@ -62,9 +62,9 @@ Do the thing? [Y/n] `,
 Do the thing? [Y/n] `,
 		},
 		{
-			name:         "non-default true - y",
-			question:     "Do the thing?",
-			defaultValue: false,
+			name:       "non-default true - y",
+			question:   "Do the thing?",
+			defaultYes: false,
 			inputLines: []string{
 				"y\n",
 			},
@@ -73,9 +73,9 @@ Do the thing? [Y/n] `,
 Do the thing? [y/N] `,
 		},
 		{
-			name:         "non-default true - Y",
-			question:     "Do the thing?",
-			defaultValue: false,
+			name:       "non-default true - Y",
+			question:   "Do the thing?",
+			defaultYes: false,
 			inputLines: []string{
 				"Y\n",
 			},
@@ -84,9 +84,9 @@ Do the thing? [y/N] `,
 Do the thing? [y/N] `,
 		},
 		{
-			name:         "loops until valid input supplied",
-			question:     "Do the thing?",
-			defaultValue: false,
+			name:       "loops until valid input supplied",
+			question:   "Do the thing?",
+			defaultYes: false,
 			inputLines: []string{
 				"blah\n",
 				"ye\n",
@@ -124,7 +124,9 @@ Do the thing? [y/N] `,
 				require.NoError(t, pipeWriter.Close())
 			}()
 
-			answer, err := p.Confirm(tc.question, tc.defaultValue)
+			answer, err := p.Confirm(tc.question, func(options *ConfirmOptions) {
+				options.DefaultYes = tc.defaultYes
+			})
 
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedAnswer, answer)

@@ -117,10 +117,9 @@ func PathToRunningThelmaExecutable() (string, error) {
 }
 
 // CollateOptions utility for collating option functions into a struct
-func CollateOptions[T any](optFns ...func(*T)) T {
-	var options T
+func CollateOptions[T any](defaults T, optFns ...func(*T)) T {
 	for _, optFn := range optFns {
-		optFn(&options)
+		optFn(&defaults)
 	}
-	return options
+	return defaults
 }

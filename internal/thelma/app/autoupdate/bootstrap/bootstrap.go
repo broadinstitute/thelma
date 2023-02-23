@@ -38,8 +38,8 @@ import (
 const thelmaInitializationFile = "init.zsh"
 const thelmaShellCompletionFile = "completion.zsh"
 
-const addToolsToPathPrompt = "Prepend PATH with thelma’s bundled tools" +
-	" (this includes kubectl, helm, helmfile, vault client, and more)?"
+const addToolsToPathPrompt = "Prepend PATH with Thelma’s bundled tools" +
+	" (Helm, kubectl, and more)?"
 
 const enableShellCompletionPrompt = "Enable shell completion for Thelma commands?"
 
@@ -124,15 +124,20 @@ func (b *bootstrapper) Bootstrap() error {
 }
 
 func (b *bootstrapper) promptUserForOptions() (opts options, err error) {
-	opts.addToolsToPath, err = b.prompt.Confirm(addToolsToPathPrompt, true)
+	if err = b.prompt.Newline(); err != nil {
+		return
+	}
+	opts.addToolsToPath, err = b.prompt.Confirm(addToolsToPathPrompt)
 	if err != nil {
 		return
 	}
-	opts.enableShellCompletion, err = b.prompt.Confirm(enableShellCompletionPrompt, true)
+	opts.enableShellCompletion, err = b.prompt.Confirm(enableShellCompletionPrompt)
 	if err != nil {
 		return
 	}
-
+	if err = b.prompt.Newline(); err != nil {
+		return
+	}
 	return
 }
 
