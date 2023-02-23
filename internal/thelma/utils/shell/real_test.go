@@ -213,7 +213,7 @@ func TestRunExpandsPathToToolbox(t *testing.T) {
 	// create an alternative `ls` implementation in the toolbox and make sure it is executed instead of real `ls`
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(path.Join(dir, "ls"), []byte("#!/bin/bash\necho 1234567890\n"), 0755))
-	_toolbox, err := toolbox.New(dir)
+	_toolbox, err := toolbox.NewToolFinderWithDir(dir)
 	require.NoError(t, err)
 	runner := NewRunner(_toolbox)
 
@@ -233,8 +233,7 @@ func TestRunExpandsPathToToolbox(t *testing.T) {
 }
 
 func newRunner(t *testing.T) Runner {
-	dir := t.TempDir()
-	_toolbox, err := toolbox.New(dir)
+	toolFinder, err := toolbox.NewToolFinderWithDir(t.TempDir())
 	require.NoError(t, err)
-	return NewRunner(_toolbox)
+	return NewRunner(toolFinder)
 }

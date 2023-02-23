@@ -4,6 +4,8 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -71,4 +73,54 @@ func FileExists(file string) (bool, error) {
 // Nullable is a utility to turn a value into a pointer to that value
 func Nullable[T any](val T) *T {
 	return &val
+}
+
+// CloseWarn gracefully handle Close() error when a prior error is more salient
+func CloseWarn(closer io.Closer, err error) error {
+	closeErr := closer.Close()
+	if err == nil {
+		return closeErr
+	}
+	if closeErr == nil {
+		return err
+	}
+	log.Error().Err(closeErr).Msg("close error")
+	return err
+}
+
+// PathToRunningThelmaExecutable returns the path to the currently-running
+// Thelma binary executable.
+// Note that this could be _outside_ Thelma's configured root directory
+// (i.e., not ~/.thelma/releases/current/bin).
+// For example:
+//   - During initial installation, Thelma is run out of Thelma release archive
+//     that is unpacked into a temp directory.
+//   - In CI pipelines, Thelma is run out of a well-known path on it's Docker image
+//     /thelma/bin/thelma
+//   - When Thelma is built locally during development, it is run out of the build
+//     output directory, ./output/bin/thelma
+//
+// Also note that this might not be a running Thelma binary at all, for example
+// if this code is executed from a unit test (command will be the `go` executable)
+func PathToRunningThelmaExecutable() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("error finding path to currently running executable: %v", err)
+	}
+
+	executable, err = filepath.EvalSymlinks(executable)
+	if err != nil {
+		return "", fmt.Errorf("error finding path to currently running executable: %v", err)
+	}
+
+	return executable, nil
+}
+
+// CollateOptions utility for collating option functions into a struct
+func CollateOptions[T any](optFns ...func(*T)) T {
+	var options T
+	for _, optFn := range optFns {
+		optFn(&options)
+	}
+	return options
 }

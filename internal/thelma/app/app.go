@@ -2,6 +2,7 @@
 package app
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	_ "github.com/broadinstitute/thelma/internal/thelma/app/logging" // import logging for side effects (trigger bootstrapping)
@@ -34,6 +35,8 @@ type ThelmaApp interface {
 	Config() config.Config
 	// Credentials returns credential manager object for this ThelmaApp
 	Credentials() credentials.Credentials
+	// AutoUpdate returns the installer for this ThelmaApp
+	AutoUpdate() autoupdate.AutoUpdate
 	// Ops returns the Ops interface for this ThelmaApp
 	Ops() ops.Ops
 	// Paths returns Paths for this ThelmaApp
@@ -51,7 +54,7 @@ type ThelmaApp interface {
 }
 
 // New constructs a new ThelmaApp
-func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, shellRunner shell.Runner, stateLoader terra.StateLoader, manageSingletons bool) (ThelmaApp, error) {
+func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, installer autoupdate.AutoUpdate, scratch scratch.Scratch, shellRunner shell.Runner, stateLoader terra.StateLoader, manageSingletons bool) (ThelmaApp, error) {
 	app := &thelmaApp{}
 
 	// Initialize paths
@@ -61,18 +64,13 @@ func New(cfg config.Config, creds credentials.Credentials, clients clients.Clien
 	}
 	app.paths = _paths
 
-	// Initialize scratch
-	_scratch, err := scratch.NewScratch(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	return &thelmaApp{
 		clients:          clients,
 		config:           cfg,
 		credentials:      creds,
+		installer:        installer,
 		paths:            _paths,
-		scratch:          _scratch,
+		scratch:          scratch,
 		shellRunner:      shellRunner,
 		stateLoader:      stateLoader,
 		manageSingletons: manageSingletons,
@@ -83,6 +81,7 @@ type thelmaApp struct {
 	clients          clients.Clients
 	config           config.Config
 	credentials      credentials.Credentials
+	installer        autoupdate.AutoUpdate
 	paths            paths.Paths
 	scratch          scratch.Scratch
 	shellRunner      shell.Runner
@@ -100,6 +99,10 @@ func (t *thelmaApp) Config() config.Config {
 
 func (t *thelmaApp) Credentials() credentials.Credentials {
 	return t.credentials
+}
+
+func (t *thelmaApp) AutoUpdate() autoupdate.AutoUpdate {
+	return t.installer
 }
 
 func (t *thelmaApp) Ops() ops.Ops {

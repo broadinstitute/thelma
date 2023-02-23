@@ -2,7 +2,9 @@ package builder
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
+	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"testing"
 
@@ -132,9 +134,9 @@ func (b *thelmaBuilder) UseStateFixture(name statefixtures.FixtureName, t *testi
 func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	rootDir := b.rootDir
 	if rootDir == "" {
-		rootDir = root.DefaultDir()
+		rootDir = root.Lookup()
 	}
-	thelmaRoot := root.New(rootDir)
+	thelmaRoot := root.NewAt(rootDir)
 	if err := thelmaRoot.CreateDirectories(); err != nil {
 		return nil, err
 	}
@@ -172,6 +174,25 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
+	// Initialize scratch
+	_scratch, err := scratch.NewScratch(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize installer
+	_installer, err := autoupdate.New(cfg, _clients.Google(), thelmaRoot, shellRunner, _scratch)
+	if err != nil {
+		return nil, err
+	}
+
+	// start backgrond update, if enabled
+	if b.manageSingletons {
+		if err = _installer.StartBackgroundUpdateIfEnabled(); err != nil {
+			return nil, err
+		}
+	}
+
 	// Initialize metrics
 	if b.manageSingletons {
 		iapToken, err := _clients.IAPToken()
@@ -189,23 +210,19 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize app
-	return app.New(cfg, _credentials, _clients, shellRunner, stateLoader, b.manageSingletons)
+	return app.New(cfg, _credentials, _clients, _installer, _scratch, shellRunner, stateLoader, b.manageSingletons)
 }
 
 func (b *thelmaBuilder) buildShellRunner(thelmaRoot root.Root) (shell.Runner, error) {
 	if b.shellRunner != nil {
 		return b.shellRunner, nil
 	}
-	_toolsdir, err := thelmaRoot.ToolsDir()
-	if err != nil {
-		return nil, err
-	}
-	_toolbox, err := toolbox.New(_toolsdir.Bin())
+	finder, err := toolbox.NewToolFinder()
 	if err != nil {
 		return nil, err
 	}
 
-	return shell.NewRunner(_toolbox), nil
+	return shell.NewRunner(finder), nil
 }
 
 func (b *thelmaBuilder) buildStateLoader(cfg config.Config, clients clients.Clients) (terra.StateLoader, error) {

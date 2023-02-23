@@ -3,6 +3,7 @@ package root
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/env"
+	"github.com/broadinstitute/thelma/internal/thelma/app/name"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -23,7 +24,7 @@ import (
 const envVarSuffix = "ROOT"
 
 // Name of the directory inside user's home directory
-const dirName = ".thelma"
+const dirName = "." + name.Name
 
 type Root interface {
 	// Dir returns the Thelma installation root directory, usually ~/.thelma
@@ -37,33 +38,31 @@ type Root interface {
 	// ConfigDir returns the path to Thelma config directory
 	ConfigDir() string
 	// ReleasesDir returns the Thelma installation directory ($ROOT/releases)
-	ReleasesDir() ReleasesDir
-	// ToolsDir returns the path to Thelma's bundled third-party tool binaries, such as Helm, Helmfile, etc.
-	ToolsDir() (ToolsDir, error)
+	ReleasesDir() string
+	// ShellDir path where Thelma generates shell scripts and utilities ($ROOT/shell)
+	ShellDir() string
 	// CreateDirectories create directories if they do not exist. Will be called as part of Thelma initialization
 	CreateDirectories() error
 }
 
-// Default returns a Root instance rooted at the default directory returned by DefaultDir
-func Default() Root {
-	return root{
-		dir: DefaultDir(),
-	}
+// New returns a new Root instance rooted at the directory returned by Lookup
+func New() Root {
+	return NewAt(Lookup())
 }
 
-// New (FOR TESTING ONLY) returns a Root instance rooted at the given directory
-func New(dir string) Root {
+// NewAt (FOR TESTING ONLY) returns a Root instance rooted at the given directory
+func NewAt(dir string) Root {
 	return root{
 		dir: dir,
 	}
 }
 
-// DefaultDir derives the default Thelma root directory. It will be:
+// Lookup derives the Thelma root directory. It will be:
 // * The value of the THELMA_ROOT env var, if set
 // * If a valid home directory exists for current user, it will be $HOME/.thelma
 // * Else, /tmp/.thelma.<pid> (worst-case fallback option in weird environments)
 // Note that this function identifies the root directory path, but does NOT create the root directory; it may or may not exist.
-func DefaultDir() string {
+func Lookup() string {
 	dir, exists := os.LookupEnv(env.WithEnvPrefix(envVarSuffix))
 	if exists {
 		return dir
@@ -106,20 +105,12 @@ func (r root) ConfigDir() string {
 	return path.Join(r.Dir(), "config")
 }
 
-func (r root) ReleasesDir() ReleasesDir {
-	return releasesDir{
-		dir: path.Join(r.Dir(), "releases"),
-	}
+func (r root) ReleasesDir() string {
+	return path.Join(r.Dir(), "releases")
 }
 
-func (r root) ToolsDir() (ToolsDir, error) {
-	dir, err := findToolsDir(r.ReleasesDir())
-	if err != nil {
-		return nil, err
-	}
-	return toolsDir{
-		dir: dir,
-	}, nil
+func (r root) ShellDir() string {
+	return path.Join(r.Dir(), "shell")
 }
 
 func (r root) CreateDirectories() error {
@@ -128,7 +119,8 @@ func (r root) CreateDirectories() error {
 		r.CredentialsDir(),
 		r.ConfigDir(),
 		r.LogDir(),
-		r.ReleasesDir().Root(),
+		r.ReleasesDir(),
+		r.ShellDir(),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0700); err != nil {

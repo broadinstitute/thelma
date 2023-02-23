@@ -32,15 +32,21 @@ type Options struct {
 func DefaultOptions() Options {
 	return Options{
 		Overrides:  make(map[string]interface{}),
-		ConfigFile: path.Join(root.Default().Dir(), defaultConfigFile),
+		ConfigFile: DefaultConfigFilePath(root.New()),
 		EnvPrefix:  env.EnvPrefix,
 		Profile:    "",
 	}
 }
 
+// DefaultConfigFilePath returns the path to the config file within a given Thelma root directory
+func DefaultConfigFilePath(thelmaRoot root.Root) string {
+	return path.Join(thelmaRoot.Dir(), defaultConfigFile)
+}
+
+// WithThelmaRoot (FOR TESTING ONLY) sets configuration defaults with paths pointing at a custom Thelma root
 func WithThelmaRoot(thelmaRoot root.Root) Option {
 	return func(options *Options) {
-		options.ConfigFile = path.Join(thelmaRoot.Dir(), defaultConfigFile)
+		options.ConfigFile = DefaultConfigFilePath(thelmaRoot)
 	}
 }
 

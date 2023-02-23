@@ -11,13 +11,16 @@ import (
 // flock is a thin wrapper around the open-source flock library with a more user-friendly interface
 
 type Locker interface {
+	// Path return the path of the file used by this Locker instance
+	Path() string
+	// WithLock wait for the lock and then execute the given function
 	WithLock(cb func() error) error
 }
 
 // Options holds necessary attributes for a file lock with a timeout.
 type Options struct {
-	RetryInterval time.Duration // RetryInterval how often to retry lock attempts
-	Timeout       time.Duration // Timeout how long to wait for the lock before giving up
+	RetryInterval time.Duration // RetryInterval how often to retry lock attempts (default 100ms)
+	Timeout       time.Duration // Timeout how long to wait for the lock before giving up (default 5s)
 }
 
 type Option func(*Options)
@@ -41,6 +44,10 @@ func NewLocker(lockFile string, options ...Option) Locker {
 type locker struct {
 	file    string
 	options Options
+}
+
+func (l *locker) Path() string {
+	return l.file
 }
 
 func (l *locker) WithLock(userFn func() error) error {
