@@ -3,6 +3,7 @@ package shell
 import (
 	"bytes"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -13,11 +14,15 @@ import (
 )
 
 // RealRunner is an implementation of the Runner interface that actually executes shell commands
-type RealRunner struct{}
+type RealRunner struct {
+	toolbox toolbox.Toolbox
+}
 
 // NewRunner constructs a new Runner
-func NewRunner() Runner {
-	return &RealRunner{}
+func NewRunner(toolbox toolbox.Toolbox) Runner {
+	return &RealRunner{
+		toolbox: toolbox,
+	}
 }
 
 // Run runs a Command, returning an error if the command exits non-zero
@@ -78,6 +83,11 @@ func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cm
 		execCmd.Env = os.Environ()
 	}
 	execCmd.Env = append(execCmd.Env, cmd.Env...)
+
+	// If a bundled tool is being run (eg. helm, kubectl), replace short name with fully-qualified path.
+	// eg. "kubectl" -> "/Users/jdoe/.thelma/releases/v1.2.3/tools/bin/kubectl"
+	execCmd.Path = r.toolbox.ExpandPath(execCmd.Path)
+
 	execCmd.Stdout = stdout
 	execCmd.Stderr = stderr
 

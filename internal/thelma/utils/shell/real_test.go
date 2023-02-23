@@ -2,7 +2,9 @@ package shell
 
 import (
 	"bytes"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
 	"path"
 	"testing"
@@ -11,8 +13,8 @@ import (
 
 func TestRunSuccess(t *testing.T) {
 	tmpdir := t.TempDir()
+	runner := newRunner(t)
 
-	runner := NewRunner()
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=foo"}
@@ -37,7 +39,7 @@ func TestRunSuccess(t *testing.T) {
 func TestSubprocessSuccess(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=bar"}
@@ -68,7 +70,7 @@ func TestSubprocessSuccess(t *testing.T) {
 func TestSubprocessDuplicateTermination(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=baz"}
@@ -107,7 +109,7 @@ func TestSubprocessDuplicateTermination(t *testing.T) {
 func TestSubprocessUnawaitedTermination(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Env = []string{"VAR1=boo"}
@@ -138,7 +140,7 @@ func TestSubprocessUnawaitedTermination(t *testing.T) {
 }
 
 func TestRunFailed(t *testing.T) {
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "sh"
 	cmd.Args = []string{"-c", "echo oops >&2 && exit 42"}
@@ -158,7 +160,7 @@ func TestRunFailed(t *testing.T) {
 }
 
 func TestRunError(t *testing.T) {
-	runner := NewRunner()
+	runner := newRunner(t)
 	cmd := Command{}
 	cmd.Prog = "echo"
 	cmd.Args = []string{"a", "b"}
@@ -176,7 +178,7 @@ func TestRunError(t *testing.T) {
 }
 
 func TestRunWithOptions(t *testing.T) {
-	runner := NewRunner()
+	runner := newRunner(t)
 	var err error
 
 	stdout := bytes.NewBuffer([]byte{})
@@ -205,4 +207,10 @@ func TestRunWithOptions(t *testing.T) {
 	)
 	assert.Error(t, err)
 	assert.Regexp(t, "does-not-exist.*No such file or directory", stderr.String())
+}
+
+func newRunner(t *testing.T) Runner {
+	_toolbox, err := toolbox.New(t.TempDir())
+	require.NoError(t, err)
+	return NewRunner(_toolbox)
 }

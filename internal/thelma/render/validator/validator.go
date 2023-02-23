@@ -3,7 +3,7 @@ package validator
 import (
 	"fmt"
 
-	"github.com/broadinstitute/thelma/internal/thelma/tools/kubeconform"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubeconform"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 
@@ -69,6 +69,6 @@ func (v validator) GetMode() Mode {
 }
 
 // New returns a new instance of a kubeconform Validator
-func New(mode Mode) validator {
-	return validator{kubeconform.New(shell.NewRunner()), mode}
+func New(mode Mode, runner shell.Runner) Validator {
+	return validator{kubeconform.New(runner), mode}
 }

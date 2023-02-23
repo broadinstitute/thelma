@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -161,9 +162,17 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 	}
 
 	// Initialize shell runner
+	toolsDir, err := thelmaRoot.ToolsDir()
+	if err != nil {
+		return nil, err
+	}
+	_toolbox, err := toolbox.New(toolsDir.Bin())
+	if err != nil {
+		return nil, err
+	}
 	shellRunner := b.shellRunner
 	if shellRunner == nil {
-		shellRunner = shell.NewRunner()
+		shellRunner = shell.NewRunner(_toolbox)
 	}
 
 	// Initialize client factory

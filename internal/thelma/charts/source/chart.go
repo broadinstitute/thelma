@@ -3,8 +3,8 @@ package source
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/semver"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/helm"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/yq"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/yq"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"

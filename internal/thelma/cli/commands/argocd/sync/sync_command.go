@@ -5,7 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/common"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
-	"github.com/broadinstitute/thelma/internal/thelma/tools/argocd"
+	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/spf13/cobra"
 )
 
