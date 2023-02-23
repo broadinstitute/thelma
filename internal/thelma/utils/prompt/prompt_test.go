@@ -25,8 +25,7 @@ func Test_Confirm(t *testing.T) {
 				"\n",
 			},
 			expectedAnswer: false,
-			expectedOutput: `
-Do the thing? [y/N] `,
+			expectedOutput: `Do the thing? [y/N] `,
 		},
 		{
 			name:       "default true",
@@ -36,8 +35,7 @@ Do the thing? [y/N] `,
 				"\n",
 			},
 			expectedAnswer: true,
-			expectedOutput: `
-Do the thing? [Y/n] `,
+			expectedOutput: `Do the thing? [Y/n] `,
 		},
 		{
 			name:       "input matches default true",
@@ -47,8 +45,7 @@ Do the thing? [Y/n] `,
 				"YES\n",
 			},
 			expectedAnswer: true,
-			expectedOutput: `
-Do the thing? [Y/n] `,
+			expectedOutput: `Do the thing? [Y/n] `,
 		},
 		{
 			name:       "non-default false - NO",
@@ -58,8 +55,7 @@ Do the thing? [Y/n] `,
 				"NO\n",
 			},
 			expectedAnswer: false,
-			expectedOutput: `
-Do the thing? [Y/n] `,
+			expectedOutput: `Do the thing? [Y/n] `,
 		},
 		{
 			name:       "non-default true - y",
@@ -69,8 +65,7 @@ Do the thing? [Y/n] `,
 				"y\n",
 			},
 			expectedAnswer: true,
-			expectedOutput: `
-Do the thing? [y/N] `,
+			expectedOutput: `Do the thing? [y/N] `,
 		},
 		{
 			name:       "non-default true - Y",
@@ -80,8 +75,7 @@ Do the thing? [y/N] `,
 				"Y\n",
 			},
 			expectedAnswer: true,
-			expectedOutput: `
-Do the thing? [y/N] `,
+			expectedOutput: `Do the thing? [y/N] `,
 		},
 		{
 			name:       "loops until valid input supplied",
@@ -94,13 +88,9 @@ Do the thing? [y/N] `,
 				"\n",
 			},
 			expectedAnswer: false,
-			expectedOutput: `
-Do the thing? [y/N] Unrecognized input "blah"; please enter "y" or "n"
-
+			expectedOutput: `Do the thing? [y/N] Unrecognized input "blah"; please enter "y" or "n"
 Do the thing? [y/N] Unrecognized input "ye"; please enter "y" or "n"
-
 Do the thing? [y/N] Unrecognized input "noooooo"; please enter "y" or "n"
-
 Do the thing? [y/N] `,
 		},
 	}
