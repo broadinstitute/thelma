@@ -2,224 +2,172 @@ package logging
 
 import (
 	"fmt"
+	"github.com/rs/zerolog"
 	"strings"
 	"unicode"
 )
 
-//
-//// WordWrappingWriter a custom io.Writer that word-wraps
-//// long lines to current terminal width
-//type WordWrappingWriter struct {
-//	// inner writer to send log messages to
-//	inner zerolog.LevelWriter
-//	// maxWidth length at which lines should be word-wrapped
-//	maxWidth int
-//	// wrapPrefix optional prefix to prepend to wrapped lines
-//	wrapPrefix []byte
-//}
-//
-//func NewWordWrappingWriter(inner zerolog.LevelWriter, maxWidth int, wrapPrefix string) zerolog.LevelWriter {
-//	return &WordWrappingWriter{
-//		inner:      inner,
-//		maxWidth:   maxWidth,
-//		wrapPrefix: []byte(wrapPrefix),
-//	}
-//}
-//
-//func (w *WordWrappingWriter) Write(p []byte) (n int, err error) {
-//	panic("TODO")
-//	return w.inner.Write(p)
-//}
-//
-//func (w *WordWrappingWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
-//	panic("TODO")
-//	return w.inner.WriteLevel(level, p)
-//}
-//
-//type wrapper struct {
-//	input      string
-//	i          int
-//	p          int
-//	maxWidth   int
-//	lineOffset int
-//	buf        strings.Builder
-//}
+// WrappingWriter drops log messages below a specified threshold
+type WrappingWriter struct {
+	// inner writer to send log messages to
+	inner zerolog.LevelWriter
+	opts  WrapOptions
+}
+
+func NewWrappingWriter(inner zerolog.LevelWriter, opts WrapOptions) zerolog.LevelWriter {
+	return &WrappingWriter{
+		inner: inner,
+		opts:  opts,
+	}
+}
+
+func (w *WrappingWriter) Write(p []byte) (n int, err error) {
+	wrapped := newWordWrapper(string(p), w.opts).wrap()
+	return w.inner.Write([]byte(wrapped))
+}
+
+func (w *WrappingWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
+	wrapped := newWordWrapper(string(p), w.opts).wrap()
+	return w.inner.WriteLevel(level, []byte(wrapped))
+}
 
 func wrap(input string, maxWidth int, padding string, escapeStringLiteral bool) string {
-	s := []rune(input)
-	var buf strings.Builder
-	i := 0  // i represents end of the current word
-	p := -1 // p represents end of the last word. s[p] will always be the recently copied to the buffer
-	inQuotes := false
-	lineOffset := 0 // offset in buf since start of the last line
+	w := newWordWrapper(input, WrapOptions{
+		maxWidth:                   maxWidth,
+		padding:                    padding,
+		escapeNewlineStringLiteral: escapeStringLiteral,
+	})
 
-	// until we have copied the last character
-	for p < len(s)-1 {
-		i = findEndOfNextWord(s, p)
-		fmt.Printf("P: %d, I: %d\n", p, i)
-
-		wordlen := i - p
-
-		// for long words at the start of a line,
-		// copy the entire word to the buffer,
-		// let the terminal wrap it, and move on.
-		if lineOffset == 0 && wordlen > maxWidth {
-			copyToBuf(s, &buf, p, i)
-			if i != len(s)-1 {
-				// if we aren't at the end of the string, then replace first space after i with a newline
-				buf.WriteByte('\n')
-				i += 1 // increment to skip
-			}
-			p = i
-			continue
-		}
-
-		if containsOddNumberOfQuotes(s, p, i) {
-			inQuotes = !inQuotes
-		}
-
-		if (escapeStringLiteral && inQuotes && (lineOffset+wordlen) > (maxWidth-2)) ||
-			((lineOffset + wordlen) > maxWidth) {
-
-			if escapeStringLiteral {
-				buf.WriteRune(s[p+1])
-				buf.WriteByte('\\')
-			}
-
-			// replace first space after p with a newline
-			buf.WriteByte('\n')
-			p++
-
-			// write padding after newline
-			buf.WriteString(padding)
-			lineOffset = len(padding)
-		}
-
-		copyToBuf(s, &buf, p, i)
-		lineOffset += i - p
-		p = i
-	}
-
-	return buf.String()
+	return w.wrap()
 }
 
-func copyToBuf(s []rune, buf *strings.Builder, startAfter int, endAt int) {
-	for k := startAfter + 1; k <= endAt; k++ {
-		fmt.Printf("WRITING RUNE AT %d\n", k)
-		buf.WriteRune(s[k])
+type wordWrapper struct {
+	opts       WrapOptions      // wrapping options
+	s          []rune           // the original, unwrapped string converted to a rune slice
+	i          int              // in s: start of current word, and the first character not yet copied to buf
+	n          int              // in s: start of the next word
+	quoteCount int              // tracks number of double-quote characters ('"') we've seen so far in s
+	buf        *strings.Builder // buf stores the word-wrapped string we're building as we traverse s
+	lineOffset int              // in buf: number of characters written since last line break
+}
+
+// okay so one way to walk through the string would be to not index on the rune.
+func newWordWrapper(input string, opts WrapOptions) *wordWrapper {
+	return &wordWrapper{
+		opts:       opts,
+		s:          []rune(input),
+		i:          0,
+		n:          0,
+		quoteCount: 0,
+		buf:        &strings.Builder{},
+		lineOffset: 0,
 	}
 }
 
-// return true if substring contains an odd number of double quote '"' characters
-func containsOddNumberOfQuotes(s []rune, startAfter int, endAt int) bool {
+type WrapOptions struct {
+	maxWidth                   int
+	padding                    string
+	escapeNewlineStringLiteral bool
+}
+
+func (w *wordWrapper) wrap() string {
+	for w.nextWord() {
+		fmt.Printf("I: %d N: %d\n", w.i, w.n)
+		if w.wordExceedsMaxWidth() && !w.atStartOfLine() {
+			w.startNewLine()
+		}
+		w.copyWordToBuffer()
+	}
+
+	return w.buf.String()
+}
+
+func (w *wordWrapper) copyWordToBuffer() {
+	for k := w.i; k < w.n; k++ {
+		w.buf.WriteRune(w.s[k])
+	}
+	w.lineOffset += w.wordLength()
+}
+
+func (w *wordWrapper) startNewLine() {
+	if w.opts.escapeNewlineStringLiteral && w.betweenQuoteMarks() {
+		// add ` \` to end of current line before adding a new line
+		w.buf.WriteString(" \\")
+	}
+
+	// if the first character of the current word is whitespace, "replace" it
+	// with the newline by incrementing i before the word is copied.
+	// This way wrapped lines will not start with a leading space.
+	if unicode.IsSpace(w.s[w.i]) {
+		w.i++
+	}
+
+	// write newline and reset line offset
+	w.buf.WriteByte('\n')
+	w.lineOffset = 0
+
+	// write optional padding after newline
+	w.buf.WriteString(w.opts.padding)
+	w.lineOffset += len(w.opts.padding)
+}
+
+func (w *wordWrapper) wordExceedsMaxWidth() bool {
+	maxWidth := w.opts.maxWidth
+	if w.opts.escapeNewlineStringLiteral && w.betweenQuoteMarks() {
+		// take off 2 chars to leave room for escape sequence
+		maxWidth = w.opts.maxWidth - 2
+	}
+	return (w.lineOffset + w.wordLength()) > maxWidth
+}
+
+func (w *wordWrapper) wordLength() int {
+	return w.n - w.i
+}
+
+func (w *wordWrapper) atStartOfLine() bool {
+	return w.lineOffset == 0
+}
+
+func (w *wordWrapper) finished() bool {
+	// last character in s has been copied to buf
+	return w.i == len(w.s)
+}
+
+func (w *wordWrapper) betweenQuoteMarks() bool {
+	return w.quoteCount%2 == 1
+}
+
+// move on to the next word, returning false if we've reached end of s
+func (w *wordWrapper) nextWord() bool {
+	w.i = w.n
+	w.n = findStartOfNextWord(w.s, w.n)
+
+	w.quoteCount += countQuotes(w.s, w.i, w.n)
+
+	return w.i != w.n
+}
+
+func countQuotes(s []rune, startAt int, endBefore int) int {
 	count := 0
-	for i := startAfter + 1; i <= endAt; i++ {
+	for i := startAt + 1; i < endBefore; i++ {
 		if s[i] == '"' {
 			count++
 		}
 	}
-	return count%2 == 1
+	return count
 }
 
-func findEndOfNextWord(s []rune, startAfter int) int {
-	// ignore leading whitespace, that counts as part of the word
-	i := startAfter + 1
+func findStartOfNextWord(s []rune, startAt int) int {
+	// ignore leading whitespace -- counts as part of the word
+	i := startAt
 	for i < len(s) && unicode.IsSpace(s[i]) {
 		i++
 	}
+
+	// we reached a non-whitespace character. read all the non-whitespace characters until we
+	// get to another whitespace character.
 	for i < len(s) && !unicode.IsSpace(s[i]) {
 		i++
 	}
-	return i - 1
+	return i
 }
-
-//
-//func wordWrap(message []byte) []byte {
-//	// we need to convert this bad boy to a string
-//	// convert to string so we can operate on runes instead of bytes
-//	// okay so - if a message has "  foo  "- we want to treat that like a single word, right?
-//	// that's a difference here.
-//	// INF attempt to run command "this is a very long
-//	//     command that needs a wrap" unfortunately failed
-//	//
-//	// okay yeah splitting seems fine.
-//	// do we need to preserve additional (n+1) spaces? seems like a good thing to do.
-//	// so if I have "echo foo    bar" that becomes
-//	// INF sadly the command "echo foo
-//	//         bar" failed
-//	// so one option would be to add a \
-//	// to things in quotes that are split up over multiple lines.
-//	// INF sadly the command "echo 'foo \
-//	//     bar" failed
-//	//
-//	// INF the very long message "here is \
-//	//     a long message" was printed
-//	//
-//	// INF the very long message "here is a lo
-//	// ng message" was printed
-//	//
-//	// INF this is a long message that does
-//	//     not include a quote
-//	// OKAY this works since whitespace is not usually significant.
-//	//
-//	// We can make the prefix configurable.
-//	// THELMA_LOGGING_CONSOLE_WORDWRAP_ENABLED
-//	// THELMA_LOGGING_CONSOLE_WORDWRAP_PAD_WRAPPED_LINE
-//	// THELMA_LOGGING_CONSOLE_WORDWRAP_BACKSLASH_STRING_LITERAL
-//	//
-//	// also, ideally we use the same logic in prompt.
-//	//
-//	// okay so we insert newlines (and maybe a backslash)
-//	// at the end of a word, REPLACING ONE (1) SPACE WITH A NEWLINE.
-//	//
-//	// if we are in quotes, we replace one space with 3 characters: " \\\n"
-//	//
-//	// we have an end-of-last-word counter p (which is known to be within max len and has been copied).
-//	// then we find end-of-next-word i.
-//	//
-//	// i = findEndOfNextWord(s, p)
-//	//
-//	// word = s[p+1:i]
-//	// len = len(word)
-//	//
-//	// if word includes an unescaped quotation mark
-//	//   toggle inQuotes
-//	//
-//	// if inQuotes && (lineOffset + len) < (maxWidth - 2)
-//	//   buf += " \\\n"
-//	//   buf += word
-//	//   lineOffset = len
-//	//   p = i
-//	// else if (lineOffset + len) < maxWidth
-//	//   buf += "\n"
-//	// 	 buf += word
-//	//	 lineOffset = len
-//	//   p = i
-//	// else
-//	//   buf += word
-//	//   lineOffset += len
-//	//   p = i
-//	//
-//	// if inQuotes && p < (maxWidth - 2)
-//	//
-//	//           |
-//	// 01234567890123
-//	// "a long q"
-//	//           |
-//	// 01234567890123
-//	// "a long q "
-//	// "a long \
-//	// q "
-//	//
-//	// "a long quote"
-//	//
-//	//
-//	// message "foo \"bar \\"baz\\" quux\" blah"
-//	m := string(message)
-//
-//	var wrapped []byte
-//	var count int
-//	for i := 0; i < len(message); i++ {
-//		unicode.IsSpace(message[i])
-//	}
-//}

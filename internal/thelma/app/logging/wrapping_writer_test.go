@@ -23,6 +23,8 @@ func Test_Wrap(t *testing.T) {
 	assert.Equal(t, "abcdef", wrap("abcdef", 5, "", false))
 	assert.Equal(t, "abcdefghijklmnopqrstuv", wrap("abcdefghijklmnopqrstuv", 5, "", false))
 	assert.Equal(t, "          ", wrap("          ", 5, "", false))
+	assert.Equal(t, "abcdefghijklmnopqrstuv\nabcdefghijklmnopqrstuv", wrap("abcdefghijklmnopqrstuv abcdefghijklmnopqrstuv", 5, "", false))
+	assert.Equal(t, "abcdefghijklmnopqrstuv\nabcdefghijklmnopqrstuv\nabcdefghijklmnopqrstuv", wrap("abcdefghijklmnopqrstuv abcdefghijklmnopqrstuv abcdefghijklmnopqrstuv", 5, "", false))
 
 	assert.Equal(t, "abcdef\n", wrap("abcdef ", 5, "", false))
 	assert.Equal(t, "abcdef\n", wrap("abcdef\n", 5, "", false))
