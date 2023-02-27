@@ -180,8 +180,8 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 				}
 
 				mutex.Lock()
+				defer mutex.Unlock()
 				successfullyFlippedEnvNames = append(successfullyFlippedEnvNames, env.Name())
-				mutex.Unlock()
 				return nil
 			},
 			Labels: map[string]string{

@@ -128,8 +128,8 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 				}
 
 				mutex.Lock()
+				defer mutex.Unlock()
 				deleted = append(deleted, env)
-				mutex.Unlock()
 				return nil
 			},
 			Labels: map[string]string{
