@@ -29,6 +29,7 @@ import (
 	bee_vars "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/vars"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bees"
+	bees_apply_schedule "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bees/apply_schedule"
 	bees_delete "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bees/delete"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts"
@@ -82,6 +83,7 @@ func withCommands(opts *cli.Options) {
 
 	opts.AddCommand("bees", bees.NewBeesCommand())
 	opts.AddCommand("bees delete", bees_delete.NewBeesDeleteCommand())
+	opts.AddCommand("bees apply-schedule", bees_apply_schedule.NewBeesApplyScheduleCommand())
 
 	opts.AddCommand("charts", charts.NewChartsCommand())
 	opts.AddCommand("charts import", charts_import.NewChartsImportCommand())
