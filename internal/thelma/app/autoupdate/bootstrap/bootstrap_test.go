@@ -8,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/prompt/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"os"
@@ -52,11 +53,12 @@ func (suite *BootstrapSuite) SetupTest() {
 	suite.configFilePath = path.Join(suite.root.Dir(), "config.yaml")
 	suite.shellCompletionScriptPath = path.Join(suite.root.ShellDir(), thelmaShellCompletionFile)
 	suite.initScriptPath = path.Join(suite.root.ShellDir(), thelmaInitializationFile)
+
+	suite.expectWelcomeMessage()
 }
 
 func (suite *BootstrapSuite) TestBootstrapFullInstallWithDefaults() {
-	suite.setUserInputAddToolsToPath(true)
-	suite.setUserInputShellCompletion(true)
+	suite.setUserInput(true, true)
 	suite.expectShellCompletionCommand("fake shell completion script")
 
 	require.NoError(suite.T(), suite.bootstrapper.Bootstrap())
@@ -82,8 +84,7 @@ source <ROOT>/shell/completion.zsh && compdef _thelma thelma
 }
 
 func (suite *BootstrapSuite) TestBootstrapDoesNotAddShellCompletionIfNotSelected() {
-	suite.setUserInputAddToolsToPath(true)
-	suite.setUserInputShellCompletion(false)
+	suite.setUserInput(true, false)
 
 	require.NoError(suite.T(), suite.bootstrapper.Bootstrap())
 
@@ -104,8 +105,7 @@ export PATH="<ROOT>/releases/current/tools/bin:${PATH}"
 }
 
 func (suite *BootstrapSuite) TestBootstrapDoesNotAddToolsToPathIfNotSelected() {
-	suite.setUserInputAddToolsToPath(false)
-	suite.setUserInputShellCompletion(true)
+	suite.setUserInput(false, true)
 	suite.expectShellCompletionCommand("fake shell completion script")
 
 	require.NoError(suite.T(), suite.bootstrapper.Bootstrap())
@@ -125,8 +125,7 @@ source <ROOT>/shell/completion.zsh && compdef _thelma thelma
 }
 
 func (suite *BootstrapSuite) TestBootstrapDoesNotAddToolsToPathOrAddShellCompletionIfNotSelected() {
-	suite.setUserInputAddToolsToPath(false)
-	suite.setUserInputShellCompletion(false)
+	suite.setUserInput(false, false)
 
 	require.NoError(suite.T(), suite.bootstrapper.Bootstrap())
 
@@ -142,8 +141,7 @@ export PATH="<ROOT>/releases/current/bin:${PATH}"
 }
 
 func (suite *BootstrapSuite) TestBootstrapBacksUpZshrc() {
-	suite.setUserInputAddToolsToPath(false)
-	suite.setUserInputShellCompletion(false)
+	suite.setUserInput(false, false)
 
 	content := []byte("A fake zshrc with stuff in it\n")
 	err := os.WriteFile(suite.zshrcPath, content, 0644)
@@ -162,12 +160,11 @@ func (suite *BootstrapSuite) TestBootstrapBacksUpZshrc() {
 	suite.assertFileContent(backupFile, "A fake zshrc with stuff in it\n")
 }
 
-func (suite *BootstrapSuite) setUserInputShellCompletion(shellCompletion bool) {
-	suite.prompt.EXPECT().Confirm(enableShellCompletionPrompt, true).Return(shellCompletion, nil)
-}
-
-func (suite *BootstrapSuite) setUserInputAddToolsToPath(addToolsToPath bool) {
-	suite.prompt.EXPECT().Confirm(addToolsToPathPrompt, true).Return(addToolsToPath, nil)
+func (suite *BootstrapSuite) setUserInput(addToolsToPath bool, shellCompletion bool) {
+	suite.prompt.EXPECT().Newline().Return(nil)
+	suite.prompt.EXPECT().Confirm(addToolsToPathPrompt, mock.Anything).Return(addToolsToPath, nil)
+	suite.prompt.EXPECT().Confirm(enableShellCompletionPrompt, mock.Anything).Return(shellCompletion, nil)
+	suite.prompt.EXPECT().Newline().Return(nil)
 }
 
 func (suite *BootstrapSuite) expectShellCompletionCommand(output string) {
@@ -210,6 +207,14 @@ if [ -f "<ROOT>/shell/init.zsh" ]; then . "<ROOT>/shell/init.zsh"; fi
 	require.NoError(suite.T(), err)
 
 	assert.Contains(suite.T(), string(actualContent), expectedFragment)
+}
+
+func (suite *BootstrapSuite) expectWelcomeMessage() {
+	suite.prompt.EXPECT().Newline(2).Return(nil)
+	suite.prompt.EXPECT().Print(asciiLogo, mock.Anything).Return(nil)
+	suite.prompt.EXPECT().Newline(2)
+	suite.prompt.EXPECT().Print(welcomeMessage).Return(nil)
+	suite.prompt.EXPECT().Newline(2)
 }
 
 func (suite *BootstrapSuite) assertFileContent(file string, expectedContent string) {

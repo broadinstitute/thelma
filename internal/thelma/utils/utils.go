@@ -4,7 +4,9 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"github.com/mcuadros/go-defaults"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/term"
 	"io"
 	"net"
 	"os"
@@ -18,6 +20,19 @@ import (
 // if Thelma is running in CI pipelines or on a dev laptop
 func Interactive() bool {
 	return isatty.IsTerminal(os.Stdout.Fd())
+}
+
+// TerminalWidth returns width of the current interactive terminal. Returns 0 if shell is not interactive
+// or if terminal width could not be detected
+func TerminalWidth() int {
+	if !Interactive() {
+		return 0
+	}
+	width, _, err := term.GetSize(0)
+	if err != nil {
+		return 0
+	}
+	return width
 }
 
 // ExpandAndVerifyExists Expand relative path to absolute, and make sure it exists.
@@ -116,10 +131,29 @@ func PathToRunningThelmaExecutable() (string, error) {
 	return executable, nil
 }
 
+// CollateOptionsWithDefaults given a struct annotated with `default` annotations from
+// https://github.com/mcuadros/go-defaults, set defaults and call CollateOptions
+// set utility for collating option functions into a struct
+func CollateOptionsWithDefaults[T any](optFns ...func(*T)) T {
+	var options T
+	defaults.SetDefaults(&options)
+	return CollateOptions(options, optFns...)
+}
+
 // CollateOptions utility for collating option functions into a struct
 func CollateOptions[T any](defaults T, optFns ...func(*T)) T {
 	for _, optFn := range optFns {
+		if optFn == nil {
+			continue
+		}
 		optFn(&defaults)
 	}
 	return defaults
+}
+
+// Not negates a single-argument predicate
+func Not[T any](fn func(T) bool) func(T) bool {
+	return func(t T) bool {
+		return !fn(t)
+	}
 }

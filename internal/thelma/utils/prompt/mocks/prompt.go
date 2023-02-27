@@ -79,13 +79,19 @@ func (_c *Prompt_Confirm_Call) Return(_a0 bool, _a1 error) *Prompt_Confirm_Call 
 	return _c
 }
 
-// Newline provides a mock function with given fields:
-func (_m *Prompt) Newline() error {
-	ret := _m.Called()
+// Newline provides a mock function with given fields: count
+func (_m *Prompt) Newline(count ...int) error {
+	_va := make([]interface{}, len(count))
+	for _i := range count {
+		_va[_i] = count[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(...int) error); ok {
+		r0 = rf(count...)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -99,18 +105,78 @@ type Prompt_Newline_Call struct {
 }
 
 // Newline is a helper method to define mock.On call
-func (_e *Prompt_Expecter) Newline() *Prompt_Newline_Call {
-	return &Prompt_Newline_Call{Call: _e.mock.On("Newline")}
+//   - count ...int
+func (_e *Prompt_Expecter) Newline(count ...interface{}) *Prompt_Newline_Call {
+	return &Prompt_Newline_Call{Call: _e.mock.On("Newline",
+		append([]interface{}{}, count...)...)}
 }
 
-func (_c *Prompt_Newline_Call) Run(run func()) *Prompt_Newline_Call {
+func (_c *Prompt_Newline_Call) Run(run func(count ...int)) *Prompt_Newline_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		variadicArgs := make([]int, len(args)-0)
+		for i, a := range args[0:] {
+			if a != nil {
+				variadicArgs[i] = a.(int)
+			}
+		}
+		run(variadicArgs...)
 	})
 	return _c
 }
 
 func (_c *Prompt_Newline_Call) Return(_a0 error) *Prompt_Newline_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+// Print provides a mock function with given fields: text, options
+func (_m *Prompt) Print(text string, options ...func(*prompt.PrintOptions)) error {
+	_va := make([]interface{}, len(options))
+	for _i := range options {
+		_va[_i] = options[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, text)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, ...func(*prompt.PrintOptions)) error); ok {
+		r0 = rf(text, options...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Prompt_Print_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Print'
+type Prompt_Print_Call struct {
+	*mock.Call
+}
+
+// Print is a helper method to define mock.On call
+//   - text string
+//   - options ...func(*prompt.PrintOptions)
+func (_e *Prompt_Expecter) Print(text interface{}, options ...interface{}) *Prompt_Print_Call {
+	return &Prompt_Print_Call{Call: _e.mock.On("Print",
+		append([]interface{}{text}, options...)...)}
+}
+
+func (_c *Prompt_Print_Call) Run(run func(text string, options ...func(*prompt.PrintOptions))) *Prompt_Print_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]func(*prompt.PrintOptions), len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(func(*prompt.PrintOptions))
+			}
+		}
+		run(args[0].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Prompt_Print_Call) Return(_a0 error) *Prompt_Print_Call {
 	_c.Call.Return(_a0)
 	return _c
 }

@@ -368,20 +368,20 @@ VAR3=yet-another-long-string \
     --which-is-annoying"`,
 		},
 		{
-			name:     "invisible characters should not count towards line length when wrapping",
-			maxWidth: 12,
+			name:     "ansii escape sequences should not count towards line length when wrapping",
+			maxWidth: 9,
 			input:    "\u001b[31mRED\u001b[0m \u001b[32mGREEN\u001b[0m \u001b[33mYELLOW\u001b[0m",
 			expected: "\u001b[31mRED\u001b[0m \u001b[32mGREEN\u001b[0m\n\u001b[33mYELLOW\u001b[0m",
 		},
+		{
+			name:     "long word at end of line should not add padding after line",
+			maxWidth: 15,
+			input:    "long word occursatendofstring\n",
+			padding:  "      ",
+			expected: "long word\n      occursatendofstring\n",
+		},
 	}
 
-	// okay so - if we have to convert from byte to string is it such a big deal?
-	// We can then cleanse these escape sequences.
-	// And get word wrapping.
-	// And it would save so much time.
-	//
-	// I mean. It's a really really long log line.
-	//
 	for _, tc := range testCases {
 		name := tc.name
 		if name == "" {
@@ -389,15 +389,13 @@ VAR3=yet-another-long-string \
 		}
 		t.Run(name, func(t *testing.T) {
 			opts := func(options *Options) {
-				options.MaxWidth = tc.maxWidth
+				options.FixedMaxWidth = tc.maxWidth
 				options.Padding = tc.padding
 				options.EscapeNewlineStringLiteral = tc.escapeQuotes
 			}
-			sw := ForString(opts)
-			bw := ForBytes(opts)
+			w := New(opts)
 
-			assert.Equal(t, tc.expected, sw.Wrap(tc.input), "(string wrapper)")
-			assert.Equal(t, tc.expected, string(bw.Wrap([]byte(tc.input))), "(bytes wrapper)")
+			assert.Equal(t, tc.expected, w.Wrap(tc.input))
 		})
 	}
 }

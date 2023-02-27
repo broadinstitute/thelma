@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/wordwrap"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -25,6 +26,8 @@ type logConfig struct {
 	Console struct {
 		// Log level for console messages
 		Level string `default:"info" validate:"oneof=trace debug info warn error"`
+		// WordWrap if true, wrap long log lines at word boundary to max terminal width
+		WordWrap bool `default:"true"`
 	}
 	File struct {
 		// Log
@@ -136,10 +139,21 @@ func newLogger(cfg *logConfig, compositeWriter zerolog.LevelWriter) (*zerolog.Lo
 }
 
 func newConsoleWriter(cfg *logConfig, consoleStream io.Writer) zerolog.LevelWriter {
-	writer := zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
-		w.Out = consoleStream
+	outputStream := consoleStream
+
+	if cfg.Console.WordWrap {
+		outputStream = NewWrappingWriter(consoleStream, func(options *wordwrap.Options) {
+			options.DynamicMaxWidth = true
+			options.Padding = "           "
+			options.EscapeNewlineStringLiteral = true
+		})
+	}
+
+	consoleWriter := zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
+		w.Out = outputStream
 	})
-	return NewFilteredWriter(zerolog.MultiLevelWriter(writer), parseLogLevel(cfg.Console.Level))
+
+	return NewFilteredWriter(zerolog.MultiLevelWriter(consoleWriter), parseLogLevel(cfg.Console.Level))
 }
 
 func newFileWriter(cfg *logConfig) (zerolog.LevelWriter, error) {

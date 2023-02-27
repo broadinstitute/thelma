@@ -120,18 +120,26 @@ func (b *bootstrapper) Bootstrap() error {
 		return err
 	}
 
-	return b.addThelmaInitToZshrc()
+	if err = b.addThelmaInitToZshrc(); err != nil {
+		return err
+	}
+
+	return welcome(b.prompt)
 }
 
 func (b *bootstrapper) promptUserForOptions() (opts options, err error) {
+	withBold := func(opts *prompt.ConfirmOptions) {
+		opts.Bold = true
+	}
+
 	if err = b.prompt.Newline(); err != nil {
 		return
 	}
-	opts.addToolsToPath, err = b.prompt.Confirm(addToolsToPathPrompt)
+	opts.addToolsToPath, err = b.prompt.Confirm(addToolsToPathPrompt, withBold)
 	if err != nil {
 		return
 	}
-	opts.enableShellCompletion, err = b.prompt.Confirm(enableShellCompletionPrompt)
+	opts.enableShellCompletion, err = b.prompt.Confirm(enableShellCompletionPrompt, withBold)
 	if err != nil {
 		return
 	}
@@ -197,7 +205,7 @@ func (b *bootstrapper) writeSkeletonConfigFile() error {
 		return fmt.Errorf("error generating skeleton Thelma config file: %v", err)
 	}
 	if exists {
-		log.Warn().Msgf("%s exists; won't generate skeleton Thelma config file", configFile)
+		log.Warn().Msgf("%s exists; won't generate skeleton config file", configFile)
 		return nil
 	}
 
