@@ -46,12 +46,14 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	suite.Assert().NoError(err)
 	suite.Assert().Equal(3, len(clusters))
 
-	suite.Assert().Equal(1, len(clusters[0].Releases()))
-	suite.Assert().Equal(1, len(environments[1].Releases()))
+	devCluster, err := _clusters.Get("terra-dev")
+	suite.Assert().NoError(err)
+	suite.Assert().Len(devCluster.Releases(), 1)
 
 	devEnv, err := _environments.Get("dev")
 	suite.Assert().NoError(err)
 	devEnvReleases := devEnv.Releases()
+	suite.Assert().Len(devEnvReleases, 1)
 	suite.Assert().Equal("datarepo", devEnvReleases[0].Name())
 
 	prodCluster, err := _clusters.Get("terra-prod")
