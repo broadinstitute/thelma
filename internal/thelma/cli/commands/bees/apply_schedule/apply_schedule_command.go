@@ -60,7 +60,7 @@ func (cmd *command) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.options.dryRun, flagNames.dryRun, true, "Print the actions that would be taken instead of also doing them")
 	cobraCommand.Flags().BoolVar(&cmd.options.start, flagNames.start, true, "If start schedules should be applied")
 	cobraCommand.Flags().BoolVar(&cmd.options.stop, flagNames.stop, true, "if stop schedules should be applied")
-	cobraCommand.Flags().DurationVar(&cmd.options.fromPast, flagNames.fromPast, 20*time.Minute, "How far back to look for schedule transitions to apply")
+	cobraCommand.Flags().DurationVar(&cmd.options.fromPast, flagNames.fromPast, 20*time.Minute, "How far back to look for schedule transitions to apply (e.g. 5m, 1h, 30s)")
 	cobraCommand.Flags().IntVar(&cmd.options.maxParallel, flagNames.maxParallel, 3, "Number of BEEs to apply schedules for in parallel")
 
 	cmd.fflags.AddFlags(cobraCommand)
