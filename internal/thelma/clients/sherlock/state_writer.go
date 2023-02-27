@@ -86,6 +86,15 @@ func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terr
 			Enabled: utils.Nullable(options.AutoDelete.Enabled),
 		}
 	}
+	if options.StopSchedule.Enabled {
+		creatableEnvironment.OfflineScheduleBeginEnabled = true
+		creatableEnvironment.OfflineScheduleBeginTime = strfmt.DateTime(options.StopSchedule.RepeatingTime)
+	}
+	if options.StartSchedule.Enabled {
+		creatableEnvironment.OfflineScheduleEndEnabled = true
+		creatableEnvironment.OfflineScheduleEndTime = strfmt.DateTime(options.StartSchedule.RepeatingTime)
+		creatableEnvironment.OfflineScheduleEndWeekends = options.StartSchedule.Weekends
+	}
 	existing, created, err := c.client.Environments.PostAPIV2Environments(
 		environments.NewPostAPIV2EnvironmentsParams().WithEnvironment(creatableEnvironment))
 	if err != nil {
@@ -321,7 +330,7 @@ func (c *Client) DisableRelease(envName, releaseName string) error {
 	return err
 }
 
-func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplate bool) *models.V2controllersCreatableEnvironment {
+func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartReleases bool) *models.V2controllersCreatableEnvironment {
 	// if Helmfile ref isn't set it should default to head
 	var helmfileRef string
 	if env.TerraHelmfileRef() == "" {
@@ -347,7 +356,7 @@ func toModelCreatableEnvironment(env terra.Environment, chartReleasesFromTemplat
 		RequiresSuitability:       utils.Nullable(env.RequireSuitable()),
 		TemplateEnvironment:       env.Template(),
 		HelmfileRef:               utils.Nullable(helmfileRef),
-		ChartReleasesFromTemplate: &chartReleasesFromTemplate,
+		AutoPopulateChartReleases: &autoPopulateChartReleases,
 		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
 		PreventDeletion:           utils.Nullable(env.PreventDeletion()),
 		AutoDelete:                autoDelete,

@@ -19,4 +19,17 @@ type CreateOptions struct {
 	}
 	// Owner optional - owner to assign to the environment
 	Owner string
+
+	// StopSchedule an optional daily time to stop the BEE
+	StopSchedule struct {
+		Enabled       bool
+		RepeatingTime time.Time
+	}
+
+	// Start Schedule an optional daily time to start the BEE
+	StartSchedule struct {
+		Enabled       bool
+		RepeatingTime time.Time
+		Weekends      bool
+	}
 }

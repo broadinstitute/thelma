@@ -141,3 +141,23 @@ func environmentNamespace(envName string) string {
 func (e *environment) Offline() bool {
 	return false
 }
+
+func (e *environment) OfflineScheduleBeginEnabled() bool {
+	return false
+}
+
+func (e *environment) OfflineScheduleBeginTime() time.Time {
+	return time.Time{}
+}
+
+func (e *environment) OfflineScheduleEndEnabled() bool {
+	return false
+}
+
+func (e *environment) OfflineScheduleEndTime() time.Time {
+	return time.Time{}
+}
+
+func (e *environment) OfflineScheduleEndWeekends() bool {
+	return false
+}

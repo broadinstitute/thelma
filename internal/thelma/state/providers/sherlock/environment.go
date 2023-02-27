@@ -6,19 +6,24 @@ import (
 )
 
 type environment struct {
-	createdAt            time.Time
-	defaultCluster       terra.Cluster
-	defaultNamespace     string
-	releases             map[string]*appRelease
-	lifecycle            terra.Lifecycle
-	template             string
-	baseDomain           string
-	namePrefixesDomain   bool
-	uniqueResourcePrefix string
-	owner                string
-	preventDeletion      bool
-	autoDelete           autoDelete
-	offline              bool
+	createdAt                   time.Time
+	defaultCluster              terra.Cluster
+	defaultNamespace            string
+	releases                    map[string]*appRelease
+	lifecycle                   terra.Lifecycle
+	template                    string
+	baseDomain                  string
+	namePrefixesDomain          bool
+	uniqueResourcePrefix        string
+	owner                       string
+	preventDeletion             bool
+	autoDelete                  autoDelete
+	offline                     bool
+	offlineScheduleBeginEnabled bool
+	offlineScheduleBeginTime    time.Time
+	offlineScheduleEndEnabled   bool
+	offlineScheduleEndTime      time.Time
+	offlineScheduleEndWeekends  bool
 	destination
 }
 
@@ -94,4 +99,24 @@ func (e *environment) AutoDelete() terra.AutoDelete {
 
 func (e *environment) Offline() bool {
 	return e.offline
+}
+
+func (e *environment) OfflineScheduleBeginEnabled() bool {
+	return e.offlineScheduleBeginEnabled
+}
+
+func (e *environment) OfflineScheduleBeginTime() time.Time {
+	return e.offlineScheduleBeginTime
+}
+
+func (e *environment) OfflineScheduleEndEnabled() bool {
+	return e.offlineScheduleEndEnabled
+}
+
+func (e *environment) OfflineScheduleEndTime() time.Time {
+	return e.offlineScheduleEndTime
+}
+
+func (e *environment) OfflineScheduleEndWeekends() bool {
+	return e.offlineScheduleEndWeekends
 }

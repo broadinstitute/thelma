@@ -39,6 +39,9 @@ var flagNames = struct {
 	notify                    string
 	exportLogsOnFailure       string
 	deleteAfter               string
+	dailyStopTime             string
+	dailyStartTime            string
+	dailyStartWeekends        string
 }{
 	name:                      "name",
 	namePrefix:                "name-prefix",
@@ -52,11 +55,17 @@ var flagNames = struct {
 	notify:                    "notify",
 	exportLogsOnFailure:       "export-logs-on-failure",
 	deleteAfter:               "delete-after",
+	dailyStopTime:             "daily-stop-time",
+	dailyStartTime:            "daily-start-time",
+	dailyStartWeekends:        "daily-start-weekends",
 }
 
 type options struct {
 	bee.CreateOptions
-	deleteAfter time.Duration
+	deleteAfter        time.Duration
+	dailyStopTime      string
+	dailyStartTime     string
+	dailyStartWeekends bool
 }
 
 type createCommand struct {
@@ -93,6 +102,10 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.options.Notify, flagNames.notify, true, "Attempt to notify the owner via Slack upon success")
 	cobraCommand.Flags().DurationVar(&cmd.options.deleteAfter, flagNames.deleteAfter, 0, "Automatically delete this BEE after a period of time (eg. 4h)")
 
+	cobraCommand.Flags().StringVar(&cmd.options.dailyStopTime, flagNames.dailyStopTime, "", "An ISO-8601 time (repeating daily) to stop the BEE.")
+	cobraCommand.Flags().StringVar(&cmd.options.dailyStartTime, flagNames.dailyStartTime, "", "An ISO-8601 time (repeating weekdays) to stop the BEE.")
+	cobraCommand.Flags().BoolVar(&cmd.options.dailyStartWeekends, flagNames.dailyStartWeekends, false, "If the daily start time should also apply on weekend days.")
+
 	cmd.pinFlags.AddFlags(cobraCommand)
 	cmd.seedFlags.AddFlags(cobraCommand)
 }
@@ -114,6 +127,25 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 	if ctx.CobraCommand().Flags().Changed(flagNames.deleteAfter) {
 		cmd.options.AutoDelete.Enabled = true
 		cmd.options.AutoDelete.After = time.Now().Add(cmd.options.deleteAfter)
+	}
+
+	if ctx.CobraCommand().Flags().Changed(flagNames.dailyStopTime) {
+		cmd.options.StopSchedule.Enabled = true
+		t, err := time.Parse(time.RFC3339, cmd.options.dailyStopTime)
+		if err != nil {
+			return fmt.Errorf("%s was an invalid time: %v", cmd.options.dailyStopTime, err)
+		}
+		cmd.options.StopSchedule.RepeatingTime = t
+	}
+
+	if ctx.CobraCommand().Flags().Changed(flagNames.dailyStartTime) {
+		cmd.options.StartSchedule.Enabled = true
+		t, err := time.Parse(time.RFC3339, cmd.options.dailyStartTime)
+		if err != nil {
+			return fmt.Errorf("%s was an invalid time: %v", cmd.options.dailyStartTime, err)
+		}
+		cmd.options.StartSchedule.RepeatingTime = t
+		cmd.options.StartSchedule.Weekends = cmd.options.dailyStartWeekends
 	}
 
 	// validate --template

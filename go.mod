@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/storage v1.27.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/broadinstitute/sherlock v0.1.6-0.20230206171243-9a3edaf79a5a
+	github.com/broadinstitute/sherlock v0.1.11-0.20230221181340-7a6d8fd697b7
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-openapi/strfmt v0.21.3
