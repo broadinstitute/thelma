@@ -160,6 +160,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 			log.Info().Msgf("Would've flipped %s target state to offline=%t but dry run was enabled", env.Name(), !env.Offline())
 		} else if err := state.Environments().SetOffline(env.Name(), !env.Offline()); err != nil {
 			log.Warn().Msgf("Failed to flip %s target state to offline=%t: %v", env.Name(), !env.Offline(), err)
+			continue
 		} else {
 			log.Info().Msgf("Flipped %s target state to offline=%t", env.Name(), !env.Offline())
 		}
