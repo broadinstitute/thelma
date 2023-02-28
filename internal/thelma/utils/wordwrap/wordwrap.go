@@ -5,7 +5,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/leaanthony/go-ansi-parser"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/ssh/terminal"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -37,7 +36,7 @@ type Options struct {
 
 func (o *Options) maxWidth() int {
 	if o.DynamicMaxWidth {
-		return terminalWidth()
+		return utils.TerminalWidth()
 	}
 	return o.FixedMaxWidth
 }
@@ -49,7 +48,7 @@ type Wrapper interface {
 
 func New(opts ...func(*Options)) Wrapper {
 	options := utils.CollateOptions(Options{
-		FixedMaxWidth:              terminalWidth(),
+		FixedMaxWidth:              utils.TerminalWidth(),
 		DynamicMaxWidth:            false,
 		Padding:                    "",
 		EscapeNewlineStringLiteral: false,
@@ -262,17 +261,6 @@ func (b *linebreaker) findStartOfNextWord(startAt int) int {
 	}
 
 	return len(b.s)
-}
-
-func terminalWidth() int {
-	if !utils.Interactive() {
-		return 0
-	}
-	width, _, err := terminal.GetSize(0)
-	if err != nil {
-		return 0
-	}
-	return width
 }
 
 func printableLength(s string) int {
