@@ -6,10 +6,6 @@ import (
 	"testing"
 )
 
-func Test_Welcome(t *testing.T) {
-
-}
-
 func Test_computeTerminalWidth(t *testing.T) {
 	testCases := []struct {
 		input    int
