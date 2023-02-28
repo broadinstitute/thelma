@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"time"
 )
 
 const logFile = "thelma.log"
@@ -144,8 +145,13 @@ func newConsoleWriter(cfg *logConfig, consoleStream io.Writer) zerolog.LevelWrit
 	if cfg.Console.WordWrap {
 		outputStream = NewWrappingWriter(consoleStream, func(options *wordwrap.Options) {
 			options.DynamicMaxWidth = true
-			options.Padding = "           "
 			options.EscapeNewlineStringLiteral = true
+
+			// try to match the width of zero-log's preconfigured date formatter
+			options.Padding = "           "
+			if time.Now().Hour()%12 >= 10 {
+				options.Padding += " "
+			}
 		})
 	}
 
