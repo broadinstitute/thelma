@@ -96,6 +96,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 
 	now := time.Now()
+	// Negative Add() since it works with durations; Sub() only works with times
 	since := now.Add(-cmd.options.fromPast)
 
 	var beesToFlip []terra.Environment
