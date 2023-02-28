@@ -205,6 +205,43 @@ Do the thing? [y/N] `,
 	}
 }
 
+func (suite *PromptSuite) Test_Newline() {
+	testCases := []struct {
+		name     string
+		input    []int
+		expected string
+	}{
+		{
+			name:     "no args = single newline",
+			expected: "\n",
+		},
+		{
+			name:     "1 = single newline",
+			input:    []int{1},
+			expected: "\n",
+		},
+		{
+			name:     "2 = 2 newlines",
+			input:    []int{2},
+			expected: "\n\n",
+		},
+		{
+			name:     "1 2 3 = 6 newlines",
+			input:    []int{1, 2, 3},
+			expected: "\n\n\n\n\n\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			err := suite.prompt.Newline(tc.input...)
+			require.NoError(suite.T(), err)
+			output := suite.fakeStdout.String()
+			assert.Equal(suite.T(), tc.expected, output)
+		})
+	}
+}
+
 func (suite *PromptSuite) SetUserInput(inputLines []string) {
 	// save to local for safety
 	t := suite.T()
