@@ -11,3 +11,5 @@ coverage:
 ignore:
   # Ignore mocks packages, which are auto-generated
   - "internal/**/mocks"
+  # Ignore spawn tester - a fake program used in testing
+  - "internal/thelma/app/autoupdate/spawn/testing/main"

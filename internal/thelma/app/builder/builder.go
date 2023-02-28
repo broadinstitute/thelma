@@ -258,7 +258,7 @@ func getStateLoaderType(cfg config.Config) (stateLoaderType, error) {
 		return 0, err
 	}
 
-	log.Info().Msgf("State Source: %s", stateLoaderConfig.Source)
+	log.Debug().Msgf("State Source: %s", stateLoaderConfig.Source)
 
 	switch stateLoaderConfig.Source {
 	case "gitops":

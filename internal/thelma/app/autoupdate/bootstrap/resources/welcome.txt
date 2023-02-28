@@ -1,0 +1,8 @@
+Thanks for installing Thelma, the Devops CLI for Terra!
+
+Check out the docs for an overview of Thelma's features:
+  https://github.com/broadinstitute/thelma/blob/main/docs/INTRO.md
+
+Questions? Bugs? Feature requests? Post in #dsp-devops-champions on Slack.
+
+To get started, try running `thelma --help` in a new terminal.

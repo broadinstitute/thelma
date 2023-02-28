@@ -42,7 +42,7 @@ func New(releasesDir releases.Dir, bucket releasebucket.ReleaseBucket, options .
 	return &installer{
 		dir:     releasesDir,
 		bucket:  bucket,
-		options: utils.CollateOptions(options...),
+		options: utils.CollateOptions(Options{KeepReleases: 5}, options...),
 	}
 }
 
@@ -102,12 +102,12 @@ func (i *installer) updateThelmaUnsafe(versionOrTag string) error {
 	}
 
 	targetVersion := resolved.TargetVersion
-	priorVersion := resolved.CurrentVersion
-	if priorVersion == "" {
+	if resolved.CurrentVersion == "" {
 		log.Debug().Err(err).Msgf("Could not identify current installed version of Thelma; is this a fresh install?")
-		priorVersion = "unknown"
+		log.Info().Msgf("Installing Thelma %s...", targetVersion)
+	} else {
+		log.Info().Msgf("Updating Thelma from %s to %s...", resolved.CurrentVersion, targetVersion)
 	}
-	log.Info().Msgf("Updating Thelma from %s to %s...", priorVersion, targetVersion)
 
 	targetArchive := releasebucket.NewArchive(targetVersion)
 	unpackDir, err := i.bucket.DownloadAndUnpack(targetArchive)
