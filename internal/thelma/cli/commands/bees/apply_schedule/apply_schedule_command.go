@@ -20,25 +20,28 @@ import (
 const helpMessage = `Start and stop BEEs as defined by their schedule`
 
 type options struct {
-	dryRun      bool
-	start       bool
-	stop        bool
-	fromPast    time.Duration
-	maxParallel int
+	dryRun         bool
+	start          bool
+	stop           bool
+	fromPast       time.Duration
+	creationBuffer time.Duration
+	maxParallel    int
 }
 
 var flagNames = struct {
-	dryRun      string
-	start       string
-	stop        string
-	fromPast    string
-	maxParallel string
+	dryRun         string
+	start          string
+	stop           string
+	fromPast       string
+	creationBuffer string
+	maxParallel    string
 }{
-	dryRun:      "dry-run",
-	start:       "start",
-	stop:        "stop",
-	fromPast:    "from-past",
-	maxParallel: "max-parallel",
+	dryRun:         "dry-run",
+	start:          "start",
+	stop:           "stop",
+	fromPast:       "from-past",
+	creationBuffer: "creation-buffer",
+	maxParallel:    "max-parallel",
 }
 
 type command struct {
@@ -61,6 +64,7 @@ func (cmd *command) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.options.start, flagNames.start, true, "If start schedules should be applied")
 	cobraCommand.Flags().BoolVar(&cmd.options.stop, flagNames.stop, true, "if stop schedules should be applied")
 	cobraCommand.Flags().DurationVar(&cmd.options.fromPast, flagNames.fromPast, 20*time.Minute, "How far back to look for schedule transitions to apply (e.g. 5m, 1h, 30s)")
+	cobraCommand.Flags().DurationVar(&cmd.options.creationBuffer, flagNames.creationBuffer, 20*time.Minute, "Ignore BEEs created in the past duration to allow uninterrupted seeding (e.g. 5m, 1h, 30s)")
 	cobraCommand.Flags().IntVar(&cmd.options.maxParallel, flagNames.maxParallel, 3, "Number of BEEs to apply schedules for in parallel")
 
 	cmd.fflags.AddFlags(cobraCommand)
@@ -92,10 +96,17 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 
 	now := time.Now()
+	// Negative Add() since it works with durations; Sub() only works with times
 	since := now.Add(-cmd.options.fromPast)
 
 	var beesToFlip []terra.Environment
 	for _, matchingBee := range matchingBees {
+
+		// If this BEE was created within the buffer time, ignore it
+		if matchingBee.CreatedAt().After(now.Add(-cmd.options.creationBuffer)) {
+			log.Info().Msgf("skipping potential match %s since it was created %s ago", matchingBee.Name(), now.Sub(matchingBee.CreatedAt()).String())
+			continue
+		}
 
 		wouldStop := cmd.options.stop &&
 			matchingBee.OfflineScheduleBeginEnabled() &&
