@@ -321,7 +321,7 @@ func (b *bees) StartStopWith(name string, offline bool, options StartStopOptions
 		}
 	}
 	if options.Notify && env.Owner() != "" && b.slack != nil {
-		markdown := fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is has been %s", env.Name(), env.Name(), stateDescription)
+		markdown := fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE has been %s", env.Name(), env.Name(), stateDescription)
 		if err := b.slack.SendDirectMessage(env.Owner(), markdown); err != nil {
 			log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
 		}
