@@ -184,6 +184,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 					log.Info().Msgf("Syncing %s", env.Name())
 					_, err := bees.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
 						options.SkipLegacyConfigsRestart = true
+						options.WaitHealthy = false
 					})
 					if err != nil {
 						return err
