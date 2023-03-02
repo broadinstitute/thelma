@@ -61,6 +61,10 @@ func computeLeftPaddingToCenterLogo(terminalWidth int) int {
 		return 8
 	}
 
+	if terminalWidth > 120 {
+		terminalWidth = 120
+	}
+
 	var maxLineLen int
 	for _, line := range strings.Split(asciiLogo, "\n") {
 		ln := len(line)
@@ -69,6 +73,7 @@ func computeLeftPaddingToCenterLogo(terminalWidth int) int {
 		}
 	}
 
+	// terminal is too narrow for our logo, oh well
 	if maxLineLen > terminalWidth {
 		return 0
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/name"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/prompt"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -22,7 +23,7 @@ type zshrcWriter interface {
 	addThelmaInitialization() error
 }
 
-func newZshrcWriter(zshrcPath string, thelmaInitFile string) (zshrcWriter, error) {
+func newZshrcWriter(zshrcPath string, thelmaInitFile string, prompt prompt.Prompt) (zshrcWriter, error) {
 	if zshrcPath == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -34,12 +35,14 @@ func newZshrcWriter(zshrcPath string, thelmaInitFile string) (zshrcWriter, error
 	return &zshrcWriterImpl{
 		file:           zshrcPath,
 		thelmaInitFile: thelmaInitFile,
+		prompt:         prompt,
 	}, nil
 }
 
 type zshrcWriterImpl struct {
 	file           string
 	thelmaInitFile string
+	prompt         prompt.Prompt
 }
 
 func (z *zshrcWriterImpl) addThelmaInitialization() error {
@@ -118,9 +121,13 @@ func (z *zshrcWriterImpl) alreadyContainsThelmaInitialization(fragment []byte) (
 	}
 
 	if bytes.Contains(content, []byte(name.Name)) {
-		log.Warn().Msgf(
-			"%s contains a reference to %s; won't update."+
-				"Consider adding the following lines manually:\n\n%s", name.Name, fragment, z.file)
+		log.Warn().Msgf("%s contains a reference to %s; won't update. "+
+			"Consider adding the following lines manually:", z.file, name.Name)
+		if err = z.prompt.Print(string(fragment), func(opts *prompt.PrintOptions) {
+			opts.Wrap = false
+		}); err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
