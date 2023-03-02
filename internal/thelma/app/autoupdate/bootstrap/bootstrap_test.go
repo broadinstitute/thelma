@@ -160,6 +160,29 @@ func (suite *BootstrapSuite) TestBootstrapBacksUpZshrc() {
 	suite.assertFileContent(backupFile, "A fake zshrc with stuff in it\n")
 }
 
+func (suite *BootstrapSuite) TestBootstrapDoesNotUpdateZshrcIfContainsThelmaReference() {
+	suite.setUserInput(false, false)
+
+	// create fake .zshrc with a thelma reference in it
+	content := []byte("A fake zshrc that includes the string `thelma`\n")
+	err := os.WriteFile(suite.zshrcPath, content, 0644)
+	require.NoError(suite.T(), err)
+
+	// expect the fragment to be printed out to console
+	expectedFragment := suite.normalizeTestFileContent(`
+# Thelma initialization
+if [ -f "<ROOT>/shell/init.zsh" ]; then . "<ROOT>/shell/init.zsh"; fi
+
+`)
+	suite.prompt.EXPECT().Print(expectedFragment, mock.Anything)
+
+	// run bootstrap
+	require.NoError(suite.T(), suite.bootstrapper.Bootstrap())
+
+	// make sure zshrc was not changed
+	suite.assertFileContent(suite.zshrcPath, string(content))
+}
+
 func (suite *BootstrapSuite) setUserInput(addToolsToPath bool, shellCompletion bool) {
 	suite.prompt.EXPECT().Newline().Return(nil)
 	suite.prompt.EXPECT().Confirm(addToolsToPathPrompt, mock.Anything).Return(addToolsToPath, nil)
