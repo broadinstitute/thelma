@@ -174,7 +174,7 @@ func (suite *BootstrapSuite) TestBootstrapDoesNotUpdateZshrcIfContainsThelmaRefe
 if [ -f "<ROOT>/shell/init.zsh" ]; then . "<ROOT>/shell/init.zsh"; fi
 
 `)
-	suite.prompt.EXPECT().Print(expectedFragment, mock.Anything)
+	suite.prompt.EXPECT().Print(expectedFragment, mock.Anything).Return(nil)
 
 	// run bootstrap
 	require.NoError(suite.T(), suite.bootstrapper.Bootstrap())

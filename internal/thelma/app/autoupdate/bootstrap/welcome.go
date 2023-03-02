@@ -13,6 +13,9 @@ var asciiLogo string
 //go:embed resources/welcome.txt
 var welcomeMessage string
 
+// pretend terminals wider than 120 characters are still 120 chars wide
+const maxTerminalWidthForPadding = 120
+
 // welcome writes a welcome message for Thelma to the given prompt
 func welcome(p prompt.Prompt) error {
 	var err error
@@ -61,8 +64,8 @@ func computeLeftPaddingToCenterLogo(terminalWidth int) int {
 		return 8
 	}
 
-	if terminalWidth > 120 {
-		terminalWidth = 120
+	if terminalWidth > maxTerminalWidthForPadding {
+		terminalWidth = maxTerminalWidthForPadding
 	}
 
 	var maxLineLen int
