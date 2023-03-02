@@ -184,6 +184,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 					log.Info().Msgf("Syncing %s", env.Name())
 					_, err := bees.SyncArgoAppsIn(env, func(options *argocd.SyncOptions) {
 						options.SkipLegacyConfigsRestart = true
+						options.WaitHealthy = false
 					})
 					if err != nil {
 						return err
@@ -206,6 +207,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		o.Summarizer.Enabled = true
 		o.Metrics.Enabled = !cmd.options.dryRun // When dry-running, don't report metrics!
 		o.Metrics.PoolName = "bees_apply_schedule"
+		o.StopProcessingOnError = false
 	}).Execute()
 
 	if err != nil {
