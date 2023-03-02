@@ -25,6 +25,7 @@ type testMessage struct {
 	Level   string `json:"level"`
 	Message string `json:"message"`
 	Caller  string `json:"caller"`
+	Pid     int    `json:"pid"`
 }
 
 type testResult struct {
@@ -100,6 +101,20 @@ func Test_newLogger(t *testing.T) {
 
 				assert.Equal(t, 1, len(r.fileMessages))
 				assert.Regexp(t, "logging_test.go", r.fileMessages[0].Caller)
+			},
+		},
+		{
+			name: "file logger messages should include pid, console should not",
+			setupFn: func(logger *zerolog.Logger) {
+				logger.Info().Msg("hello world")
+			},
+			verifyFn: func(t *testing.T, r testResult) {
+				assert.Equal(t, 1, len(r.consoleMessages))
+				assert.Regexp(t, "INF.* hello world$", r.consoleMessages[0])
+
+				assert.Equal(t, 1, len(r.fileMessages))
+				assert.Equal(t, "hello world", r.fileMessages[0].Message)
+				assert.Equal(t, os.Getppid(), r.fileMessages[0].Pid)
 			},
 		},
 		{
@@ -222,6 +237,46 @@ func Test_newLogger(t *testing.T) {
 
 				tc.verifyFn(t, testResult{fileMessages, consoleMessages, logDir, file})
 			}
+		})
+	}
+}
+
+func Test_ConsoleFormatter(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "2023-03-02T09:04:49-02:00",
+			expected: "09:04",
+		},
+		{
+			input:    "2023-03-02T10:32:49-05:00",
+			expected: "10:32",
+		},
+		{
+			input:    "2023-03-02T12:15:49+08:00",
+			expected: "12:15",
+		},
+		{
+			input:    "2023-03-02T13:23:49-00:00",
+			expected: "13:23",
+		},
+		{
+			input:    "2023-03-02T19:49:49+11:00",
+			expected: "19:49",
+		},
+		{
+			input:    "2023-03-02T23:03:49-01:00",
+			expected: "23:03",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.expected, func(t *testing.T) {
+			_time, err := time.Parse(time.RFC3339, tc.input)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, _time.Format(consoleTimeFormatter))
 		})
 	}
 }

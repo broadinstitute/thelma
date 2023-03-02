@@ -380,6 +380,19 @@ VAR3=yet-another-long-string \
 			padding:  "      ",
 			expected: "long word\n      occursatendofstring\n",
 		},
+		{
+			name:     "should correctly wrap emoji",
+			maxWidth: 10,
+			input:    "🦄🦄🦄 a 👹 b 🎏c🎏d🎏 e 🦜f🦜g🦜h🦜i🦜j🦜k ⚠️ ☣️ l m 💯 💯 🚽 🧻",
+			padding:  "🍜🍜🍜🍜",
+			expected: `🦄🦄🦄 a 👹 b
+🍜🍜🍜🍜🎏c🎏d🎏
+🍜🍜🍜🍜e
+🍜🍜🍜🍜🦜f🦜g🦜h🦜i🦜j🦜k
+🍜🍜🍜🍜⚠️ ☣️
+🍜🍜🍜🍜l m 💯
+🍜🍜🍜🍜💯 🚽 🧻`,
+		},
 	}
 
 	for _, tc := range testCases {
