@@ -206,6 +206,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		o.Summarizer.Enabled = true
 		o.Metrics.Enabled = !cmd.options.dryRun // When dry-running, don't report metrics!
 		o.Metrics.PoolName = "bees_apply_schedule"
+		o.StopProcessingOnError = false
 	}).Execute()
 
 	if err != nil {
