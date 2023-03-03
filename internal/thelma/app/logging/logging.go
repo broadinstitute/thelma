@@ -15,6 +15,8 @@ import (
 
 const logFile = "thelma.log"
 const configPrefix = "logging"
+const pidField = "pid"
+const consoleTimeFormatter = "15:04"
 
 // globalWriter is the writer that zerolog's global log.Logger is configured to write to.
 // We track it in a package-level variable so that WithMask can wrap it with a masking writer.
@@ -134,6 +136,9 @@ func newLogger(cfg *logConfig, compositeWriter zerolog.LevelWriter) (*zerolog.Lo
 	// Add timestamps to logs
 	ctx = ctx.Timestamp()
 
+	// Add pid to logs -- helps distinguish distinct thelma runs from each other
+	ctx = ctx.Int(pidField, os.Getppid())
+
 	logger := ctx.Logger()
 	return &logger, nil
 }
@@ -144,13 +149,18 @@ func newConsoleWriter(cfg *logConfig, consoleStream io.Writer) zerolog.LevelWrit
 	if cfg.Console.WordWrap {
 		outputStream = NewWrappingWriter(consoleStream, func(options *wordwrap.Options) {
 			options.DynamicMaxWidth = true
-			options.Padding = "           "
 			options.EscapeNewlineStringLiteral = true
+
+			// match width of console logger prefix
+			//                "15:04 INF "
+			options.Padding = "          "
 		})
 	}
 
 	consoleWriter := zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
 		w.Out = outputStream
+		w.TimeFormat = consoleTimeFormatter
+		w.FieldsExclude = []string{pidField}
 	})
 
 	return NewFilteredWriter(zerolog.MultiLevelWriter(consoleWriter), parseLogLevel(cfg.Console.Level))
