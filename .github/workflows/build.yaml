@@ -161,7 +161,7 @@ jobs:
         id: rel-dir-name
         run: |
           REL_DIR_PATH=./output/releases/darwin-amd64
-          echo ::set-output "name=rel-dir::${REL_DIR_PATH}"
+          echo rel-dir=${REL_DIR_PATH} >> $GITHUB_OUTPUT
 
       - name: Cache release directory
         id: cache-release-darwin-amd64
