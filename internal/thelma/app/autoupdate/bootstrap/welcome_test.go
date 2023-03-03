@@ -43,6 +43,22 @@ func Test_computeTerminalWidth(t *testing.T) {
 			input:    120,
 			expected: 37,
 		},
+		{
+			input:    121,
+			expected: 37,
+		},
+		{
+			input:    122,
+			expected: 37,
+		},
+		{
+			input:    150,
+			expected: 37,
+		},
+		{
+			input:    200,
+			expected: 37,
+		},
 	}
 
 	for _, tc := range testCases {

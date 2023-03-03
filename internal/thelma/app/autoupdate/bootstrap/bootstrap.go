@@ -150,7 +150,7 @@ func (b *bootstrapper) promptUserForOptions() (opts options, err error) {
 }
 
 func (b *bootstrapper) addThelmaInitToZshrc() error {
-	writer, err := newZshrcWriter(b.zshrcFile, b.initFile)
+	writer, err := newZshrcWriter(b.zshrcFile, b.initFile, b.prompt)
 	if err != nil {
 		return err
 	}
