@@ -24,7 +24,7 @@ jobs:
       run: |
         GCP_CREDS_PATH=$(pwd)/service_account.json
         echo '${{ secrets.THELMA_CI_KEY }}' > service_account.json
-        echo ::set-output "name=gcp-creds-path::${GCP_CREDS_PATH}"
+        echo gcp-creds-path=${GCP_CREDS_PATH} >> $GITHUB_OUTPUT
 
     - name: Run tests
       uses: ./.github/actions/make
