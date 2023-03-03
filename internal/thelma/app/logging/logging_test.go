@@ -187,7 +187,7 @@ func Test_newLogger(t *testing.T) {
 
 				jsonLog, err := os.ReadFile(r.logFile)
 				require.NoError(t, err)
-				assert.Regexp(t, `{"level":"info","key1":"\*\*\*\*\*\*","key2":"extra \*\*\*\*\*\* stuff","time":".*","message":"Hello \*\*\*\*\*\*"}`, string(jsonLog))
+				assert.Regexp(t, `{"level":"info","pid":\d+,"key1":"\*\*\*\*\*\*","key2":"extra \*\*\*\*\*\* stuff","time":".*","message":"Hello \*\*\*\*\*\*"}`, string(jsonLog))
 			},
 		},
 	}
@@ -241,7 +241,7 @@ func Test_newLogger(t *testing.T) {
 	}
 }
 
-func Test_ConsoleFormatter(t *testing.T) {
+func Test_ConsoleTimeFormat(t *testing.T) {
 	testCases := []struct {
 		input    string
 		expected string
