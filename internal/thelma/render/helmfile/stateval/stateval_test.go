@@ -2,13 +2,16 @@ package stateval
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func Test_BuildStateValues(t *testing.T) {
-	state := statefixtures.LoadFixture(statefixtures.Default, t)
+	//nolint:staticcheck // SA1019
+	fixture, err := statefixtures.LoadFixture(statefixtures.Default)
+	require.NoError(t, err)
 
 	chartPath := t.TempDir()
 
@@ -21,7 +24,7 @@ func Test_BuildStateValues(t *testing.T) {
 	}{
 		{
 			name:    "static env release",
-			release: state.Release("sam", "dev"),
+			release: fixture.Release("sam", "dev"),
 			expectedAppValues: AppValues{
 				ChartPath: chartPath,
 				Release: Release{
@@ -63,7 +66,7 @@ func Test_BuildStateValues(t *testing.T) {
 		},
 		{
 			name:    "suitable release",
-			release: state.Release("sam", "prod"),
+			release: fixture.Release("sam", "prod"),
 			expectedAppValues: AppValues{
 				ChartPath: chartPath,
 				Release: Release{
@@ -105,7 +108,7 @@ func Test_BuildStateValues(t *testing.T) {
 		},
 		{
 			name:    "template env release",
-			release: state.Release("sam", "swatomation"),
+			release: fixture.Release("sam", "swatomation"),
 			expectedAppValues: AppValues{
 				ChartPath: chartPath,
 				Release: Release{
@@ -147,7 +150,7 @@ func Test_BuildStateValues(t *testing.T) {
 		},
 		{
 			name:    "dynamic env release",
-			release: state.Release("sam", "fiab-funky-chipmunk"),
+			release: fixture.Release("sam", "fiab-funky-chipmunk"),
 			expectedAppValues: AppValues{
 				ChartPath: chartPath,
 				Release: Release{
@@ -191,7 +194,7 @@ func Test_BuildStateValues(t *testing.T) {
 		},
 		{
 			name:    "cluster release",
-			release: state.Release("diskmanager", "terra-dev"),
+			release: fixture.Release("diskmanager", "terra-dev"),
 			expectedAppValues: AppValues{
 				ChartPath: chartPath,
 				Release: Release{

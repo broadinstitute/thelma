@@ -3,6 +3,7 @@ package pinflags
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	climocks "github.com/broadinstitute/thelma/internal/thelma/cli/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,13 +14,20 @@ import (
 
 func Test_LoadFromEnv(t *testing.T) {
 	// build thelma app set up for testing
-	app, err := builder.NewBuilder().WithTestDefaults(t).Build()
+	//nolint:staticcheck // SA1019
+	fixture, err := statefixtures.LoadFixture(statefixtures.Default)
+	require.NoError(t, err)
+
+	app, err := builder.NewBuilder().
+		WithTestDefaults(t).
+		UseCustomStateLoader(fixture.Mocks().StateLoader).
+		Build()
 	require.NoError(t, err)
 
 	// set up an empty cobra command and mock run context
 	cmd := &cobra.Command{}
 	rc := &climocks.RunContext{}
-	rc.On("CobraCommand").Return(cmd)
+	rc.EXPECT().CobraCommand().Return(cmd)
 
 	// add the cli flags we want to test
 	cmd.SetArgs([]string{"--from-env", "dev"})
@@ -61,7 +69,14 @@ func Test_LoadFromFile(t *testing.T) {
 	`), 0600))
 
 	// build thelma app set up for testing
-	app, err := builder.NewBuilder().WithTestDefaults(t).Build()
+	//nolint:staticcheck // SA1019
+	fixture, err := statefixtures.LoadFixture(statefixtures.Default)
+	require.NoError(t, err)
+	app, err := builder.NewBuilder().
+		WithTestDefaults(t).
+		UseCustomStateLoader(fixture.Mocks().StateLoader).
+		Build()
+	require.NoError(t, err)
 	require.NoError(t, err)
 
 	// set up an empty cobra command and run context

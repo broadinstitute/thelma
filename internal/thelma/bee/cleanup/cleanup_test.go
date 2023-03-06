@@ -8,7 +8,6 @@ import (
 	googletesting "github.com/broadinstitute/thelma/internal/thelma/clients/google/testing"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -83,24 +82,41 @@ func Test_Cleanup(t *testing.T) {
 }
 
 func Test_pubsubTopicIds(t *testing.T) {
-	fixture := statefixtures.LoadFixture(statefixtures.Default, t)
-
-	dynamic := fixture.Environment("fiab-funky-chipmunk")
+	bee := statemocks.NewEnvironment(t)
+	bee.EXPECT().Name().Return("fiab-funky-chipmunk")
 	assert.ElementsMatch(t, []string{
 		"leonardo-pubsub-fiab-funky-chipmunk",
 		"rawls-async-import-topic-fiab-funky-chipmunk",
 		"sam-group-sync-fiab-funky-chipmunk",
 		"terra-fiab-funky-chipmunk-stairwaycluster-workqueue",
 		"workbench-notifications-fiab-funky-chipmunk",
-	}, pubsubTopicIds(dynamic))
+	}, pubsubTopicIds(bee))
 }
 
 func Test_projectIds(t *testing.T) {
-	fixture := statefixtures.LoadFixture(statefixtures.Default, t)
+	stagingCluster := statemocks.NewCluster(t)
+	stagingCluster.EXPECT().Project().Return("broad-dsde-staging")
+	tdrStagingCluster := statemocks.NewCluster(t)
+	tdrStagingCluster.EXPECT().Project().Return("terra-datarepo-staging")
 
-	static := fixture.Environment("staging")
-	assert.ElementsMatch(t, []string{"broad-dsde-staging", "terra-datarepo-staging"}, projectIds(static))
+	samStaging := statemocks.NewRelease(t)
+	samStaging.EXPECT().Cluster().Return(stagingCluster)
+	tdrStaging := statemocks.NewRelease(t)
+	tdrStaging.EXPECT().Cluster().Return(tdrStagingCluster)
 
-	dynamic := fixture.Environment("fiab-funky-chipmunk")
-	assert.ElementsMatch(t, []string{"broad-dsde-qa"}, projectIds(dynamic))
+	staging := statemocks.NewEnvironment(t)
+	staging.EXPECT().Releases().Return([]terra.Release{samStaging, tdrStaging})
+
+	assert.ElementsMatch(t, []string{"broad-dsde-staging", "terra-datarepo-staging"}, projectIds(staging))
+
+	beeCluster := statemocks.NewCluster(t)
+	beeCluster.EXPECT().Project().Return("broad-dsde-qa")
+
+	samBee := statemocks.NewRelease(t)
+	samBee.EXPECT().Cluster().Return(beeCluster)
+
+	bee := statemocks.NewEnvironment(t)
+	bee.EXPECT().Releases().Return([]terra.Release{samBee})
+
+	assert.ElementsMatch(t, []string{"broad-dsde-qa"}, projectIds(bee))
 }

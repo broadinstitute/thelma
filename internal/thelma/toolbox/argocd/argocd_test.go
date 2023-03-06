@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -139,9 +138,21 @@ func Test_Login(t *testing.T) {
 }
 
 func Test_releaseSelector(t *testing.T) {
-	fixture := statefixtures.LoadFixture(statefixtures.Default, t)
-	samDev := fixture.Release("sam", "dev")
-	yaleTerraDev := fixture.Release("yale", "terra-dev")
+	samDev := statemocks.NewRelease(t)
+	samDev.EXPECT().IsAppRelease().Return(true)
+	samDev.EXPECT().Name().Return("sam")
+
+	dev := statemocks.NewEnvironment(t)
+	dev.EXPECT().Name().Return("dev")
+	samDev.EXPECT().Destination().Return(dev)
+
+	yaleTerraDev := statemocks.NewRelease(t)
+	yaleTerraDev.EXPECT().IsAppRelease().Return(false)
+	yaleTerraDev.EXPECT().Name().Return("yale")
+
+	terraDev := statemocks.NewCluster(t)
+	terraDev.EXPECT().Name().Return("terra-dev")
+	yaleTerraDev.EXPECT().Destination().Return(terraDev)
 
 	assert.Equal(t, map[string]string{"app": "sam", "env": "dev"}, releaseSelector(samDev))
 	assert.Equal(t, map[string]string{"release": "yale", "cluster": "terra-dev", "type": "cluster"}, releaseSelector(yaleTerraDev))

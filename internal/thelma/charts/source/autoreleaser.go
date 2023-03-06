@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -12,7 +11,8 @@ import (
 )
 
 const configFile = ".autorelease.yaml"
-const targetVersionSet = gitops.Dev
+
+const targetEnvironment = "dev"
 
 // AutoReleaser offers a UpdateReleaseVersion to take a newly published chart and update development instances to use
 // it.
@@ -20,7 +20,6 @@ const targetVersionSet = gitops.Dev
 // This is a literal struct, not an interface, so the callers can configure it out without needing to pass multiple
 // parameters around.
 type AutoReleaser struct {
-	GitopsUpdaters           []gitops.Versions
 	SherlockUpdaters         []sherlock.ChartVersionUpdater
 	SoftFailSherlockUpdaters []sherlock.ChartVersionUpdater
 }
@@ -65,7 +64,7 @@ func (a *AutoReleaser) UpdateReleaseVersion(chart Chart, newVersion string, last
 		sherlockTargetChartReleases = cfg.Sherlock.ChartReleasesToUseLatest
 		sherlockCanAlwaysSoftFail = false
 	} else {
-		sherlockTargetChartReleases = []string{fmt.Sprintf("%s/%s", targetVersionSet.String(), cfg.Release.Name)}
+		sherlockTargetChartReleases = []string{fmt.Sprintf("%s/%s", targetEnvironment, cfg.Release.Name)}
 		sherlockCanAlwaysSoftFail = true
 	}
 	for index, sherlockUpdater := range a.SherlockUpdaters {

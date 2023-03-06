@@ -2,6 +2,7 @@ package sherlock_test
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
@@ -62,7 +63,10 @@ func (suite *sherlockStateWriterSuite) TestErrorWriteClusters() {
 }
 
 func constructFakeState(t *testing.T) terra.State {
-	builder := builder.NewBuilder().WithTestDefaults(t)
+	//nolint:staticcheck // SA1019
+	fixture, err := statefixtures.LoadFixture(statefixtures.Default)
+	require.NoError(t, err)
+	builder := builder.NewBuilder().WithTestDefaults(t).UseCustomStateLoader(fixture.Mocks().StateLoader)
 	app, err := builder.Build()
 	require.NoError(t, err)
 

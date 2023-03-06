@@ -1,0 +1,1367 @@
+clusters:
+    - name: dsp-tools
+      base: tools
+      address: https://34.68.254.48
+      project: dsp-tools-k8s
+      location: us-central-1
+      requiresuitable: false
+    - name: terra-integration
+      base: terra
+      address: https://34.70.205.77
+      project: terra-kernel-k8s
+      location: us-central1-a
+      requiresuitable: false
+    - name: terra-prod
+      base: terra
+      address: https://35.232.149.177
+      project: broad-dsde-prod
+      location: us-central1
+      requiresuitable: true
+    - name: terra-qa
+      base: terra
+      address: https://35.224.175.229
+      project: broad-dsde-qa
+      location: us-central1-a
+      requiresuitable: false
+    - name: dsp-eng-tools
+      base: tools
+      address: https://34.123.94.51
+      project: dsp-tools-k8s
+      location: us-central-1
+      requiresuitable: false
+    - name: datarepo-staging
+      base: datarepo
+      address: https://35.202.44.141
+      project: terra-datarepo-staging
+      location: us-central1
+      requiresuitable: false
+    - name: terra-staging
+      base: terra
+      address: https://35.202.93.150
+      project: broad-dsde-staging
+      location: us-central-1
+      requiresuitable: false
+    - name: terra-perf
+      base: terra
+      address: https://35.224.104.186
+      project: broad-dsde-perf
+      location: us-central1-a
+      requiresuitable: false
+    - name: datarepo-production
+      base: datarepo
+      address: https://34.72.249.113
+      project: terra-datarepo-production
+      location: us-central1
+      requiresuitable: false
+    - name: terra-alpha
+      base: terra
+      address: https://34.70.215.101
+      project: broad-dsde-alpha
+      location: us-central1-a
+      requiresuitable: false
+    - name: datarepo-alpha
+      base: datarepo
+      address: https://34.72.14.91
+      project: terra-datarepo-alpha
+      location: us-central1
+      requiresuitable: false
+    - name: terra-dev
+      base: terra
+      address: https://35.238.186.116
+      project: broad-dsde-dev
+      location: us-central1-a
+      requiresuitable: false
+environments:
+    - name: prod
+      base: live
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-prod
+      requiresuitable: true
+    - name: staging
+      base: live
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-staging
+      requiresuitable: false
+    - name: fiab-funky-chipmunk
+      base: bee
+      template: swatomation
+      lifecycle: dynamic
+      uniqueresourceprefix: e101
+      defaultcluster: terra-qa
+      requiresuitable: false
+    - name: tools
+      base: personal
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-integration
+      requiresuitable: false
+    - name: buffertest
+      base: personal
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-integration
+      requiresuitable: false
+    - name: fiab-special-snowflake
+      base: bee
+      template: swatomation
+      lifecycle: dynamic
+      uniqueresourceprefix: e103
+      defaultcluster: terra-qa
+      requiresuitable: false
+    - name: fiab-snarky-panini
+      base: bee
+      template: swatomation
+      lifecycle: dynamic
+      uniqueresourceprefix: e104
+      defaultcluster: terra-qa
+      requiresuitable: false
+      terrahelmfileref: some-pr
+    - name: alpha
+      base: live
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-alpha
+      requiresuitable: false
+    - name: perf
+      base: live
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-perf
+      requiresuitable: false
+    - name: sam-ci-002
+      base: bee
+      template: sam-ci
+      lifecycle: dynamic
+      uniqueresourceprefix: e105
+      defaultcluster: terra-qa
+      requiresuitable: false
+    - name: sam-ci
+      base: bee
+      template: ""
+      lifecycle: template
+      uniqueresourceprefix: ""
+      defaultcluster: terra-qa
+      requiresuitable: false
+    - name: fiab-nerdy-walrus
+      base: bee
+      template: swatomation
+      lifecycle: dynamic
+      uniqueresourceprefix: e102
+      defaultcluster: terra-qa
+      requiresuitable: false
+    - name: sam-ci-001
+      base: bee
+      template: sam-ci
+      lifecycle: dynamic
+      uniqueresourceprefix: e105
+      defaultcluster: terra-qa
+      requiresuitable: false
+    - name: dev
+      base: live
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-dev
+      requiresuitable: false
+    - name: swatomation
+      base: bee
+      template: ""
+      lifecycle: template
+      uniqueresourceprefix: ""
+      defaultcluster: terra-qa
+      requiresuitable: false
+    - name: wsmtest
+      base: personal
+      template: ""
+      lifecycle: static
+      uniqueresourceprefix: ""
+      defaultcluster: terra-integration
+      requiresuitable: false
+    - name: fiab-swirly-rabbit
+      base: bee
+      template: swatomation
+      lifecycle: dynamic
+      uniqueresourceprefix: e100
+      defaultcluster: terra-qa
+      requiresuitable: false
+charts:
+    - name: external-dns
+      repo: terra-helm-thirdparty
+    - name: diskmanager
+      repo: terra-helm
+    - name: install-secrets-manager
+      repo: datarepo-helm
+    - name: buffer
+      repo: terra-helm
+    - name: externalcreds
+      repo: terra-helm
+    - name: yale
+      repo: terra-helm
+    - name: opendj
+      repo: terra-helm
+    - name: sam
+      repo: terra-helm
+    - name: cromwell
+      repo: terra-helm
+    - name: terra-prometheus
+      repo: terra-helm
+    - name: leonardo
+      repo: terra-helm
+    - name: rawls
+      repo: terra-helm
+    - name: datarepo
+      repo: datarepo-helm
+    - name: agora
+      repo: terra-helm
+    - name: workspacemanager
+      repo: terra-helm
+releases:
+    - fullname: rawls-fiab-snarky-panini
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-qa
+      namespace: terra-fiab-snarky-panini
+      environment: fiab-snarky-panini
+      appversion: cead2f9206b5
+      chartversion: 0.34.0
+      terrahelmfileref: completely-different-pr
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: leonardo-dev
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: workspacemanager-wsmtest
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-integration
+      namespace: terra-wsmtest
+      environment: wsmtest
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspacemanager
+      protocol: workspacemanager
+      port: 443
+    - fullname: yale-terra-alpha
+      repo: terra-helm
+      chart: yale
+      cluster: terra-alpha
+      namespace: yale
+      environment: ""
+      appversion: ""
+      chartversion: 0.6.0
+    - fullname: install-secrets-manager-terra-perf
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: terra-perf
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: sam-fiab-funky-chipmunk
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-fiab-funky-chipmunk
+      environment: fiab-funky-chipmunk
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      terrahelmfileref: my-th-branch-1
+      fireclouddevelopref: my-fc-branch-1
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: leonardo-fiab-special-snowflake
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-qa
+      namespace: terra-fiab-special-snowflake
+      environment: fiab-special-snowflake
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: agora-swatomation
+      repo: terra-helm
+      chart: agora
+      cluster: terra-qa
+      namespace: terra-swatomation
+      environment: swatomation
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: workspacemanager-alpha
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-alpha
+      namespace: terra-alpha
+      environment: alpha
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspacemanager
+      protocol: workspacemanager
+      port: 443
+    - fullname: terra-prometheus-dsp-tools
+      repo: terra-helm
+      chart: terra-prometheus
+      cluster: dsp-tools
+      namespace: monitoring
+      environment: ""
+      appversion: ""
+      chartversion: 0.14.0
+    - fullname: sam-perf
+      repo: terra-helm
+      chart: sam
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: yale-terra-staging
+      repo: terra-helm
+      chart: yale
+      cluster: terra-staging
+      namespace: yale
+      environment: ""
+      appversion: ""
+      chartversion: 0.6.0
+    - fullname: diskmanager-terra-dev
+      repo: terra-helm
+      chart: diskmanager
+      cluster: terra-dev
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.5.0
+    - fullname: external-dns-terra-qa
+      repo: terra-helm-thirdparty
+      chart: external-dns
+      cluster: terra-qa
+      namespace: external-dns
+      environment: ""
+      appversion: ""
+      chartversion: 5.4.11
+    - fullname: buffer-dev
+      repo: terra-helm
+      chart: buffer
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: 0.185.0
+      chartversion: 0.54.0
+      subdomain: buffer
+      protocol: buffer
+      port: 443
+    - fullname: diskmanager-terra-prod
+      repo: terra-helm
+      chart: diskmanager
+      cluster: terra-prod
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.5.0
+    - fullname: cromwell-dev
+      repo: terra-helm
+      chart: cromwell
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: 77-b5699f6
+      chartversion: 0.28.0
+      subdomain: cromwell
+      protocol: cromwell
+      port: 443
+    - fullname: cromwell-perf
+      repo: terra-helm
+      chart: cromwell
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: 77-b5699f6
+      chartversion: 0.28.0
+      subdomain: cromwell
+      protocol: cromwell
+      port: 443
+    - fullname: workspacemanager-prod
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-prod
+      namespace: terra-prod
+      environment: prod
+      appversion: 0.254.191
+      chartversion: 0.64.0
+      subdomain: workspacemanager
+      protocol: workspacemanager
+      port: 443
+    - fullname: datarepo-prod
+      repo: datarepo-helm
+      chart: datarepo
+      cluster: datarepo-production
+      namespace: terra-prod
+      environment: prod
+      appversion: 1.300.0
+      chartversion: 0.1.390
+      subdomain: datarepo
+      protocol: datarepo
+      port: 443
+    - fullname: terra-prometheus-terra-prod
+      repo: terra-helm
+      chart: terra-prometheus
+      cluster: terra-prod
+      namespace: monitoring
+      environment: ""
+      appversion: ""
+      chartversion: 0.14.0
+    - fullname: install-secrets-manager-dsp-tools
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: dsp-tools
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: workspacemanager-fiab-nerdy-walrus
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-qa
+      namespace: terra-fiab-nerdy-walrus
+      environment: fiab-nerdy-walrus
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspace
+      protocol: workspace
+      port: 443
+    - fullname: leonardo-swatomation
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-qa
+      namespace: terra-swatomation
+      environment: swatomation
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: rawls-swatomation
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-qa
+      namespace: terra-swatomation
+      environment: swatomation
+      appversion: cead2f9206b5
+      chartversion: 0.34.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: cromwell-alpha
+      repo: terra-helm
+      chart: cromwell
+      cluster: terra-alpha
+      namespace: terra-alpha
+      environment: alpha
+      appversion: 77-b5699f6
+      chartversion: 0.28.0
+      subdomain: cromwell
+      protocol: cromwell
+      port: 443
+    - fullname: externalcreds-dev
+      repo: terra-helm
+      chart: externalcreds
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: 0.68.0
+      chartversion: 0.65.0
+      subdomain: externalcreds
+      protocol: externalcreds
+      port: 443
+    - fullname: leonardo-fiab-swirly-rabbit
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-qa
+      namespace: terra-fiab-swirly-rabbit
+      environment: fiab-swirly-rabbit
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: cromwell-staging
+      repo: terra-helm
+      chart: cromwell
+      cluster: terra-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: 77-b5699f6
+      chartversion: 0.27.0
+      subdomain: cromwell
+      protocol: cromwell
+      port: 443
+    - fullname: workspacemanager-fiab-snarky-panini
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-qa
+      namespace: terra-fiab-snarky-panini
+      environment: fiab-snarky-panini
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      terrahelmfileref: some-pr
+      subdomain: workspace
+      protocol: workspace
+      port: 443
+    - fullname: workspacemanager-perf
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspacemanager
+      protocol: workspacemanager
+      port: 443
+    - fullname: terra-prometheus-terra-dev
+      repo: terra-helm
+      chart: terra-prometheus
+      cluster: terra-dev
+      namespace: monitoring
+      environment: ""
+      appversion: ""
+      chartversion: 0.14.0
+    - fullname: leonardo-prod
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-prod
+      namespace: terra-prod
+      environment: prod
+      appversion: 7d85b84317b6
+      chartversion: 0.83.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: agora-staging
+      repo: terra-helm
+      chart: agora
+      cluster: terra-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: 55b83ca56ba2
+      chartversion: 0.24.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: diskmanager-terra-alpha
+      repo: terra-helm
+      chart: diskmanager
+      cluster: terra-alpha
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.5.0
+    - fullname: agora-fiab-special-snowflake
+      repo: terra-helm
+      chart: agora
+      cluster: terra-qa
+      namespace: terra-fiab-special-snowflake
+      environment: fiab-special-snowflake
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: opendj-sam-ci-002
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-sam-ci-002
+      environment: sam-ci-002
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 443
+    - fullname: opendj-fiab-funky-chipmunk
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-fiab-funky-chipmunk
+      environment: fiab-funky-chipmunk
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 389
+    - fullname: sam-fiab-swirly-rabbit
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-fiab-swirly-rabbit
+      environment: fiab-swirly-rabbit
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: rawls-alpha
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-alpha
+      namespace: terra-alpha
+      environment: alpha
+      appversion: cead2f9206b5
+      chartversion: 0.34.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: datarepo-alpha
+      repo: datarepo-helm
+      chart: datarepo
+      cluster: datarepo-staging
+      namespace: terra-alpha
+      environment: alpha
+      appversion: 1.303.0
+      chartversion: 0.1.398
+      subdomain: datarepo
+      protocol: datarepo
+      port: 443
+    - fullname: sam-dev
+      repo: terra-helm
+      chart: sam
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: terra-prometheus-terra-integration
+      repo: terra-helm
+      chart: terra-prometheus
+      cluster: terra-integration
+      namespace: monitoring
+      environment: ""
+      appversion: ""
+      chartversion: 0.14.0
+    - fullname: buffer-tools
+      repo: terra-helm
+      chart: buffer
+      cluster: terra-integration
+      namespace: terra-tools
+      environment: tools
+      appversion: 0.185.0
+      chartversion: 0.54.0
+      subdomain: buffer
+      protocol: buffer
+      port: 443
+    - fullname: install-secrets-manager-terra-prod
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: terra-prod
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: yale-terra-dev
+      repo: terra-helm
+      chart: yale
+      cluster: terra-dev
+      namespace: yale
+      environment: ""
+      appversion: ""
+      chartversion: 0.6.0
+    - fullname: workspacemanager-swatomation
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-qa
+      namespace: terra-swatomation
+      environment: swatomation
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspace
+      protocol: workspace
+      port: 443
+    - fullname: sam-alpha
+      repo: terra-helm
+      chart: sam
+      cluster: terra-alpha
+      namespace: terra-alpha
+      environment: alpha
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: agora-alpha
+      repo: terra-helm
+      chart: agora
+      cluster: terra-alpha
+      namespace: terra-alpha
+      environment: alpha
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: leonardo-fiab-snarky-panini
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-qa
+      namespace: terra-fiab-snarky-panini
+      environment: fiab-snarky-panini
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      terrahelmfileref: some-pr
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: sam-sam-ci-002
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-sam-ci-002
+      environment: sam-ci-002
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: agora-perf
+      repo: terra-helm
+      chart: agora
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: leonardo-perf
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: buffer-prod
+      repo: terra-helm
+      chart: buffer
+      cluster: terra-prod
+      namespace: terra-prod
+      environment: prod
+      appversion: 0.185.0
+      chartversion: 0.53.0
+      subdomain: buffer
+      protocol: buffer
+      port: 443
+    - fullname: rawls-perf
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: cead2f9206b5
+      chartversion: 0.34.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: cromwell-prod
+      repo: terra-helm
+      chart: cromwell
+      cluster: terra-prod
+      namespace: terra-prod
+      environment: prod
+      appversion: 77-b5699f6
+      chartversion: 0.27.0
+      subdomain: cromwell
+      protocol: cromwell
+      port: 443
+    - fullname: leonardo-fiab-nerdy-walrus
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-qa
+      namespace: terra-fiab-nerdy-walrus
+      environment: fiab-nerdy-walrus
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: sam-fiab-snarky-panini
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-fiab-snarky-panini
+      environment: fiab-snarky-panini
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      terrahelmfileref: some-pr
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: opendj-fiab-special-snowflake
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-fiab-special-snowflake
+      environment: fiab-special-snowflake
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 389
+    - fullname: workspacemanager-fiab-swirly-rabbit
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-qa
+      namespace: terra-fiab-swirly-rabbit
+      environment: fiab-swirly-rabbit
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspace
+      protocol: workspace
+      port: 443
+    - fullname: opendj-sam-ci-001
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-sam-ci-001
+      environment: sam-ci-001
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 443
+    - fullname: leonardo-fiab-funky-chipmunk
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-qa
+      namespace: terra-fiab-funky-chipmunk
+      environment: fiab-funky-chipmunk
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: workspacemanager-fiab-funky-chipmunk
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-qa
+      namespace: terra-fiab-funky-chipmunk
+      environment: fiab-funky-chipmunk
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspace
+      protocol: workspace
+      port: 443
+    - fullname: install-secrets-manager-terra-staging
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: terra-staging
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: sam-sam-ci
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-sam-ci
+      environment: sam-ci
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: terra-prometheus-terra-alpha
+      repo: terra-helm
+      chart: terra-prometheus
+      cluster: terra-alpha
+      namespace: monitoring
+      environment: ""
+      appversion: ""
+      chartversion: 0.14.0
+    - fullname: diskmanager-terra-perf
+      repo: terra-helm
+      chart: diskmanager
+      cluster: terra-perf
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.5.0
+    - fullname: workspacemanager-staging
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: 0.254.191
+      chartversion: 0.64.0
+      subdomain: workspacemanager
+      protocol: workspacemanager
+      port: 443
+    - fullname: rawls-fiab-special-snowflake
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-qa
+      namespace: terra-fiab-special-snowflake
+      environment: fiab-special-snowflake
+      appversion: cead2f9206b5
+      chartversion: 100.200.300
+      terrahelmfileref: my-terra-helmfile-branch
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: sam-sam-ci-001
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-sam-ci-001
+      environment: sam-ci-001
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: agora-dev
+      repo: terra-helm
+      chart: agora
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: agora-prod
+      repo: terra-helm
+      chart: agora
+      cluster: terra-prod
+      namespace: terra-prod
+      environment: prod
+      appversion: 55b83ca56ba2
+      chartversion: 0.24.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: agora-fiab-swirly-rabbit
+      repo: terra-helm
+      chart: agora
+      cluster: terra-qa
+      namespace: terra-fiab-swirly-rabbit
+      environment: fiab-swirly-rabbit
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: buffer-buffertest
+      repo: terra-helm
+      chart: buffer
+      cluster: terra-integration
+      namespace: terra-buffertest
+      environment: buffertest
+      appversion: 0.185.0
+      chartversion: 0.54.0
+      subdomain: buffer
+      protocol: buffer
+      port: 443
+    - fullname: install-secrets-manager-terra-alpha
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: terra-alpha
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: opendj-fiab-snarky-panini
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-fiab-snarky-panini
+      environment: fiab-snarky-panini
+      appversion: none
+      chartversion: 0.26.0
+      terrahelmfileref: some-pr
+      subdomain: opendj
+      protocol: opendj
+      port: 389
+    - fullname: sam-prod
+      repo: terra-helm
+      chart: sam
+      cluster: terra-prod
+      namespace: terra-prod
+      environment: prod
+      appversion: 8f69c32bd9fe
+      chartversion: 0.33.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: yale-terra-perf
+      repo: terra-helm
+      chart: yale
+      cluster: terra-perf
+      namespace: yale
+      environment: ""
+      appversion: ""
+      chartversion: 0.6.0
+    - fullname: rawls-staging
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: f2f90a946307
+      chartversion: 0.33.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: external-dns-dsp-eng-tools
+      repo: terra-helm-thirdparty
+      chart: external-dns
+      cluster: dsp-eng-tools
+      namespace: external-dns
+      environment: ""
+      appversion: ""
+      chartversion: 5.4.11
+    - fullname: agora-fiab-funky-chipmunk
+      repo: terra-helm
+      chart: agora
+      cluster: terra-qa
+      namespace: terra-fiab-funky-chipmunk
+      environment: fiab-funky-chipmunk
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: rawls-fiab-funky-chipmunk
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-qa
+      namespace: terra-fiab-funky-chipmunk
+      environment: fiab-funky-chipmunk
+      appversion: my-rawls-pr-0ef4
+      chartversion: 0.34.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: sam-swatomation
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-swatomation
+      environment: swatomation
+      appversion: 2d309b1645a0
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: workspacemanager-dev
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspacemanager
+      protocol: workspacemanager
+      port: 443
+    - fullname: buffer-staging
+      repo: terra-helm
+      chart: buffer
+      cluster: terra-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: 0.185.0
+      chartversion: 0.53.0
+      subdomain: buffer
+      protocol: buffer
+      port: 443
+    - fullname: agora-fiab-snarky-panini
+      repo: terra-helm
+      chart: agora
+      cluster: terra-qa
+      namespace: terra-fiab-snarky-panini
+      environment: fiab-snarky-panini
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      terrahelmfileref: some-pr
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: opendj-swatomation
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-swatomation
+      environment: swatomation
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 389
+    - fullname: leonardo-alpha
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-alpha
+      namespace: terra-alpha
+      environment: alpha
+      appversion: 03865547c329
+      chartversion: 0.84.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: install-secrets-manager-terra-dev
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: terra-dev
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: externalcreds-perf
+      repo: terra-helm
+      chart: externalcreds
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: 0.68.0
+      chartversion: 0.65.0
+      subdomain: externalcreds
+      protocol: externalcreds
+      port: 443
+    - fullname: rawls-prod
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-prod
+      namespace: terra-prod
+      environment: prod
+      appversion: f2f90a946307
+      chartversion: 0.33.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: agora-fiab-nerdy-walrus
+      repo: terra-helm
+      chart: agora
+      cluster: terra-qa
+      namespace: terra-fiab-nerdy-walrus
+      environment: fiab-nerdy-walrus
+      appversion: 55b83ca56ba2
+      chartversion: 0.25.0
+      subdomain: agora
+      protocol: agora
+      port: 443
+    - fullname: workspacemanager-fiab-special-snowflake
+      repo: terra-helm
+      chart: workspacemanager
+      cluster: terra-qa
+      namespace: terra-fiab-special-snowflake
+      environment: fiab-special-snowflake
+      appversion: 0.254.195
+      chartversion: 0.65.0
+      subdomain: workspace
+      protocol: workspace
+      port: 443
+    - fullname: rawls-fiab-swirly-rabbit
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-qa
+      namespace: terra-fiab-swirly-rabbit
+      environment: fiab-swirly-rabbit
+      appversion: cead2f9206b5
+      chartversion: 0.34.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: install-secrets-manager-dsp-eng-tools
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: dsp-eng-tools
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: opendj-fiab-nerdy-walrus
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-fiab-nerdy-walrus
+      environment: fiab-nerdy-walrus
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 389
+    - fullname: buffer-alpha
+      repo: terra-helm
+      chart: buffer
+      cluster: terra-alpha
+      namespace: terra-alpha
+      environment: alpha
+      appversion: 0.185.0
+      chartversion: 0.54.0
+      subdomain: buffer
+      protocol: buffer
+      port: 443
+    - fullname: datarepo-staging
+      repo: datarepo-helm
+      chart: datarepo
+      cluster: datarepo-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: 1.300.0
+      chartversion: 0.1.390
+      subdomain: datarepo
+      protocol: datarepo
+      port: 443
+    - fullname: terra-prometheus-terra-staging
+      repo: terra-helm
+      chart: terra-prometheus
+      cluster: terra-staging
+      namespace: monitoring
+      environment: ""
+      appversion: ""
+      chartversion: 0.14.0
+    - fullname: rawls-fiab-nerdy-walrus
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-qa
+      namespace: terra-fiab-nerdy-walrus
+      environment: fiab-nerdy-walrus
+      appversion: cead2f9206b5
+      chartversion: 0.34.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: opendj-fiab-swirly-rabbit
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-fiab-swirly-rabbit
+      environment: fiab-swirly-rabbit
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 389
+    - fullname: leonardo-staging
+      repo: terra-helm
+      chart: leonardo
+      cluster: terra-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: 7d85b84317b6
+      chartversion: 0.83.0
+      subdomain: leonardo
+      protocol: leonardo
+      port: 443
+    - fullname: sam-staging
+      repo: terra-helm
+      chart: sam
+      cluster: terra-staging
+      namespace: terra-staging
+      environment: staging
+      appversion: 8f69c32bd9fe
+      chartversion: 0.33.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: sam-fiab-nerdy-walrus
+      repo: terra-helm
+      chart: sam
+      cluster: terra-qa
+      namespace: terra-fiab-nerdy-walrus
+      environment: fiab-nerdy-walrus
+      appversion: 1.2.3
+      chartversion: 0.34.0
+      subdomain: sam
+      protocol: sam
+      port: 443
+    - fullname: buffer-perf
+      repo: terra-helm
+      chart: buffer
+      cluster: terra-perf
+      namespace: terra-perf
+      environment: perf
+      appversion: 0.185.0
+      chartversion: 0.54.0
+      subdomain: buffer
+      protocol: buffer
+      port: 443
+    - fullname: install-secrets-manager-terra-integration
+      repo: datarepo-helm
+      chart: install-secrets-manager
+      cluster: terra-integration
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.0.6
+    - fullname: terra-prometheus-terra-perf
+      repo: terra-helm
+      chart: terra-prometheus
+      cluster: terra-perf
+      namespace: monitoring
+      environment: ""
+      appversion: ""
+      chartversion: 0.14.0
+    - fullname: opendj-sam-ci
+      repo: terra-helm
+      chart: opendj
+      cluster: terra-qa
+      namespace: terra-sam-ci
+      environment: sam-ci
+      appversion: none
+      chartversion: 0.26.0
+      subdomain: opendj
+      protocol: opendj
+      port: 443
+    - fullname: rawls-dev
+      repo: terra-helm
+      chart: rawls
+      cluster: terra-dev
+      namespace: terra-dev
+      environment: dev
+      appversion: cead2f9206b5
+      chartversion: 0.34.0
+      subdomain: rawls
+      protocol: rawls
+      port: 443
+    - fullname: diskmanager-terra-staging
+      repo: terra-helm
+      chart: diskmanager
+      cluster: terra-staging
+      namespace: default
+      environment: ""
+      appversion: ""
+      chartversion: 0.5.0

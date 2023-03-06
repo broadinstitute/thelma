@@ -1,9 +1,0 @@
-# Common settings for private developer environments
-
-# All private dev environments go to same cluster
-defaultCluster: terra-integration
-
-# Enable services below, eg:
-# releases:
-#   cromwell:
-#     enabled: true

@@ -214,7 +214,11 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	state, err = app.StateLoader().Reload()
+	stateLoader, err := app.StateLoader()
+	if err != nil {
+		return err
+	}
+	state, err = stateLoader.Reload()
 	if err != nil {
 		return fmt.Errorf("flipped BEEs but couldn't reload state: %v", err)
 	}
