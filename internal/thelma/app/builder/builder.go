@@ -1,11 +1,11 @@
 package builder
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -15,12 +15,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statebucket"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
 	sherlockState "github.com/broadinstitute/thelma/internal/thelma/state/providers/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/rs/zerolog/log"
 )
 
 // ThelmaBuilder is a utility for initializing new ThelmaApp instances
@@ -40,33 +36,16 @@ type ThelmaBuilder interface {
 	NoManageSingletons() ThelmaBuilder
 	// SetShellRunner (FOR USE IN UNIT TESTS ONLY) sets the shell runner that the Thelma app should use.
 	SetShellRunner(shell.Runner) ThelmaBuilder
-	// UseStateFixture (FOR USE IN UNIT TESTS ONLY) configures Thelma to use a state fixture instead of a "real" terra.State
-	UseStateFixture(name statefixtures.FixtureName, t *testing.T) ThelmaBuilder
+	// UseCustomStateLoader (FOR USE IN UNIT TESTS ONLY) configures Thelma to use a custom state loader instead of a "real" terra.State
+	UseCustomStateLoader(stateLoader terra.StateLoader) ThelmaBuilder
 }
 
 type thelmaBuilder struct {
-	configOptions    []config.Option
-	manageSingletons bool
-	shellRunner      shell.Runner
-	stateFixture     struct {
-		enabled bool
-		name    statefixtures.FixtureName
-		t       *testing.T
-	}
-	rootDir string
-}
-
-type stateLoaderType int
-
-const (
-	gitopsStateLoader stateLoaderType = iota + 1
-	sherlockStateLoader
-	undefinedStateLoader
-)
-const stateLoaderConfigPrefix string = "stateloader"
-
-type StateLoaderConfig struct {
-	Source string `default:"sherlock"`
+	configOptions     []config.Option
+	manageSingletons  bool
+	shellRunner       shell.Runner
+	customStateLoader terra.StateLoader
+	rootDir           string
 }
 
 func NewBuilder() ThelmaBuilder {
@@ -87,9 +66,6 @@ func (b *thelmaBuilder) WithTestDefaults(t *testing.T) ThelmaBuilder {
 
 	// Use mock shell runner
 	b.SetShellRunner(shell.DefaultMockRunner())
-
-	// Use state loader filled with fake/pre-populated data
-	b.UseStateFixture(statefixtures.Default, t)
 
 	return b
 }
@@ -124,10 +100,8 @@ func (b *thelmaBuilder) SetShellRunner(shellRunner shell.Runner) ThelmaBuilder {
 	return b
 }
 
-func (b *thelmaBuilder) UseStateFixture(name statefixtures.FixtureName, t *testing.T) ThelmaBuilder {
-	b.stateFixture.enabled = true
-	b.stateFixture.name = name
-	b.stateFixture.t = t
+func (b *thelmaBuilder) UseCustomStateLoader(stateLoader terra.StateLoader) ThelmaBuilder {
+	b.customStateLoader = stateLoader
 	return b
 }
 
@@ -163,7 +137,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		return nil, err
 	}
 
-	shellRunner, err := b.buildShellRunner(thelmaRoot)
+	shellRunner, err := b.buildShellRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -204,16 +178,13 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 		}
 	}
 
-	stateLoader, err := b.buildStateLoader(cfg, _clients)
-	if err != nil {
-		return nil, fmt.Errorf("error constructing state loader: %v", err)
-	}
+	stateLoader := b.buildStateLoader(cfg, _clients)
 
 	// Initialize app
 	return app.New(cfg, _credentials, _clients, _installer, _scratch, shellRunner, stateLoader, b.manageSingletons)
 }
 
-func (b *thelmaBuilder) buildShellRunner(thelmaRoot root.Root) (shell.Runner, error) {
+func (b *thelmaBuilder) buildShellRunner() (shell.Runner, error) {
 	if b.shellRunner != nil {
 		return b.shellRunner, nil
 	}
@@ -225,47 +196,18 @@ func (b *thelmaBuilder) buildShellRunner(thelmaRoot root.Root) (shell.Runner, er
 	return shell.NewRunner(finder), nil
 }
 
-func (b *thelmaBuilder) buildStateLoader(cfg config.Config, clients clients.Clients) (terra.StateLoader, error) {
-	if b.stateFixture.enabled {
-		return statefixtures.NewFakeStateLoader(b.stateFixture.name, b.stateFixture.t, cfg.Home())
+func (b *thelmaBuilder) buildStateLoader(cfg config.Config, clients clients.Clients) lazy.LazyE[terra.StateLoader] {
+	if b.customStateLoader != nil {
+		return lazy.NewLazyE(func() (terra.StateLoader, error) {
+			return b.customStateLoader, nil
+		})
 	}
 
-	stateLoaderType, err := getStateLoaderType(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	if stateLoaderType == gitopsStateLoader {
-		sb, err := statebucket.New(cfg, clients.Google())
-		if err != nil {
-			return nil, err
-		}
-		return gitops.NewStateLoader(cfg.Home(), sb), nil
-	} else if stateLoaderType == sherlockStateLoader {
+	return lazy.NewLazyE(func() (terra.StateLoader, error) {
 		sherlock, err := clients.Sherlock()
 		if err != nil {
 			return nil, err
 		}
 		return sherlockState.NewStateLoader(cfg.Home(), sherlock), nil
-	}
-
-	return nil, fmt.Errorf("received an undefined state loader source: valid options gitops or sherlock")
-}
-
-func getStateLoaderType(cfg config.Config) (stateLoaderType, error) {
-	var stateLoaderConfig StateLoaderConfig
-	if err := cfg.Unmarshal(stateLoaderConfigPrefix, &stateLoaderConfig); err != nil {
-		return 0, err
-	}
-
-	log.Debug().Msgf("State Source: %s", stateLoaderConfig.Source)
-
-	switch stateLoaderConfig.Source {
-	case "gitops":
-		return gitopsStateLoader, nil
-	case "sherlock":
-		return sherlockStateLoader, nil
-	default:
-		return undefinedStateLoader, nil
-	}
+	})
 }

@@ -33,7 +33,11 @@ func NewBees(thelmaApp app.ThelmaApp) (bee.Bees, error) {
 		log.Debug().Msgf("error configuring slack client: %v", err)
 	}
 
-	return bee.NewBees(_argocd, thelmaApp.StateLoader(), seeder, _cleanup, kubectl, thelmaApp.Ops(), slack)
+	stateLoader, err := thelmaApp.StateLoader()
+	if err != nil {
+		return nil, err
+	}
+	return bee.NewBees(_argocd, stateLoader, seeder, _cleanup, kubectl, thelmaApp.Ops(), slack)
 }
 
 func newSeeder(thelma app.ThelmaApp) (seed.Seeder, error) {

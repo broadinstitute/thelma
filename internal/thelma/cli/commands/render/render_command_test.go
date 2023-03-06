@@ -2,9 +2,11 @@ package render
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"os"
 	"path"
 	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
@@ -16,8 +18,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/render/validator"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
-	tsort "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
 	. "github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,7 +37,9 @@ func TestRenderArgParsing(t *testing.T) {
 		expected *expectedAttrs
 	}
 
-	fixture := statefixtures.LoadFixture(stateFixture, t)
+	//nolint:staticcheck // SA1019
+	fixture, err := statefixtures.LoadFixture(stateFixture)
+	require.NoError(t, err)
 
 	testCases := []struct {
 		description   string                     // testcase description
@@ -491,7 +494,7 @@ func TestRenderArgParsing(t *testing.T) {
 			// set config repo path to a tmp dir we control
 			options.ConfigureThelma(func(b builder.ThelmaBuilder) {
 				b.WithTestDefaults(t)
-				b.UseStateFixture(stateFixture, t)
+				b.UseCustomStateLoader(fixture.Mocks().StateLoader)
 				b.SetHome(thelmaHome)
 			})
 
@@ -540,12 +543,28 @@ func TestRenderArgParsing(t *testing.T) {
 			}
 
 			// sort expected releases before comparison
-			tsort.Releases(expected.renderOptions.Releases)
+			expectedReleases := releasesToFullNames(expected.renderOptions.Releases)
+			actualReleases := releasesToFullNames(cmd.renderOptions.Releases)
+			sort.Strings(expectedReleases)
+			sort.Strings(actualReleases)
+
+			assert.Equal(t, expectedReleases, actualReleases)
+
+			expected.renderOptions.Releases = nil
+			cmd.renderOptions.Releases = nil
 
 			assert.Equal(t, expected.renderOptions, cmd.renderOptions)
 			assert.Equal(t, expected.helmfileArgs, cmd.helmfileArgs)
 		})
 	}
+}
+
+func releasesToFullNames(releases []terra.Release) []string {
+	var fullNames []string
+	for _, r := range releases {
+		fullNames = append(fullNames, r.FullName())
+	}
+	return fullNames
 }
 
 // return the default set of releases that should be matched when no filter flags are applied

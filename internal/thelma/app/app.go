@@ -13,6 +13,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients"
 	"github.com/broadinstitute/thelma/internal/thelma/ops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
 )
@@ -48,13 +49,13 @@ type ThelmaApp interface {
 	// State returns a new terra.State instance for this ThelmaApp
 	State() (terra.State, error)
 	// StateLoader returns the terra.StateLoader instance for this ThelmaApp
-	StateLoader() terra.StateLoader
+	StateLoader() (terra.StateLoader, error)
 	// Close deletes local resources associated with this ThelmaApp, and should be called once before the program exits.
 	Close() error
 }
 
 // New constructs a new ThelmaApp
-func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, installer autoupdate.AutoUpdate, scratch scratch.Scratch, shellRunner shell.Runner, stateLoader terra.StateLoader, manageSingletons bool) (ThelmaApp, error) {
+func New(cfg config.Config, creds credentials.Credentials, clients clients.Clients, installer autoupdate.AutoUpdate, scratch scratch.Scratch, shellRunner shell.Runner, stateLoader lazy.LazyE[terra.StateLoader], manageSingletons bool) (ThelmaApp, error) {
 	app := &thelmaApp{}
 
 	// Initialize paths
@@ -85,7 +86,7 @@ type thelmaApp struct {
 	paths            paths.Paths
 	scratch          scratch.Scratch
 	shellRunner      shell.Runner
-	stateLoader      terra.StateLoader
+	stateLoader      lazy.LazyE[terra.StateLoader]
 	manageSingletons bool
 }
 
@@ -122,11 +123,15 @@ func (t *thelmaApp) ShellRunner() shell.Runner {
 }
 
 func (t *thelmaApp) State() (terra.State, error) {
-	return t.stateLoader.Load()
+	s, err := t.StateLoader()
+	if err != nil {
+		return nil, err
+	}
+	return s.Load()
 }
 
-func (t *thelmaApp) StateLoader() terra.StateLoader {
-	return t.stateLoader
+func (t *thelmaApp) StateLoader() (terra.StateLoader, error) {
+	return t.stateLoader.Get()
 }
 
 func (t *thelmaApp) Close() error {
