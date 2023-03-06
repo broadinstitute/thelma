@@ -1,9 +1,0 @@
-# Environment overrides for perf environment
-
-defaultCluster: terra-perf
-
-releases:
-  externalcreds:
-    enabled: true
-
-baseDomain: dsde-perf.broadinstitute.org

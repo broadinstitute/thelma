@@ -1,7 +1,0 @@
-defaultCluster: terra-qa
-
-releases:
-  sam:
-    enabled: true
-  opendj:
-    enabled: true

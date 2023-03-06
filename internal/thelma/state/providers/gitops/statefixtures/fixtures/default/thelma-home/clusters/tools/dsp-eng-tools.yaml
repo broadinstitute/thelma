@@ -1,7 +1,0 @@
-address: https://34.123.94.51
-project: dsp-tools-k8s
-location: us-central-1
-
-releases:
-  external-dns:
-    enabled: true

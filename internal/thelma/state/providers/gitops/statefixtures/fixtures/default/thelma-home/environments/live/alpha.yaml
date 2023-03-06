@@ -1,9 +1,0 @@
-# Environment overrides for alpha environment
-
-# Cluster in ArgoCD where manifests should be deployed to
-defaultCluster: terra-alpha
-
-releases:
-  datarepo:
-    enabled: true
-    cluster: datarepo-staging
