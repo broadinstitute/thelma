@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	sherlockmocks "github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
-	"github.com/broadinstitute/thelma/internal/thelma/state/providers/gitops"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
@@ -18,8 +17,6 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 	description := "my new description"
 
 	type mocks struct {
-		versions        *gitops.MockVersions
-		snapshot        *gitops.MockSnapshot
 		sherlockUpdater *sherlockmocks.ChartVersionUpdater
 	}
 
@@ -34,7 +31,7 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			name: "No config file should default to enabled + app release type",
 			setupMocks: func(m mocks) {
 				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
-					fmt.Sprintf("%s/%s", gitops.Dev.String(), chartName)).Return(nil)
+					fmt.Sprintf("%s/%s", targetEnvironment, chartName)).Return(nil)
 			},
 		},
 		{
@@ -46,7 +43,7 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			configContent: `release: {name: foo}`,
 			setupMocks: func(m mocks) {
 				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
-					fmt.Sprintf("%s/%s", gitops.Dev.String(), "foo")).Return(nil)
+					fmt.Sprintf("%s/%s", targetEnvironment, "foo")).Return(nil)
 			},
 		},
 		{
@@ -54,7 +51,7 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			configContent: `release: {type: cluster}`,
 			setupMocks: func(m mocks) {
 				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
-					fmt.Sprintf("%s/%s", gitops.Dev.String(), chartName)).Return(nil)
+					fmt.Sprintf("%s/%s", targetEnvironment, chartName)).Return(nil)
 			},
 		},
 		{
@@ -81,8 +78,6 @@ sherlock:
 
 		t.Run(tc.name, func(t *testing.T) {
 			m := mocks{
-				versions:        gitops.NewMockVersions(),
-				snapshot:        gitops.NewMockSnapshot(),
 				sherlockUpdater: sherlockmocks.NewChartVersionUpdater(t),
 			}
 			if tc.setupMocks != nil {
@@ -95,13 +90,11 @@ sherlock:
 				}
 			}
 
-			_autoReleaser := &AutoReleaser{GitopsUpdaters: []gitops.Versions{m.versions}, SherlockUpdaters: []sherlock.ChartVersionUpdater{m.sherlockUpdater}}
+			_autoReleaser := &AutoReleaser{SherlockUpdaters: []sherlock.ChartVersionUpdater{m.sherlockUpdater}}
 			// lastVersion and description are arguments handled solely on Sherlock's end, Thelma doesn't need to even
 			// validate them
 			err := _autoReleaser.UpdateReleaseVersion(chart, newVersion, lastVersion, description)
 
-			m.versions.AssertExpectations(t)
-			m.snapshot.AssertExpectations(t)
 			m.sherlockUpdater.AssertExpectations(t)
 
 			if len(tc.matchErr) == 0 {
