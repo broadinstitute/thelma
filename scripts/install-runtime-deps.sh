@@ -151,11 +151,11 @@ install_kubectl() {
 install_kubelogin() {
   URL="https://github.com/Azure/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin-${OS}-${ARCH}.zip"
   echo "Downloading kubelogin from ${URL}"
-  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
-    bsdtar -xz --strip-components=2 "bin/${OS}_${ARCH}/kubelogin" && 
-    chmod +x ./kubelogin && \
-    testexec ./kubelogin --version && \
-    mv ./kubelogin "${INSTALL_DIR}/kubelogin"
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O ./kubelogin.zip && \
+    unzip -qo kubelogin && \
+    chmod +x "./bin/${OS}_${ARCH}/kubelogin" && 
+    testexec "./bin/${OS}_${ARCH}/kubelogin" --version && \
+    mv "./bin/${OS}_${ARCH}/kubelogin" "${INSTALL_DIR}/kubelogin"
 }
 
 install_kubeconform() {
