@@ -13,6 +13,7 @@ HELM_DOCS_VERSION=1.5.0
 ARGOCD_VERSION=2.5.3
 KUBECTL_VERSION=1.24.0
 KUBECONFORM_VERSION=0.5.0
+KUBELOGIN_VERSION='v0.0.27'
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
@@ -147,6 +148,16 @@ install_kubectl() {
     mv ./kubectl "${INSTALL_DIR}/kubectl"
 }
 
+install_kubelogin() {
+  URL="https://github.com/Azure/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin-${OS}-${ARCH}.zip"
+  echo "Downloading kubelogin from ${URL}"
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
+    tar -xz --strip-components=2 "bin/${OS}_${ARCH}/kubelogin" && 
+    chmod +x ./kubelogin && \
+    testexec ./kubelogin --version && \
+    mv ./kubelogin "${INSTALL_DIR}/kubelogin"
+}
+
 install_kubeconform() {
   URL="https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-${OS}-${ARCH}.tar.gz"
   echo "Downloading kubeconform from ${URL}"
@@ -209,6 +220,14 @@ fi
 if [[ ! -f "${INSTALL_DIR}/kubectl" ]]; then
   if ! install_kubectl; then
     echo "kubectl install failed!" >&2
+    exit 1
+  fi
+fi
+
+# Install kubelogin
+if [[ ! -f "${INSTALL_DIR}/kubelogin" ]]; then
+  if ! install_kubelogin; then
+    echo "kubelogin install failed!" >&2
     exit 1
   fi
 fi
