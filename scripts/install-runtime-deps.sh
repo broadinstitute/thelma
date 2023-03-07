@@ -152,7 +152,7 @@ install_kubelogin() {
   URL="https://github.com/Azure/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin-${OS}-${ARCH}.zip"
   echo "Downloading kubelogin from ${URL}"
   wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
-    tar -xz --strip-components=2 "bin/${OS}_${ARCH}/kubelogin" && 
+    bsdtar -xz --strip-components=2 "bin/${OS}_${ARCH}/kubelogin" && 
     chmod +x ./kubelogin && \
     testexec ./kubelogin --version && \
     mv ./kubelogin "${INSTALL_DIR}/kubelogin"
