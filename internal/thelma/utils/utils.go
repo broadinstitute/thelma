@@ -157,3 +157,27 @@ func Not[T any](fn func(T) bool) func(T) bool {
 		return !fn(t)
 	}
 }
+
+func MapValues[K comparable, V any](m map[K]V) []V {
+	var vs []V
+	for _, v := range m {
+		vs = append(vs, v)
+	}
+	return vs
+}
+
+func MapValuesFlattened[K comparable, V any](m map[K][]V) []V {
+	var vs []V
+	for _, v := range m {
+		vs = append(vs, v...)
+	}
+	return vs
+}
+
+func MapKeys[K comparable, V any](m map[K]V) []K {
+	var ks []K
+	for k, _ := range m {
+		ks = append(ks, k)
+	}
+	return ks
+}
