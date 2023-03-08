@@ -87,6 +87,12 @@ func (r *RealRunner) prepareExecCmd(cmd Command, options ...RunOption) (*exec.Cm
 	execCmd.Stdout = stdout
 	execCmd.Stderr = stderr
 
+	if opts.Stdin != nil {
+		execCmd.Stdin = os.Stdin
+		execCmd.Stdout = os.Stdout
+		execCmd.Stderr = os.Stderr
+	}
+
 	logger.WithLevel(level).Str("dir", cmd.Dir).Msgf("Executing: %q", cmd.PrettyFormat())
 	return execCmd, logger, errBuffer
 }

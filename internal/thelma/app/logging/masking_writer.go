@@ -2,12 +2,15 @@ package logging
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/rs/zerolog"
 	"io"
+	"strings"
 	"sync"
 )
 
 const replacementText = "******"
+const maskEscapeLevels = 2
 
 // MaskingWriter replaces sensitive text in log messages
 type MaskingWriter struct {
@@ -38,6 +41,12 @@ func (w *MaskingWriter) MaskSecrets(secrets ...string) {
 		_, exists := w.secrets[s]
 		if !exists {
 			w.secrets[s] = []byte(s)
+
+			e := s
+			for i := 0; i < maskEscapeLevels; i++ {
+				e = escapeSecret(e)
+				w.secrets[e] = []byte(e)
+			}
 		}
 	}
 }
@@ -67,4 +76,13 @@ func (w *MaskingWriter) redactSecrets(msg []byte) []byte {
 		msg = bytes.ReplaceAll(msg, secret, w.replacementText)
 	}
 	return msg
+}
+
+func escapeSecret(s string) string {
+	// create quoted & escaped copy of the string
+	escaped := fmt.Sprintf("%q", s)
+
+	// remove quotes because they aren't part of the secret and can break matching
+	// for multiple levels of escaping
+	return strings.TrimSuffix(strings.TrimPrefix(escaped, `"`), `"`)
 }

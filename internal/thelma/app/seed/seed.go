@@ -9,7 +9,7 @@ import (
 )
 
 // Rand seeds the math/rand package's pseudo random number generator
-// Via stack overflow: https://stackoverflow.com/questions/12321133/how-to-properly-seed-random-number-generator
+// Via stack overflow: https://stackoverflow.com/a/54491783
 func Rand() {
 	var seed [8]byte
 	_, err := cryptorand.Read(seed[:])

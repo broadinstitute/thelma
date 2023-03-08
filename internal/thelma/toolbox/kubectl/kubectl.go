@@ -46,6 +46,10 @@ type Kubectl interface {
 	CreateNamespace(env terra.Environment) error
 	// Logs runs `kubectl logs` against the given Kubectx with given parameters
 	Logs(ktx kubecfg.Kubectx, podSelector map[string]string, option ...LogsOption) error
+	// Exec runs `kubectl exec` for the given Kubectx and pod with given parameters
+	Exec(ktx kubecfg.Kubectx, container Container, command []string) error
+	// ExecInteractive runs `kubectl exec` with stdin/stdout/stderr connected to local OS stdout/stdin/stderr
+	ExecInteractive(ktx kubecfg.Kubectx, container Container, command []string) error
 	// PortForward runs `kubectl port-forward` and returns the forwarding local port, a callback to stop forwarding, and
 	// a possible error if the command failed.
 	// The targetResource should be of the form `[pods|deployment|replicaset|service]/<name>`, like `service/sam-postgres-service`.
@@ -109,7 +113,7 @@ func (k *kubectl) PortForward(targetRelease terra.Release, targetResource string
 		return 0, nil, err
 	}
 	output := &strings.Builder{}
-	cmd := k.makeCmd(kubectx, []string{"port-forward", targetResource, fmt.Sprintf(":%d", targetPort)})
+	cmd := k.makeCmd(kubectx, kubectx.Namespace(), []string{"port-forward", targetResource, fmt.Sprintf(":%d", targetPort)})
 	subprocess := k.shellRunner.PrepareSubprocess(cmd, func(options *shell.RunOptions) {
 		options.Stdout = output
 		options.Stderr = output
@@ -176,6 +180,28 @@ func (k *kubectl) Logs(ktx kubecfg.Kubectx, podSelector map[string]string, opts 
 	})
 }
 
+type Container struct {
+	Pod       string
+	Namespace string
+	Name      string
+}
+
+func (k *kubectl) Exec(ktx kubecfg.Kubectx, container Container, command []string) error {
+	args := []string{"exec", container.Pod, "-c", container.Name, "--"}
+	args = append(args, command...)
+	return k.runForKubectxWithNamespace(ktx, container.Namespace, args)
+}
+
+func (k *kubectl) ExecInteractive(ktx kubecfg.Kubectx, container Container, command []string) error {
+	args := []string{"exec", "-it", container.Pod, "-c", container.Name, "--"}
+	args = append(args, command...)
+	return k.runForKubectxWithNamespace(ktx, container.Namespace, args, func(options *shell.RunOptions) {
+		options.Stdin = os.Stdin
+		options.Stdout = os.Stdout
+		options.Stderr = os.Stderr
+	})
+}
+
 var portRegex = regexp.MustCompile(`\d+\.\d+\.\d+\.\d+:(\d+)`)
 
 func parsePortFromPortForwardOutput(output string) int {
@@ -207,11 +233,15 @@ func (k *kubectl) runForEnv(env terra.Environment, args []string) error {
 }
 
 func (k *kubectl) runForKubectx(kubectx kubecfg.Kubectx, args []string, opts ...shell.RunOption) error {
-	return k.shellRunner.Run(k.makeCmd(kubectx, args), opts...)
+	return k.runForKubectxWithNamespace(kubectx, kubectx.Namespace(), args, opts...)
 }
 
-func (k *kubectl) makeCmd(kubectx kubecfg.Kubectx, args []string) shell.Command {
-	kargs := []string{"--context", kubectx.ContextName(), "--namespace", kubectx.Namespace()}
+func (k *kubectl) runForKubectxWithNamespace(kubectx kubecfg.Kubectx, namespace string, args []string, opts ...shell.RunOption) error {
+	return k.shellRunner.Run(k.makeCmd(kubectx, namespace, args), opts...)
+}
+
+func (k *kubectl) makeCmd(kubectx kubecfg.Kubectx, namespace string, args []string) shell.Command {
+	kargs := []string{"--context", kubectx.ContextName(), "--namespace", namespace}
 	kargs = append(kargs, args...)
 
 	return shell.Command{

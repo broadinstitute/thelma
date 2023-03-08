@@ -27,6 +27,8 @@ type RunOptions struct {
 	LogLevel zerolog.Level
 	// optional level at which command output (stdout/stderr) should be logged
 	OutputLogLevel zerolog.Level
+	// optional reader from which stdin should be read
+	Stdin io.Reader
 	// optional writer where stdout should be written
 	Stdout io.Writer
 	// optional writer where stderr should be written

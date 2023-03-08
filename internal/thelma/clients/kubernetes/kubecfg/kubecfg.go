@@ -12,7 +12,6 @@ import (
 	container "cloud.google.com/go/container/apiv1"
 	"cloud.google.com/go/container/apiv1/containerpb"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/flock"
 	"github.com/rs/zerolog/log"
@@ -23,6 +22,10 @@ import (
 
 // defaultAuthInfo name of AuthInfo inside kube config file to use for authentication to non-prod clusters
 const defaultAuthInfo = "default"
+
+// ctxDelimiter delimiter to use when joining environment/cluster/chart names to build context names in kubecfg
+// note that this helps guarantee uniqueness since underscores are not valid characters in env or cluster names
+const ctxDelimiter = "_"
 
 // kubectx represents a run context for a kubectl command
 type kubectx struct {
@@ -76,6 +79,8 @@ type Kubeconfig interface {
 	ForReleases(releases ...terra.Release) ([]ReleaseKtx, error)
 	// ForEnvironment returns all kubectxs for all releases in an environment
 	ForEnvironment(env terra.Environment) ([]Kubectx, error)
+	// ForCluster returns the name of the kubectx to use for executing commands against the cluster (without any awareness of environment/releases)
+	ForCluster(cluster terra.Cluster) (Kubectx, error)
 }
 
 // New constructs a Kubeconfig
@@ -124,6 +129,10 @@ func (c *kubeconfig) ForReleases(releases ...terra.Release) ([]ReleaseKtx, error
 
 func (c *kubeconfig) ForEnvironment(env terra.Environment) ([]Kubectx, error) {
 	return c.addAllReleases(env)
+}
+
+func (c *kubeconfig) ForCluster(cluster terra.Cluster) (Kubectx, error) {
+	return c.addCluster(cluster)
 }
 
 func (c *kubeconfig) ConfigFile() string {
@@ -200,9 +209,24 @@ func (c *kubeconfig) addRelease(release terra.Release) (Kubectx, error) {
 	return _kubectx, nil
 }
 
+// addCluster updates the kubecfg to include a context for given cluster, pointing at the cluster's default
+// namespace.
+//
+// For example, if called for Terra's alpha cluster, this will add a context to
+// the kubeconfig that is called "cluster_terra-alpha", uses the default namespace, and is (of course) pointing
+// at the terra-alpha cluster in the broad-dsde-alpha project.
+func (c *kubeconfig) addCluster(cluster terra.Cluster) (Kubectx, error) {
+	_kubectx := kubectxForCluster(cluster)
+	err := c.writeContextIfNeeded(_kubectx)
+	if err != nil {
+		return kubectx{}, err
+	}
+	return _kubectx, nil
+}
+
 // writeContextIfNeeded writes a context with the given name, namespace, and target cluster to the kubeconfig file,
 // unless the same context has already been written at least once by this kubecfg instance.
-// (saves THelma from making a Google Cloud api call for every `kubectl` command it runs)
+// (saves Thelma from making a Google Cloud api call for every `kubectl` command it runs)
 func (c *kubeconfig) writeContextIfNeeded(ctx kubectx) error {
 	c.mutex.Lock()
 	_, exists := c.writtenCtxs[ctx.contextName]
@@ -343,21 +367,33 @@ func kubectxForRelease(release terra.Release) kubectx {
 	}
 }
 
-// contextForRelease computes name of the kubecfg context for this release.
+func kubectxForCluster(cluster terra.Cluster) kubectx {
+	return kubectx{
+		contextName: contextNameForCluster(cluster),
+		cluster:     cluster,
+	}
+}
+
+func contextNameForCluster(cluster terra.Cluster) string {
+	// prefix with cluster to avoid collisions with environment context names
+	return "cluster" + ctxDelimiter + cluster.Name()
+}
+
+// contextNameForRelease computes name of the kubecfg context for this release.
 // If the release is deployed to an environment's default cluster, then use the
 // environment name. ("alpha", "staging", "fiab-choover-funky-squirrel")
 // If the release is a cluster release, or if the release is deployed to a different cluster than the environment's
-// default, use the ArgoCD application name, which is globally unique (eg. "datarepo-staging")
+// default, use the ArgoCD application name, which is globally unique (eg. "datarepo_staging")
 func contextNameForRelease(release terra.Release) string {
 	if release.IsClusterRelease() {
-		return argocd.ApplicationName(release)
+		return release.Cluster().Name() + ctxDelimiter + release.Name()
 	}
 	appRelease, ok := release.(terra.AppRelease)
 	if !ok {
 		panic(fmt.Errorf("failed to cast to AppRelease: %v", appRelease))
 	}
 	if appRelease.Cluster().Name() != appRelease.Environment().DefaultCluster().Name() {
-		return argocd.ApplicationName(release)
+		return appRelease.Environment().Name() + ctxDelimiter + release.Name()
 	}
 	return appRelease.Environment().Name()
 }

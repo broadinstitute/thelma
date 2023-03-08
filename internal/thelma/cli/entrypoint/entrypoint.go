@@ -44,6 +44,12 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/render"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/slack"
 	slack_notify "github.com/broadinstitute/thelma/internal/thelma/cli/commands/slack/notify"
+
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/sql"
+	sql_connect "github.com/broadinstitute/thelma/internal/thelma/cli/commands/sql/connect"
+	sql_init "github.com/broadinstitute/thelma/internal/thelma/cli/commands/sql/init"
+	sql_proxy "github.com/broadinstitute/thelma/internal/thelma/cli/commands/sql/proxy"
+
 	states "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state"
 	state_export "github.com/broadinstitute/thelma/internal/thelma/cli/commands/state/export"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/status"
@@ -103,6 +109,11 @@ func withCommands(opts *cli.Options) {
 
 	opts.AddCommand("slack", slack.NewSlackCommand())
 	opts.AddCommand("slack notify", slack_notify.NewSlackNotifyCommand())
+
+	opts.AddCommand("sql", sql.NewSqlCommand())
+	opts.AddCommand("sql connect", sql_connect.NewSqlConnectCommand())
+	opts.AddCommand("sql init", sql_init.NewSqlInitCommand())
+	opts.AddCommand("sql proxy", sql_proxy.NewSqlProxyCommand())
 
 	opts.AddCommand("state", states.NewStateCommand())
 	opts.AddCommand("state export", state_export.NewStateExportCommand())

@@ -18,7 +18,7 @@ const kubeConfigName = "kubecfg"
 
 // Clients factory interface for K8s tools & clients
 type Clients interface {
-	// ForRelease returns an API client authenticated againt the release's cluster
+	// ForRelease returns an API client authenticated against the release's cluster
 	ForRelease(release terra.Release) (k8s.Interface, error)
 	// ForKubectx returns an API client authenticated against the cluster referred to by the given Kubeconfig
 	ForKubectx(kubectx kubecfg.Kubectx) (k8s.Interface, error)
