@@ -2,16 +2,13 @@ package pwgen
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
-	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
 	"math/rand"
 )
 
 const defaultLength = 24
 const absoluteMinimumLength = 8
 
-func init() {
-	seed.Rand()
-}
+var r = rand.New(&source{})
 
 var lower = []rune(`abcdefghijklmnopqrstuvwxyz`)
 var upper = []rune(`ABCDEFGHIJKLMNOPQRSTUVWXYZ`)
@@ -78,7 +75,7 @@ func (p Pwgen) Generate() string {
 		buf[i] = pick(all)
 	}
 
-	rand.Shuffle(n, func(a, b int) {
+	r.Shuffle(n, func(a, b int) {
 		buf[a], buf[b] = buf[b], buf[a]
 	})
 
@@ -88,5 +85,5 @@ func (p Pwgen) Generate() string {
 }
 
 func pick(from []rune) rune {
-	return from[rand.Intn(len(from))]
+	return from[r.Intn(len(from))]
 }

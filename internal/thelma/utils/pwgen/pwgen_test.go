@@ -33,6 +33,31 @@ func Test_Pwgen(t *testing.T) {
 			len: absoluteMinimumLength + 10,
 		},
 		{
+			name: "length increased min char requirements exceed",
+			pwgen: Pwgen{
+				MinLength:  8,
+				MinLower:   16,
+				MinUpper:   16,
+				MinNum:     16,
+				MinSpecial: 16,
+			},
+			len: 64,
+		},
+		{
+			name: "all lower",
+			pwgen: Pwgen{
+				MinLength: 9,
+				MinLower:  9,
+			},
+			minCounts: counts{
+				lower:   9,
+				upper:   0,
+				num:     0,
+				special: 0,
+			},
+			len: 9,
+		},
+		{
 			name: "all upper",
 			pwgen: Pwgen{
 				MinLength: 12,
