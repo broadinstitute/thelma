@@ -1,10 +1,13 @@
 package entrypoint
 
 import (
+	"os"
+
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/repo"
+	repoCreate "github.com/broadinstitute/thelma/internal/thelma/cli/commands/repo/create"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/update"
 	"github.com/rs/zerolog/log"
-	"os"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
@@ -93,6 +96,8 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("logs", logs.NewLogsCommand())
 
 	opts.AddCommand("render", render.NewRenderCommand())
+	opts.AddCommand("repo", repo.NewRepoCommand())
+	opts.AddCommand("repo create", repoCreate.NewCreateCommand())
 
 	opts.AddCommand("slack", slack.NewSlackCommand())
 	opts.AddCommand("slack notify", slack_notify.NewSlackNotifyCommand())
