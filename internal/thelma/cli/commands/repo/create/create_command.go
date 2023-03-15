@@ -1,10 +1,12 @@
 package create
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,10 +32,16 @@ func (v *createCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (v *createCommand) Run(thelma app.ThelmaApp, ctx cli.RunContext) error {
-	_, err := thelma.Clients().Github()
+	github, err := thelma.Clients().Github()
 	if err != nil {
 		return err
 	}
+	u, _, err := github.Users.Get(context.Background(), "")
+	if err != nil {
+		return err
+	}
+
+	log.Debug().Msgf("github user: %+v", u)
 	return nil
 }
 

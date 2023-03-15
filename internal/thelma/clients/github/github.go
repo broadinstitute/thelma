@@ -48,7 +48,7 @@ func New(config config.Config, vaultClientFactory func() (*vault.Client, error))
 		log.Debug().Msg("github PAT not found in env, attempting to fetch from vault")
 		token, err := fetchAccessTokenFromVault(cfg.Vault.Path, cfg.Vault.Key, vaultClientFactory)
 		if err != nil {
-			return nil, err
+			return nil, errorNoGithubPat
 		}
 		cfg.AccessToken = &token
 	}
