@@ -2,7 +2,6 @@ package create
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -10,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const helpMessage = `Reports Thelma's version`
+const helpMessage = `Creates New DataBiosphere repos from an existing template and performs a number of common setup operations`
 
 type createCommand struct{}
 
@@ -25,9 +24,7 @@ func (v *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (v *createCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
-	if len(ctx.Args()) != 0 {
-		return fmt.Errorf("expected 0 arguments, got: %v", ctx.Args())
-	}
+	// nothing to do here
 	return nil
 }
 
