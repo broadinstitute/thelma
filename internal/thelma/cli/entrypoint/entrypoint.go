@@ -26,6 +26,7 @@ import (
 	bee_unseed "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed/unseed"
 	bee_start "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/start"
 	bee_stop "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/stop"
+	bee_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/sync"
 	bee_unpin "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/unpin"
 	bee_vars "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/vars"
 
@@ -78,6 +79,7 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("bee seed", bee_seed.NewBeeSeedCommand())
 	opts.AddCommand("bee start", bee_start.NewBeeStartCommand())
 	opts.AddCommand("bee stop", bee_stop.NewBeeStopCommand())
+	opts.AddCommand("bee sync", bee_sync.NewBeeSyncCommand())
 	opts.AddCommand("bee unseed", bee_unseed.NewBeeUnseedCommand())
 	opts.AddCommand("bee unpin", bee_unpin.NewBeeUnpinCommand())
 	opts.AddCommand("bee vars", bee_vars.NewBeeVarsCommand())

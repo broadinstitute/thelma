@@ -26,6 +26,7 @@ type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (*Bee, error)
 	CreateWith(options CreateOptions) (*Bee, error)
 	ProvisionWith(name string, options ProvisionOptions) (*Bee, error)
+	SyncWith(name string, options ProvisionExistingOptions) (*Bee, error)
 	StartStopWith(name string, offline bool, options StartStopOptions) (*Bee, error)
 	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
@@ -51,14 +52,18 @@ type CreateOptions struct {
 }
 
 type ProvisionOptions struct {
+	PinOptions          PinOptions
+	Seed                bool
+	SeedOptions         seed.SeedOptions
+	ExportLogsOnFailure bool
+	ProvisionExistingOptions
+}
+
+type ProvisionExistingOptions struct {
 	SyncGeneratorOnly        bool
 	WaitHealthy              bool
 	WaitHealthTimeoutSeconds int
-	PinOptions               PinOptions
 	Notify                   bool
-	Seed                     bool
-	SeedOptions              seed.SeedOptions
-	ExportLogsOnFailure      bool
 }
 
 type PinOptions struct {
@@ -166,25 +171,8 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 	if err = b.argocd.WaitExist(argocd_names.GeneratorName(env)); err != nil {
 		return bee, err
 	}
-	if err = b.SyncEnvironmentGenerator(env); err != nil {
-		return bee, err
-	}
-	if options.SyncGeneratorOnly {
-		log.Warn().Msgf("Won't sync Argo apps for %s", env.Name())
-		return bee, nil
-	}
 
-	log.Info().Msgf("Syncing all Argo apps in environment %s", env.Name())
-	statuses, err := b.SyncArgoAppsIn(env, func(_options *argocd.SyncOptions) {
-		// No need to do a legacy configs restart the first time we create a BEE
-		// (the deployments are being created for the first time)
-		_options.SyncIfNoDiff = true
-		_options.SkipLegacyConfigsRestart = true
-		_options.WaitHealthy = options.WaitHealthy
-		_options.WaitHealthyTimeoutSeconds = options.WaitHealthTimeoutSeconds
-	})
-
-	bee.Status = statuses
+	err = b.provisionBeeApps(bee, options.ProvisionExistingOptions)
 
 	if err == nil && options.Seed {
 		log.Info().Msgf("Seeding BEE with test data")
@@ -223,6 +211,52 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 	}
 
 	return bee, err
+}
+
+func (b *bees) SyncWith(name string, options ProvisionExistingOptions) (*Bee, error) {
+	env, err := b.state.Environments().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	bee := &Bee{
+		Environment: env,
+	}
+	err = b.provisionBeeApps(bee, options)
+	if options.Notify && env.Owner() != "" && b.slack != nil {
+		var outcome string
+		if err == nil {
+			outcome = "has been synced"
+		} else {
+			outcome = "failed to sync"
+		}
+		if slackErr := b.slack.SendDirectMessage(env.Owner(), fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE %s.", env.Name(), env.Name(), outcome)); slackErr != nil {
+			log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), slackErr)
+		}
+	}
+	return bee, err
+}
+
+func (b *bees) provisionBeeApps(bee *Bee, options ProvisionExistingOptions) error {
+	if err := b.SyncEnvironmentGenerator(bee.Environment); err != nil {
+		return err
+	}
+	if options.SyncGeneratorOnly {
+		log.Warn().Msgf("Won't sync Argo apps for %s", bee.Environment.Name())
+		return nil
+	}
+
+	log.Info().Msgf("Syncing all Argo apps in environment %s", bee.Environment.Name())
+	statuses, err := b.SyncArgoAppsIn(bee.Environment, func(_options *argocd.SyncOptions) {
+		// No need to do a legacy configs restart when we're changing the structure of a BEE -- we're not
+		// intending to really be syncing existing chart releases
+		_options.SyncIfNoDiff = true
+		_options.SkipLegacyConfigsRestart = true
+		_options.WaitHealthy = options.WaitHealthy
+		_options.WaitHealthyTimeoutSeconds = options.WaitHealthTimeoutSeconds
+	})
+
+	bee.Status = statuses
+	return err
 }
 
 func (b *bees) exportLogs(bee terra.Environment) (map[terra.Release]artifacts.Location, error) {

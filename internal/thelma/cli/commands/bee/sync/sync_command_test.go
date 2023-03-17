@@ -11,11 +11,11 @@ import (
 func Test_ProvisionHelp(t *testing.T) {
 	_cli := cli.New(func(options *cli.Options) {
 		options.AddCommand("bee", bee.NewBeeCommand())
-		options.AddCommand("bee provision", NewBeeProvisionCommand())
+		options.AddCommand("bee sync", NewBeeSyncCommand())
 		options.ConfigureThelma(func(thelmaBuilder builder.ThelmaBuilder) {
 			thelmaBuilder.WithTestDefaults(t)
 		})
-		options.SetArgs([]string{"bee", "provision", "--help"})
+		options.SetArgs([]string{"bee", "sync", "--help"})
 	})
 	assert.NoError(t, _cli.Execute(), "--help should execute successfully")
 }
