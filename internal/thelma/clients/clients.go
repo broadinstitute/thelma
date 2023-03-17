@@ -143,5 +143,5 @@ func (c *clients) Slack() (*slack.Slack, error) {
 }
 
 func (c *clients) Github() (*github.Client, error) {
-	return github.New(c.thelmaConfig, c.creds, c.Vault)
+	return github.New(github.WithDefaults(c.thelmaConfig, c.creds, c.Vault))
 }
