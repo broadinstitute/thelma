@@ -33,12 +33,12 @@ func (v *createCommand) Run(thelma app.ThelmaApp, ctx cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	u, _, err := github.Users.Get(context.Background(), "")
+	userInfo, err := github.GetCallingUser(context.Background())
 	if err != nil {
 		return err
 	}
 
-	log.Debug().Msgf("github user: %+v", u)
+	log.Debug().Msgf("github user: %+v", userInfo)
 	return nil
 }
 
