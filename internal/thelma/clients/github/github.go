@@ -41,6 +41,7 @@ type githubConfig struct {
 	}
 }
 
+// New creates a new instantiation of a github API client
 func New(options ...func(*Client) error) (*Client, error) {
 	log.Debug().Msg("initializing github client")
 	githubClient := &Client{}
@@ -53,6 +54,7 @@ func New(options ...func(*Client) error) (*Client, error) {
 	return githubClient, nil
 }
 
+// WithClient will create a github API client using the provided API client
 func WithClient(client *http.Client) func(*Client) error {
 	return func(c *Client) error {
 		c.client = github.NewClient(client)
@@ -60,6 +62,7 @@ func WithClient(client *http.Client) func(*Client) error {
 	}
 }
 
+// WithDefaults will use Thelma's configuration and credential store to construct an http.Client with sane defaults that will be used in a github api client
 func WithDefaults(config config.Config, creds credentials.Credentials, vaultClientFactory func() (*vault.Client, error)) func(*Client) error {
 	return func(c *Client) error {
 		var cfg githubConfig
@@ -131,6 +134,7 @@ func buildVaultGithubTokenProvider(creds credentials.Credentials, vault *vault.C
 	})
 }
 
+// GetCallingUser looks up the authenticated identity of the user that will be issuing github API commands
 func (c *Client) GetCallingUser(ctx context.Context) (string, error) {
 	// passing "" to this method will turn user info for the authenticated user
 	caller, _, err := c.client.Users.Get(ctx, "")
