@@ -22,6 +22,7 @@ const credentialsKey = "github-repo-pat"
 var (
 	errorVaultKeyNotExists = errors.New("unable to retrieve access token from vault: key does not exist")
 	errorBadTokenFormat    = errors.New("unable to convert token from vault to string: bad format")
+	errorUnknownAuthMethod = errors.New("unsupported github auth method, options are local | vault")
 )
 
 type Client struct {
@@ -58,6 +59,8 @@ func New(config config.Config, creds credentials.Credentials, vaultClientFactory
 			return nil, err
 		}
 		tokenProvider = buildVaultGithubTokenProvider(creds, vault, cfg.Auth.Vault.Path, cfg.Auth.Vault.Key)
+	} else {
+		return nil, errorUnknownAuthMethod
 	}
 
 	token, err := tokenProvider.Get()
