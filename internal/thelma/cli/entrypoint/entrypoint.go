@@ -21,12 +21,12 @@ import (
 	bee_list "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/list"
 	bee_pin "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/pin"
 	bee_provision "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/provision"
-	bee_re_provision "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/re_provision"
 	bee_reset "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/reset"
 	bee_seed "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed/seed"
 	bee_unseed "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/seed/unseed"
 	bee_start "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/start"
 	bee_stop "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/stop"
+	bee_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/sync"
 	bee_unpin "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/unpin"
 	bee_vars "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/vars"
 
@@ -71,7 +71,6 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("bee", bee.NewBeeCommand())
 	opts.AddCommand("bee create", bee_create.NewBeeCreateCommand())
 	opts.AddCommand("bee provision", bee_provision.NewBeeProvisionCommand())
-	opts.AddCommand("bee re-provision", bee_re_provision.NewBeeReProvisionCommand())
 	opts.AddCommand("bee delete", bee_delete.NewBeeDeleteCommand())
 	opts.AddCommand("bee describe", bee_describe.NewBeeDescribeCommand())
 	opts.AddCommand("bee list", bee_list.NewBeeListCommand())
@@ -80,6 +79,7 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("bee seed", bee_seed.NewBeeSeedCommand())
 	opts.AddCommand("bee start", bee_start.NewBeeStartCommand())
 	opts.AddCommand("bee stop", bee_stop.NewBeeStopCommand())
+	opts.AddCommand("bee sync", bee_sync.NewBeeSyncCommand())
 	opts.AddCommand("bee unseed", bee_unseed.NewBeeUnseedCommand())
 	opts.AddCommand("bee unpin", bee_unpin.NewBeeUnpinCommand())
 	opts.AddCommand("bee vars", bee_vars.NewBeeVarsCommand())

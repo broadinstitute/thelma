@@ -12,11 +12,14 @@ import (
 	"strings"
 )
 
-const helpMessage = `Re-provision the resources for an existing BEE (Branch Engineering Environment)
+const helpMessage = `Sync the resources for an existing BEE (Branch Engineering Environment)
+
+This is different from thelma argocd sync because this command is aware of BEE structure and will exhaustively
+sync an entire BEE to make sure that added or deleted chart releases are correctly reflected.
 
 Examples:
 
-thelma bee re-provision --name=bee-swat-ecstatic-spider
+thelma bee sync --name=bee-swat-ecstatic-spider
 `
 
 var flagNames = struct {
@@ -33,21 +36,21 @@ var flagNames = struct {
 	notify:                    "notify",
 }
 
-type reProvisionCommand struct {
+type syncCommand struct {
 	name    string
 	options bee.ProvisionExistingOptions
 }
 
-func NewBeeReProvisionCommand() cli.ThelmaCommand {
-	return &reProvisionCommand{}
+func NewBeeSyncCommand() cli.ThelmaCommand {
+	return &syncCommand{}
 }
 
-func (cmd *reProvisionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
-	cobraCommand.Use = "re-provision"
-	cobraCommand.Short = "Re-provision the resources for an existing BEE"
+func (cmd *syncCommand) ConfigureCobra(cobraCommand *cobra.Command) {
+	cobraCommand.Use = "sync"
+	cobraCommand.Short = "Sync the resources for an existing BEE"
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "NAME", "Name of the existing BEE to provision")
+	cobraCommand.Flags().StringVarP(&cmd.name, flagNames.name, "n", "NAME", "Name of the existing BEE to sync")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
 	cobraCommand.Flags().BoolVar(&cmd.options.WaitHealthy, flagNames.waitHealthy, true, "Wait for BEE's Argo apps to become healthy after syncing")
 	cobraCommand.Flags().IntVar(&cmd.options.WaitHealthTimeoutSeconds, flagNames.waitHealthyTimeoutSeconds, 1200, "How long to wait for BEE's Argo apps to become healthy after syncing")
@@ -55,7 +58,7 @@ func (cmd *reProvisionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 }
 
-func (cmd *reProvisionCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *syncCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	if !ctx.CobraCommand().Flags().Changed(flagNames.name) {
 		return fmt.Errorf("no environment name specified; --%s is required", flagNames.name)
 	}
@@ -67,18 +70,18 @@ func (cmd *reProvisionCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error
 	return nil
 }
 
-func (cmd *reProvisionCommand) Run(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
+func (cmd *syncCommand) Run(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
 	bees, err := builders.NewBees(thelmaApp)
 	if err != nil {
 		return err
 	}
-	_bee, err := bees.ReProvisionWith(cmd.name, cmd.options)
+	_bee, err := bees.SyncWith(cmd.name, cmd.options)
 	if _bee != nil {
 		ctx.SetOutput(views.DescribeBee(_bee))
 	}
 	return err
 }
 
-func (cmd *reProvisionCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
+func (cmd *syncCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	return nil
 }

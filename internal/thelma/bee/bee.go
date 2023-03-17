@@ -26,7 +26,7 @@ type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (*Bee, error)
 	CreateWith(options CreateOptions) (*Bee, error)
 	ProvisionWith(name string, options ProvisionOptions) (*Bee, error)
-	ReProvisionWith(name string, options ProvisionExistingOptions) (*Bee, error)
+	SyncWith(name string, options ProvisionExistingOptions) (*Bee, error)
 	StartStopWith(name string, offline bool, options StartStopOptions) (*Bee, error)
 	GetBee(name string) (terra.Environment, error)
 	GetTemplate(templateName string) (terra.Environment, error)
@@ -213,7 +213,7 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 	return bee, err
 }
 
-func (b *bees) ReProvisionWith(name string, options ProvisionExistingOptions) (*Bee, error) {
+func (b *bees) SyncWith(name string, options ProvisionExistingOptions) (*Bee, error) {
 	env, err := b.state.Environments().Get(name)
 	if err != nil {
 		return nil, err
@@ -225,9 +225,9 @@ func (b *bees) ReProvisionWith(name string, options ProvisionExistingOptions) (*
 	if options.Notify && env.Owner() != "" && b.slack != nil {
 		var outcome string
 		if err == nil {
-			outcome = "has been re-provisioned"
+			outcome = "has been synced"
 		} else {
-			outcome = "failed to re-provision"
+			outcome = "failed to sync"
 		}
 		if slackErr := b.slack.SendDirectMessage(env.Owner(), fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE %s", env.Name(), env.Name(), outcome)); slackErr != nil {
 			log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), slackErr)
