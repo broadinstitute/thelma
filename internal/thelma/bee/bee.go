@@ -229,7 +229,7 @@ func (b *bees) SyncWith(name string, options ProvisionExistingOptions) (*Bee, er
 		} else {
 			outcome = "failed to sync"
 		}
-		if slackErr := b.slack.SendDirectMessage(env.Owner(), fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE %s", env.Name(), env.Name(), outcome)); slackErr != nil {
+		if slackErr := b.slack.SendDirectMessage(env.Owner(), fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE %s.", env.Name(), env.Name(), outcome)); slackErr != nil {
 			log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), slackErr)
 		}
 	}
