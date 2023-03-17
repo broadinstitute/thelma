@@ -43,14 +43,14 @@ type githubConfig struct {
 
 func New(options ...func(*Client) error) (*Client, error) {
 	log.Debug().Msg("initializing github client")
-	gh := &Client{}
+	githubClient := &Client{}
 	for _, option := range options {
-		if err := option(gh); err != nil {
+		if err := option(githubClient); err != nil {
 			return nil, err
 		}
 	}
 
-	return gh, nil
+	return githubClient, nil
 }
 
 func WithClient(client *http.Client) func(*Client) error {
