@@ -13,6 +13,10 @@ credentials:
   # use inmemory store so creds aren't persistent to disk
   storetype: inmemory
 
+github:
+  auth:
+    type: vault
+
 google:
   # authenticate to Google Cloud services using a service account from Vault
   auth:

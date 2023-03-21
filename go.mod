@@ -10,15 +10,19 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/broadinstitute/sherlock v0.1.11-0.20230221181340-7a6d8fd697b7
 	github.com/davecgh/go-spew v1.1.1
+	github.com/fatih/color v1.9.0
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-openapi/strfmt v0.21.3
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/gofrs/flock v0.8.1
+	github.com/google/go-github v17.0.0+incompatible
 	github.com/hashicorp/vault/api v1.7.2
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/knadh/koanf v1.4.4
+	github.com/leaanthony/go-ansi-parser v1.6.0
 	github.com/mattn/go-isatty v0.0.16
 	github.com/mcuadros/go-defaults v1.2.0
+	github.com/migueleliasweb/go-github-mock v0.0.16
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/muesli/termenv v0.11.0
 	github.com/pkg/errors v0.9.1
@@ -56,7 +60,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/emicklei/go-restful v2.16.0+incompatible // indirect
-	github.com/fatih/color v1.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -76,10 +79,13 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-github/v50 v50.0.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
+	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -110,7 +116,6 @@ require (
 	github.com/jackc/pgtype v1.13.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/leaanthony/go-ansi-parser v1.6.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect

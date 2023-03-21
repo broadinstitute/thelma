@@ -4,14 +4,15 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/mcuadros/go-defaults"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/term"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/mcuadros/go-defaults"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/term"
 
 	"github.com/mattn/go-isatty"
 )
@@ -156,4 +157,9 @@ func Not[T any](fn func(T) bool) func(T) bool {
 	return func(t T) bool {
 		return !fn(t)
 	}
+}
+
+func UnsetOrEmpty[T comparable](val *T) bool {
+	var t T
+	return val == nil || *val == t
 }

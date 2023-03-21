@@ -2,9 +2,12 @@
 package clients
 
 import (
+	"sync"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/github"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes"
@@ -14,7 +17,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
-	"sync"
 )
 
 // Clients convenience builders for client objects used in Thelma commands
@@ -25,6 +27,8 @@ type Clients interface {
 	Vault() (*vaultapi.Client, error)
 	// ArgoCD returns a client for the DSP ArgoCD instance
 	ArgoCD() (argocd.ArgoCD, error)
+	// Github returns a wrapper around a github api client instance
+	Github() (*github.Client, error)
 	// Google returns a client factory for GCP clients, using Thelma's default configuration
 	Google() google.Clients
 	// GoogleUsingVaultSA is like Google but allows a vault path/key for the service account key file
@@ -136,4 +140,8 @@ func (c *clients) Kubernetes() kubernetes.Clients {
 
 func (c *clients) Slack() (*slack.Slack, error) {
 	return slack.New(c.thelmaConfig, c.Vault)
+}
+
+func (c *clients) Github() (*github.Client, error) {
+	return github.New(github.WithDefaults(c.thelmaConfig, c.creds, c.Vault))
 }
