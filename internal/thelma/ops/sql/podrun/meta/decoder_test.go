@@ -62,7 +62,7 @@ func Test_Annotations(t *testing.T) {
 		Float       float64              `annotation:"floatval"`
 		Int         int                  `annotation:"intval"`
 		MapVal      map[string]time.Time `annotation:"mapval"`
-		SliceVal    []int                `annotation:"sliceval"'`
+		SliceVal    []int                `annotation:"sliceval"`
 		String      string               `annotation:"stringval"`
 		Struct      MyStruct             `annotation:"mystructval"`
 		Time        time.Time            `annotation:"timestamp"`

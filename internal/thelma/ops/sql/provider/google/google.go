@@ -236,18 +236,6 @@ func (g *google) PodSpec() (podrun.ProviderSpec, error) {
 	}, nil
 }
 
-func (g *google) getPasswordIfIAMNotSupported(user string) (string, error) {
-	f, err := g.features.Get()
-	if err != nil {
-		return "", err
-	}
-
-	if f.iamSupported {
-		return "", nil
-	}
-	return g.passwordStore.fetch(g.connection.GoogleInstance, user)
-}
-
 func (g *google) enableIAMAuthIfSupported(features features) error {
 	if !features.iamSupported {
 		return nil
@@ -418,23 +406,6 @@ func (g *google) waitForOpToBeDone(op *sqladmin.Operation) error {
 		time.Sleep(operationPollInterval)
 	}
 	return nil
-}
-
-func (g *google) databaseUser() (string, error) {
-	switch g.connection.Options.PermissionLevel {
-	case api.ReadOnly:
-		return g.roUser.dbuser(), nil
-	case api.ReadWrite:
-		return g.roUser.dbuser(), nil
-	case api.Admin:
-		f, err := g.features.Get()
-		if err != nil {
-			return "", err
-		}
-		return f.dbms.AdminUser(), nil
-	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PermissionLevel))
-	}
 }
 
 func (g *google) kubernetesServiceAccount() string {

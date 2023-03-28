@@ -6,10 +6,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/connector"
 )
 
-const podNamespace = "thelma-workloads"
-const thelmaRwUser = "thelma-rw"
-const thelmaRoUser = "thelma-ro"
-
 type Sql interface {
 	// Init initialize database for Thelma connections.
 	Init(c api.Connection) error

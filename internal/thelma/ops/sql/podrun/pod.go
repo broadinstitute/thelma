@@ -52,7 +52,7 @@ func (p *pod) ExecInteractive(cmd []string) error {
 		Name:      clientContainerName,
 	}, cmd)
 
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 
 	if elapsed > time.Minute && errors.Is(err, &shell.ExitError{}) {
 		log.Debug().Err(err).Msgf("ignoring exit error from interactive shell")

@@ -5,7 +5,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/podrun"
 )
 
-const mysqlAdminUser = "root"
+// TODO
+// const mysqlAdminUser = "root"
 
 type mysql struct{}
 

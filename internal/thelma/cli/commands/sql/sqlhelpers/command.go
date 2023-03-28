@@ -79,7 +79,7 @@ func (c *command) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 
 	if flags.Changed(flagNames.googleInstance) {
 		if !flags.Changed(flagNames.googleProject) {
-			return fmt.Errorf("--% requires a google project be specified with --%s", flagNames.googleInstance, flagNames.googleProject)
+			return fmt.Errorf("--%s requires a google project be specified with --%s", flagNames.googleInstance, flagNames.googleProject)
 		}
 		conn.Provider = api.Google
 		conn.GoogleInstance.Project = c.flags.googleProject
