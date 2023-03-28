@@ -69,7 +69,8 @@ func Test_Annotations(t *testing.T) {
 	}
 
 	d := Decoder[annotations]{
-		Prefix: "my.annotation.prefix/",
+		Prefix:  "my.annotation.prefix/",
+		TagName: "annotation",
 	}
 
 	now := time.Now().Round(time.Millisecond)
