@@ -10,6 +10,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
@@ -17,7 +18,7 @@ import (
 	oauth2google "golang.org/x/oauth2/google"
 	googleoauth "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
-	"google.golang.org/api/sqladmin/v1"
+	googlesqladmin "google.golang.org/api/sqladmin/v1"
 	"google.golang.org/api/transport"
 	"strings"
 )
@@ -48,7 +49,7 @@ type Clients interface {
 	// ClusterManager returns a new google container cluster manager client
 	ClusterManager() (*container.ClusterManagerClient, error)
 	// SqlAdmin returns a new google sql admin client
-	SqlAdmin() (*sqladmin.Service, error)
+	SqlAdmin() (sqladmin.Client, error)
 	// TokenSource returns an oauth TokenSource for this client factory's configured identity
 	TokenSource() (oauth2.TokenSource, error)
 }
@@ -189,13 +190,18 @@ func (g *google) TokenSource() (oauth2.TokenSource, error) {
 	return creds.TokenSource, nil
 }
 
-func (g *google) SqlAdmin() (*sqladmin.Service, error) {
+func (g *google) SqlAdmin() (sqladmin.Client, error) {
 	clientOpts, err := g.clientOptions(false)
 	if err != nil {
 		return nil, err
 	}
 
-	return sqladmin.NewService(context.Background(), clientOpts...)
+	client, err := googlesqladmin.NewService(context.Background(), clientOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqladmin.New(client), nil
 }
 
 func (g *google) clientOptions(usesGrpc bool) ([]option.ClientOption, error) {

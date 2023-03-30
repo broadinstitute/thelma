@@ -14,7 +14,7 @@ import (
 
 	pubsub "cloud.google.com/go/pubsub"
 
-	sqladmin "google.golang.org/api/sqladmin/v1"
+	sqladmin "github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 
 	terraapi "github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 )
@@ -224,15 +224,15 @@ func (_c *Clients_SetSubject_Call) Return(_a0 google.Clients) *Clients_SetSubjec
 }
 
 // SqlAdmin provides a mock function with given fields:
-func (_m *Clients) SqlAdmin() (*sqladmin.Service, error) {
+func (_m *Clients) SqlAdmin() (sqladmin.Client, error) {
 	ret := _m.Called()
 
-	var r0 *sqladmin.Service
-	if rf, ok := ret.Get(0).(func() *sqladmin.Service); ok {
+	var r0 sqladmin.Client
+	if rf, ok := ret.Get(0).(func() sqladmin.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*sqladmin.Service)
+			r0 = ret.Get(0).(sqladmin.Client)
 		}
 	}
 
@@ -263,7 +263,7 @@ func (_c *Clients_SqlAdmin_Call) Run(run func()) *Clients_SqlAdmin_Call {
 	return _c
 }
 
-func (_c *Clients_SqlAdmin_Call) Return(_a0 *sqladmin.Service, _a1 error) *Clients_SqlAdmin_Call {
+func (_c *Clients_SqlAdmin_Call) Return(_a0 sqladmin.Client, _a1 error) *Clients_SqlAdmin_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }

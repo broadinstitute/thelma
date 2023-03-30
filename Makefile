@@ -178,9 +178,10 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/clients/google --name Clients --output=./internal/thelma/clients/google/mocks --outpkg mocks --filename clients.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Bucket --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename bucket.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Locker --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename locker.go
-	mockery --dir ./internal/thelma/clients/google/testing/mocks/interfaces --name ClusterManagerServer --output=./internal/thelma/clients/google/testing/mocks --outpkg mocks --filename cluster_manager_server.go
-	mockery --dir ./internal/thelma/clients/google/testing/mocks/interfaces --name PublisherServer --output=./internal/thelma/clients/google/testing/mocks --outpkg mocks --filename publisher_server.go
-	mockery --dir ./internal/thelma/clients/google/testing/mocks/interfaces --name SubscriberServer --output=./internal/thelma/clients/google/testing/mocks --outpkg mocks --filename subscriber_server.go
+	mockery --dir ./internal/thelma/clients/google/sqladmin --name Client --output=./internal/thelma/clients/google/sqladmin/mocks --outpkg mocks --filename sqladmin.go
+	mockery --dir ./internal/thelma/clients/google/testing/aliases --name ClusterManagerServer --output=./internal/thelma/clients/google/testing/mocks --outpkg mocks --filename cluster_manager_server.go
+	mockery --dir ./internal/thelma/clients/google/testing/aliases --name PublisherServer --output=./internal/thelma/clients/google/testing/mocks --outpkg mocks --filename publisher_server.go
+	mockery --dir ./internal/thelma/clients/google/testing/aliases --name SubscriberServer --output=./internal/thelma/clients/google/testing/mocks --outpkg mocks --filename subscriber_server.go
 	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubeconfig --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubecfg.go
 	mockery --dir ./internal/thelma/clients/kubernetes/kubecfg --name Kubectx --output=./internal/thelma/clients/kubernetes/kubecfg/mocks --outpkg mocks --filename kubectx.go
 	mockery --dir ./internal/thelma/clients/sherlock --name ChartVersionUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_version_updater.go

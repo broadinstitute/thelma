@@ -61,6 +61,17 @@ func (s *FakeVaultServer) ConfigureClient(clientConfig *vaultapi.Config) {
 	clientConfig.Address = s.server.URL
 }
 
+// GetClient can be used to quickly construct a vault client connected to this fake vault server instance
+func (s *FakeVaultServer) GetClient() *vaultapi.Client {
+	var cfg vaultapi.Config
+	s.ConfigureClient(&cfg)
+	client, err := vaultapi.NewClient(&cfg)
+	if err != nil {
+		panic(fmt.Errorf("unexpected error configuring vault client for testing: %v", err))
+	}
+	return client
+}
+
 // Server returns the underlying httptest.Server associated with this fake vault server instance
 func (s *FakeVaultServer) Server() *httptest.Server {
 	return s.server

@@ -2,6 +2,7 @@ package google
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/dbms"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/podrun"
@@ -10,11 +11,10 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/api/sqladmin/v1"
+	googlesqladmin "google.golang.org/api/sqladmin/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"strings"
-	"time"
 )
 
 // suffix to remove when converting
@@ -22,9 +22,8 @@ import (
 const googleIAMAuthStripSuffix = ".gserviceaccount.com"
 const cloudSqlIamAuthenticationFlag = "cloudsql.iam_authentication"
 const cloudSqlFlagEnabled = "on"
-
-const operationFinishedStatus = "DONE"
-const operationPollInterval = 3 * time.Second
+const cloudSqlAccountTypeIAM = "CLOUD_IAM_SERVICE_ACCOUNT"
+const cloudSqlAccountTypeBuiltIn = "BUILT_IN"
 
 const cloudsqlProxySidecarAddress = "127.0.0.1"
 
@@ -43,12 +42,12 @@ var googleSATemplates = struct {
 	},
 }
 
-func New(connection api.Connection, sqladminClient *sqladmin.Service, vaultClient *vaultapi.Client) provider.Provider {
+func New(connection api.Connection, sqladminClient sqladmin.Client, vaultClient *vaultapi.Client) provider.Provider {
 	return &google{
 		connection: connection,
 		client:     sqladminClient,
 		features: lazy.NewLazyE(func() (features, error) {
-			instance, err := sqladminClient.Instances.Get(connection.GoogleInstance.Project, connection.GoogleInstance.InstanceName).Do()
+			instance, err := sqladminClient.GetInstance(connection.GoogleInstance.Project, connection.GoogleInstance.InstanceName)
 			if err != nil {
 				return features{}, err
 			}
@@ -68,7 +67,7 @@ func New(connection api.Connection, sqladminClient *sqladmin.Service, vaultClien
 
 type google struct {
 	connection    api.Connection
-	client        *sqladmin.Service
+	client        sqladmin.Client
 	features      lazy.LazyE[features]
 	passwordStore passwordStore
 	roUser        googleSA
@@ -133,7 +132,7 @@ func (g *google) Initialized() (bool, error) {
 }
 
 func (g *google) Initialize() error {
-	instance, err := g.client.Instances.Get(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName).Do()
+	instance, err := g.client.GetInstance(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName)
 	if err != nil {
 		return err
 	}
@@ -169,7 +168,6 @@ func (g *google) PodSpec() (podrun.ProviderSpec, error) {
 			"-use_http_health_check",
 			"-health_check_port=9090",
 			"-verbose",
-			//"--http-address=0.0.0.0",
 		},
 		Env: []v1.EnvVar{
 			{
@@ -246,9 +244,9 @@ func (g *google) enableIAMAuthIfSupported(features features) error {
 
 	log.Info().Msgf("Enabling Cloud IAM Authentication for %s", g.connection.GoogleInstance.InstanceName)
 
-	patch := &sqladmin.DatabaseInstance{}
-	patch.Settings = &sqladmin.Settings{
-		DatabaseFlags: []*sqladmin.DatabaseFlags{
+	patch := &googlesqladmin.DatabaseInstance{}
+	patch.Settings = &googlesqladmin.Settings{
+		DatabaseFlags: []*googlesqladmin.DatabaseFlags{
 			{
 				Name:  cloudSqlIamAuthenticationFlag,
 				Value: cloudSqlFlagEnabled,
@@ -256,28 +254,15 @@ func (g *google) enableIAMAuthIfSupported(features features) error {
 		},
 	}
 
-	op, err := g.client.Instances.Patch(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName, patch).Do()
-	if err != nil {
-		return err
-	}
-	if err = g.waitForOpToBeDone(op); err != nil {
-		return err
-	}
-	return nil
+	return g.client.PatchInstance(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName, patch)
 }
 
 func (g *google) getLocalUsernames() (set.Set[string], error) {
-	userResp, err := g.client.Users.List(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName).Do()
+	users, err := g.client.GetInstanceLocalUsers(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName)
 	if err != nil {
 		return nil, err
 	}
-
-	userSet := set.NewSet[string]()
-	for _, user := range userResp.Items {
-		userSet.Add(user.Name)
-	}
-
-	return userSet, nil
+	return set.NewSet[string](users...), nil
 }
 
 func (g *google) getLocalAdminCredentials() (*api.Credentials, error) {
@@ -336,10 +321,7 @@ func (g *google) addThelmaUsers(features features) error {
 	for _, username := range usernames {
 		if userSet.Exists(username) {
 			log.Info().Msgf("Deleting existing user %s (will re-create)", username)
-			if _, err = g.client.Users.Delete(
-				g.connection.GoogleInstance.Project,
-				g.connection.GoogleInstance.InstanceName,
-			).Name(username).Do(); err != nil {
+			if err = g.client.DeleteUser(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName, username); err != nil {
 				return err
 			}
 		}
@@ -347,13 +329,13 @@ func (g *google) addThelmaUsers(features features) error {
 
 	for _, username := range usernames {
 		log.Info().Msgf("Adding user %s", username)
-		user := &sqladmin.User{
+		user := &googlesqladmin.User{
 			Name: username,
 		}
 		if features.iamSupported {
-			user.Type = "CLOUD_IAM_SERVICE_ACCOUNT"
+			user.Type = cloudSqlAccountTypeIAM
 		} else {
-			user.Type = "BUILT_IN"
+			user.Type = cloudSqlAccountTypeBuiltIn
 			password := g.passwordStore.generate()
 			if err = g.passwordStore.save(g.connection.GoogleInstance, username, password); err != nil {
 				return fmt.Errorf("error saving generated password to Vault: %v", err)
@@ -361,11 +343,11 @@ func (g *google) addThelmaUsers(features features) error {
 			user.Password = password
 		}
 
-		if _, err = g.client.Users.Insert(
+		if err = g.client.AddUser(
 			g.connection.GoogleInstance.Project,
 			g.connection.GoogleInstance.InstanceName,
 			user,
-		).Do(); err != nil {
+		); err != nil {
 			return err
 		}
 	}
@@ -378,34 +360,11 @@ func (g *google) resetPassword(username string) (string, error) {
 
 	password := g.passwordStore.generate()
 
-	req := g.client.Users.Update(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName, &sqladmin.User{
-		Password: password,
-	}).Name(username)
-
-	op, err := req.Do()
+	err := g.client.ResetPassword(g.connection.GoogleInstance.Project, g.connection.GoogleInstance.InstanceName, username, password)
 	if err != nil {
-		return "", fmt.Errorf("error resetting password for %s: %v", username, err)
+		return "", err
 	}
-
-	if err = g.waitForOpToBeDone(op); err != nil {
-		return "", fmt.Errorf("error resetting password for %s: %v", username, err)
-	}
-
 	return password, nil
-}
-
-func (g *google) waitForOpToBeDone(op *sqladmin.Operation) error {
-	var err error
-
-	for op.Status != operationFinishedStatus { // TODO constant
-		log.Info().Msgf("Waiting for %s operation to complete...", op.OperationType)
-		op, err = g.client.Operations.Get(op.TargetProject, op.Name).Do()
-		if err != nil {
-			return err
-		}
-		time.Sleep(operationPollInterval)
-	}
-	return nil
 }
 
 func (g *google) kubernetesServiceAccount() string {
