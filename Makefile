@@ -199,7 +199,7 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/clients/sherlock --name StateReadWriter --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename state_read_writer.go
 	mockery --dir ./internal/thelma/clients/sherlock --name StateReadWriter --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename state_read_writer.go
 	mockery --dir ./internal/thelma/ops/sql/dbms --name DBMS --output=./internal/thelma/ops/sql/dbms/mocks --outpkg mocks --filename dbms.go
-	mockery --dir ./internal/thelma/ops/sql/podrun --name Pod --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename Pod.go
+	mockery --dir ./internal/thelma/ops/sql/podrun --name Pod --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename pod.go
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Runner --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename runner.go
 	mockery --dir ./internal/thelma/ops/sql/provider --name Provider --output=./internal/thelma/ops/sql/provider/mocks --outpkg mocks --filename provider.go
 	mockery --dir ./internal/thelma/state/api/terra --name AppRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename app_release.go
