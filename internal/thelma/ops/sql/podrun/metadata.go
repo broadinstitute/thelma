@@ -20,7 +20,6 @@ type annotations struct {
 	DeleteAfter time.Time `key:"delete-after"`
 
 	// Remaining annotations are purely informational
-
 	// CreatedFor name of the user this pod was created for
 	CreatedFor string `key:"created-for"`
 	// Provider - api.Provider value

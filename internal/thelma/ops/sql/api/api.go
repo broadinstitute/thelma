@@ -105,8 +105,8 @@ func (k KubernetesInstance) IsShared() bool {
 type ConnectionOptions struct {
 	// Database (within the instance) to connect to
 	Database string
-	// PermissionLevel permission level to use for connection
-	PermissionLevel PermissionLevel
+	// PrivilegeLevel permission level to use for connection
+	PrivilegeLevel PrivilegeLevel
 	// ProxyCluster terra Kubernetes cluster to connect through
 	ProxyCluster terra.Cluster
 	// Release (nil if the target database instance has no association with a Terra release)
@@ -115,10 +115,10 @@ type ConnectionOptions struct {
 	Shell bool
 }
 
-type PermissionLevel int64
+type PrivilegeLevel int64
 
 const (
-	ReadOnly PermissionLevel = iota
+	ReadOnly PrivilegeLevel = iota
 	ReadWrite
 	Admin
 )

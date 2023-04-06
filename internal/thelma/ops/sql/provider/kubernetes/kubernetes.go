@@ -25,11 +25,12 @@ const readwriteUsername = "thelma-sql-rw"
 const serviceAccountName = "thelma-workloads"
 const secretNameSuffix = "-thelma-sql-secret"
 
-var pwg = pwgen.Pwgen{
-	MinLength: 8,
+func New(connection api.Connection, clients k8s.Clients) (provider.Provider, error) {
+	return newKubernetesProvider(connection, clients, pwgen.Pwgen{MinLength: 8})
 }
 
-func New(connection api.Connection, clients k8s.Clients) (provider.Provider, error) {
+// package-private constructor for testing
+func newKubernetesProvider(connection api.Connection, clients k8s.Clients, pwg pwgen.Generator) (provider.Provider, error) {
 	_kubecfg, err := clients.Kubecfg()
 	if err != nil {
 		return nil, err
@@ -55,6 +56,7 @@ func New(connection api.Connection, clients k8s.Clients) (provider.Provider, err
 		features: lazy.NewLazyE(func() (*features, error) {
 			return detectFeatures(connection.KubernetesInstance.Release, _k8sclient)
 		}),
+		pwg: pwg,
 	}, nil
 }
 
@@ -64,15 +66,21 @@ type kubernetes struct {
 	client   k8sclient.Interface
 	kubectl  kubectl.Kubectl
 	features lazy.LazyE[*features]
+	pwg      pwgen.Generator
 }
 
-func (k *kubernetes) ClientSettings() (dbms.ClientSettings, error) {
+func (k *kubernetes) ClientSettings(overrides ...provider.ConnectionOverride) (dbms.ClientSettings, error) {
+	options := k.conn.Options
+	for _, o := range overrides {
+		o(&options)
+	}
+
 	f, err := k.features.Get()
 	if err != nil {
 		return dbms.ClientSettings{}, err
 	}
 
-	creds, err := k.getCredentialsForConnection()
+	creds, err := k.getCredentialsForConnection(options)
 	if err != nil {
 		return dbms.ClientSettings{}, err
 	}
@@ -90,7 +98,7 @@ func (k *kubernetes) ClientSettings() (dbms.ClientSettings, error) {
 		Username: creds.Username,
 		Password: creds.Password,
 		Host:     f.serviceHostName,
-		Database: k.conn.Options.Database,
+		Database: options.Database,
 		Init: dbms.InitSettings{
 			CreateUsers: true,
 			ReadOnlyUser: dbms.InitUser{
@@ -134,23 +142,23 @@ func (k *kubernetes) Initialize() error {
 			Name: k.secretName(),
 		},
 		StringData: map[string]string{
-			readonlyUsername:  pwg.Generate(),
-			readwriteUsername: pwg.Generate(),
+			readonlyUsername:  k.pwg.Generate(),
+			readwriteUsername: k.pwg.Generate(),
 		},
 	}
 	_, err = k.client.CoreV1().Secrets(k.namespace()).Create(context.Background(), &secret, metav1.CreateOptions{})
 	return err
 }
 
-func (k *kubernetes) PodSpec() (podrun.ProviderSpec, error) {
+func (k *kubernetes) PodSpec(_ ...provider.ConnectionOverride) (podrun.ProviderSpec, error) {
 	return podrun.ProviderSpec{
 		Sidecar:        nil,
 		ServiceAccount: serviceAccountName,
 	}, nil
 }
 
-func (k *kubernetes) getCredentialsForConnection() (*api.Credentials, error) {
-	switch k.conn.Options.PermissionLevel {
+func (k *kubernetes) getCredentialsForConnection(options api.ConnectionOptions) (*api.Credentials, error) {
+	switch options.PrivilegeLevel {
 	case api.Admin:
 		return k.getAdminUserCredentials()
 	case api.ReadWrite:
@@ -158,7 +166,7 @@ func (k *kubernetes) getCredentialsForConnection() (*api.Credentials, error) {
 	case api.ReadOnly:
 		return k.getLocalThelmaUserCredentials(readonlyUsername)
 	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", k.conn.Options.PermissionLevel))
+		panic(fmt.Errorf("unsupported permission level: %#v", options.PrivilegeLevel))
 	}
 }
 
@@ -168,7 +176,7 @@ func (k *kubernetes) resetPassword(username string) (*api.Credentials, error) {
 		return nil, err
 	}
 
-	password := pwg.Generate()
+	password := k.pwg.Generate()
 	log.Info().Msgf("Resetting password for user %s", username)
 	var command []string
 	switch f.dbms {
@@ -226,6 +234,9 @@ func (k *kubernetes) readSecret() (map[string]string, error) {
 }
 
 func (k *kubernetes) secretExists() (bool, error) {
+	// we use list here because it doesn't seem like there's a great
+	// way to distinguish between 404 (secret not found) and other
+	// types of API errors (5xx/4xx) received from cluster API
 	secrets, err := k.client.CoreV1().Secrets(k.namespace()).List(
 		context.Background(),
 		metav1.ListOptions{
@@ -241,6 +252,7 @@ func (k *kubernetes) secretExists() (bool, error) {
 	if len(secrets.Items) == 1 {
 		return true, nil
 	}
+	// multiple secrets with the same name in the same namespace should be impossible
 	panic(fmt.Errorf("found multiple secrets with name %s (%d)", k.secretName(), len(secrets.Items)))
 }
 

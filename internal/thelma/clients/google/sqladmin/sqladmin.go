@@ -105,7 +105,7 @@ func (c client) waitForOpToBeDone(op *sqladmin.Operation) error {
 	var err error
 
 	for op.Status != operationFinishedStatus {
-		log.Info().Msgf("Waiting for %s operation to complete...", op.OperationType)
+		log.Info().Msgf("Waiting for operation to complete...")
 		op, err = c.sqladminClient.Operations.Get(op.TargetProject, op.Name).Do()
 		if err != nil {
 			return err

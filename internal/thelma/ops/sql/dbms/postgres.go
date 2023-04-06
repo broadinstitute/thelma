@@ -79,7 +79,7 @@ func (p postgres) ShellCommand() []string {
 }
 
 func (p postgres) ensureTargetDatabaseSelected() error {
-	if p.conn.Options.PermissionLevel == api.Admin {
+	if p.conn.Options.PrivilegeLevel == api.Admin {
 		// postgres user can connect to its default database, postgres
 		return nil
 	}
@@ -103,7 +103,7 @@ func (p postgres) renderPsqlrc(settings ClientSettings) ([]byte, error) {
 
 	var ctx psqlrcContext
 	ctx.Prompt = p.buildPrompt(settings)
-	if p.conn.Options.PermissionLevel == api.ReadWrite {
+	if p.conn.Options.PrivilegeLevel == api.ReadWrite {
 		ctx.SetRole = p.conn.Options.Database
 	}
 
@@ -124,12 +124,12 @@ var psqlColors = struct {
 	yellow string
 	red    string
 }{
-	green:  "%033[1;32;40m%]", // green
-	yellow: "%033[1;33;40m%]", // yellow
-	red:    "%033[1;31;40m%]", // red
+	green:  "%[%033[1;32;40m%]", // green
+	yellow: "%[%033[1;33;40m%]", // yellow
+	red:    "%[%033[1;31;40m%]", // red
 }
 
-const endStyle = "%033[0m%]"
+const endStyle = "%[%033[0m%]"
 
 func (p postgres) buildPrompt(settings ClientSettings) string {
 	user := "%n"

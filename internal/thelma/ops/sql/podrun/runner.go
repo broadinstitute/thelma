@@ -111,7 +111,7 @@ func (r *runner) Create(spec Spec) (Pod, error) {
 			Containers: []v1.Container{
 				{
 					Name:  clientContainerName,
-					Image: "postgres:15",
+					Image: spec.ContainerImage,
 					Command: []string{
 						"/bin/sleep",
 						strconv.Itoa(maxPodLifetimeSeconds),
@@ -129,7 +129,7 @@ func (r *runner) Create(spec Spec) (Pod, error) {
 						{
 							Name:      "scripts",
 							ReadOnly:  true,
-							MountPath: "/scripts",
+							MountPath: spec.ScriptsMount,
 						},
 					},
 					// TODO - limits/requests
@@ -228,6 +228,7 @@ func (r *runner) waitForPodToBeReady(_pod *v1.Pod, timeout time.Duration) error 
 }
 
 func (r *runner) Cleanup() error {
-	//TODO implement me
+
+	//TODO clean up orphaned pods
 	panic("implement me")
 }

@@ -74,12 +74,17 @@ type google struct {
 	rwUser        googleSA
 }
 
-func (g *google) ClientSettings() (dbms.ClientSettings, error) {
+func (g *google) ClientSettings(overrides ...provider.ConnectionOverride) (dbms.ClientSettings, error) {
+	options := g.connection.Options
+	for _, override := range overrides {
+		override(&options)
+	}
+
 	var creds *api.Credentials
 	var nickname string
 	var err error
 
-	switch g.connection.Options.PermissionLevel {
+	switch options.PrivilegeLevel {
 	case api.ReadOnly:
 		creds, err = g.getLocalThelmaUserCredentials(g.roUser)
 		nickname = g.roUser.nickname()
@@ -89,7 +94,7 @@ func (g *google) ClientSettings() (dbms.ClientSettings, error) {
 	case api.Admin:
 		creds, err = g.getLocalAdminCredentials()
 	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PermissionLevel))
+		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PrivilegeLevel))
 	}
 
 	if err != nil {
@@ -100,7 +105,7 @@ func (g *google) ClientSettings() (dbms.ClientSettings, error) {
 		Username: creds.Username,
 		Password: creds.Password,
 		Host:     cloudsqlProxySidecarAddress,
-		Database: g.connection.Options.Database,
+		Database: options.Database,
 		Nickname: nickname,
 		Init: dbms.InitSettings{
 			CreateUsers: false, // we created them already via CloudSQL API commands
@@ -153,7 +158,12 @@ func (g *google) Initialize() error {
 	return nil
 }
 
-func (g *google) PodSpec() (podrun.ProviderSpec, error) {
+func (g *google) PodSpec(overrides ...provider.ConnectionOverride) (podrun.ProviderSpec, error) {
+	options := g.connection.Options
+	for _, override := range overrides {
+		override(&options)
+	}
+
 	_features, err := g.features.Get()
 	if err != nil {
 		return podrun.ProviderSpec{}, err
@@ -224,7 +234,7 @@ func (g *google) PodSpec() (podrun.ProviderSpec, error) {
 	if err != nil {
 		return podrun.ProviderSpec{}, err
 	}
-	if f.iamSupported && g.connection.Options.PermissionLevel != api.Admin {
+	if f.iamSupported && options.PrivilegeLevel != api.Admin {
 		// use IAM login for users that are not the local admin account
 		sidecar.Command = append(sidecar.Command, "-enable_iam_login")
 	}
@@ -368,7 +378,7 @@ func (g *google) resetPassword(username string) (string, error) {
 }
 
 func (g *google) kubernetesServiceAccount() string {
-	switch g.connection.Options.PermissionLevel {
+	switch g.connection.Options.PrivilegeLevel {
 	case api.ReadOnly:
 		return googleSATemplates.readOnly.kubernetesSA
 	case api.ReadWrite:
@@ -377,7 +387,7 @@ func (g *google) kubernetesServiceAccount() string {
 		// admin level uses password auth, not iam, so the SA doesn't actually matter
 		return googleSATemplates.readOnly.kubernetesSA
 	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PermissionLevel))
+		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PrivilegeLevel))
 	}
 }
 

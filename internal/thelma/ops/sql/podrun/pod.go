@@ -6,7 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -40,7 +40,9 @@ func (p *pod) Exec(cmd []string) error {
 		Pod:       p.name,
 		Namespace: thelmaWorkloadsNamespace,
 		Name:      clientContainerName,
-	}, cmd)
+	}, cmd, func(options *shell.RunOptions) {
+		options.OutputLogLevel = zerolog.InfoLevel
+	})
 }
 
 func (p *pod) ExecInteractive(cmd []string) error {
@@ -54,8 +56,11 @@ func (p *pod) ExecInteractive(cmd []string) error {
 
 	elapsed := time.Since(start)
 
-	if elapsed > time.Minute && errors.Is(err, &shell.ExitError{}) {
-		log.Debug().Err(err).Msgf("ignoring exit error from interactive shell")
+	if err != nil && elapsed > time.Minute {
+		if _, ok := err.(*shell.ExitError); ok {
+			log.Debug().Err(err).Msgf("ignoring exit error from interactive shell")
+			return nil
+		}
 	}
 
 	return err

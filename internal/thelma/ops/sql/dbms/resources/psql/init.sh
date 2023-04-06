@@ -7,6 +7,8 @@
 
 set -euo pipefail
 
+CLOUDSQL_DBOWNER="cloudsqlsuperuser"
+
 run_psql_no_echo() {
   psql --no-psqlrc --quiet --set=ON_ERROR_STOP=1 "$@"
 }
@@ -64,8 +66,25 @@ if [[ "${action}" == "uninit" ]] || [[ "${action}" == "reinit" ]]; then
   OLDIFS=$IFS
   IFS=','
   list_dbs_and_owners | while read db owner; do
+    echo "> Updating permissions for database ${db} (owner ${owner})"
     # Grant readwrite account the same permissions as app user
     # ref: https://stackoverflow.com/a/19602050
+
+    # So in CloudSQL, the database owner for all databases is
+    # "cloudsqlsuperuser" but the application user (eg.
+    # "workspacemanager-landingzone")
+    # is the table owner.
+    #
+    # Because we are modifying table permissions, we need
+    # to assume the table owner user's permissions.
+    #
+    # Conventionally in CloudSQL, the table owner role has
+    # the same name as the database.
+    #
+    if [[ "${owner}" == "${CLOUDSQL_DBOWNER}" ]]; then
+      echo "This looks like a cloudsql database; assuming db owner is ${db}"
+      owner="${db}"
+    fi
 
     if [[ "${ro_user_exists}" == "true" ]]; then
       # Revoke readonly account permissions
@@ -75,11 +94,14 @@ if [[ "${action}" == "uninit" ]] || [[ "${action}" == "reinit" ]]; then
       run_psql -d "${db}" -c "revoke all privileges on schema public from \"${INIT_RO_USER}\";"
 
       if [[ "${PGUSER}" != "${owner}" ]]; then
-        run_psql -d "${db}" -c "grant \"${owner}\" to \"${PGUSER}\;"
+        echo "> Temporarily granting ${owner} role to ${PGUSER}"
+        run_psql -d "${db}" -c "grant \"${owner}\" to \"${PGUSER}\";"
       fi
+      echo "> Revoking privileges on all tables in ${db} from ${INIT_RO_USER}"
       run_psql -d "${db}" -c "revoke all privileges on all tables in schema public from \"${INIT_RO_USER}\";"
       if [[ "${PGUSER}" != "${owner}" ]]; then
-        run_psql -d "${db}" -c "revoke \"${owner}\" from \"${PGUSER}\;"
+        echo "> Revoking ${owner} role from ${PGUSER}"
+        run_psql -d "${db}" -c "revoke \"${owner}\" from \"${PGUSER}\";"
       fi
 
       run_psql -d "${db}" -c "alter default privileges in schema public revoke all on tables from \"${INIT_RO_USER}\""
@@ -128,6 +150,12 @@ if [[ "${action}" == "init" ]] || [[ "${action}" == "reinit" ]]; then
   OLDIFS=$IFS
   IFS=','
   list_dbs_and_owners | while read db owner; do
+    echo "> Updating permissions for database ${db} (owner ${owner})"
+    if [[ "${owner}" == "${CLOUDSQL_DBOWNER}" ]]; then
+      echo "This looks like a cloudsql database; assuming db owner is ${db}"
+      owner="${db}"
+    fi
+
     # Grant readonly account permissions
     # ref: https://stackoverflow.com/a/42044878
     echo
@@ -136,11 +164,14 @@ if [[ "${action}" == "init" ]] || [[ "${action}" == "reinit" ]]; then
     run_psql -d "${db}" -c "grant usage on schema public to \"${INIT_RO_USER}\";"
 
     if [[ "${PGUSER}" != "${owner}" ]]; then
-      run_psql -d "${db}" -c "grant \"${owner}\" to \"${PGUSER}\;"
+      echo "> Temporarily granting ${owner} role to ${PGUSER}"
+      run_psql -d "${db}" -c "grant \"${owner}\" to \"${PGUSER}\";"
     fi
+    echo "> Granting privileges on all tables in ${db} to ${INIT_RO_USER}"
     run_psql -d "${db}" -c "grant select on all tables in schema public to \"${INIT_RO_USER}\";"
     if [[ "${PGUSER}" != "${owner}" ]]; then
-      run_psql -d "${db}" -c "revoke \"${owner}\" from \"${PGUSER}\;"
+      echo "> Revoking ${owner} role from ${PGUSER}"
+      run_psql -d "${db}" -c "revoke \"${owner}\" from \"${PGUSER}\";"
     fi
 
     run_psql -d "${db}" -c "alter default privileges in schema public grant select on tables to \"${INIT_RO_USER}\""

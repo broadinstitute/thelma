@@ -73,7 +73,7 @@ func Test_Annotations(t *testing.T) {
 		TagName: "annotation",
 	}
 
-	now := time.Now().Round(time.Millisecond)
+	now := time.Now().UTC().Round(time.Millisecond)
 	nowbs, err := json.Marshal(now)
 	require.NoError(t, err)
 	nows := string(nowbs)

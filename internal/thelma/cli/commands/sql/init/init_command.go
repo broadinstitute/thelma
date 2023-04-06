@@ -10,7 +10,9 @@ import (
 )
 
 func NewSqlInitCommand() cli.ThelmaCommand {
-	return sqlcli.AsThelmaCommand(&initCommand{})
+	return sqlcli.AsThelmaCommand(&initCommand{}, func(options *sqlcli.CommandOptions) {
+		options.ExcludeConnectFlags = true
+	})
 }
 
 type initCommand struct {
@@ -21,9 +23,6 @@ func (c *initCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (c *initCommand) Run(conn api.Connection, app app.ThelmaApp, rc cli.RunContext) error {
-	// ignore any permission-level settings specified with cli flags; init has to connect
-	// as a db admin
-	conn.Options.PermissionLevel = api.Admin
 	if err := app.Ops().Sql().Init(conn); err != nil {
 		return err
 	}

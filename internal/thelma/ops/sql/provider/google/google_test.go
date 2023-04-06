@@ -52,7 +52,7 @@ type GoogleSuite struct {
 
 func (suite *GoogleSuite) SetupTest() {
 	suite.proxyCluster = &statemocks.Cluster{}
-	suite.proxyCluster.EXPECT().Name().Return("my-cluster")
+	suite.proxyCluster.EXPECT().Name().Return(cluster)
 	suite.proxyCluster.EXPECT().Project().Return(project)
 
 	suite.sqladminClient = sqladminmocks.NewClient(suite.T())
@@ -86,9 +86,9 @@ func (suite *GoogleSuite) Test_DetectDBMS_ReturnsErrorIfNotMatched() {
 func (suite *GoogleSuite) Test_DetectDBMS_IdentifiesPostgres() {
 	suite.expectGetInstanceWith(postgres15Version, true)
 
-	dbms, err := suite.buildProvider().DetectDBMS()
+	_dbms, err := suite.buildProvider().DetectDBMS()
 	require.NoError(suite.T(), err)
-	assert.Equal(suite.T(), api.Postgres, dbms)
+	assert.Equal(suite.T(), api.Postgres, _dbms)
 }
 
 func (suite *GoogleSuite) Test_Initialize_EnablesIAMAndAddsUsers() {
@@ -126,11 +126,11 @@ func (suite *GoogleSuite) Test_ClientSettings_ReadOnlyUser() {
 func (suite *GoogleSuite) Test_ClientSettings_ReadWriteUser() {
 	suite.expectGetInstanceWith(postgres15Version, true)
 
-	provider := suite.buildProvider(func(options *api.ConnectionOptions) {
-		options.PermissionLevel = api.ReadWrite
+	_provider := suite.buildProvider(func(options *api.ConnectionOptions) {
+		options.PrivilegeLevel = api.ReadWrite
 	})
 
-	settings, err := provider.ClientSettings()
+	settings, err := _provider.ClientSettings()
 	require.NoError(suite.T(), err)
 	assert.Equal(suite.T(), dbms.ClientSettings{
 		Username: rwUser,
@@ -151,7 +151,7 @@ func (suite *GoogleSuite) Test_ClientSettings_AdminUser() {
 	}).Return(nil)
 
 	settings, err := suite.buildProvider(func(options *api.ConnectionOptions) {
-		options.PermissionLevel = api.Admin
+		options.PrivilegeLevel = api.Admin
 	}).ClientSettings()
 
 	require.NoError(suite.T(), err)
@@ -169,7 +169,7 @@ func (suite *GoogleSuite) Test_PodSpec_RoUser() {
 	suite.expectGetInstanceWith(postgres15Version, true)
 
 	spec, err := suite.buildProvider(func(options *api.ConnectionOptions) {
-		options.PermissionLevel = api.ReadOnly
+		options.PrivilegeLevel = api.ReadOnly
 	}).PodSpec()
 
 	require.NoError(suite.T(), err)
@@ -187,7 +187,7 @@ func (suite *GoogleSuite) Test_PodSpec_RwUser() {
 	suite.expectGetInstanceWith(postgres15Version, true)
 
 	spec, err := suite.buildProvider(func(options *api.ConnectionOptions) {
-		options.PermissionLevel = api.ReadWrite
+		options.PrivilegeLevel = api.ReadWrite
 	}).PodSpec()
 
 	require.NoError(suite.T(), err)
@@ -205,7 +205,7 @@ func (suite *GoogleSuite) Test_PodSpec_AdminUser() {
 	suite.expectGetInstanceWith(postgres15Version, true)
 
 	spec, err := suite.buildProvider(func(options *api.ConnectionOptions) {
-		options.PermissionLevel = api.Admin
+		options.PrivilegeLevel = api.Admin
 	}).PodSpec()
 
 	require.NoError(suite.T(), err)
@@ -227,11 +227,11 @@ func TestGoogleSuite(t *testing.T) {
 
 func (suite *GoogleSuite) buildProvider(opts ...func(options *api.ConnectionOptions)) provider.Provider {
 	options := api.ConnectionOptions{
-		Database:        database,
-		PermissionLevel: api.ReadOnly,
-		ProxyCluster:    suite.proxyCluster,
-		Release:         nil,
-		Shell:           false,
+		Database:       database,
+		PrivilegeLevel: api.ReadOnly,
+		ProxyCluster:   suite.proxyCluster,
+		Release:        nil,
+		Shell:          false,
 	}
 
 	for _, opt := range opts {

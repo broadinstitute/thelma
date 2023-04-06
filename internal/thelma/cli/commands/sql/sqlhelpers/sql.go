@@ -14,6 +14,16 @@ type Command interface {
 }
 
 // AsThelmaCommand convert a sql.Command into a cli.ThelmaCommand
-func AsThelmaCommand(c Command) cli.ThelmaCommand {
-	return &command{child: c}
+func AsThelmaCommand(c Command, opts ...CommandOption) cli.ThelmaCommand {
+	var options CommandOptions
+	for _, o := range opts {
+		o(&options)
+	}
+	return &command{child: c, commandOptions: options}
 }
+
+type CommandOptions struct {
+	// if true, do not include connection config flags like --database or --privilege-level on the Cobra command
+	ExcludeConnectFlags bool
+}
+type CommandOption func(options *CommandOptions)

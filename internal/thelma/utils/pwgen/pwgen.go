@@ -13,6 +13,10 @@ func init() {
 	seed.Rand()
 }
 
+type Generator interface {
+	Generate() string
+}
+
 var lower = []rune(`abcdefghijklmnopqrstuvwxyz`)
 var upper = []rune(`ABCDEFGHIJKLMNOPQRSTUVWXYZ`)
 var num = []rune(`1234567890`)

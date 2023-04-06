@@ -15,20 +15,20 @@ import (
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced
 var flagNames = struct {
-	googleInstance  string
-	googleProject   string
-	chartRelease    string
-	database        string
-	permissionLevel string
+	googleInstance string
+	googleProject  string
+	chartRelease   string
+	database       string
+	privilegeLevel string
 }{
-	googleInstance:  "google-instance",
-	googleProject:   "google-project",
-	chartRelease:    "chart-release",
-	database:        "database",
-	permissionLevel: "permission-level",
+	googleInstance: "google-instance",
+	googleProject:  "google-project",
+	chartRelease:   "chart-release",
+	database:       "database",
+	privilegeLevel: "privilege-level",
 }
 
-var permissionLevelNames = map[api.PermissionLevel][]string{
+var privilegeLevelNames = map[api.PrivilegeLevel][]string{
 	api.ReadOnly:  {"read-only"},
 	api.ReadWrite: {"read-write"},
 	api.Admin:     {"admin"},
@@ -37,8 +37,9 @@ var permissionLevelNames = map[api.PermissionLevel][]string{
 // command converts a child command that implements the sql.Command interface
 // into a cli.ThelmaCommand
 type command struct {
-	child Command
-	flags struct {
+	child          Command
+	commandOptions CommandOptions
+	flags          struct {
 		googleInstance string
 		googleProject  string
 		chartRelease   string
@@ -52,18 +53,23 @@ func (c *command) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&c.flags.googleInstance, flagNames.googleInstance, "", `Name of Google CloudSQL instance`)
 	cobraCommand.Flags().StringVar(&c.flags.googleProject, flagNames.googleProject, "", `Name of project containing Google CloudSQL instance`)
 	cobraCommand.Flags().StringVar(&c.flags.chartRelease, flagNames.chartRelease, "", "Name of a chart release running in Kubernetes to connect to")
+
+	if c.commandOptions.ExcludeConnectFlags {
+		return
+	}
+
 	cobraCommand.Flags().StringVarP(&c.opts.Database, flagNames.database, "d", "", "Database to connect to")
 
-	permLevels := maps.ValuesFlattened(permissionLevelNames)
+	privLevels := maps.ValuesFlattened(privilegeLevelNames)
 	cobraCommand.Flags().VarP(
-		enumflag.New(&c.opts.PermissionLevel, flagNames.permissionLevel, permissionLevelNames, enumflag.EnumCaseInsensitive),
-		flagNames.permissionLevel, "p",
-		fmt.Sprintf("Permission level to connect with; one of: %s", utils.QuoteJoin(permLevels)),
+		enumflag.New(&c.opts.PrivilegeLevel, flagNames.privilegeLevel, privilegeLevelNames, enumflag.EnumCaseInsensitive),
+		flagNames.privilegeLevel, "p",
+		fmt.Sprintf("Privilege} level to connect with; one of: %s", utils.QuoteJoin(privLevels)),
 	)
-	if err := cobraCommand.RegisterFlagCompletionFunc(flagNames.permissionLevel, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return permLevels, cobra.ShellCompDirectiveDefault
+	if err := cobraCommand.RegisterFlagCompletionFunc(flagNames.privilegeLevel, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return privLevels, cobra.ShellCompDirectiveDefault
 	}); err != nil {
-		panic(fmt.Errorf("failed to register cobra flag completion function for --%s: %v", flagNames.permissionLevel, err))
+		panic(fmt.Errorf("failed to register cobra flag completion function for --%s: %v", flagNames.privilegeLevel, err))
 	}
 }
 

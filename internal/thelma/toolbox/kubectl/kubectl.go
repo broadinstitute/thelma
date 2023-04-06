@@ -47,7 +47,7 @@ type Kubectl interface {
 	// Logs runs `kubectl logs` against the given Kubectx with given parameters
 	Logs(ktx kubecfg.Kubectx, podSelector map[string]string, option ...LogsOption) error
 	// Exec runs `kubectl exec` for the given Kubectx and pod with given parameters
-	Exec(ktx kubecfg.Kubectx, container Container, command []string) error
+	Exec(ktx kubecfg.Kubectx, container Container, command []string, opts ...shell.RunOption) error
 	// ExecInteractive runs `kubectl exec` with stdin/stdout/stderr connected to local OS stdout/stdin/stderr
 	ExecInteractive(ktx kubecfg.Kubectx, container Container, command []string) error
 	// PortForward runs `kubectl port-forward` and returns the forwarding local port, a callback to stop forwarding, and
@@ -186,10 +186,10 @@ type Container struct {
 	Name      string
 }
 
-func (k *kubectl) Exec(ktx kubecfg.Kubectx, container Container, command []string) error {
+func (k *kubectl) Exec(ktx kubecfg.Kubectx, container Container, command []string, shellOpts ...shell.RunOption) error {
 	args := []string{"exec", container.Pod, "-c", container.Name, "--"}
 	args = append(args, command...)
-	return k.runForKubectxWithNamespace(ktx, container.Namespace, args)
+	return k.runForKubectxWithNamespace(ktx, container.Namespace, args, shellOpts...)
 }
 
 func (k *kubectl) ExecInteractive(ktx kubecfg.Kubectx, container Container, command []string) error {

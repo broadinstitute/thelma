@@ -10,6 +10,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/provider/google"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/provider/kubernetes"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/rs/zerolog/log"
 )
 
 type Connector interface {
@@ -55,12 +56,16 @@ func New(conn api.Connection, clients clients.Clients) (Connector, error) {
 		return nil, err
 	}
 
+	return newConnector(conn, _provider, podrunner, _dbms), nil
+}
+
+func newConnector(conn api.Connection, provider provider.Provider, podrunner podrun.Runner, dbms dbms.DBMS) Connector {
 	return &connector{
 		conn:      conn,
-		provider:  _provider,
+		provider:  provider,
 		podrunner: podrunner,
-		dbms:      _dbms,
-	}, nil
+		dbms:      dbms,
+	}
 }
 
 type connector struct {
@@ -83,7 +88,10 @@ func (c *connector) Init() error {
 		return err
 	}
 
-	pod, err := c.createPod()
+	pod, err := c.createPod(func(options *api.ConnectionOptions) {
+		options.PrivilegeLevel = api.Admin // connect as db admin user
+		options.Database = ""              // connect to default postgres/mysql database
+	})
 	if err != nil {
 		return err
 	}
@@ -113,19 +121,24 @@ func (c *connector) ensureInitialized() error {
 	if err != nil {
 		return err
 	}
-	if !initalized {
+	if initalized {
+		return nil
+	}
+	if c.conn.Provider != api.Kubernetes {
+		// require explicit initialization for non-K8s dbs
 		return fmt.Errorf("database instance %s has not been initialized; please run `thelma sql init` and try again", c.conn.Instance().Name())
 	}
-	return nil
+	log.Info().Msgf("Auto-initializing database for Thelma connections")
+	return c.Init()
 }
 
-func (c *connector) createPod() (podrun.Pod, error) {
-	settings, err := c.provider.ClientSettings()
+func (c *connector) createPod(overrides ...provider.ConnectionOverride) (podrun.Pod, error) {
+	settings, err := c.provider.ClientSettings(overrides...)
 	if err != nil {
 		return nil, err
 	}
 
-	providerSpec, err := c.provider.PodSpec()
+	providerSpec, err := c.provider.PodSpec(overrides...)
 	if err != nil {
 		return nil, err
 	}
