@@ -5,9 +5,8 @@ package mocks
 import (
 	context "context"
 
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
-
 	mock "github.com/stretchr/testify/mock"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 
 	pubsubpb "cloud.google.com/go/pubsub/apiv1/pubsubpb"
 )

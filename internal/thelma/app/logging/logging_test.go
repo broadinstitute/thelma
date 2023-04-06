@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
+	"github.com/leaanthony/go-ansi-parser"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -188,6 +189,27 @@ func Test_newLogger(t *testing.T) {
 				jsonLog, err := os.ReadFile(r.logFile)
 				require.NoError(t, err)
 				assert.Regexp(t, `{"level":"info","pid":\d+,"key1":"\*\*\*\*\*\*","key2":"extra \*\*\*\*\*\* stuff","time":".*","message":"Hello \*\*\*\*\*\*"}`, string(jsonLog))
+			},
+		},
+		{
+			name:        "with mask should mask secrets with JSON-escaped characters",
+			maskSecrets: []string{`back\slash`, `qu"ote`},
+			setupFn: func(logger *zerolog.Logger) {
+				_logger := logger.With().
+					Str("backslash", `back\slash`).
+					Str("quote", `qu"ote`).
+					Logger()
+				_logger.Info().Msgf("backslash %q and quote %q", `back\slash`, `qu"ote`)
+			},
+			verifyFn: func(t *testing.T, r testResult) {
+				assert.Equal(t, 1, len(r.consoleMessages))
+				consoleLog, err := ansi.Cleanse(r.consoleMessages[0])
+				require.NoError(t, err)
+				assert.Regexp(t, `INF backslash "\*\*\*\*\*\*" and quote "\*\*\*\*\*\*" backslash=\*\*\*\*\*\* quote=\*\*\*\*\*\*`, consoleLog)
+
+				jsonLog, err := os.ReadFile(r.logFile)
+				require.NoError(t, err)
+				assert.Regexp(t, `{"level":"info","pid":\d+,"backslash":"\*\*\*\*\*\*","quote":"\*\*\*\*\*\*","time":".*","message":"backslash \\"\*\*\*\*\*\*\\" and quote \\"\*\*\*\*\*\*\\""}`, string(jsonLog))
 			},
 		},
 	}

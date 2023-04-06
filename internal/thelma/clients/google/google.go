@@ -10,6 +10,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/rs/zerolog/log"
@@ -17,6 +18,8 @@ import (
 	oauth2google "golang.org/x/oauth2/google"
 	googleoauth "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
+	googlesqladmin "google.golang.org/api/sqladmin/v1"
+	"google.golang.org/api/transport"
 	"strings"
 )
 
@@ -45,6 +48,8 @@ type Clients interface {
 	PubSub(projectId string) (*pubsub.Client, error)
 	// ClusterManager returns a new google container cluster manager client
 	ClusterManager() (*container.ClusterManagerClient, error)
+	// SqlAdmin returns a new google sql admin client
+	SqlAdmin() (sqladmin.Client, error)
 	// TokenSource returns an oauth TokenSource for this client factory's configured identity
 	TokenSource() (oauth2.TokenSource, error)
 }
@@ -64,6 +69,9 @@ type googleConfig struct {
 			// (for legacy "splatted" key file JSONs)
 			Key string `default:"sa-key.json"`
 		}
+	}
+	TransportLogging struct {
+		Enabled bool `default:"false"`
 	}
 }
 
@@ -126,7 +134,7 @@ type google struct {
 }
 
 func (g *google) Bucket(name string, options ...bucket.BucketOption) (bucket.Bucket, error) {
-	clientOpts, err := g.clientOptions()
+	clientOpts, err := g.clientOptions(false)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +167,7 @@ func (g *google) SetSubject(subject string) Clients {
 }
 
 func (g *google) PubSub(projectId string) (*pubsub.Client, error) {
-	clientOpts, err := g.clientOptions()
+	clientOpts, err := g.clientOptions(true)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +175,7 @@ func (g *google) PubSub(projectId string) (*pubsub.Client, error) {
 }
 
 func (g *google) ClusterManager() (*container.ClusterManagerClient, error) {
-	clientOpts, err := g.clientOptions()
+	clientOpts, err := g.clientOptions(true)
 	if err != nil {
 		return nil, err
 	}
@@ -182,26 +190,54 @@ func (g *google) TokenSource() (oauth2.TokenSource, error) {
 	return creds.TokenSource, nil
 }
 
-func (g *google) clientOptions() ([]option.ClientOption, error) {
+func (g *google) SqlAdmin() (sqladmin.Client, error) {
+	clientOpts, err := g.clientOptions(false)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := googlesqladmin.NewService(context.Background(), clientOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqladmin.New(client), nil
+}
+
+func (g *google) clientOptions(usesGrpc bool) ([]option.ClientOption, error) {
+	cfg, err := g.loadConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	creds, err := g.oauthCredentials()
 	if err != nil {
 		return nil, err
 	}
+
+	if cfg.TransportLogging.Enabled && !usesGrpc {
+		client, _, err := transport.NewHTTPClient(context.Background(), option.WithCredentials(creds))
+		if err != nil {
+			return nil, err
+		}
+		client.Transport = &loggingTransport{
+			rt: client.Transport,
+		}
+
+		return []option.ClientOption{
+			option.WithHTTPClient(client),
+		}, nil
+	}
+
 	return []option.ClientOption{
 		option.WithCredentials(creds),
 	}, nil
 }
 
 func (g *google) oauthCredentials() (*oauth2google.Credentials, error) {
-	var cfg googleConfig
-	if g.customConfig == nil {
-		err := g.thelmaConfig.Unmarshal(configKey, &cfg)
-		if err != nil {
-			return nil, fmt.Errorf("error reading Google client config: %v", err)
-		}
-	} else {
-		log.Debug().Msg("Using Google client with custom configuration")
-		cfg = *g.customConfig
+	cfg, err := g.loadConfig()
+	if err != nil {
+		return nil, err
 	}
 
 	params := oauth2google.CredentialsParams{
@@ -323,4 +359,17 @@ func (g *google) readServiceAccountKeyFromVault(cfg googleConfig) ([]byte, error
 		_serviceAccountKeyVaultCache[cacheKey] = jsonBytes
 		return jsonBytes, nil
 	}
+}
+
+func (g *google) loadConfig() (googleConfig, error) {
+	if g.customConfig != nil {
+		return *g.customConfig, nil
+	}
+
+	var cfg googleConfig
+	err := g.thelmaConfig.Unmarshal(configKey, &cfg)
+	if err != nil {
+		return cfg, fmt.Errorf("error reading Google client config: %v", err)
+	}
+	return cfg, nil
 }

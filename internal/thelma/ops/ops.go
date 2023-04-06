@@ -5,12 +5,14 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
+	"github.com/broadinstitute/thelma/internal/thelma/ops/sql"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sync"
 )
 
 type Ops interface {
 	Logs() logs.Logs
+	Sql() sql.Sql
 	Status() (status.Reporter, error)
 	Sync() (sync.Sync, error)
 }
@@ -27,6 +29,10 @@ type ops struct {
 
 func (o *ops) Logs() logs.Logs {
 	return logs.New(o.clients.Kubernetes(), artifacts.New(o.clients.Google()))
+}
+
+func (o *ops) Sql() sql.Sql {
+	return sql.New(o.clients)
 }
 
 func (o *ops) Status() (status.Reporter, error) {

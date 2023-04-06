@@ -18,7 +18,7 @@ contexts:
     cluster: cluster2
     namespace: env1-namespace
     user: default
-  name: release2-env1
+  name: env1_release2
 current-context: ""
 kind: Config
 preferences: {}

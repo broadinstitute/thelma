@@ -58,6 +58,52 @@ func (_c *Kubeconfig_ConfigFile_Call) Return(_a0 string) *Kubeconfig_ConfigFile_
 	return _c
 }
 
+// ForCluster provides a mock function with given fields: cluster
+func (_m *Kubeconfig) ForCluster(cluster terra.Cluster) (kubecfg.Kubectx, error) {
+	ret := _m.Called(cluster)
+
+	var r0 kubecfg.Kubectx
+	if rf, ok := ret.Get(0).(func(terra.Cluster) kubecfg.Kubectx); ok {
+		r0 = rf(cluster)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(kubecfg.Kubectx)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(terra.Cluster) error); ok {
+		r1 = rf(cluster)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Kubeconfig_ForCluster_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ForCluster'
+type Kubeconfig_ForCluster_Call struct {
+	*mock.Call
+}
+
+// ForCluster is a helper method to define mock.On call
+//   - cluster terra.Cluster
+func (_e *Kubeconfig_Expecter) ForCluster(cluster interface{}) *Kubeconfig_ForCluster_Call {
+	return &Kubeconfig_ForCluster_Call{Call: _e.mock.On("ForCluster", cluster)}
+}
+
+func (_c *Kubeconfig_ForCluster_Call) Run(run func(cluster terra.Cluster)) *Kubeconfig_ForCluster_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(terra.Cluster))
+	})
+	return _c
+}
+
+func (_c *Kubeconfig_ForCluster_Call) Return(_a0 kubecfg.Kubectx, _a1 error) *Kubeconfig_ForCluster_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // ForEnvironment provides a mock function with given fields: env
 func (_m *Kubeconfig) ForEnvironment(env terra.Environment) ([]kubecfg.Kubectx, error) {
 	ret := _m.Called(env)

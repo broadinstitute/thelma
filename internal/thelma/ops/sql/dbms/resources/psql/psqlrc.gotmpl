@@ -1,0 +1,18 @@
+/* silence messages from formatting changes */
+\set QUIET true
+
+/* set prompt */
+\set PROMPT1 '{{ .Prompt }}'
+
+{{- if .SetRole }}
+\echo '-----------------------------------------------------------'
+\echo
+\echo '    'Switching to role {{ .SetRole }}
+\echo '    'Type "set role <name>" to switch to another role
+\echo
+\echo '-----------------------------------------------------------'
+
+set role '{{ .SetRole }}'
+{{- end }}
+
+\set QUIET false

@@ -14,6 +14,8 @@ import (
 
 	pubsub "cloud.google.com/go/pubsub"
 
+	sqladmin "github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
+
 	terraapi "github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 )
 
@@ -218,6 +220,51 @@ func (_c *Clients_SetSubject_Call) Run(run func(subject string)) *Clients_SetSub
 
 func (_c *Clients_SetSubject_Call) Return(_a0 google.Clients) *Clients_SetSubject_Call {
 	_c.Call.Return(_a0)
+	return _c
+}
+
+// SqlAdmin provides a mock function with given fields:
+func (_m *Clients) SqlAdmin() (sqladmin.Client, error) {
+	ret := _m.Called()
+
+	var r0 sqladmin.Client
+	if rf, ok := ret.Get(0).(func() sqladmin.Client); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(sqladmin.Client)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Clients_SqlAdmin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SqlAdmin'
+type Clients_SqlAdmin_Call struct {
+	*mock.Call
+}
+
+// SqlAdmin is a helper method to define mock.On call
+func (_e *Clients_Expecter) SqlAdmin() *Clients_SqlAdmin_Call {
+	return &Clients_SqlAdmin_Call{Call: _e.mock.On("SqlAdmin")}
+}
+
+func (_c *Clients_SqlAdmin_Call) Run(run func()) *Clients_SqlAdmin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Clients_SqlAdmin_Call) Return(_a0 sqladmin.Client, _a1 error) *Clients_SqlAdmin_Call {
+	_c.Call.Return(_a0, _a1)
 	return _c
 }
 

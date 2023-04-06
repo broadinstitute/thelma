@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mcuadros/go-defaults"
@@ -111,7 +112,7 @@ func CloseWarn(closer io.Closer, err error) error {
 // For example:
 //   - During initial installation, Thelma is run out of Thelma release archive
 //     that is unpacked into a temp directory.
-//   - In CI pipelines, Thelma is run out of a well-known path on it's Docker image
+//   - In CI pipelines, Thelma is run out of a well-known path on its Docker image
 //     /thelma/bin/thelma
 //   - When Thelma is built locally during development, it is run out of the build
 //     output directory, ./output/bin/thelma
@@ -162,4 +163,14 @@ func Not[T any](fn func(T) bool) func(T) bool {
 func UnsetOrEmpty[T comparable](val *T) bool {
 	var t T
 	return val == nil || *val == t
+}
+
+// JoinSelector join map of label key-value pairs {"a":"b", "c":"d"} into selector string "a=b,c=d"
+func JoinSelector(labels map[string]string) string {
+	var list []string
+	for name, value := range labels {
+		list = append(list, fmt.Sprintf("%s=%s", name, value))
+	}
+	sort.Strings(list)
+	return strings.Join(list, ",")
 }
