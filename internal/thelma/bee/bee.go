@@ -441,6 +441,10 @@ func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) (terra.
 
 	log.Info().Msgf("Updated version overrides for %s", bee.Name())
 
+	// reload state since we mutated an environment
+	if err := b.reloadState(); err != nil {
+		return nil, err
+	}
 	// return a refreshed/updated bee environment object that includes the version overrides
 	return b.state.Environments().Get(bee.Name())
 }
