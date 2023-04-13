@@ -401,7 +401,7 @@ func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) (terra.
 		if err := b.state.Environments().PinEnvironmentToTerraHelmfileRef(bee.Name(), pinOptions.Flags.TerraHelmfileRef); err != nil {
 			return nil, err
 		}
-		log.Info().Msgf("Set terra-helmfile ref to %s for %s (was: %s)", bee.Name(), pinOptions.Flags.TerraHelmfileRef, was)
+		log.Info().Msgf("Set terra-helmfile ref to %s for %s (was: %s)", pinOptions.Flags.TerraHelmfileRef, bee.Name(), was)
 	}
 
 	// now, pin version overrides for individual releases.
