@@ -115,6 +115,9 @@ type ConnectionOptions struct {
 	Shell bool
 }
 
+// ConnectionOverride used to override parameters in a ConnectionOptions
+type ConnectionOverride func(options *ConnectionOptions)
+
 type PrivilegeLevel int64
 
 const (

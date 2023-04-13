@@ -62,20 +62,27 @@ func (_c *DBMS_InitCommand_Call) Return(_a0 []string) *DBMS_InitCommand_Call {
 	return _c
 }
 
-// PodSpec provides a mock function with given fields: _a0
-func (_m *DBMS) PodSpec(_a0 dbms.ClientSettings) (podrun.DBMSSpec, error) {
-	ret := _m.Called(_a0)
+// PodSpec provides a mock function with given fields: _a0, _a1
+func (_m *DBMS) PodSpec(_a0 dbms.ClientSettings, _a1 ...api.ConnectionOverride) (podrun.DBMSSpec, error) {
+	_va := make([]interface{}, len(_a1))
+	for _i := range _a1 {
+		_va[_i] = _a1[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 podrun.DBMSSpec
-	if rf, ok := ret.Get(0).(func(dbms.ClientSettings) podrun.DBMSSpec); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(dbms.ClientSettings, ...api.ConnectionOverride) podrun.DBMSSpec); ok {
+		r0 = rf(_a0, _a1...)
 	} else {
 		r0 = ret.Get(0).(podrun.DBMSSpec)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(dbms.ClientSettings) error); ok {
-		r1 = rf(_a0)
+	if rf, ok := ret.Get(1).(func(dbms.ClientSettings, ...api.ConnectionOverride) error); ok {
+		r1 = rf(_a0, _a1...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -90,13 +97,21 @@ type DBMS_PodSpec_Call struct {
 
 // PodSpec is a helper method to define mock.On call
 //   - _a0 dbms.ClientSettings
-func (_e *DBMS_Expecter) PodSpec(_a0 interface{}) *DBMS_PodSpec_Call {
-	return &DBMS_PodSpec_Call{Call: _e.mock.On("PodSpec", _a0)}
+//   - _a1 ...api.ConnectionOverride
+func (_e *DBMS_Expecter) PodSpec(_a0 interface{}, _a1 ...interface{}) *DBMS_PodSpec_Call {
+	return &DBMS_PodSpec_Call{Call: _e.mock.On("PodSpec",
+		append([]interface{}{_a0}, _a1...)...)}
 }
 
-func (_c *DBMS_PodSpec_Call) Run(run func(_a0 dbms.ClientSettings)) *DBMS_PodSpec_Call {
+func (_c *DBMS_PodSpec_Call) Run(run func(_a0 dbms.ClientSettings, _a1 ...api.ConnectionOverride)) *DBMS_PodSpec_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(dbms.ClientSettings))
+		variadicArgs := make([]api.ConnectionOverride, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(api.ConnectionOverride)
+			}
+		}
+		run(args[0].(dbms.ClientSettings), variadicArgs...)
 	})
 	return _c
 }

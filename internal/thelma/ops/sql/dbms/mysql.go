@@ -20,7 +20,7 @@ func (m mysql) AdminUser() string {
 	panic("implement me")
 }
 
-func (m mysql) PodSpec(clientSettings ClientSettings) (podrun.DBMSSpec, error) {
+func (m mysql) PodSpec(ClientSettings, ...api.ConnectionOverride) (podrun.DBMSSpec, error) {
 	//TODO implement me
 	panic("implement me")
 }

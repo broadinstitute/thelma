@@ -89,6 +89,7 @@ func (c *connector) Init() error {
 	}
 
 	pod, err := c.createPod(func(options *api.ConnectionOptions) {
+		log.Info().Msgf("setting privilege level to Admin")
 		options.PrivilegeLevel = api.Admin // connect as db admin user
 		options.Database = ""              // connect to default postgres/mysql database
 	})
@@ -132,7 +133,7 @@ func (c *connector) ensureInitialized() error {
 	return c.Init()
 }
 
-func (c *connector) createPod(overrides ...provider.ConnectionOverride) (podrun.Pod, error) {
+func (c *connector) createPod(overrides ...api.ConnectionOverride) (podrun.Pod, error) {
 	settings, err := c.provider.ClientSettings(overrides...)
 	if err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ type DBMS interface {
 	Type() api.DBMS
 	// PodSpec returns information about Kubernetes resources that should be created in order to execute commands
 	// against the database
-	PodSpec(ClientSettings) (podrun.DBMSSpec, error)
+	PodSpec(ClientSettings, ...api.ConnectionOverride) (podrun.DBMSSpec, error)
 	// InitCommand returns a command that should be run during `thelma sql init` to set up the database
 	InitCommand() []string
 	// ShellCommand returns a command that should be run during `thelma sql connect` to launch an interactive shell

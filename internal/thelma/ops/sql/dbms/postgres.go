@@ -36,8 +36,13 @@ func (p postgres) Type() api.DBMS {
 	return api.Postgres
 }
 
-func (p postgres) PodSpec(settings ClientSettings) (podrun.DBMSSpec, error) {
-	psqlrc, err := p.renderPsqlrc(settings)
+func (p postgres) PodSpec(settings ClientSettings, overrides ...api.ConnectionOverride) (podrun.DBMSSpec, error) {
+	opts := p.conn.Options
+	for _, override := range overrides {
+		override(&opts)
+	}
+
+	psqlrc, err := p.renderPsqlrc(settings, opts)
 	if err != nil {
 		return podrun.DBMSSpec{}, err
 	}
@@ -78,21 +83,21 @@ func (p postgres) ShellCommand() []string {
 	return []string{api.Postgres.CLIClient()}
 }
 
-func (p postgres) ensureTargetDatabaseSelected() error {
-	if p.conn.Options.PrivilegeLevel == api.Admin {
+func (p postgres) ensureTargetDatabaseSelected(opts api.ConnectionOptions) error {
+	if opts.PrivilegeLevel == api.Admin {
 		// postgres user can connect to its default database, postgres
 		return nil
 	}
 	// thelma-sql-ro and thelma-sql-srw do not have default databases; if we try
 	// to connect without specifying one, psql will return an error
-	if p.conn.Options.Database == "" {
+	if opts.Database == "" {
 		return fmt.Errorf("please specify a target database")
 	}
 	return nil
 }
 
-func (p postgres) renderPsqlrc(settings ClientSettings) ([]byte, error) {
-	if err := p.ensureTargetDatabaseSelected(); err != nil {
+func (p postgres) renderPsqlrc(settings ClientSettings, opts api.ConnectionOptions) ([]byte, error) {
+	if err := p.ensureTargetDatabaseSelected(opts); err != nil {
 		return nil, err
 	}
 
@@ -102,9 +107,9 @@ func (p postgres) renderPsqlrc(settings ClientSettings) ([]byte, error) {
 	}
 
 	var ctx psqlrcContext
-	ctx.Prompt = p.buildPrompt(settings)
-	if p.conn.Options.PrivilegeLevel == api.ReadWrite {
-		ctx.SetRole = p.conn.Options.Database
+	ctx.Prompt = p.buildPrompt(settings, opts)
+	if opts.PrivilegeLevel == api.ReadWrite {
+		ctx.SetRole = opts.Database
 	}
 
 	t, err := template.New(scriptNames.psqlrc).Parse(psqlrcTemplate)
@@ -131,15 +136,15 @@ var psqlColors = struct {
 
 const endStyle = "%[%033[0m%]"
 
-func (p postgres) buildPrompt(settings ClientSettings) string {
+func (p postgres) buildPrompt(settings ClientSettings, opts api.ConnectionOptions) string {
 	user := "%n"
 	if settings.Nickname != "" {
 		user = settings.Nickname
 	}
 
 	var host string
-	if p.conn.Options.Release != nil {
-		host = p.conn.Options.Release.FullName()
+	if opts.Release != nil {
+		host = opts.Release.FullName()
 	} else {
 		if p.conn.Provider == api.Google {
 			host = p.conn.GoogleInstance.InstanceName

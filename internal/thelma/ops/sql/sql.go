@@ -9,7 +9,7 @@ import (
 type Sql interface {
 	// Init initialize database for Thelma connections.
 	Init(c api.Connection) error
-	// Connect connect to a database via K8s pod running CLI client
+	// Connect to a database via K8s pod running CLI client
 	Connect(c api.Connection) error
 }
 

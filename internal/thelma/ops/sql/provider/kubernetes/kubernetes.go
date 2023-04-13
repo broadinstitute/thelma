@@ -69,7 +69,7 @@ type kubernetes struct {
 	pwg      pwgen.Generator
 }
 
-func (k *kubernetes) ClientSettings(overrides ...provider.ConnectionOverride) (dbms.ClientSettings, error) {
+func (k *kubernetes) ClientSettings(overrides ...api.ConnectionOverride) (dbms.ClientSettings, error) {
 	options := k.conn.Options
 	for _, o := range overrides {
 		o(&options)
@@ -150,7 +150,7 @@ func (k *kubernetes) Initialize() error {
 	return err
 }
 
-func (k *kubernetes) PodSpec(_ ...provider.ConnectionOverride) (podrun.ProviderSpec, error) {
+func (k *kubernetes) PodSpec(_ ...api.ConnectionOverride) (podrun.ProviderSpec, error) {
 	return podrun.ProviderSpec{
 		Sidecar:        nil,
 		ServiceAccount: serviceAccountName,

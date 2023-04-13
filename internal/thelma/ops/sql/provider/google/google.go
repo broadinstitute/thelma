@@ -74,7 +74,7 @@ type google struct {
 	rwUser        googleSA
 }
 
-func (g *google) ClientSettings(overrides ...provider.ConnectionOverride) (dbms.ClientSettings, error) {
+func (g *google) ClientSettings(overrides ...api.ConnectionOverride) (dbms.ClientSettings, error) {
 	options := g.connection.Options
 	for _, override := range overrides {
 		override(&options)
@@ -84,6 +84,7 @@ func (g *google) ClientSettings(overrides ...provider.ConnectionOverride) (dbms.
 	var nickname string
 	var err error
 
+	log.Info().Msgf("client settings: privilege level: %#v", options.PrivilegeLevel)
 	switch options.PrivilegeLevel {
 	case api.ReadOnly:
 		creds, err = g.getLocalThelmaUserCredentials(g.roUser)
@@ -94,7 +95,7 @@ func (g *google) ClientSettings(overrides ...provider.ConnectionOverride) (dbms.
 	case api.Admin:
 		creds, err = g.getLocalAdminCredentials()
 	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PrivilegeLevel))
+		panic(fmt.Errorf("unsupported privilege level: %#v", g.connection.Options.PrivilegeLevel))
 	}
 
 	if err != nil {
@@ -158,7 +159,7 @@ func (g *google) Initialize() error {
 	return nil
 }
 
-func (g *google) PodSpec(overrides ...provider.ConnectionOverride) (podrun.ProviderSpec, error) {
+func (g *google) PodSpec(overrides ...api.ConnectionOverride) (podrun.ProviderSpec, error) {
 	options := g.connection.Options
 	for _, override := range overrides {
 		override(&options)
