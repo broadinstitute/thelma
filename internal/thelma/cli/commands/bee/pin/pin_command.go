@@ -126,7 +126,8 @@ func (cmd *pinCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	if err = bees.PinVersions(env, pinOptions); err != nil {
+	env, err = bees.PinVersions(env, pinOptions)
+	if err != nil {
 		return err
 	}
 	ctx.SetOutput(pinOptions)
