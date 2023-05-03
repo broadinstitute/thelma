@@ -32,7 +32,7 @@ type Bees interface {
 	GetTemplate(templateName string) (terra.Environment, error)
 	Seeder() seed.Seeder
 	FilterBees(filter terra.EnvironmentFilter) ([]terra.Environment, error)
-	PinVersions(bee terra.Environment, overrides PinOptions) error
+	PinVersions(bee terra.Environment, overrides PinOptions) (terra.Environment, error)
 	UnpinVersions(bee terra.Environment) error
 	SyncEnvironmentGenerator(env terra.Environment) error
 	SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
@@ -160,9 +160,11 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 		return bee, err
 	}
 
-	if err = b.PinVersions(env, options.PinOptions); err != nil {
+	env, err = b.PinVersions(env, options.PinOptions)
+	if err != nil {
 		return bee, err
 	}
+	bee.Environment = env
 
 	if err = b.RefreshBeeGenerator(); err != nil {
 		return bee, err
@@ -392,14 +394,14 @@ func (b *bees) RefreshBeeGenerator() error {
 	return b.argocd.HardRefresh(generatorArgoApp)
 }
 
-func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) error {
+func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) (terra.Environment, error) {
 	// pin global terra-helmfile ref, if one is specified
 	if pinOptions.Flags.TerraHelmfileRef != "" {
 		was := bee.TerraHelmfileRef()
 		if err := b.state.Environments().PinEnvironmentToTerraHelmfileRef(bee.Name(), pinOptions.Flags.TerraHelmfileRef); err != nil {
-			return err
+			return nil, err
 		}
-		log.Info().Msgf("Set terra-helmfile ref to %s for %s (was: %s)", bee.Name(), pinOptions.Flags.TerraHelmfileRef, was)
+		log.Info().Msgf("Set terra-helmfile ref to %s for %s (was: %s)", pinOptions.Flags.TerraHelmfileRef, bee.Name(), was)
 	}
 
 	// now, pin version overrides for individual releases.
@@ -427,18 +429,24 @@ func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) error {
 	}
 	releaseOverridesJson, err := json.Marshal(releaseOverrides)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debug().Bytes("overrides", releaseOverridesJson).Msgf("Updating release version overrides for %s", bee.Name())
 
 	_, err = b.state.Environments().PinVersions(bee.Name(), releaseOverrides)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Info().Msgf("Updated version overrides for %s", bee.Name())
-	return nil
+
+	// reload state since we mutated an environment
+	if err := b.reloadState(); err != nil {
+		return nil, err
+	}
+	// return a refreshed/updated bee environment object that includes the version overrides
+	return b.state.Environments().Get(bee.Name())
 }
 
 func (b *bees) UnpinVersions(bee terra.Environment) error {
@@ -526,6 +534,7 @@ func (b *bees) templateNames() ([]string, error) {
 }
 
 func (b *bees) reloadState() error {
+	log.Debug().Msgf("reloading state from Sherlock...")
 	state, err := b.stateLoader.Reload()
 	if err != nil {
 		return err
