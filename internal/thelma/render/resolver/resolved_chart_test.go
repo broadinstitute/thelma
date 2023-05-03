@@ -9,7 +9,7 @@ import (
 )
 
 func TestResolvedChart_SourceDescription(t *testing.T) {
-	fakeChartPath, err := utils.ExpandAndVerifyExists(path.Join("testdata", "charts", fakeChartName), "fake chart path")
+	fakeChartPath, err := utils.ExpandAndVerifyExists(path.Join("testdata", "charts", fakeChart1Name), "fake chart path")
 	assert.NoError(t, err)
 
 	testCases := []struct {
@@ -20,12 +20,12 @@ func TestResolvedChart_SourceDescription(t *testing.T) {
 		{
 			name:     "local charts should be relative to cwd even when fully-qualified path is supplied",
 			resType:  Local,
-			expected: fmt.Sprintf("./testdata/charts/%s", fakeChartName),
+			expected: fmt.Sprintf("./testdata/charts/%s", fakeChart1Name),
 		},
 		{
 			name:     "remote charts source should be repo name",
 			resType:  Remote,
-			expected: fakeChartRepo,
+			expected: fakeChart1Repo,
 		},
 	}
 
@@ -35,12 +35,12 @@ func TestResolvedChart_SourceDescription(t *testing.T) {
 
 			rc := NewResolvedChart(
 				fakeChartPath,
-				fakeChartVersion,
+				fakeChart1Version,
 				tc.resType,
 				ChartRelease{
-					Name:    fakeChartName,
-					Repo:    fakeChartRepo,
-					Version: fakeChartVersion,
+					Name:    fakeChart1Name,
+					Repo:    fakeChart1Repo,
+					Version: fakeChart1Version,
 				})
 
 			assert.Equal(t, tc.expected, rc.SourceDescription())

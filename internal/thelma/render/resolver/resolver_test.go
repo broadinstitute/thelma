@@ -12,14 +12,22 @@ import (
 )
 
 const chartSourceDir = "testdata/charts"
-const fakeChartName = "fakechart"
-const fakeChartVersion = "0.10.0"
-const fakeChartRepo = "terra-helm"
+const fakeChart1Name = "fakechart1"
+const fakeChart1Version = "0.10.0"
+const fakeChart1Repo = "terra-helm"
+const fakeChart2Name = "fakechart2"
+const fakeChart2Version = "0.5.0"
+const fakeChart2Repo = "terra-helm"
 
-var fakeChartDependencyTopographicOrder = []string{
+var fakeChartDependencyTopographicOrder1 = []string{
 	"fakechartdep2",
 	"fakechartdep1",
-	"fakechart",
+	"fakechart1",
+}
+
+var fakeChartDependencyTopographicOrder2 = []string{
+	"fakechartdep2",
+	"fakechart2",
 }
 
 type testCfg struct {
@@ -27,6 +35,7 @@ type testCfg struct {
 	cacheDir   string
 	scratchDir string
 	mockRunner *shell.MockRunner
+	preInputs  []*ChartRelease // other inputs to have passed before running input
 	input      *ChartRelease
 }
 
@@ -48,12 +57,12 @@ func TestResolver(t *testing.T) {
 			name: "development mode should successfully resolve chart from source directory",
 			mode: Development,
 			setupMocks: func(tc *testCfg) {
-				tc.expectHelmDependencyUpdate()
+				tc.expectHelmDependencyUpdate(fakeChartDependencyTopographicOrder1...)
 			},
 			expect: func(e *expect, _ *testCfg) {
-				e.path = path.Join(chartSourceDir, fakeChartName)
-				e.version = fakeChartVersion
-				e.sourceDesc = fmt.Sprintf("./%s/%s", chartSourceDir, fakeChartName)
+				e.path = path.Join(chartSourceDir, fakeChart1Name)
+				e.version = fakeChart1Version
+				e.sourceDesc = fmt.Sprintf("./%s/%s", chartSourceDir, fakeChart1Name)
 			},
 		},
 		{
@@ -89,9 +98,9 @@ func TestResolver(t *testing.T) {
 				tc.expectHelmFetch(true)
 			},
 			expect: func(e *expect, tc *testCfg) {
-				e.path = path.Join(tc.cacheDir, fakeChartRepo, fmt.Sprintf("%s-%s", fakeChartName, fakeChartVersion))
-				e.version = fakeChartVersion
-				e.sourceDesc = fakeChartRepo
+				e.path = path.Join(tc.cacheDir, fakeChart1Repo, fmt.Sprintf("%s-%s", fakeChart1Name, fakeChart1Version))
+				e.version = fakeChart1Version
+				e.sourceDesc = fakeChart1Repo
 			},
 		},
 		{
@@ -99,12 +108,12 @@ func TestResolver(t *testing.T) {
 			mode: Deploy,
 			setupMocks: func(tc *testCfg) {
 				tc.expectHelmFetch(false)
-				tc.expectHelmDependencyUpdate()
+				tc.expectHelmDependencyUpdate(fakeChartDependencyTopographicOrder1...)
 			},
 			expect: func(e *expect, _ *testCfg) {
-				e.path = path.Join(chartSourceDir, fakeChartName)
-				e.version = fakeChartVersion
-				e.sourceDesc = fmt.Sprintf("./%s/%s", chartSourceDir, fakeChartName)
+				e.path = path.Join(chartSourceDir, fakeChart1Name)
+				e.version = fakeChart1Version
+				e.sourceDesc = fmt.Sprintf("./%s/%s", chartSourceDir, fakeChart1Name)
 			},
 		},
 		{
@@ -126,9 +135,9 @@ func TestResolver(t *testing.T) {
 				scratchDir: t.TempDir(),
 				mockRunner: shell.DefaultMockRunner(),
 				input: &ChartRelease{
-					Repo:    fakeChartRepo,
-					Name:    fakeChartName,
-					Version: fakeChartVersion,
+					Repo:    fakeChart1Repo,
+					Name:    fakeChart1Name,
+					Version: fakeChart1Version,
 				},
 			}
 
@@ -153,6 +162,11 @@ func TestResolver(t *testing.T) {
 				ScratchDir: cfg.scratchDir,
 			})
 
+			for _, preInput := range cfg.preInputs {
+				_, err := resolver.Resolve(*preInput)
+				assert.NoError(t, err)
+			}
+
 			result, err := resolver.Resolve(*cfg.input)
 
 			if testCase.errMatcher != "" {
@@ -174,8 +188,8 @@ func TestResolver(t *testing.T) {
 	}
 }
 
-func (tc *testCfg) expectHelmDependencyUpdate() {
-	for _, chartName := range fakeChartDependencyTopographicOrder {
+func (tc *testCfg) expectHelmDependencyUpdate(chartNames ...string) {
+	for _, chartName := range chartNames {
 		tc.mockRunner.ExpectCmd(shell.Command{
 			Prog: "helm",
 			Args: []string{
