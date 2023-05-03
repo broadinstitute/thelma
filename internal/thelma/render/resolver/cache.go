@@ -9,22 +9,29 @@ import (
 const defaultCacheKeySeparator = " " // URLs can't have whitespace, so this won't show up
 // in Helm repo and chart names, or in chart version strings
 
-// Synchronized cache is a concurrent-safe cache for ResolvedCharts.
-// It guarantees that the chart resolver function will only be called once for a given cache key.
-type syncCache interface {
-	get(chartRelease ChartRelease, resolver resolverFn) (ResolvedChart, error)
+// syncCache is a concurrent-safe cache for ResolvedCharts. Guarantees a chart won't be resolved multiple times.
+//
+// The important complexity here is that different resolvers want to resolve charts from different input:
+//   - remoteResolver, for instance, wants the cache to operate per ChartRelease.
+//   - localResolver, by contrast, wants the cache to operate per on-disk Chart, regardless of what environment it is
+//     being released to.
+//
+// syncCache is generic on the input type so that it can accomplish either case with the same important mutex/locking
+// behavior.
+type syncCache[R any] interface {
+	get(resolvable R) (ResolvedChart, error)
 }
 
-// Maps chart releases to cache keys.
-// This is useful because the local chart resolver, for example, ignores chart versions
-// when resolving charts.
-type keyMapper func(chartRelease ChartRelease) string
+// keyMapper determines how syncCache should resolve the resolvable input to a cache key.
+// In other words, this determines when syncCache will actually call resolver on the resolvable versus getting a
+// cache hit.
+type keyMapper[R any] func(resolvable R) string
 
-// Function the cache should use for resolving a chart release.
-type resolverFn func(chartRelease ChartRelease) (ResolvedChart, error)
+// resolver is responsible for converting an (uncached) resolvable to a ResolvedChart.
+type resolver[R any] func(resolvable R) (ResolvedChart, error)
 
-// Default key mapper factors all fields of ChartRelease into a unique key
-func defaultCacheKeyMapper(chartRelease ChartRelease) string {
+// chartReleaseKeyMapper is the default keyMapper for a syncCache of ChartRelease (the usual case)
+func chartReleaseKeyMapper(chartRelease ChartRelease) string {
 	return strings.Join(
 		[]string{
 			chartRelease.Repo,
@@ -35,33 +42,37 @@ func defaultCacheKeyMapper(chartRelease ChartRelease) string {
 	)
 }
 
-type syncCacheImpl struct {
+type syncCacheImpl[R any] struct {
 	globalMutex sync.RWMutex
-	keyMapper   keyMapper
-	cache       map[string]*entry
+	keyMapper   keyMapper[R]
+	resolver    resolver[R]
+	cache       map[string]*entry[R]
 }
 
 // Returns a new syncCache instance
-func newSyncCache() syncCache {
-	return newSyncCacheWithMapper(defaultCacheKeyMapper)
+func newSyncCache(resolver resolver[ChartRelease]) syncCache[ChartRelease] {
+	return newSyncCacheWithMapper(resolver, chartReleaseKeyMapper)
 }
 
-func newSyncCacheWithMapper(keyMapper func(ChartRelease) string) syncCache {
-	return &syncCacheImpl{
+func newSyncCacheWithMapper[R any](resolver resolver[R], keyMapper keyMapper[R]) syncCache[R] {
+	return &syncCacheImpl[R]{
 		globalMutex: sync.RWMutex{},
 		keyMapper:   keyMapper,
-		cache:       make(map[string]*entry),
+		resolver:    resolver,
+		cache:       make(map[string]*entry[R]),
 	}
 }
 
-func (c *syncCacheImpl) get(chartRelease ChartRelease, resolver resolverFn) (ResolvedChart, error) {
-	key := c.keyMapper(chartRelease)
+//nolint:unused
+func (c *syncCacheImpl[R]) get(resolvable R) (ResolvedChart, error) {
+	key := c.keyMapper(resolvable)
 	_entry := c.getEntry(key)
 
-	return _entry.getValue(chartRelease, resolver)
+	return _entry.getValue(resolvable, c.resolver)
 }
 
-func (c *syncCacheImpl) getEntry(key string) *entry {
+//nolint:unused
+func (c *syncCacheImpl[R]) getEntry(key string) *entry[R] {
 	// get a read lock so we can safely read from the map
 	c.globalMutex.RLock()
 	_entry, exists := c.cache[key]
@@ -75,14 +86,16 @@ func (c *syncCacheImpl) getEntry(key string) *entry {
 	c.globalMutex.Lock()
 	defer c.globalMutex.Unlock()
 
-	_entry = &entry{}
+	_entry = &entry[R]{}
 	c.cache[key] = _entry
 
 	return _entry
 }
 
 // Represents an entry in the cache
-type entry struct {
+//
+//nolint:unused
+type entry[R any] struct {
 	initialized   bool
 	mutex         sync.RWMutex
 	resolvedChart ResolvedChart
@@ -90,7 +103,9 @@ type entry struct {
 }
 
 // Returns the cached value for a given entry
-func (e *entry) getValue(chartRelease ChartRelease, resolver resolverFn) (ResolvedChart, error) {
+//
+//nolint:unused
+func (e *entry[R]) getValue(resolvable R, resolver resolver[R]) (ResolvedChart, error) {
 	// Obtain a read lock
 	// if we've been initialized already, return the cached values
 	e.mutex.RLock()
@@ -105,7 +120,7 @@ func (e *entry) getValue(chartRelease ChartRelease, resolver resolverFn) (Resolv
 	defer e.mutex.Unlock()
 
 	// generate the values
-	rc, err := resolver(chartRelease)
+	rc, err := resolver(resolvable)
 
 	// save them & mark this entry as initialized
 	e.resolvedChart = rc

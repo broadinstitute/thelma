@@ -31,7 +31,7 @@ type Resolver interface {
 
 type chartResolver struct {
 	options        Options
-	cache          syncCache
+	cache          syncCache[ChartRelease]
 	localResolver  localResolver
 	remoteResolver remoteResolver
 }
@@ -39,21 +39,21 @@ type chartResolver struct {
 func NewResolver(runner shell.Runner, options Options) Resolver {
 	local := newLocalResolver(options.SourceDir, runner)
 	remote := newRemoteResolver(options.CacheDir, options.ScratchDir, runner)
-	cache := newSyncCache()
-	return &chartResolver{
+	r := &chartResolver{
 		options:        options,
-		cache:          cache,
 		localResolver:  local,
 		remoteResolver: remote,
 	}
+	r.cache = newSyncCache(r.resolverFn)
+	return r
 }
 
 func (r *chartResolver) Resolve(chartRelease ChartRelease) (ResolvedChart, error) {
-	return r.cache.get(chartRelease, r.resolverFn)
+	return r.cache.get(chartRelease)
 }
 
-func (r *chartResolver) resolverFn(chart ChartRelease) (ResolvedChart, error) {
-	existsInSource, err := r.localResolver.chartExists(chart)
+func (r *chartResolver) resolverFn(chartRelease ChartRelease) (ResolvedChart, error) {
+	existsInSource, err := r.localResolver.chartExists(chartRelease)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +62,14 @@ func (r *chartResolver) resolverFn(chart ChartRelease) (ResolvedChart, error) {
 		// In development mode, render from source (unless the chart does not exist in source)
 		if !existsInSource {
 			// This behavior is necessary to support renders for charts that live outside the terra-helmfile repo. (eg. charts in the datarepo-helm and terra-helm-thirdparty repos).
-			log.Warn().Msgf("Chart %s does not exist in source dir %s, will try to download from Helm repo", chart.Name, r.options.SourceDir)
-			return r.remoteResolver.resolve(chart)
+			log.Warn().Msgf("Chart %s does not exist in source dir %s, will try to download from Helm repo", chartRelease.Name, r.options.SourceDir)
+			return r.remoteResolver.resolve(chartRelease)
 		}
-		return r.localResolver.resolve(chart)
+		return r.localResolver.resolve(chartRelease)
 	}
 
 	// We're in deploy mode, so download released version from Helm repo
-	resolved, err := r.remoteResolver.resolve(chart)
+	resolved, err := r.remoteResolver.resolve(chartRelease)
 	if err != nil {
 		// Welp, we failed to download the chart from the repo.
 		// So try to use source copy, but only if the version in the source's Chart.yaml matches what we've been asked for.
@@ -77,14 +77,14 @@ func (r *chartResolver) resolverFn(chart ChartRelease) (ResolvedChart, error) {
 		if !existsInSource {
 			return nil, err
 		}
-		sourceVersion, versionErr := r.localResolver.sourceVersion(chart)
+		sourceVersion, versionErr := r.localResolver.sourceVersion(chartRelease)
 		if versionErr != nil {
-			log.Warn().Msgf("error checking source version for %s: %v", chart.Name, versionErr)
+			log.Warn().Msgf("error checking source version for %s: %v", chartRelease.Name, versionErr)
 			return nil, err
 		}
-		if sourceVersion == chart.Version {
-			log.Warn().Msgf("Failed to download chart %s/%s version %s from Helm repo, will fall back to source copy", chart.Repo, chart.Name, chart.Version)
-			return r.localResolver.resolve(chart)
+		if sourceVersion == chartRelease.Version {
+			log.Warn().Msgf("Failed to download chart %s/%s version %s from Helm repo, will fall back to source copy", chartRelease.Repo, chartRelease.Name, chartRelease.Version)
+			return r.localResolver.resolve(chartRelease)
 		}
 		return nil, err
 	}
