@@ -17,21 +17,22 @@ type remoteResolver interface {
 type remoteResolverImpl struct {
 	cacheDir   string
 	scratchDir string
-	cache      syncCache
+	cache      syncCache[ChartRelease]
 	runner     shell.Runner
 }
 
 func newRemoteResolver(cacheDir string, scratchDir string, runner shell.Runner) remoteResolver {
-	return &remoteResolverImpl{
+	r := &remoteResolverImpl{
 		cacheDir:   cacheDir,
 		scratchDir: scratchDir,
-		cache:      newSyncCache(),
 		runner:     runner,
 	}
+	r.cache = newSyncCache(r.resolverFn)
+	return r
 }
 
 func (r *remoteResolverImpl) resolve(chartRelease ChartRelease) (ResolvedChart, error) {
-	return r.cache.get(chartRelease, r.resolverFn)
+	return r.cache.get(chartRelease)
 }
 
 // Fetch the chart from the Helm repo and unpack in the cache directory
@@ -81,8 +82,7 @@ func (r *remoteResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChar
 	if err = os.Rename(tmpChartPath, cachePath); err != nil {
 		return nil, err
 	}
-
-	return NewResolvedChart(cachePath, chartRelease.Version, Remote, chartRelease), nil
+	return NewRemotelyResolvedChart(cachePath, chartRelease.Version, chartRelease.Repo), nil
 }
 
 // Path in the filesystem where cached chart should be kept.

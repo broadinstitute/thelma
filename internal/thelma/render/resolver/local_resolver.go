@@ -24,23 +24,19 @@ type localResolver interface {
 
 type localResolverImpl struct {
 	sourceDir string
-	cache     syncCache
+	cache     syncCache[source.Chart]
 	runner    shell.Runner
 }
 
 func newLocalResolver(sourceDir string, runner shell.Runner) localResolver {
-	cache := newSyncCacheWithMapper(func(chart ChartRelease) string {
-		// since all charts live at the first level of the source directory
-		// eg. charts/agora, charts/cromwell, etc.
-		// we key on chart name and ignore version and repository
-		return chart.Name
-	})
-
-	return &localResolverImpl{
+	r := &localResolverImpl{
 		sourceDir: sourceDir,
-		cache:     cache,
 		runner:    runner,
 	}
+	r.cache = newSyncCacheWithMapper(r.resolverFn, func(resolvable source.Chart) string {
+		return resolvable.Name()
+	})
+	return r
 }
 
 func (r *localResolverImpl) chartExists(chartRelease ChartRelease) (bool, error) {
@@ -67,27 +63,52 @@ func (r *localResolverImpl) sourceVersion(chartRelease ChartRelease) (string, er
 	return chart.ManifestVersion(), nil
 }
 
+// resolve gets a ResolvedChart for the given ChartRelease, but it behaves differently under the hood compared
+// to its counterparts in remoteResolverImpl and the top-level chartResolver.
+//
+// The resolve methods in those other implementations just hand off to their respective syncCache, and all the logic
+// is inside the resolver function inside the syncCache. That works because there's a unique process to run for
+// each ChartRelease (say, downloading the appropriately versioned tarball) and that process is thread-safe.
+//
+// That won't work here, though. For one, when we're resolving locally, we don't care about the chart *release*, we
+// just care about the chart (the version / contents are derived from the filesystem, so it's the same regardless of
+// what environment the chart is deployed to). That means we can have our syncCache operate per chart, not per
+// chart release.
+//
+// Secondly, `helm dependency update` invocations against the same directory aren't thread-safe. This means we need to
+// prevent concurrent invocations against not just top-level charts, but the other dependent charts on disk.
+//
+// syncCache still works, but rather than caching per ChartRelease, we instead do caching per source.Chart, including
+// dependencies courtesy of determineChartDependencies. We still only return the ResolvedChart that the caller cares
+// about for their input ChartRelease, but caching for all the underlying dependencies gets us the locking behavior we
+// need.
 func (r *localResolverImpl) resolve(chartRelease ChartRelease) (ResolvedChart, error) {
-	return r.cache.get(chartRelease, r.resolverFn)
-}
-
-func (r *localResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChart, error) {
 	chart, err := r.getChart(chartRelease.Name)
 	if err != nil {
 		return nil, err
 	}
-	chartsToUpdate, err := r.determineDependenciesToUpdate(chart)
+	dependencyCharts, err := r.determineChartDependencies(chart)
 	if err != nil {
-		return nil, fmt.Errorf("error determining charts to run helm dependency update on: %v", err)
+		return nil, fmt.Errorf("error determining dependencies of chart %s: %v", chart.Name(), err)
 	}
-	for _, chart := range chartsToUpdate {
-		err = chart.UpdateDependencies()
+	var desiredResolvedChart ResolvedChart
+	for _, dependencyChart := range dependencyCharts {
+		resolvedDependencyChart, err := r.cache.get(dependencyChart)
 		if err != nil {
-			return nil, fmt.Errorf("error updating chart source directory %s: %v", chart.Path(), err)
+			return nil, fmt.Errorf("error resolving chart %s in %s, necessary for chart %s: %v", dependencyChart.Name(), dependencyChart.Path(), chart.Name(), err)
+		}
+		if dependencyChart.Name() == chart.Name() {
+			desiredResolvedChart = resolvedDependencyChart
 		}
 	}
+	return desiredResolvedChart, nil
+}
 
-	return NewResolvedChart(chart.Path(), chart.ManifestVersion(), Local, chartRelease), nil
+func (r *localResolverImpl) resolverFn(chart source.Chart) (ResolvedChart, error) {
+	if err := chart.UpdateDependencies(); err != nil {
+		return nil, fmt.Errorf("error updating chart source directory %s: %v", chart.Path(), err)
+	}
+	return NewLocallyResolvedChart(chart.Path(), chart.ManifestVersion()), nil
 }
 
 // Returns source.Chart instance for the given chart name
@@ -104,10 +125,10 @@ func (r *localResolverImpl) chartSourcePath(chartName string) string {
 	return path.Join(r.sourceDir, chartName)
 }
 
-// determineDependenciesToUpdate is used to add support for lack of handling for multi-layer dependencies
+// determineChartDependencies is used to add support for lack of handling for multi-layer dependencies
 // in helm upgrade. It performs a BFS traversal of the dependency graph for a given chart and outputs
 // a topologically sorted list of charts to run helm dependency update upon
-func (r *localResolverImpl) determineDependenciesToUpdate(chart source.Chart) ([]source.Chart, error) {
+func (r *localResolverImpl) determineChartDependencies(chart source.Chart) ([]source.Chart, error) {
 	dependencies := make(map[string][]string)
 	dependencies[chart.Name()] = chart.LocalDependencies()
 	chartsToProcess := make([]string, 0)

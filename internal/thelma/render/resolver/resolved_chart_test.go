@@ -13,37 +13,25 @@ func TestResolvedChart_SourceDescription(t *testing.T) {
 	assert.NoError(t, err)
 
 	testCases := []struct {
-		name     string
-		resType  ResolutionType
-		expected string
+		name          string
+		resolvedChart ResolvedChart
+		expected      string
 	}{
 		{
-			name:     "local charts should be relative to cwd even when fully-qualified path is supplied",
-			resType:  Local,
-			expected: fmt.Sprintf("./testdata/charts/%s", fakeChart1Name),
+			name:          "local charts should be relative to cwd even when fully-qualified path is supplied",
+			resolvedChart: NewLocallyResolvedChart(fakeChartPath, fakeChart1Version),
+			expected:      fmt.Sprintf("./testdata/charts/%s", fakeChart1Name),
 		},
 		{
-			name:     "remote charts source should be repo name",
-			resType:  Remote,
-			expected: fakeChart1Repo,
+			name:          "remote charts source should be repo name",
+			resolvedChart: NewRemotelyResolvedChart(fakeChartPath, fakeChart1Version, fakeChart1Repo),
+			expected:      fakeChart1Repo,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.NoError(t, err)
-
-			rc := NewResolvedChart(
-				fakeChartPath,
-				fakeChart1Version,
-				tc.resType,
-				ChartRelease{
-					Name:    fakeChart1Name,
-					Repo:    fakeChart1Repo,
-					Version: fakeChart1Version,
-				})
-
-			assert.Equal(t, tc.expected, rc.SourceDescription())
+			assert.Equal(t, tc.expected, tc.resolvedChart.SourceDescription())
 		})
 	}
 }
