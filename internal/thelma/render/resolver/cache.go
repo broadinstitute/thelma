@@ -63,6 +63,7 @@ func newSyncCacheWithMapper[R any](resolver resolver[R], keyMapper keyMapper[R])
 	}
 }
 
+//nolint:unused
 func (c *syncCacheImpl[R]) get(resolvable R) (ResolvedChart, error) {
 	key := c.keyMapper(resolvable)
 	_entry := c.getEntry(key)
@@ -70,6 +71,7 @@ func (c *syncCacheImpl[R]) get(resolvable R) (ResolvedChart, error) {
 	return _entry.getValue(resolvable, c.resolver)
 }
 
+//nolint:unused
 func (c *syncCacheImpl[R]) getEntry(key string) *entry[R] {
 	// get a read lock so we can safely read from the map
 	c.globalMutex.RLock()
@@ -91,6 +93,8 @@ func (c *syncCacheImpl[R]) getEntry(key string) *entry[R] {
 }
 
 // Represents an entry in the cache
+//
+//nolint:unused
 type entry[R any] struct {
 	initialized   bool
 	mutex         sync.RWMutex
@@ -99,6 +103,8 @@ type entry[R any] struct {
 }
 
 // Returns the cached value for a given entry
+//
+//nolint:unused
 func (e *entry[R]) getValue(resolvable R, resolver resolver[R]) (ResolvedChart, error) {
 	// Obtain a read lock
 	// if we've been initialized already, return the cached values
