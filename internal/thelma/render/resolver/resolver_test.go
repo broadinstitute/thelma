@@ -125,6 +125,29 @@ func TestResolver(t *testing.T) {
 			},
 			errMatcher: "error downloading chart",
 		},
+		{
+			name: "development mode (problematically) reruns helm dependency update on dependencies",
+			mode: Development,
+			setupMocks: func(tc *testCfg) {
+				tc.preInputs = []*ChartRelease{
+					{
+						Name:    fakeChart1Name,
+						Version: fakeChart1Version,
+						Repo:    fakeChart1Repo,
+					},
+				}
+				tc.input.Name = fakeChart2Name
+				tc.input.Version = fakeChart2Version
+				tc.input.Repo = fakeChart2Repo
+				// Note that the topographic orders here aren't mutually exclusive!
+				tc.expectHelmDependencyUpdate(append(fakeChartDependencyTopographicOrder1, fakeChartDependencyTopographicOrder2...)...)
+			},
+			expect: func(e *expect, _ *testCfg) {
+				e.path = path.Join(chartSourceDir, fakeChart2Name)
+				e.version = fakeChart2Version
+				e.sourceDesc = fmt.Sprintf("./%s/%s", chartSourceDir, fakeChart2Name)
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
