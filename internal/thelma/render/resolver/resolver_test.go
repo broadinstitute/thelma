@@ -126,7 +126,7 @@ func TestResolver(t *testing.T) {
 			errMatcher: "error downloading chart",
 		},
 		{
-			name: "development mode (problematically) reruns helm dependency update on dependencies",
+			name: "development mode doesn't rerun helm dependency update on dependencies",
 			mode: Development,
 			setupMocks: func(tc *testCfg) {
 				tc.preInputs = []*ChartRelease{
@@ -139,8 +139,9 @@ func TestResolver(t *testing.T) {
 				tc.input.Name = fakeChart2Name
 				tc.input.Version = fakeChart2Version
 				tc.input.Repo = fakeChart2Repo
-				// Note that the topographic orders here aren't mutually exclusive!
-				tc.expectHelmDependencyUpdate(append(fakeChartDependencyTopographicOrder1, fakeChartDependencyTopographicOrder2...)...)
+				tc.expectHelmDependencyUpdate(
+					// Make the topographic orders mutually exclusive
+					stableRemoveDuplicates(append(fakeChartDependencyTopographicOrder1, fakeChartDependencyTopographicOrder2...)...)...)
 			},
 			expect: func(e *expect, _ *testCfg) {
 				e.path = path.Join(chartSourceDir, fakeChart2Name)
@@ -209,6 +210,20 @@ func TestResolver(t *testing.T) {
 			assert.Equal(t, expected.version, result.Version())
 		})
 	}
+}
+
+func stableRemoveDuplicates(chartNames ...string) []string {
+	ret := make([]string, 0)
+outer:
+	for _, chartName := range chartNames {
+		for _, existing := range ret {
+			if chartName == existing {
+				continue outer
+			}
+		}
+		ret = append(ret, chartName)
+	}
+	return ret
 }
 
 func (tc *testCfg) expectHelmDependencyUpdate(chartNames ...string) {
