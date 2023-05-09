@@ -2,9 +2,10 @@ package seed
 
 import (
 	"fmt"
+	"regexp"
+
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
-	"regexp"
 )
 
 func (s *seeder) seedStep2RegisterSaProfiles(appReleases map[string]terra.AppRelease, opts SeedOptions) error {
@@ -93,7 +94,7 @@ func _ignore409Conflict(maybe409Err error) error {
 		return nil
 	}
 
-	pattern := "(?s)409 [Cc]onflict.*[Uu]ser.*already exists"
+	pattern := "(?s)409 [Cc]onflict.*[Uu]ser.*already (?:exists|registered)"
 	matches, err := regexp.MatchString(pattern, maybe409Err.Error())
 
 	if err != nil {
