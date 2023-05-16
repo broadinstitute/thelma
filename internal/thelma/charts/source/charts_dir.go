@@ -101,11 +101,11 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 			}
 		}
 
-		if err := _chart.PackageChart(d.publisher.ChartDir()); err != nil {
+		if err := _chart.GenerateDocs(); err != nil {
 			return nil, err
 		}
-		
-		if err := _chart.GenerateDocs(); err != nil {
+
+		if err := _chart.PackageChart(d.publisher.ChartDir()); err != nil {
 			return nil, err
 		}
 
