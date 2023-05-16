@@ -86,9 +86,6 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 
 		dependenciesToUpdate := d.determineDependenciesToUpdate(_chart)
 
-		if err := _chart.GenerateDocs(); err != nil {
-			return nil, err
-		}
 		lastVersions[chartName] = d.publisher.Index().MostRecentVersion(chartName)
 		newVersion, err := _chart.BumpChartVersion(lastVersions[chartName])
 		if err != nil {
@@ -107,6 +104,11 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 		if err := _chart.PackageChart(d.publisher.ChartDir()); err != nil {
 			return nil, err
 		}
+		
+		if err := _chart.GenerateDocs(); err != nil {
+			return nil, err
+		}
+
 		publishedVersions[chartName] = newVersion
 	}
 
