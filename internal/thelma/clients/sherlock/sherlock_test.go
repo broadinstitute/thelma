@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/broadinstitute/sherlock/clients/go/client/models"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
