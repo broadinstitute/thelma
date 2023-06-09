@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/broadinstitute/sherlock/clients/go/client"
-	"github.com/broadinstitute/sherlock/clients/go/client/misc"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/misc"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"

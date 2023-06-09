@@ -2,11 +2,11 @@ package sherlock
 
 import (
 	"fmt"
-	"github.com/broadinstitute/sherlock/clients/go/client/changesets"
-	"github.com/broadinstitute/sherlock/clients/go/client/chart_releases"
-	"github.com/broadinstitute/sherlock/clients/go/client/chart_versions"
-	"github.com/broadinstitute/sherlock/clients/go/client/environments"
-	"github.com/broadinstitute/sherlock/clients/go/client/models"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/changesets"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/chart_releases"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/chart_versions"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/environments"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
 	"github.com/rs/zerolog/log"
 )
 

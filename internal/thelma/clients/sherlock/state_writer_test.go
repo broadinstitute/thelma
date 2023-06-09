@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/broadinstitute/sherlock/clients/go/client/environments"
-	"github.com/broadinstitute/sherlock/clients/go/client/models"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/environments"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"

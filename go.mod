@@ -8,11 +8,11 @@ require (
 	cloud.google.com/go/storage v1.27.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/broadinstitute/sherlock v0.1.11-0.20230221181340-7a6d8fd697b7
+	github.com/broadinstitute/sherlock/sherlock-go-client v0.0.0-20230609153609-fba9fbb374f9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.9.0
-	github.com/go-openapi/runtime v0.25.0
-	github.com/go-openapi/strfmt v0.21.3
+	github.com/go-openapi/runtime v0.26.0
+	github.com/go-openapi/strfmt v0.21.7
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-github v17.0.0+incompatible
@@ -34,6 +34,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	github.com/thediveo/enumflag/v2 v2.0.2
+	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
 	golang.org/x/mod v0.6.0
 	golang.org/x/oauth2 v0.5.0
 	golang.org/x/term v0.5.0
@@ -55,7 +56,7 @@ require (
 	cloud.google.com/go/iam v0.11.0 // indirect
 	github.com/armon/go-metrics v0.3.9 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
-	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -69,9 +70,9 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/loads v0.21.2 // indirect
-	github.com/go-openapi/spec v0.20.7 // indirect
+	github.com/go-openapi/spec v0.20.8 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
-	github.com/go-openapi/validate v0.22.0 // indirect
+	github.com/go-openapi/validate v0.22.1 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -141,13 +142,12 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	go.mongodb.org/mongo-driver v1.11.0 // indirect
+	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/otel v1.11.1 // indirect
-	go.opentelemetry.io/otel/trace v1.11.1 // indirect
+	go.opentelemetry.io/otel v1.14.0 // indirect
+	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/crypto v0.3.0 // indirect
-	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect

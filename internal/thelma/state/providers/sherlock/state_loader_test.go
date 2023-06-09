@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/broadinstitute/sherlock/clients/go/client/models"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
