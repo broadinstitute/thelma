@@ -37,10 +37,10 @@ const configKey = "iap"
 // tokenKey unique name for IAP tokens issued by this package, used to identify it in Thelma's token storage
 const tokenKey = "iap-oauth-token"
 
-// URL to request in order to validate IAP credentials are working
-// Note that Sherlock doesn't actually have a thelma-iap-check endpoint so this will 404, but we don't care.
-// We just care that we don't get the iap response header back in the response
-const tokenValidationURL = "https://sherlock.dsp-devops.broadinstitute.org/thelma-iap-check"
+// URL to request in order to validate IAP credentials are working.
+// We don't read the body, we just use tokenValidationIapResponseHeader to check that IAP didn't send it.
+// If IAP didn't send it, then we are through to Sherlock.
+const tokenValidationURL = "https://sherlock.dsp-devops.broadinstitute.org/connection-check"
 
 // how long to wait before timing out token validation request
 const tokenValidationRequestTimeout = 15 * time.Second
