@@ -1,6 +1,7 @@
 package seed
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 )
@@ -55,6 +56,21 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			log.Info().Msg("Import Service not present in environment, skipping")
 		}
 
+		if workspaceManager, workspaceManagerPresent := appReleases["workspacemanager"]; workspaceManagerPresent {
+			log.Info().Msgf("will add Workspace Manager SA permissions to %s", sam.Host())
+			googleClient, err := s.googleAuthAs(workspaceManager)
+			if err := opts.handleErrorWithForce(err); err != nil {
+				return err
+			}
+			terraClient, err := googleClient.Terra()
+			if err := opts.handleErrorWithForce(err); err != nil {
+				return err
+			}
+			emails = append(emails, terraClient.GoogleUserInfo().Email)
+		} else {
+			log.Info().Msg("Workspace Manager not present in environment, skipping")
+		}
+
 		googleClient, err := s.googleAuthAs(sam)
 		if err != nil {
 			return err
@@ -64,7 +80,17 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			return err
 		}
 		emails = append(emails, terraClient.GoogleUserInfo().Email)
-		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails)
+		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "google", terraapi.GetPetPrivateKeyAction)
+		if err != nil {
+			return err
+		}
+		log.Info().Msg("creating azure cloud extension sam resource")
+		_, _, err = terraClient.Sam(sam).CreateCloudExtension("azure")
+		if err != nil {
+			return err
+		}
+
+		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "azure", terraapi.GetPetManagedIdentityAction)
 		if err != nil {
 			return err
 		}
