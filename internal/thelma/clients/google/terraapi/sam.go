@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"net/http"
+
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
 type SamClient interface {
 	FcServiceAccounts([]string, string) (*http.Response, string, error)
 	AcceptToS() (*http.Response, string, error)
 	UnregisterUser(id string) (*http.Response, string, error)
+	CreateCloudExtension(cloud string) (*http.Response, string, error)
 }
 
 type samClient struct {
@@ -46,4 +48,8 @@ func (c *samClient) AcceptToS() (*http.Response, string, error) {
 
 func (c *samClient) UnregisterUser(id string) (*http.Response, string, error) {
 	return c.doJsonRequest(http.MethodDelete, fmt.Sprintf("%s/api/admin/user/%s", c.appRelease.URL(), id), &bytes.Buffer{})
+}
+
+func (c *samClient) CreateCloudExtension(cloud string) (*http.Response, string, error) {
+	return c.doJsonRequest(http.MethodPost, fmt.Sprintf("%s/api/resources/v2/cloud-extension/%s", c.appRelease.URL(), cloud), &bytes.Buffer{})
 }

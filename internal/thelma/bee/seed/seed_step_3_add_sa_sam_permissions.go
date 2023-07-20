@@ -83,6 +83,12 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 		if err != nil {
 			return err
 		}
+		log.Info().Msg("creating azure cloud extension sam resource")
+		_, _, err = terraClient.Sam(sam).CreateCloudExtension("azure")
+		if err != nil {
+			return err
+		}
+
 		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "azure")
 		if err != nil {
 			return err
