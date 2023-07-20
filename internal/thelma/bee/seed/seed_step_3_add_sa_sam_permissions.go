@@ -1,6 +1,7 @@
 package seed
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
 )
@@ -79,7 +80,7 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			return err
 		}
 		emails = append(emails, terraClient.GoogleUserInfo().Email)
-		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "google")
+		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "google", terraapi.GetPetPrivateKeyAction)
 		if err != nil {
 			return err
 		}
@@ -89,7 +90,7 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			return err
 		}
 
-		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "azure")
+		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "azure", terraapi.GetPetManagedIdentityAction)
 		if err != nil {
 			return err
 		}

@@ -9,8 +9,13 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
+const (
+	GetPetPrivateKeyAction      = "get_pet_private_key"
+	GetPetManagedIdentityAction = "get_pet_managed_identity"
+)
+
 type SamClient interface {
-	FcServiceAccounts([]string, string) (*http.Response, string, error)
+	FcServiceAccounts([]string, string, string) (*http.Response, string, error)
 	AcceptToS() (*http.Response, string, error)
 	UnregisterUser(id string) (*http.Response, string, error)
 	CreateCloudExtension(cloud string) (*http.Response, string, error)
@@ -21,14 +26,14 @@ type samClient struct {
 	appRelease terra.AppRelease
 }
 
-func (c *samClient) FcServiceAccounts(memberEmails []string, cloud string) (*http.Response, string, error) {
+func (c *samClient) FcServiceAccounts(memberEmails []string, cloud string, action string) (*http.Response, string, error) {
 	bodyStruct := struct {
 		MemberEmails []string `json:"memberEmails"`
 		Actions      []string `json:"actions"`
 		Roles        []string `json:"roles"`
 	}{
 		MemberEmails: memberEmails,
-		Actions:      []string{"get_pet_private_key"},
+		Actions:      []string{action},
 		Roles:        []string{},
 	}
 	body, err := json.Marshal(bodyStruct)
