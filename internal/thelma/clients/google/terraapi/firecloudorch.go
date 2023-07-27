@@ -27,6 +27,7 @@ var retryableErrors = []*regexp.Regexp{
 	regexp.MustCompile(`java\.net\.UnknownHostException`),
 	regexp.MustCompile(`akka\.http\.impl\.engine\.client\.OutgoingConnectionBlueprint\$UnexpectedConnectionClosureException`),
 	regexp.MustCompile(`(?m)503 Service Temporarily Unavailable.*nginx`),
+	regexp.MustCompile(`503 Service Unavailable`),
 }
 
 type FirecloudOrchClient interface {
