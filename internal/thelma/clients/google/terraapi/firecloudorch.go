@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/avast/retry-go"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/rs/zerolog/log"
 	"net/http"
 	"regexp"
 	"time"
+
+	"github.com/avast/retry-go"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/rs/zerolog/log"
 )
 
 // BEE seeding occasionally fails, with Orch occasionally encountering connection timeouts, resets, or DNS errors
@@ -129,7 +130,6 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 			count++
 			log.Warn().Err(err).Msgf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
 		}),
-		retry.RetryIf(isRetryableError),
 	); retryErr != nil {
 		return nil, "", retryErr
 	}
