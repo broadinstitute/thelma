@@ -1,16 +1,15 @@
 package terraapi
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"time"
-
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	googleoauth "google.golang.org/api/oauth2/v2"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
 )
 
 func Test_OrchClientRetriesFailedRequests(t *testing.T) {
@@ -25,19 +24,18 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 			retryableErrCount: 0,
 			expectErr:         false,
 		},
-		// Treat all errors as retryable for now, there are just too many different errors that can occur
-		// {
-		// 	name:              "1 non-retryable err",
-		// 	retryableErrCount: 0,
-		// 	finalErr:          "should not cause a retry",
-		// 	expectErr:         true,
-		// },
-		// {
-		// 	name:              "3 retryable, 1 non-retryable err",
-		// 	retryableErrCount: 3,
-		// 	finalErr:          "should not cause a retry",
-		// 	expectErr:         true,
-		// },
+		{
+			name:              "1 non-retryable err",
+			retryableErrCount: 0,
+			finalErr:          "should not cause a retry",
+			expectErr:         true,
+		},
+		{
+			name:              "3 retryable, 1 non-retryable err",
+			retryableErrCount: 3,
+			finalErr:          "should not cause a retry",
+			expectErr:         true,
+		},
 		{
 			name:              "5 retryable, then success",
 			retryableErrCount: 5,

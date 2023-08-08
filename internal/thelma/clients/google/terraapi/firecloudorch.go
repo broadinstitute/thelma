@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/avast/retry-go"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
+	"net/http"
+	"regexp"
+	"time"
 )
 
 // BEE seeding occasionally fails, with Orch occasionally encountering connection timeouts, resets, or DNS errors
@@ -21,6 +21,14 @@ import (
 
 const defaultRetryAttempts = 40
 const defaultRetryDelay = 30 * time.Second
+
+var retryableErrors = []*regexp.Regexp{
+	regexp.MustCompile(`java\.net\.SocketTimeoutException`),
+	regexp.MustCompile(`java\.net\.UnknownHostException`),
+	regexp.MustCompile(`akka\.http\.impl\.engine\.client\.OutgoingConnectionBlueprint\$UnexpectedConnectionClosureException`),
+	regexp.MustCompile(`(?m)503 Service Temporarily Unavailable.*nginx`),
+	regexp.MustCompile(`503 Service Unavailable`),
+}
 
 type FirecloudOrchClient interface {
 	RegisterProfile(firstName string, lastName string, title string, contactEmail string, institute string, institutionalProgram string, programLocationCity string, programLocationState string, programLocationCountry string, pi string, nonProfitStatus string) (*http.Response, string, error)
@@ -121,6 +129,7 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 			count++
 			log.Warn().Err(err).Msgf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
 		}),
+		retry.RetryIf(isRetryableError),
 	); retryErr != nil {
 		return nil, "", retryErr
 	}
@@ -130,4 +139,14 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 	}
 
 	return resp, responseBody, nil
+}
+
+func isRetryableError(err error) bool {
+	msg := err.Error()
+	for _, matcher := range retryableErrors {
+		if matcher.MatchString(msg) {
+			return true
+		}
+	}
+	return false
 }
