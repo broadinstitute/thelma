@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/avast/retry-go"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/rs/zerolog/log"
+	"net/http"
+	"regexp"
+	"time"
 )
 
 // BEE seeding occasionally fails, with Orch occasionally encountering connection timeouts, resets, or DNS errors
@@ -21,6 +21,11 @@ import (
 
 const defaultRetryAttempts = 40
 const defaultRetryDelay = 30 * time.Second
+
+// unretryableErrors a list of errors from Orch that should NOT be retried
+var unretryableErrors = []*regexp.Regexp{
+	regexp.MustCompile(`409 Conflict`),
+}
 
 type FirecloudOrchClient interface {
 	RegisterProfile(firstName string, lastName string, title string, contactEmail string, institute string, institutionalProgram string, programLocationCity string, programLocationState string, programLocationCountry string, pi string, nonProfitStatus string) (*http.Response, string, error)
@@ -121,6 +126,7 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 			count++
 			log.Warn().Err(err).Msgf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
 		}),
+		retry.RetryIf(isRetryableError),
 	); retryErr != nil {
 		return nil, "", retryErr
 	}
@@ -130,4 +136,14 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 	}
 
 	return resp, responseBody, nil
+}
+
+func isRetryableError(err error) bool {
+	msg := err.Error()
+	for _, matcher := range unretryableErrors {
+		if matcher.MatchString(msg) {
+			return false
+		}
+	}
+	return true
 }
