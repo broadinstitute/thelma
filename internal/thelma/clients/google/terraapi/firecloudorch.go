@@ -22,12 +22,9 @@ import (
 const defaultRetryAttempts = 40
 const defaultRetryDelay = 30 * time.Second
 
-var retryableErrors = []*regexp.Regexp{
-	regexp.MustCompile(`java\.net\.SocketTimeoutException`),
-	regexp.MustCompile(`java\.net\.UnknownHostException`),
-	regexp.MustCompile(`akka\.http\.impl\.engine\.client\.OutgoingConnectionBlueprint\$UnexpectedConnectionClosureException`),
-	regexp.MustCompile(`(?m)503 Service Temporarily Unavailable.*nginx`),
-	regexp.MustCompile(`503 Service Unavailable`),
+// unretryableErrors a list of errors from Orch that should NOT be retried
+var unretryableErrors = []*regexp.Regexp{
+	regexp.MustCompile(`409 Conflict`),
 }
 
 type FirecloudOrchClient interface {
@@ -143,10 +140,10 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 
 func isRetryableError(err error) bool {
 	msg := err.Error()
-	for _, matcher := range retryableErrors {
+	for _, matcher := range unretryableErrors {
 		if matcher.MatchString(msg) {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }

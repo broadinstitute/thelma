@@ -27,13 +27,13 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 		{
 			name:              "1 non-retryable err",
 			retryableErrCount: 0,
-			finalErr:          "should not cause a retry",
+			finalErr:          "something weird happened",
 			expectErr:         true,
 		},
 		{
 			name:              "3 retryable, 1 non-retryable err",
 			retryableErrCount: 3,
-			finalErr:          "should not cause a retry",
+			finalErr:          "something weird happened",
 			expectErr:         true,
 		},
 		{
@@ -58,15 +58,15 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 
 				if requestCount > tc.retryableErrCount {
 					if tc.finalErr != "" {
-						status = http.StatusInternalServerError
-						body = tc.finalErr
+						status = http.StatusConflict
+						body = "409 Conflict: this error should not be retried: " + tc.finalErr
 					} else {
 						status = http.StatusCreated
 						body = "Created"
 					}
 				} else {
 					status = http.StatusInternalServerError
-					body = `error connecting to thurloe: java.net.UnknownHostException`
+					body = `This error is retryable`
 				}
 
 				w.WriteHeader(status)
