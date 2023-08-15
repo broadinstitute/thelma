@@ -4,7 +4,7 @@ kind: Component
 metadata:
   name: thelma
   description: |
-    **`thelma`** (short for **T**erra **Helm** **A**utomator) is DSP-Devops' self service CLI tool for interacting with DSP infrastructure.
+    thelma (short for Terra Helm Automator) is DSP-Devops' self service CLI tool for interacting with DSP infrastructure
   tags:
     - go
     - thelma
