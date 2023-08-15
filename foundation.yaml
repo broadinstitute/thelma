@@ -1,0 +1,26 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: thelma
+  description: |
+    **`thelma`** (short for **T**erra **Helm** **A**utomator) is DSP-Devops' self service CLI tool for interacting with DSP infrastructure.
+  tags:
+    - go
+    - thelma
+    - kubernetes
+    - dsp-devops
+    - helm
+    - argocd
+    - dsp-tools
+  annotations:
+    github.com/project-slug: broadinstitute/thelma
+spec:
+  type: service
+  lifecycle: production
+  owner: dsp-devops
+  dependsOn:
+    - component:sherlock
+    - component:sherlock-go-client-lib
+  consumesApis:
+    - sherlock-api
