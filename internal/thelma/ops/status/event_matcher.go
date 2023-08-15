@@ -33,7 +33,8 @@ func newEventMatcher(apiClient kubernetes.Interface, namespace string) (*eventMa
 // annotateResource with any matching events
 func (e *eventMatcher) annotateResourceWithMatchingEvents(resource *Resource) error {
 	if resource.Namespace != e.namespace {
-		panic(fmt.Errorf("resource namespace %s does not match event cache namespace %s", resource.Namespace, e.namespace))
+		log.Warn().Msgf("Unexpected data inconsistency: resource namespace %s does not match event cache namespace %s", resource.Namespace, e.namespace)
+		return nil
 	}
 
 	var podSelector *metav1.LabelSelector
