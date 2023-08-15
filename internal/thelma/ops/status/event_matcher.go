@@ -2,7 +2,6 @@ package status
 
 import (
 	"context"
-	"fmt"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +32,8 @@ func newEventMatcher(apiClient kubernetes.Interface, namespace string) (*eventMa
 // annotateResource with any matching events
 func (e *eventMatcher) annotateResourceWithMatchingEvents(resource *Resource) error {
 	if resource.Namespace != e.namespace {
-		panic(fmt.Errorf("resource namespace %s does not match event cache namespace %s", resource.Namespace, e.namespace))
+		log.Warn().Msgf("Unexpected inconsistency: resource namespace %s does not match event cache namespace %s", resource.Namespace, e.namespace)
+		return nil
 	}
 
 	var podSelector *metav1.LabelSelector
