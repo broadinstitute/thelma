@@ -2,7 +2,6 @@ package status
 
 import (
 	"context"
-	"fmt"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
