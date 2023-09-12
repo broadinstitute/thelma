@@ -35,8 +35,12 @@ func Test_NewClient(t *testing.T) {
 		thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
 		require.NoError(t, err)
 
+		// Don't assume that the environment variable will be empty... clear it and then clean up the side effect.
+		oldEnv := os.Getenv(githubActionsOidcTokenEnvVar)
+		_ = os.Setenv(githubActionsOidcTokenEnvVar, "")
 		client, err := New(thelmaConfig, testIapToken)
 		require.NoError(t, err)
+		_ = os.Setenv(githubActionsOidcTokenEnvVar, oldEnv)
 
 		err = client.getStatus()
 		require.NoError(t, err)
