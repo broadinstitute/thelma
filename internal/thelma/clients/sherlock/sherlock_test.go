@@ -2,8 +2,10 @@ package sherlock
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
@@ -18,23 +20,49 @@ type mockOkResponse struct {
 
 // Verify that the sherlock client can successfully issue a request against a mock sherlock backend
 func Test_NewClient(t *testing.T) {
-	mockSherlockServer := httptest.NewServer(newMockSherlockStatusHandler())
-	defer mockSherlockServer.Close()
+	testGhaToken := "test github actions oidc jwt"
+	testIapToken := "test identity aware proxy token"
 
-	thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
-	require.NoError(t, err)
+	t.Run("just iap", func(t *testing.T) {
+		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
+			require.Empty(t, r.Header.Get(sherlockGithubActionsOidcHeader))
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(mockOkResponse{Ok: true})
+		}))
+		defer mockSherlockServer.Close()
 
-	client, err := New(thelmaConfig, "fake")
-	require.NoError(t, err)
+		thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
+		require.NoError(t, err)
 
-	err = client.getStatus()
-	require.NoError(t, err)
-}
+		client, err := New(thelmaConfig, testIapToken)
+		require.NoError(t, err)
 
-func newMockSherlockStatusHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(mockOkResponse{Ok: true})
+		err = client.getStatus()
+		require.NoError(t, err)
+	})
+
+	t.Run("iap and gha", func(t *testing.T) {
+		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
+			require.Equal(t, testGhaToken, r.Header.Get(sherlockGithubActionsOidcHeader))
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(mockOkResponse{Ok: true})
+		}))
+		defer mockSherlockServer.Close()
+
+		thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
+		require.NoError(t, err)
+
+		// Easiest just to modify this env var from the test... but at least we'll clean up the side effect when we're done.
+		oldEnv := os.Getenv(githubActionsOidcTokenEnvVar)
+		_ = os.Setenv(githubActionsOidcTokenEnvVar, testGhaToken)
+		client, err := New(thelmaConfig, testIapToken)
+		require.NoError(t, err)
+		_ = os.Setenv(githubActionsOidcTokenEnvVar, oldEnv)
+
+		err = client.getStatus()
+		require.NoError(t, err)
 	})
 }
 

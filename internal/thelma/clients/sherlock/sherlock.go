@@ -1,7 +1,9 @@
 package sherlock
 
 import (
+	"github.com/go-openapi/runtime"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client"
@@ -12,6 +14,12 @@ import (
 )
 
 const configKey = "sherlock"
+
+// This environment variable is more similar to the Vault client's VAULT_ROLE_ID and VAULT_SECRET_ID environment
+// variables than it is to normal config. We only expose this through the environment to help protect against
+// this secret value ever being written to a file.
+const githubActionsOidcTokenEnvVar = "SHERLOCK_GHA_OIDC_TOKEN"
+const sherlockGithubActionsOidcHeader = "X-GHA-OIDC-JWT"
 
 // StateReadWriter is an interface representing the ability to both read and
 // create/update thelma's internal state using a sherlock client
@@ -81,7 +89,11 @@ func configureClientRuntime(addr, token string) (*Client, error) {
 
 	// setup runtime for openapi client
 	transport := httptransport.New(hostname, "", []string{scheme})
-	transport.DefaultAuthentication = httptransport.BearerToken(token)
+	authMechanisms := []runtime.ClientAuthInfoWriter{httptransport.BearerToken(token)}
+	if ghaOidcToken := os.Getenv(githubActionsOidcTokenEnvVar); ghaOidcToken != "" {
+		authMechanisms = append(authMechanisms, httptransport.APIKeyAuth(sherlockGithubActionsOidcHeader, "header", ghaOidcToken))
+	}
+	transport.DefaultAuthentication = httptransport.Compose(authMechanisms...)
 
 	sherlockClient := client.New(transport, strfmt.Default)
 	return &Client{client: sherlockClient}, nil
