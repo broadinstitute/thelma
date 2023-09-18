@@ -2,6 +2,7 @@ package selector
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
@@ -28,6 +29,7 @@ var flagNames = struct {
 	environmentTemplate  string
 	destinationType      string
 	destinationBase      string
+	fileTrigger          string
 }{
 	release:              ReleasesFlagName,
 	exactRelease:         "exact-release",
@@ -37,6 +39,7 @@ var flagNames = struct {
 	environmentTemplate:  "environment-template",
 	destinationBase:      "destination-base",
 	destinationType:      "destination-type",
+	fileTrigger:          filetrigger.FlagName,
 }
 
 type Option func(*Options)
@@ -82,6 +85,7 @@ func NewSelector(options ...Option) *Selector {
 		newExactReleasesFlag(),
 		newEnvironmentsFlag(),
 		newClustersFlag(),
+		newFileTriggerFlag(),
 	}
 
 	if opts.IncludeBulkFlags {

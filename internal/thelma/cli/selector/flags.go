@@ -2,6 +2,7 @@ package selector
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
@@ -25,6 +26,9 @@ func newReleasesFlag() *enumFlag {
 				return flagValues, nil
 			} else if len(args) > 0 {
 				return []string{args[0]}, nil
+			} else if pflags.Changed(flagNames.fileTrigger) {
+				// file trigger list will be used to filter the list of releases, pretend ALL was selected
+				return []string{allSelector}, nil
 			} else if pflags.Changed(flagNames.exactRelease) {
 				// If there's no releases specified but there are exact releases specified, act as if this flag had been
 				// set to ALL so we don't filter on it
@@ -203,6 +207,22 @@ func newEnvironmentLifecyclesFlag() *enumFlag {
 
 		buildFilter: func(f *filterBuilder, uniqueValues []string) {
 			f.addEnvironmentFilter(filter.Environments().HasLifecycleName(uniqueValues...))
+		},
+	}
+}
+
+// --file-trigger flag
+func newFileTriggerFlag() *enumFlag {
+	return &enumFlag{
+		flagName:      flagNames.fileTrigger,
+		defaultValues: []string{},
+		usageMessage: fmt.Sprintf(
+			`Run for releases matching a newline-separated list of updated `+
+				`files in terra-helmfile. Paths should be relative to terra-helmfile `+
+				`root. Eg. --%s=file-list.txt`, flagNames.fileTrigger),
+
+		buildFilter: func(f *filterBuilder, uniqueValues []string) {
+			f.addReleaseFilter(filetrigger.ReleaseFilter(uniqueValues...))
 		},
 	}
 }

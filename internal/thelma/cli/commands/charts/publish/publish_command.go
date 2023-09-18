@@ -3,6 +3,7 @@ package publish
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
@@ -14,7 +15,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const helpMessage = `Publishes Helm charts for Terra services`
+const helpMessage = `Publishes Helm charts for Terra services
+
+EXAMPLES
+
+Publish in dry-run mode (this won't actually update any systems, and is safe to
+run on your local machine):
+
+  thelma charts publish --dry-run agora workspacemanager thurloe
+
+Actually publish a list of charts to the terra-helm bucket and report new versions to Sherlock:
+
+  thelma charts publish agora workspacemanager thurloe
+
+Publish a list of charts from a file trigger:
+
+  thelma charts publish --file-trigger ./list-of-updated-files.txt
+
+  Note: A file trigger is text file containing a newline-separated list of files in the
+  terra-helmfile repo that have changed. This is used to determine which charts need to
+  be published, and is used in GitHub actions workflows to determine which charts were
+  updated by a particular PR.
+
+  All paths in the file trigger should be relative to the root of the terra-helmfile repo.
+  Example:
+
+    charts/agora/templates/deployment.yaml
+    charts/thurloe/values.yaml
+    helmfile.yaml
+`
 const defaultBucketName = "terra-helm"
 const sherlockProdURL = "https://sherlock.dsp-devops.broadinstitute.org"
 const sherlockDevURL = "https://sherlock-dev.dsp-devops.broadinstitute.org"
@@ -27,6 +56,7 @@ type options struct {
 	sherlock         []string
 	softFailSherlock []string
 	description      string
+	fileTrigger      string
 }
 
 var flagNames = struct {
@@ -36,6 +66,7 @@ var flagNames = struct {
 	sherlock         string
 	softFailSherlock string
 	description      string
+	fileTrigger      string
 }{
 	chartDir:         "chart-dir",
 	bucketName:       "bucket",
@@ -43,6 +74,7 @@ var flagNames = struct {
 	sherlock:         "sherlock",
 	softFailSherlock: "soft-fail-sherlock",
 	description:      "description",
+	fileTrigger:      filetrigger.FlagName,
 }
 
 type publishCommand struct {
@@ -66,10 +98,22 @@ func (cmd *publishCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringSliceVar(&cmd.options.sherlock, flagNames.sherlock, []string{sherlockProdURL}, "Sherlock servers to use as versioning systems to release to")
 	cobraCommand.Flags().StringSliceVar(&cmd.options.softFailSherlock, flagNames.softFailSherlock, []string{sherlockDevURL}, "Sherlock server to use as versioning systems to release to, always using soft-fail behavior")
 	cobraCommand.Flags().StringVarP(&cmd.options.description, flagNames.description, "d", "", "The description to use for these version bumps on any Sherlock versioning systems")
+	cobraCommand.Flags().StringVarP(&cmd.options.fileTrigger, flagNames.fileTrigger, "f", "", "Path to a file trigger (see --help for more info)")
 }
 
 func (cmd *publishCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	cmd.options.charts = ctx.Args()
+	if cmd.options.fileTrigger != "" {
+		state, err := app.State()
+		if err != nil {
+			return err
+		}
+		triggerCharts, err := filetrigger.ChartList(cmd.options.fileTrigger, state)
+		if err != nil {
+			return fmt.Errorf("error building chart list from file trigger: %v", err)
+		}
+		cmd.options.charts = append(cmd.options.charts, triggerCharts...)
+	}
 
 	if ctx.CobraCommand().Flags().Changed(flagNames.chartDir) {
 		expanded, err := utils.ExpandAndVerifyExists(cmd.options.chartDir, "chart directory")
