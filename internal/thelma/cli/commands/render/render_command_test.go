@@ -219,8 +219,10 @@ func TestRenderArgParsing(t *testing.T) {
 		{
 			description: "--file-trigger should set release name",
 			setupFn: func(tc *testConfig) error {
-				panic("TODO")
-				tc.options.SetArgs(Args("render -r datarepo"))
+				fileTrigger := t.TempDir() + "/file-trigger.txt"
+				require.NoError(t, os.WriteFile(fileTrigger, []byte("values/app/datarepo/live/alpha.yaml"), 0644))
+
+				tc.options.SetArgs(Args("render --file-trigger=%s", fileTrigger))
 				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("datarepo", "alpha"),

@@ -24,6 +24,9 @@ func ChartList(triggerInputFile string, state terra.State) ([]string, error) {
 		return nil, err
 	}
 	releases, err := state.Releases().Filter(ReleaseFilter(files...))
+	if err != nil {
+		return nil, err
+	}
 
 	chartNames := set.NewSet[string]()
 	for _, r := range releases {
