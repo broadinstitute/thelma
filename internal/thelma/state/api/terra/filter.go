@@ -12,6 +12,8 @@ type ReleaseFilter interface {
 	And(ReleaseFilter) ReleaseFilter
 	// Or returns a new filter that matches this filter or another
 	Or(ReleaseFilter) ReleaseFilter
+	// Negate returns a new filter that matches the opposite of this filter
+	Negate() ReleaseFilter
 	// Filter given a list of releases, return the sublist that match this filter
 	Filter([]Release) []Release
 }

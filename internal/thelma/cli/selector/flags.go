@@ -221,6 +221,13 @@ func newFileTriggerFlag() *enumFlag {
 				`files in terra-helmfile. Paths should be relative to terra-helmfile `+
 				`root. Eg. --%s=file-list.txt`, flagNames.fileTrigger),
 
+		preProcessHook: func(flagValues []string, _ []string, _ *pflag.FlagSet) (normalizedValues []string, err error) {
+			// we abute abuse preprocesshook here a bit to convert the file triggers into a
+			// list of filepaths that are then passed into the buildFilter function.
+			// (buildFilter doesn't allow to return an error)
+			return filetrigger.ParseTriggers(flagValues...)
+		},
+
 		buildFilter: func(f *filterBuilder, uniqueValues []string) {
 			f.addReleaseFilter(filetrigger.ReleaseFilter(uniqueValues...))
 		},

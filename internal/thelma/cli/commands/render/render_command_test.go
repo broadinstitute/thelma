@@ -217,6 +217,20 @@ func TestRenderArgParsing(t *testing.T) {
 			},
 		},
 		{
+			description: "--file-trigger should set release name",
+			setupFn: func(tc *testConfig) error {
+				panic("TODO")
+				tc.options.SetArgs(Args("render -r datarepo"))
+				tc.expected.renderOptions.Scope = scope.Release
+				tc.expected.renderOptions.Releases = []terra.Release{
+					fixture.Release("datarepo", "alpha"),
+					fixture.Release("datarepo", "staging"),
+					fixture.Release("datarepo", "prod"),
+				}
+				return nil
+			},
+		},
+		{
 			description: "first positional should set release name",
 			setupFn: func(tc *testConfig) error {
 				tc.options.SetArgs(Args("render -r datarepo"))

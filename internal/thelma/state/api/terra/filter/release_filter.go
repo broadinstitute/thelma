@@ -39,6 +39,15 @@ func (f releaseFilter) Or(other terra.ReleaseFilter) terra.ReleaseFilter {
 	}
 }
 
+func (f releaseFilter) Negate() terra.ReleaseFilter {
+	return releaseFilter{
+		string: fmt.Sprintf(notFormat, f.String()),
+		matcher: func(release terra.Release) bool {
+			return !f.Matches(release)
+		},
+	}
+}
+
 func (f releaseFilter) Filter(releases []terra.Release) []terra.Release {
 	var result []terra.Release
 	for _, release := range releases {
