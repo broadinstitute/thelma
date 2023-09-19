@@ -38,9 +38,14 @@ func Test_Selector(t *testing.T) {
 			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging"},
 		},
 		{
-			name:           "env selector",
+			name:           "env selector: dev",
 			args:           "-e dev ALL",
 			expectReleases: []string{"agora-dev", "sam-dev"},
+		},
+		{
+			name:           "env selector: my-bee",
+			args:           "-e my-bee ALL",
+			expectReleases: []string{"cromwell-my-bee"},
 		},
 		{
 			name:           "cluster selector",
@@ -59,6 +64,51 @@ func Test_Selector(t *testing.T) {
 			name:           "exact releases",
 			args:           "--exact-release rawls-staging,yale-terra-dev,agora-dev",
 			expectReleases: []string{"agora-dev", "rawls-staging", "yale-terra-dev"},
+		},
+		{
+			name:           "multiple environments",
+			args:           "--environment dev,swatomation --release ALL",
+			expectReleases: []string{"agora-dev", "sam-dev", "workspacemanager-swatomation"},
+		},
+		{
+			name:           "destination type: env",
+			args:           "--destination-type environment ALL",
+			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging", "workspacemanager-swatomation"},
+		},
+		{
+			name:           "destination type: cluster",
+			args:           "--destination-type cluster ALL",
+			expectReleases: []string{"secrets-manager-terra-dev", "yale-terra-dev", "yale-terra-staging"},
+		},
+		{
+			name:           "destination base: bee (bees excluded by defaults)",
+			args:           "--destination-base bee ALL",
+			expectReleases: []string{"workspacemanager-swatomation"},
+		},
+		{
+			name:           "destination base: live",
+			args:           "--destination-base live ALL",
+			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging"},
+		},
+		{
+			name:           "environment lifecycle: static, destination type: env",
+			args:           "--environment-lifecycle=static --destination-type=environment ALL",
+			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging"},
+		},
+		{
+			name:           "environment lifecycle: template, destination type: env",
+			args:           "--environment-lifecycle=template --destination-type=environment ALL",
+			expectReleases: []string{"workspacemanager-swatomation"},
+		},
+		{
+			name:           "environment lifecycle: dynamic, destination type: env",
+			args:           "--environment-lifecycle=dynamic --destination-type=environment ALL",
+			expectReleases: []string{"cromwell-my-bee"},
+		},
+		{
+			name:           "environment template: swatomation, environment lifecycle: dynamic, destination type: env",
+			args:           "--environment-template=swatomation --environment-lifecycle=dynamic --destination-type=environment ALL",
+			expectReleases: []string{"cromwell-my-bee"},
 		},
 	}
 

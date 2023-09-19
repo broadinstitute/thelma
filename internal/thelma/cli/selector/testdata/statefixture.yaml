@@ -117,6 +117,17 @@ releases:
     subdomain: workspacemanager
     protocol: https
     port: 443
+  - fullname: cromwell-my-bee
+    repo: terra-helm
+    chart: cromwell
+    cluster: terra-qa-bees
+    namespace: terra-my-bee
+    environment: my-bee
+    appversion: some-sha
+    chartversion: 1.2.3
+    subdomain: cromwell
+    protocol: https
+    port: 443
   - fullname: yale-terra-dev
     repo: terra-helm
     chart: yale

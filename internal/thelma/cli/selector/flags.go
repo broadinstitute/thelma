@@ -170,7 +170,7 @@ func newDestinationBasesFlag() *enumFlag {
 	}
 }
 
-// --environment-templates flag
+// --environment-template flag
 func newEnvironmentTemplatesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.environmentTemplate,
@@ -191,7 +191,7 @@ func newEnvironmentTemplatesFlag() *enumFlag {
 	}
 }
 
-// --environment-lifecycles flag
+// --environment-lifecycle flag
 func newEnvironmentLifecyclesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.environmentLifecycle,
