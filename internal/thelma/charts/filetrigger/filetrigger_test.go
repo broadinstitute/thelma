@@ -102,6 +102,14 @@ values/app/global/bee.yaml.gotmpl
 `,
 			errMatcher: "contains absolute path",
 		},
+		{
+			name: "chart with no corresponding release",
+			input: `
+charts/ingress/some/file.txt
+charts/rawls/values.yaml
+`,
+			expected: []string{"ingress", "rawls"},
+		},
 	}
 
 	for _, tc := range testCases {
