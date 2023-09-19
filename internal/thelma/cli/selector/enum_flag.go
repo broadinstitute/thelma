@@ -26,6 +26,9 @@ type enumFlag struct {
 	// flagName long name of this flag, eg. "releases", "environments", etc
 	flagName string
 
+	// optional
+	optional bool
+
 	// shortHand single-letter alias for the flag. Can be left blank for no short-hand
 	shortHand string
 
@@ -86,8 +89,8 @@ func (e *enumFlag) processInput(f *filterBuilder, state terra.State, args []stri
 func (e *enumFlag) validate(state terra.State, inputValues []string) (*valueSet, error) {
 	collated := collateSelectorValues(inputValues)
 
-	if collated.Empty() {
-		return nil, fmt.Errorf("--%s: at least option must be speficied", e.flagName)
+	if collated.Empty() && !e.optional {
+		return nil, fmt.Errorf("--%s: at least one option must be specified", e.flagName)
 	}
 
 	// handle ALL selector (--releases=ALL, --cluster=ALL, etc)

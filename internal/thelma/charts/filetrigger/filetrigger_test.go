@@ -8,9 +8,8 @@ import (
 	"testing"
 )
 
-// ChartList is a great entrypoint for testing since it exercises all the other functions in this package
+// ChartList is a good entrypoint for testing since it exercises all the other functions in this package
 func Test_ChartList(t *testing.T) {
-
 	testCases := []struct {
 		name       string
 		input      string

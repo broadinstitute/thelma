@@ -26,12 +26,9 @@ func newReleasesFlag() *enumFlag {
 				return flagValues, nil
 			} else if len(args) > 0 {
 				return []string{args[0]}, nil
-			} else if pflags.Changed(flagNames.fileTrigger) {
-				// file trigger list will be used to filter the list of releases, pretend ALL was selected
-				return []string{allSelector}, nil
-			} else if pflags.Changed(flagNames.exactRelease) {
-				// If there's no releases specified but there are exact releases specified, act as if this flag had been
-				// set to ALL so we don't filter on it
+			} else if pflags.Changed(flagNames.exactRelease) || pflags.Changed(flagNames.changedFilesList) {
+				// If there's no releases specified but there are exact releases specified, or a changed file list, act
+				// as if this flag had been set to ALL so we don't filter on it
 				return []string{allSelector}, nil
 			} else {
 				// We have a lot of releases, and most developers want to render for a specific service,
@@ -211,24 +208,30 @@ func newEnvironmentLifecyclesFlag() *enumFlag {
 	}
 }
 
-// --file-trigger flag
-func newFileTriggerFlag() *enumFlag {
+// --changed-files-list flag
+func newChangedFilesList() *enumFlag {
 	return &enumFlag{
-		flagName:      flagNames.fileTrigger,
+		flagName:      flagNames.changedFilesList,
+		optional:      true,
 		defaultValues: []string{},
 		usageMessage: fmt.Sprintf(
 			`Run for releases matching a newline-separated list of updated `+
 				`files in terra-helmfile. Paths should be relative to terra-helmfile `+
-				`root. Eg. --%s=file-list.txt`, flagNames.fileTrigger),
+				`root. Eg. --%s=file-list.txt`, flagNames.changedFilesList),
 
 		preProcessHook: func(flagValues []string, _ []string, _ *pflag.FlagSet) (normalizedValues []string, err error) {
-			// we abute abuse preprocesshook here a bit to convert the file triggers into a
+			// we abuse preprocesshook here a bit to convert the file triggers into a
 			// list of filepaths that are then passed into the buildFilter function.
 			// (buildFilter doesn't allow to return an error)
 			return filetrigger.ParseTriggers(flagValues...)
 		},
 
 		buildFilter: func(f *filterBuilder, uniqueValues []string) {
+			if len(uniqueValues) == 0 {
+				// If there's no changed file list specified, act as if this flag had been set to ALL so we don't filter on it.
+				return
+			}
+
 			f.addReleaseFilter(filetrigger.ReleaseFilter(uniqueValues...))
 		},
 	}

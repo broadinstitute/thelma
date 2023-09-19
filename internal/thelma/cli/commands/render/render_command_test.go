@@ -217,12 +217,12 @@ func TestRenderArgParsing(t *testing.T) {
 			},
 		},
 		{
-			description: "--file-trigger should set release name",
+			description: "--changed-files-list should set release name",
 			setupFn: func(tc *testConfig) error {
-				fileTrigger := t.TempDir() + "/file-trigger.txt"
-				require.NoError(t, os.WriteFile(fileTrigger, []byte("values/app/datarepo/live/alpha.yaml"), 0644))
+				changedFilesList := t.TempDir() + "/changed-files.txt"
+				require.NoError(t, os.WriteFile(changedFilesList, []byte("values/app/datarepo/live/alpha.yaml"), 0644))
 
-				tc.options.SetArgs(Args("render --file-trigger=%s", fileTrigger))
+				tc.options.SetArgs(Args("render --changed-files-list=%s", changedFilesList))
 				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("datarepo", "alpha"),

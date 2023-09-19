@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-const FlagName = "file-trigger"
+const FlagName = "changed-files-list"
 
 func ChartList(triggerInputFile string, state terra.State) ([]string, error) {
 	files, err := ParseTriggers(triggerInputFile)

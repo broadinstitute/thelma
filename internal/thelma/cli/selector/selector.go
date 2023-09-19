@@ -29,7 +29,7 @@ var flagNames = struct {
 	environmentTemplate  string
 	destinationType      string
 	destinationBase      string
-	fileTrigger          string
+	changedFilesList     string
 }{
 	release:              ReleasesFlagName,
 	exactRelease:         "exact-release",
@@ -39,7 +39,7 @@ var flagNames = struct {
 	environmentTemplate:  "environment-template",
 	destinationBase:      "destination-base",
 	destinationType:      "destination-type",
-	fileTrigger:          filetrigger.FlagName,
+	changedFilesList:     filetrigger.FlagName,
 }
 
 type Option func(*Options)
@@ -85,7 +85,7 @@ func NewSelector(options ...Option) *Selector {
 		newExactReleasesFlag(),
 		newEnvironmentsFlag(),
 		newClustersFlag(),
-		newFileTriggerFlag(),
+		newChangedFilesList(),
 	}
 
 	if opts.IncludeBulkFlags {
