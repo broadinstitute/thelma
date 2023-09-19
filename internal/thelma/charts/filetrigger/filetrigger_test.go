@@ -95,6 +95,13 @@ values/app/global/bee.yaml.gotmpl
 `,
 			expected: []string{"rawls", "sam", "workspacemanager", "yale"},
 		},
+		{
+			name: "error on non-relative path",
+			input: `
+/Users/jdoe/terra-helmfile/helmfile.yaml
+`,
+			errMatcher: "contains absolute path",
+		},
 	}
 
 	for _, tc := range testCases {

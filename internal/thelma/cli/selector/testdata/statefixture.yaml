@@ -1,0 +1,143 @@
+clusters:
+  - name: terra-dev
+    base: terra
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+    requiresuitable: false
+  - name: terra-staging
+    base: terra
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+    requiresuitable: false
+  - name: terra-qa-bees
+    base: terra
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+    requiresuitable: false
+environments:
+  - name: dev
+    base: live
+    template: ""
+    lifecycle: static
+    uniqueresourceprefix: ""
+    defaultcluster: terra-dev
+  - name: staging
+    base: live
+    template: ""
+    lifecycle: static
+    uniqueresourceprefix: ""
+    defaultcluster: terra-staging
+  - name: swatomation
+    base: bee
+    template: ""
+    lifecycle: template
+    uniqueresourceprefix: ""
+    defaultcluster: terra-qa-bees
+    requiresuitable: false
+  - name: my-bee
+    base: bee
+    template: swatomation
+    lifecycle: dynamic
+    uniqueresourceprefix: abcd
+    defaultcluster: terra-qa-bees
+    requiresuitable: false
+charts:
+  - name: agora
+    repo: terra-helm
+  - name: cromwell
+    repo: terra-helm
+  - name: leonardo
+    repo: terra-helm
+  - name: rawls
+    repo: terra-helm
+  - name: sam
+    repo: terra-helm
+  - name: workspacemanager
+    repo: terra-helm
+  - name: yale
+    repo: terra-helm
+  - name: secrets-manager
+    repo: terra-helm
+releases:
+  - fullname: agora-dev
+    repo: terra-helm
+    chart: agora
+    cluster: terra-dev
+    namespace: terra-dev
+    environment: dev
+    appversion: some-sha
+    chartversion: abcdef00
+    subdomain: agora
+    protocol: https
+    port: 443
+  - fullname: sam-dev
+    repo: terra-helm
+    chart: sam
+    cluster: terra-dev
+    namespace: terra-dev
+    environment: dev
+    appversion: some-sha
+    chartversion: 4.5.6
+    subdomain: sam
+    protocol: https
+    port: 443
+  - fullname: sam-staging
+    repo: terra-helm
+    chart: sam
+    cluster: terra-staging
+    namespace: terra-staging
+    environment: staging
+    appversion: some-sha
+    chartversion: 4.5.6
+    subdomain: sam
+    protocol: https
+    port: 443
+  - fullname: rawls-staging
+    repo: terra-helm
+    chart: rawls
+    cluster: terra-staging
+    namespace: terra-staging
+    environment: staging
+    appversion: some-sha
+    chartversion: 2.20.1
+    subdomain: rawls
+    protocol: https
+    port: 443
+  - fullname: workspacemanager-swatomation
+    repo: terra-helm
+    chart: workspacemanager
+    cluster: terra-qa-bees
+    namespace: terra-swatomation
+    environment: swatomation
+    appversion: some-sha
+    chartversion: 13.14.15
+    subdomain: workspacemanager
+    protocol: https
+    port: 443
+  - fullname: yale-terra-dev
+    repo: terra-helm
+    chart: yale
+    cluster: terra-dev
+    namespace: yale
+    environment:
+    appversion: some-sha
+    chartversion: 10.11.12
+  - fullname: yale-terra-staging
+    repo: terra-helm
+    chart: yale
+    cluster: terra-staging
+    namespace: yale
+    environment:
+    appversion:
+    chartversion: 10.11.12
+  - fullname: secrets-manager-terra-dev
+    repo: terra-helm
+    chart: secrets-manager
+    cluster: terra-dev
+    namespace: default
+    environment:
+    appversion:
+    chartversion: 1.2.3
