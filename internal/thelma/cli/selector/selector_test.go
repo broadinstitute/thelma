@@ -56,11 +56,8 @@ func Test_Selector(t *testing.T) {
 			expectReleases: []string{"workspacemanager-swatomation"},
 		},
 		{
-			name: "exact releases",
-			args: "--exact-release rawls-staging,yale-terra-dev,agora-dev",
-			setupFn: func() error {
-				return os.WriteFile(tmpdir+"/changedfiles.txt", []byte(`charts/workspacemanager/somefile.txt`), 0644)
-			},
+			name:           "exact releases",
+			args:           "--exact-release rawls-staging,yale-terra-dev,agora-dev",
 			expectReleases: []string{"agora-dev", "rawls-staging", "yale-terra-dev"},
 		},
 	}
