@@ -1,4 +1,10 @@
 // Package filetrigger maps a list of updated files in the terra-helmfile repo to a list of charts that need to be published.
+//
+// The logic is as follows:
+// * Changes to charts/<chartname>/* or values/(app|cluster)/<chartname>* will trigger a publish of the affected chart
+// * Changes to values/app/global* will trigger a publish of all app release charts
+// * Changes to values/cluster/global* will trigger a publish of all cluster release charts
+// * Changes to helmfile.yaml will trigger a publish/render of all charts that have at least one chart release
 package filetrigger
 
 import (
