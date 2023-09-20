@@ -27,7 +27,7 @@ jobs:
           echo 'Scanning for usage of `fmt.Errorf`...'
           echo
           
-          if grep -nr --include \*.go errors.Errorf internal; then
+          if grep -nr --include \*.go fmt.Errorf internal; then
             cat <<EOF
           
           -----------------------------------------------------------------
