@@ -60,7 +60,9 @@ func init() {
 func Bootstrap() {
 	// Enable stack traces for errors
 	zerolog.ErrorStackMarshaler = func(err error) interface{} {
-		return pkgerrors.MarshalStack(err)
+		// use errors.Cause to pull out the underlying error, which will have a more complete
+		// stack trace than any wrapping errors
+		return pkgerrors.MarshalStack(errors.Cause(err))
 	}
 
 	log.Logger = log.Output(globalWriter).Level(zerolog.DebugLevel)
