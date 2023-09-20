@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"math/rand"
