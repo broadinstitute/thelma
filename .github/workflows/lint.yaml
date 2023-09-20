@@ -24,13 +24,16 @@ jobs:
           
           set -eo pipefail
           
+          echo Scanning for usage of `fmt.Errorf`...'
+          echo
+          
           if grep -nr --include \*.go errors.Errorf internal; then
             cat <<EOF
           
           -----------------------------------------------------------------
-          ERROR: Usage of `fmt.Errorf` detected!
+          ERROR: Usage of \`fmt.Errorf\` detected!
           
-          Please use `errors.Errorf` instead.
+          Please use \`errors.Errorf\` instead.
           
           This allows us to log errors with stack traces:
             https://github.com/rs/zerolog#error-logging-with-stacktrace
@@ -46,6 +49,9 @@ jobs:
           
           set -eo pipefail
           
+          echo 'Scanning for usage of "errors" package...'
+          echo
+
           if grep -nr --include \*.go '^\(import\)?[[:space:]]*"errors"' internal; then
             cat <<EOF
           
