@@ -41,20 +41,6 @@ thelma render cromwell --values-file=path/to/my-values.yaml
 # Render leonardo manifests to a directory other than $THELMA_HOME/output
 thelma render leonardo  --output-dir=/tmp/my-manifests
 
-# Render manifests for a list of charts that have been updated in a 
-# PR, using a file trigger file.
-#
-# Note: A file trigger is text file containing a newline-separated 
-# list of files in the terra-helmfile repo that have changed.
-# All paths in the file trigger should be relative.
-# Example:
-#
-#    charts/agora/templates/deployment.yaml
-#    charts/thurloe/values.yaml
-#    helmfile.yaml
-#
-thelma render ---file-trigger=./list-of-updated-files.txt
-
 `
 
 // defaultOutputDir name of default output directory
