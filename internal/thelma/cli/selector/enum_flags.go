@@ -2,7 +2,6 @@ package selector
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
@@ -204,35 +203,6 @@ func newEnvironmentLifecyclesFlag() *enumFlag {
 
 		buildFilter: func(f *filterBuilder, uniqueValues []string) {
 			f.addEnvironmentFilter(filter.Environments().HasLifecycleName(uniqueValues...))
-		},
-	}
-}
-
-// --changed-files-list flag
-func newChangedFilesList() *enumFlag {
-	return &enumFlag{
-		flagName:      flagNames.changedFilesList,
-		optional:      true,
-		defaultValues: []string{},
-		usageMessage: fmt.Sprintf(
-			`Run for releases matching a newline-separated list of updated `+
-				`files in terra-helmfile. Paths should be relative to terra-helmfile `+
-				`root. Eg. --%s=file-list.txt`, flagNames.changedFilesList),
-
-		preProcessHook: func(flagValues []string, _ []string, _ *pflag.FlagSet) (normalizedValues []string, err error) {
-			// we abuse preprocesshook here a bit to convert the file triggers into a
-			// list of filepaths that are then passed into the buildFilter function.
-			// (buildFilter doesn't allow to return an error)
-			return filetrigger.ParseTriggers(flagValues...)
-		},
-
-		buildFilter: func(f *filterBuilder, uniqueValues []string) {
-			if len(uniqueValues) == 0 {
-				// If there's no changed file list specified, act as if this flag had been set to ALL so we don't filter on it.
-				return
-			}
-
-			f.addReleaseFilter(filetrigger.ReleaseFilter(uniqueValues...))
 		},
 	}
 }

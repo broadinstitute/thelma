@@ -1,9 +1,11 @@
-package source
+package releaser
 
 import (
 	"fmt"
+	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	sherlockmocks "github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
+
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
@@ -72,9 +74,9 @@ sherlock:
 	}
 	for _, tc := range testCases {
 		chartDir := t.TempDir()
-		chart := NewMockChart()
-		chart.On("Name").Return("mychart")
-		chart.On("Path").Return(chartDir)
+		chart := sourcemocks.NewChart(t)
+		chart.EXPECT().Name().Return("mychart")
+		chart.EXPECT().Path().Return(chartDir)
 
 		t.Run(tc.name, func(t *testing.T) {
 			m := mocks{
@@ -90,10 +92,10 @@ sherlock:
 				}
 			}
 
-			_autoReleaser := &AutoReleaser{SherlockUpdaters: []sherlock.ChartVersionUpdater{m.sherlockUpdater}}
+			updater := &DeployedVersionUpdater{SherlockUpdaters: []sherlock.ChartVersionUpdater{m.sherlockUpdater}}
 			// lastVersion and description are arguments handled solely on Sherlock's end, Thelma doesn't need to even
 			// validate them
-			err := _autoReleaser.UpdateReleaseVersion(chart, newVersion, lastVersion, description)
+			err := updater.UpdateReleaseVersion(chart, newVersion, lastVersion, description)
 
 			m.sherlockUpdater.AssertExpectations(t)
 

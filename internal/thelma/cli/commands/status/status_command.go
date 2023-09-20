@@ -16,10 +16,7 @@ type statusCommand struct {
 
 func NewStatusCommand() cli.ThelmaCommand {
 	return &statusCommand{
-		selector: selector.NewSelector(func(options *selector.Options) {
-			options.IncludeBulkFlags = false
-			options.RequireDestinationOrExact = true
-		}),
+		selector: selector.NewSelector(),
 	}
 }
 
@@ -42,12 +39,10 @@ func (cmd *statusCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	if err != nil {
 		return err
 	}
-	selection, err := cmd.selector.GetSelection(state, rc.CobraCommand().Flags(), rc.Args())
+	releases, err := cmd.selector.GetSelection(state, rc.CobraCommand().Flags(), rc.Args())
 	if err != nil {
 		return err
 	}
-
-	releases := selection.Releases
 
 	reporter, err := app.Ops().Status()
 	if err != nil {

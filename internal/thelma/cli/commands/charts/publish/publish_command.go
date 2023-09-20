@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/releaser"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
@@ -56,7 +57,7 @@ type options struct {
 	sherlock         []string
 	softFailSherlock []string
 	description      string
-	fileTrigger      string
+	changedFilesList string
 }
 
 var flagNames = struct {
@@ -98,21 +99,26 @@ func (cmd *publishCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringSliceVar(&cmd.options.sherlock, flagNames.sherlock, []string{sherlockProdURL}, "Sherlock servers to use as versioning systems to release to")
 	cobraCommand.Flags().StringSliceVar(&cmd.options.softFailSherlock, flagNames.softFailSherlock, []string{sherlockDevURL}, "Sherlock server to use as versioning systems to release to, always using soft-fail behavior")
 	cobraCommand.Flags().StringVarP(&cmd.options.description, flagNames.description, "d", "", "The description to use for these version bumps on any Sherlock versioning systems")
-	cobraCommand.Flags().StringVarP(&cmd.options.fileTrigger, flagNames.fileTrigger, "f", "", "Path to a file trigger (see --help for more info)")
+	cobraCommand.Flags().StringVarP(&cmd.options.changedFilesList, flagNames.fileTrigger, "f", "", "Path to a file trigger (see --help for more info)")
 }
 
 func (cmd *publishCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	cmd.options.charts = ctx.Args()
-	if cmd.options.fileTrigger != "" {
+	if cmd.options.changedFilesList != "" {
 		state, err := app.State()
 		if err != nil {
 			return err
 		}
-		triggerCharts, err := filetrigger.ChartList(cmd.options.fileTrigger, state)
+		chartsDir, err := source.NewChartsDir(app.Paths().ChartsDir(), app.ShellRunner())
+		if err != nil {
+			return err
+		}
+		changedFiles := filetrigger.New(chartsDir, state)
+		chartsToPublish, err := changedFiles.ChartList(cmd.options.changedFilesList)
 		if err != nil {
 			return fmt.Errorf("error building chart list from file trigger: %v", err)
 		}
-		cmd.options.charts = append(cmd.options.charts, triggerCharts...)
+		cmd.options.charts = append(cmd.options.charts, chartsToPublish...)
 	}
 
 	if ctx.CobraCommand().Flags().Changed(flagNames.chartDir) {
@@ -177,8 +183,8 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	defer pb.CloseWarn()
 	publisher := pb.Publisher()
 
-	autoreleaser := &source.AutoReleaser{}
-	// If we're dry-running, the autoreleaser will be empty so we don't mutate anything.
+	updater := &releaser.DeployedVersionUpdater{}
+	// If we're dry-running, the updater will be empty so we don't mutate anything.
 	if !options.dryRun {
 		if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
 			iapIdToken, err := app.Clients().IAPToken()
@@ -191,7 +197,7 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 					if err != nil {
 						return nil, err
 					}
-					autoreleaser.SherlockUpdaters = append(autoreleaser.SherlockUpdaters, client)
+					updater.SherlockUpdaters = append(updater.SherlockUpdaters, client)
 				}
 			}
 			for _, sherlockURL := range options.softFailSherlock {
@@ -200,18 +206,20 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 					if err != nil {
 						return nil, err
 					}
-					autoreleaser.SoftFailSherlockUpdaters = append(autoreleaser.SoftFailSherlockUpdaters, client)
+					updater.SoftFailSherlockUpdaters = append(updater.SoftFailSherlockUpdaters, client)
 				}
 			}
 		}
 	}
 
-	chartsDir, err := source.NewChartsDir(options.chartDir, publisher, app.ShellRunner(), autoreleaser)
+	chartsDir, err := source.NewChartsDir(options.chartDir, app.ShellRunner())
 	if err != nil {
 		return nil, err
 	}
 
-	chartVersions, err := chartsDir.PublishAndRelease(options.charts, options.description)
+	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher, updater)
+
+	chartVersions, err := chartReleaser.Release(options.charts, options.description)
 	if err != nil {
 		return nil, err
 	}

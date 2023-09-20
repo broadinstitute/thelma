@@ -1,41 +1,48 @@
 package selector
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
 	"sort"
 	"strings"
 	"testing"
 )
 
 func Test_Selector(t *testing.T) {
-	tmpdir := t.TempDir()
-
 	testCases := []struct {
 		name           string
 		args           string
 		expectErr      string
 		expectReleases []string
-		options        func(options *Options)
 		setupFn        func() error
 	}{
 		{
 			name:      "empty input",
 			args:      "",
-			expectErr: "please specify at least one release",
+			expectErr: "please specify a target environment or cluster",
 		},
 		{
-			name:           "one chart multiple releases",
-			args:           "sam",
-			expectReleases: []string{"sam-dev", "sam-staging"},
+			name:      "one chart multiple releases",
+			args:      "sam",
+			expectErr: "please specify a target environment or cluster",
 		},
 		{
-			name:           "multiple charts",
-			args:           "-r agora,sam,rawls",
-			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging"},
+			name:      "multiple charts, no environment scoping",
+			args:      "-r agora,sam,rawls",
+			expectErr: "please specify a target environment or cluster",
+		},
+		{
+			name:           "multiple charts, scope to dev",
+			args:           "-r agora,sam,rawls -e dev",
+			expectReleases: []string{"agora-dev", "sam-dev"},
+		},
+		{
+			name:           "multiple charts, scope to staging",
+			args:           "-r agora,sam,rawls -e staging",
+			expectReleases: []string{"rawls-staging", "sam-staging"},
 		},
 		{
 			name:           "env selector: dev",
@@ -53,14 +60,6 @@ func Test_Selector(t *testing.T) {
 			expectReleases: []string{"secrets-manager-terra-dev", "yale-terra-dev"},
 		},
 		{
-			name: "changed files list",
-			args: "--changed-files-list " + tmpdir + "/changedfiles.txt",
-			setupFn: func() error {
-				return os.WriteFile(tmpdir+"/changedfiles.txt", []byte(`charts/workspacemanager/somefile.txt`), 0644)
-			},
-			expectReleases: []string{"workspacemanager-swatomation"},
-		},
-		{
 			name:           "exact releases",
 			args:           "--exact-release rawls-staging,yale-terra-dev,agora-dev",
 			expectReleases: []string{"agora-dev", "rawls-staging", "yale-terra-dev"},
@@ -69,46 +68,6 @@ func Test_Selector(t *testing.T) {
 			name:           "multiple environments",
 			args:           "--environment dev,swatomation --release ALL",
 			expectReleases: []string{"agora-dev", "sam-dev", "workspacemanager-swatomation"},
-		},
-		{
-			name:           "destination type: env",
-			args:           "--destination-type environment ALL",
-			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging", "workspacemanager-swatomation"},
-		},
-		{
-			name:           "destination type: cluster",
-			args:           "--destination-type cluster ALL",
-			expectReleases: []string{"secrets-manager-terra-dev", "yale-terra-dev", "yale-terra-staging"},
-		},
-		{
-			name:           "destination base: bee (bees excluded by defaults)",
-			args:           "--destination-base bee ALL",
-			expectReleases: []string{"workspacemanager-swatomation"},
-		},
-		{
-			name:           "destination base: live",
-			args:           "--destination-base live ALL",
-			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging"},
-		},
-		{
-			name:           "environment lifecycle: static, destination type: env",
-			args:           "--environment-lifecycle=static --destination-type=environment ALL",
-			expectReleases: []string{"agora-dev", "rawls-staging", "sam-dev", "sam-staging"},
-		},
-		{
-			name:           "environment lifecycle: template, destination type: env",
-			args:           "--environment-lifecycle=template --destination-type=environment ALL",
-			expectReleases: []string{"workspacemanager-swatomation"},
-		},
-		{
-			name:           "environment lifecycle: dynamic, destination type: env",
-			args:           "--environment-lifecycle=dynamic --destination-type=environment ALL",
-			expectReleases: []string{"cromwell-my-bee"},
-		},
-		{
-			name:           "environment template: swatomation, environment lifecycle: dynamic, destination type: env",
-			args:           "--environment-template=swatomation --environment-lifecycle=dynamic --destination-type=environment ALL",
-			expectReleases: []string{"cromwell-my-bee"},
 		},
 	}
 
@@ -122,14 +81,9 @@ func Test_Selector(t *testing.T) {
 			statefixture, err := statefixtures.LoadFixtureFromFile("testdata/statefixture.yaml")
 			require.NoError(t, err)
 
-			var options []Option
-			if tc.options != nil {
-				options = append(options, tc.options)
-			}
+			selector := NewSelector()
 
-			selector := NewSelector(options...)
-
-			var selection *Selection
+			var selection []terra.Release
 			cobraCommand := &cobra.Command{RunE: func(cmd *cobra.Command, args []string) error {
 				var cmdErr error
 				selection, cmdErr = selector.GetSelection(statefixture.Mocks().State, cmd.Flags(), args)
@@ -149,7 +103,7 @@ func Test_Selector(t *testing.T) {
 
 			require.NoError(t, err)
 
-			names := releaseFullNames(selection.Releases).Elements()
+			names := releaseFullNames(selection).Elements()
 			sort.Strings(names)
 			assert.Equal(t, tc.expectReleases, names)
 		})

@@ -47,8 +47,8 @@ environments:
 charts:
   - name: agora
     repo: terra-helm
-  - name: cromwell
-    repo: terra-helm
+  - name: datarepo
+    repo: datarepo-helm
   - name: leonardo
     repo: terra-helm
   - name: rawls
@@ -119,3 +119,14 @@ releases:
       environment:
       appversion:
       chartversion: 1.2.3
+    - fullname: datarepo-my-bee
+      repo: terra-helm
+      chart: datarepo
+      cluster: terra-qa-bees
+      namespace: terra-my-bee
+      environment: my-bee
+      appversion: some-sha
+      chartversion: 7.8.9
+      subdomain: datarepo
+      protocol: datarepo
+      port: 443

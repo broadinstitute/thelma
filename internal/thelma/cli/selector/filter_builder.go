@@ -3,6 +3,8 @@ package selector
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
+	"github.com/rs/zerolog/log"
 )
 
 func newFilterBuilder() *filterBuilder {
@@ -11,7 +13,7 @@ func newFilterBuilder() *filterBuilder {
 
 // filterBuilder is for aggregating a number of complex filters into a single release filter
 type filterBuilder struct {
-	// holds intersection filters (all must be matched). Used for --destination-type flags and friends
+	// holds destination filters (intersected). Used for --destination-type flags and friends
 	destinationFilters []terra.DestinationFilter
 	// holds release filters (intersected). Used for -r / --release flag
 	releaseFilters []terra.ReleaseFilter
@@ -76,4 +78,16 @@ func (f *filterBuilder) addReleaseFilter(filter terra.ReleaseFilter) {
 
 func (f *filterBuilder) addDestinationInclude(filter terra.DestinationFilter) {
 	f.destinationIncludes = append(f.destinationIncludes, filter)
+}
+
+func applyFilter(state terra.State, filter terra.ReleaseFilter) ([]terra.Release, error) {
+	releases, err := state.Releases().Filter(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug().Msgf("%d releases matched filter: %s", len(releases), filter.String())
+	sort.Releases(releases)
+
+	return releases, nil
 }

@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -42,63 +39,20 @@ var flagNames = struct {
 	changedFilesList:     filetrigger.FlagName,
 }
 
-type Option func(*Options)
-
-type Options struct {
-	// IncludeBulkFlags include bulk destination selection flags such as --destination-type, --environment-template, and so on
-	IncludeBulkFlags bool
-	// RequireDestinationOrExact requires either one of --environment or --cluster to be passed or for --exact-release to be
-	// used instead of --release (since --exact-release is globally unique, as enforced by Sherlock, it is enough to find
-	// the destination on its own).
-	RequireDestinationOrExact bool
-}
-
 type Selector struct {
-	options       Options
 	flags         []*enumFlag
 	filterBuilder *filterBuilder
 }
 
-// Selection describes the set of releases that match user-supplied CLI flags
-type Selection struct {
-	// IsReleaseScoped true if the user supplied the names of releases (like "agora", "cromwell"), false if they supplied "ALL"
-	IsReleaseScoped bool
-	// Releases is the set of matching releases
-	Releases []terra.Release
-	// SingleChart true if we're using a single release name
-	SingleChart bool
-	// AppReleasesOnly true if all matched releases are application releases
-	AppReleasesOnly bool
-}
-
-func NewSelector(options ...Option) *Selector {
-	opts := Options{
-		IncludeBulkFlags:          true,
-		RequireDestinationOrExact: false,
-	}
-	for _, option := range options {
-		option(&opts)
-	}
-
+func NewSelector() *Selector {
 	flags := []*enumFlag{
 		newReleasesFlag(),
 		newExactReleasesFlag(),
 		newEnvironmentsFlag(),
 		newClustersFlag(),
-		newChangedFilesList(),
-	}
-
-	if opts.IncludeBulkFlags {
-		flags = append(flags,
-			newDestinationTypesFlag(),
-			newDestinationBasesFlag(),
-			newEnvironmentTemplatesFlag(),
-			newEnvironmentLifecyclesFlag(),
-		)
 	}
 
 	return &Selector{
-		options:       opts,
 		filterBuilder: newFilterBuilder(),
 		flags:         flags,
 	}
@@ -111,11 +65,11 @@ func (s *Selector) AddFlags(cobraCommand *cobra.Command) {
 	}
 }
 
-func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args []string) (*Selection, error) {
+func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args []string) ([]terra.Release, error) {
 	if err := s.checkRequiredFlags(pflags); err != nil {
 		return nil, err
 	}
-	if err := checkIncompatibleFlags(pflags); err != nil {
+	if err := checkIncompatibleEnumFlags(pflags); err != nil {
 		return nil, err
 	}
 
@@ -126,38 +80,27 @@ func (s *Selector) GetSelection(state terra.State, pflags *pflag.FlagSet, args [
 	}
 
 	releaseFilter := s.filterBuilder.combine()
-	releases, err := state.Releases().Filter(releaseFilter)
+	releases, err := applyFilter(state, releaseFilter)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debug().Msgf("%d releases matched filter: %s", len(releases), releaseFilter.String())
-
-	sort.Releases(releases)
-
-	return &Selection{
-		IsReleaseScoped: s.filterBuilder.isReleaseScoped(),
-		Releases:        releases,
-		SingleChart:     singleChart(releases),
-		AppReleasesOnly: appReleasesOnly(releases),
-	}, nil
+	return releases, nil
 }
 
 func (s *Selector) checkRequiredFlags(flags *pflag.FlagSet) error {
-	if s.options.RequireDestinationOrExact {
-		// "If -e isn't provided, and -c isn't provided, and the user hasn't passed just --exact-release instead of --r"
-		if !flags.Changed(flagNames.environment) && !flags.Changed(flagNames.cluster) &&
-			!(flags.Changed(flagNames.exactRelease) && !flags.Changed(flagNames.release)) {
-			return fmt.Errorf("please specify a target environment or cluster with the -e/-c flags, or specify only full Sherlock-style release names with --exact-release")
-		}
+	// "If -e isn't provided, and -c isn't provided, and the user hasn't passed just --exact-release instead of --r"
+	if !flags.Changed(flagNames.environment) && !flags.Changed(flagNames.cluster) &&
+		!(flags.Changed(flagNames.exactRelease) && !flags.Changed(flagNames.release)) {
+		return fmt.Errorf("please specify a target environment or cluster with the -e/-c flags, or specify only full Sherlock-style release names with --exact-release")
 	}
 	return nil
 }
 
-func checkIncompatibleFlags(flags *pflag.FlagSet) error {
+func checkIncompatibleEnumFlags(flags *pflag.FlagSet) error {
 	unionFlags := []string{flagNames.environment, flagNames.cluster}
 
-	intersectFlags := []string{flagNames.environmentTemplate, flagNames.environmentLifecycle, flagNames.destinationBase, flagNames.environmentTemplate}
+	intersectFlags := []string{flagNames.environmentTemplate, flagNames.environmentLifecycle, flagNames.destinationBase, flagNames.destinationType}
 
 	for _, unf := range unionFlags {
 		if flags.Changed(unf) {
@@ -170,21 +113,4 @@ func checkIncompatibleFlags(flags *pflag.FlagSet) error {
 	}
 
 	return nil
-}
-
-func singleChart(releases []terra.Release) bool {
-	s := set.NewStringSet()
-	for _, r := range releases {
-		s.Add(r.Name())
-	}
-	return s.Size() == 1
-}
-
-func appReleasesOnly(releases []terra.Release) bool {
-	for _, r := range releases {
-		if !r.IsAppRelease() {
-			return false
-		}
-	}
-	return true
 }
