@@ -27,12 +27,14 @@ jobs:
           if grep -nr --include \*.go errors.Errorf internal; then
             cat <<EOF
           
-          Use errors.Errorf to create new errors instead of fmt.Errorf!
+          -----------------------------------------------------------------
+          ERROR: Usage of `fmt.Errorf` detected!
+          
+          Please use `errors.Errorf` instead.
           
           This allows us to log errors with stack traces:
             https://github.com/rs/zerolog#error-logging-with-stacktrace
-          
-          See scan results above.
+          -----------------------------------------------------------------
           
           EOF
             exit 1
@@ -48,15 +50,12 @@ jobs:
             cat <<EOF
           
           -----------------------------------------------------------------
+          ERROR: Usage of "errors" package detected!
           
-          You have imported Go's "errors" standard library package.
-          Please import "github.com/pkg/errors" instead.
+          Please use "github.com/pkg/errors" instead.
           
           This allows us to log errors with stack traces:
-            https://github.com/rs/zerolog#error-logging-with-stacktrace
-          
-          See scan results above.
-          
+            https://github.com/rs/zerolog#error-logging-with-stacktrace          
           -----------------------------------------------------------------
           
           EOF
