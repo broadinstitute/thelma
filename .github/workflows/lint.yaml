@@ -17,6 +17,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
+      - name: check-errorf
+        run: |
+          #!/bin/bash
+          
+          set -eo pipefail
+          
+          if grep -nr --include \*.go errors.Errorf internal; then
+            cat <<EOF
+          
+          Use errors.Errorf to create new errors instead of fmt.Errorf!
+          
+          This allows us to log errors with stack traces:
+            https://github.com/rs/zerolog#error-logging-with-stacktrace
+          
+          See scan results above.
+          
+          EOF
+            exit 1
+          fi
+
+      - name: check-errors-package
+        run: |
+          #!/bin/bash
+          
+          set -eo pipefail
+          
+          if grep -nr --include \*.go '^\(import\)?[[:space:]]*"errors"' internal; then
+            cat <<EOF
+          
+          -----------------------------------------------------------------
+          
+          You have imported Go's "errors" standard library package.
+          Please import "github.com/pkg/errors" instead.
+          
+          This allows us to log errors with stack traces:
+            https://github.com/rs/zerolog#error-logging-with-stacktrace
+          
+          See scan results above.
+          
+          -----------------------------------------------------------------
+          
+          EOF
+            exit 1
+          fi
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
