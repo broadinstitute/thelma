@@ -3,7 +3,7 @@ package publish
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/changedfiles"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/releaser"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -75,7 +75,7 @@ var flagNames = struct {
 	sherlock:         "sherlock",
 	softFailSherlock: "soft-fail-sherlock",
 	description:      "description",
-	fileTrigger:      filetrigger.FlagName,
+	fileTrigger:      changedfiles.FlagName,
 }
 
 type publishCommand struct {
@@ -113,7 +113,7 @@ func (cmd *publishCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 		if err != nil {
 			return err
 		}
-		changedFiles := filetrigger.New(chartsDir, state)
+		changedFiles := changedfiles.New(chartsDir, state)
 		chartsToPublish, err := changedFiles.ChartList(cmd.options.changedFilesList)
 		if err != nil {
 			return fmt.Errorf("error building chart list from file trigger: %v", err)

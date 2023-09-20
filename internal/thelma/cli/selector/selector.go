@@ -2,7 +2,7 @@ package selector
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/changedfiles"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -36,7 +36,7 @@ var flagNames = struct {
 	environmentTemplate:  "environment-template",
 	destinationBase:      "destination-base",
 	destinationType:      "destination-type",
-	changedFilesList:     filetrigger.FlagName,
+	changedFilesList:     changedfiles.FlagName,
 }
 
 type Selector struct {

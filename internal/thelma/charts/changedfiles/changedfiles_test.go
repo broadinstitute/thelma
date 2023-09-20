@@ -1,4 +1,4 @@
-package filetrigger
+package changedfiles
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"

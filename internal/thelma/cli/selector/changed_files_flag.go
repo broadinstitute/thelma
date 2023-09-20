@@ -1,7 +1,7 @@
 package selector
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/charts/filetrigger"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/changedfiles"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/spf13/cobra"
@@ -25,7 +25,7 @@ func (c *changedFilesListFlag) processInput(f *filterBuilder, state terra.State,
 	if !pflags.Changed(flagNames.changedFilesList) {
 		return nil
 	}
-	changedFiles := filetrigger.New(chartsDir, state)
+	changedFiles := changedfiles.New(chartsDir, state)
 	releaseFilter, err := changedFiles.ReleaseFilter(c.changedFilesList)
 	if err != nil {
 		return err
