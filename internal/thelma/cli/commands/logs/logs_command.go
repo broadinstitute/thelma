@@ -32,10 +32,7 @@ type logsCommand struct {
 func NewLogsCommand() cli.ThelmaCommand {
 	return &logsCommand{
 		artifactsFlags: artifactsflags.NewArtifactsFlags(),
-		selector: selector.NewSelector(func(options *selector.Options) {
-			options.IncludeBulkFlags = false
-			options.RequireDestinationOrExact = true
-		}),
+		selector:       selector.NewSelector(),
 	}
 }
 
@@ -70,10 +67,10 @@ func (cmd *logsCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	_logs := app.Ops().Logs()
 
 	if !cmd.options.export {
-		if len(selection.Releases) != 1 {
-			return errors.Errorf("please specify exactly one chart release (matched %d)", len(selection.Releases))
+		if len(selection) != 1 {
+			return errors.Errorf("please specify exactly one chart release (matched %d)", len(selection))
 		}
-		return _logs.Logs(selection.Releases[0])
+		return _logs.Logs(selection[0])
 	}
 
 	artifactsOptions, err := cmd.artifactsFlags.GetOptions()
@@ -81,7 +78,7 @@ func (cmd *logsCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	locations, err := _logs.Export(selection.Releases, func(options *logs.ExportOptions) {
+	locations, err := _logs.Export(selection, func(options *logs.ExportOptions) {
 		options.Artifacts = artifactsOptions
 	})
 	if err != nil {
