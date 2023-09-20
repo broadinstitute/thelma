@@ -1,7 +1,7 @@
 package mirror
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
+	publishmocks "github.com/broadinstitute/thelma/internal/thelma/charts/publish/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/repo/index"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -12,7 +12,7 @@ import (
 func TestUploadToMirror(t *testing.T) {
 	chartDir := t.TempDir()
 
-	publisher := publish.NewMockPublisher()
+	publisher := publishmocks.NewPublisher(t)
 	_index := index.NewMockIndex()
 	runner := shell.DefaultMockRunner()
 

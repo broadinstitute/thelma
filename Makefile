@@ -174,7 +174,11 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/app/autoupdate/releases --name Dir --output=./internal/thelma/app/autoupdate/releases/mocks --outpkg mocks --filename dir.go
 	mockery --dir ./internal/thelma/app/autoupdate/spawn --name Spawn --output=./internal/thelma/app/autoupdate/spawn/mocks --outpkg mocks --filename spawn.go
 	mockery --dir ./internal/thelma/app/scratch --name Scratch --output=./internal/thelma/app/scratch/mocks --outpkg mocks --filename scratch.go
+	mockery --dir ./internal/thelma/charts/publish --name Publisher --output=./internal/thelma/charts/publish/mocks --outpkg mocks --filename publisher.go
+	mockery --dir ./internal/thelma/charts/repo --name Repo --output=./internal/thelma/charts/repo/mocks --outpkg mocks --filename repo.go
+	mockery --dir ./internal/thelma/charts/repo/index --name Index --output=./internal/thelma/charts/repo/index/mocks --outpkg mocks --filename index.go
 	mockery --dir ./internal/thelma/charts/source --name Chart --output=./internal/thelma/charts/source/mocks --outpkg mocks --filename chart.go
+	mockery --dir ./internal/thelma/charts/source --name ChartsDir --output=./internal/thelma/charts/source/mocks --outpkg mocks --filename charts_dir.go
 	mockery --dir ./internal/thelma/cli --name RunContext --output=./internal/thelma/cli/mocks --outpkg mocks --filename run_context.go
 	mockery --dir ./internal/thelma/clients/google --name Clients --output=./internal/thelma/clients/google/mocks --outpkg mocks --filename clients.go
 	mockery --dir ./internal/thelma/clients/google/bucket --name Bucket --output=./internal/thelma/clients/google/bucket/testing/mocks --outpkg mocks --filename bucket.go

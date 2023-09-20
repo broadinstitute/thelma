@@ -2,10 +2,9 @@ package publish
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/repo"
+	repomocks "github.com/broadinstitute/thelma/internal/thelma/charts/repo/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"os"
 	"path"
 	"testing"
@@ -13,7 +12,7 @@ import (
 
 type testState struct {
 	scratchDir string
-	mockRepo   *repo.MockRepo
+	mockRepo   *repomocks.Repo
 	mockRunner *shell.MockRunner
 	publisher  *publisher
 }
@@ -98,7 +97,7 @@ func TestPublish(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			mockRepo := repo.NewMockRepo()
+			mockRepo := repomocks.NewRepo(t)
 			mockRunner := shell.DefaultMockRunner()
 
 			scratchDir := t.TempDir()
@@ -107,9 +106,9 @@ func TestPublish(t *testing.T) {
 			if !tc.dryRun {
 				mockRepo.On("Lock").Return(nil)
 			}
-			mockRepo.On("HasIndex").Return(true, nil)
-			mockRepo.On("DownloadIndex", indexFile).Run(func(args mock.Arguments) {
-				writeFakeIndexFile(t, indexFile)
+			mockRepo.EXPECT().HasIndex().Return(true, nil)
+			mockRepo.EXPECT().DownloadIndex(indexFile).Run(func(_indexFile string) {
+				writeFakeIndexFile(t, _indexFile)
 			}).Return(nil)
 
 			publisher, err := NewPublisher(mockRepo, mockRunner, scratchDir, tc.dryRun)
@@ -131,13 +130,13 @@ func TestPublish(t *testing.T) {
 }
 
 func TestConstructorCreatesEmptyIndexIfNoExist(t *testing.T) {
-	mockRepo := repo.NewMockRepo()
+	mockRepo := repomocks.NewRepo(t)
 	mockRunner := shell.DefaultMockRunner()
 
 	tmpDir := t.TempDir()
 
-	mockRepo.On("Lock").Return(nil)
-	mockRepo.On("HasIndex").Return(false, nil)
+	mockRepo.EXPECT().Lock().Return(nil)
+	mockRepo.EXPECT().HasIndex().Return(false, nil)
 
 	publisher, err := NewPublisher(mockRepo, mockRunner, tmpDir, false)
 
