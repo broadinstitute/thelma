@@ -1,13 +1,12 @@
 package entrypoint
 
 import (
-	"os"
-
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/repo"
 	repoCreate "github.com/broadinstitute/thelma/internal/thelma/cli/commands/repo/create"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/update"
 	"github.com/rs/zerolog/log"
+	"os"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd"
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
@@ -63,7 +62,7 @@ func Execute() {
 	_cli := cli.New(withCommands)
 
 	if err := _cli.Execute(); err != nil {
-		log.Error().Msgf("%v", err)
+		log.Error().Err(err).Send()
 		os.Exit(1)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"github.com/mcuadros/go-defaults"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
@@ -69,7 +70,7 @@ func (s Season) String() string {
 	case Winter:
 		return "winter"
 	default:
-		panic(fmt.Errorf("unknown season: %#v", s))
+		panic(errors.Errorf("unknown season: %#v", s))
 	}
 }
 
@@ -85,7 +86,7 @@ func (s *Season) UnmarshalText(text []byte) error {
 	case "winter":
 		*s = Winter
 	default:
-		return fmt.Errorf("invalid season: %q", str)
+		return errors.Errorf("invalid season: %q", str)
 	}
 	return nil
 }
