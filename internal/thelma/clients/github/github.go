@@ -2,13 +2,13 @@ package github
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/google/go-github/github"
 	vault "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 )

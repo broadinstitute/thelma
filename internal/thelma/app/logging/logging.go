@@ -59,7 +59,9 @@ func init() {
 // to catch any messages that are logged before full Thelma initialization
 func Bootstrap() {
 	// Enable stack traces for errors
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+	zerolog.ErrorStackMarshaler = func(err error) interface{} {
+		return pkgerrors.MarshalStack(err)
+	}
 
 	log.Logger = log.Output(globalWriter).Level(zerolog.DebugLevel)
 }
