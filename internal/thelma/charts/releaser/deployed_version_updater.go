@@ -1,7 +1,8 @@
-package source
+package releaser
 
 import (
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
@@ -15,12 +16,12 @@ const configFile = ".autorelease.yaml"
 
 const targetEnvironment = "dev"
 
-// AutoReleaser offers a UpdateReleaseVersion to take a newly published chart and update development instances to use
+// DeployedVersionUpdater offers a UpdateReleaseVersion to take a newly published chart and update development instances to use
 // it.
 // It stores lists of different update mechanisms so they can be easily enabled/disabled by the caller.
 // This is a literal struct, not an interface, so the callers can configure it out without needing to pass multiple
 // parameters around.
-type AutoReleaser struct {
+type DeployedVersionUpdater struct {
 	SherlockUpdaters         []sherlock.ChartVersionUpdater
 	SoftFailSherlockUpdaters []sherlock.ChartVersionUpdater
 }
@@ -53,7 +54,7 @@ type config struct {
 	} `yaml:"sherlock"`
 }
 
-func (a *AutoReleaser) UpdateReleaseVersion(chart Chart, newVersion string, lastVersion string, description string) error {
+func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVersion string, lastVersion string, description string) error {
 	cfg := loadConfig(chart)
 	if !cfg.Enabled {
 		return nil
@@ -91,7 +92,7 @@ func (a *AutoReleaser) UpdateReleaseVersion(chart Chart, newVersion string, last
 }
 
 // load .autorelease.yaml config file from chart source directory if it exists
-func loadConfig(chart Chart) config {
+func loadConfig(chart source.Chart) config {
 	cfg := config{}
 
 	// Set defaults
