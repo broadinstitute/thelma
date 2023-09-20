@@ -1,7 +1,9 @@
 package selector
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -121,12 +123,15 @@ func Test_RenderSelector(t *testing.T) {
 			statefixture, err := statefixtures.LoadFixtureFromFile("testdata/statefixture.yaml")
 			require.NoError(t, err)
 
+			chartsDir, err := source.NewChartsDir("testdata", shell.DefaultMockRunner())
+			require.NoError(t, err)
+
 			selector := NewRenderSelector()
 
 			var selection *RenderSelection
 			cobraCommand := &cobra.Command{RunE: func(cmd *cobra.Command, args []string) error {
 				var cmdErr error
-				selection, cmdErr = selector.GetSelection(statefixture.Mocks().State, nil, cmd.Flags(), args)
+				selection, cmdErr = selector.GetSelection(statefixture.Mocks().State, chartsDir, cmd.Flags(), args)
 				return cmdErr
 			}}
 
