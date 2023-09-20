@@ -2,10 +2,10 @@ package podrun
 
 import (
 	"context"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,17 +71,17 @@ func (p *pod) Delete() error {
 
 	log.Info().Msgf("Deleting pod: %s", p.name)
 	if err = p.client.CoreV1().Pods(thelmaWorkloadsNamespace).Delete(context.Background(), p.name, metav1.DeleteOptions{}); err != nil {
-		return fmt.Errorf("error deleting pod: %v", err)
+		return errors.Errorf("error deleting pod: %v", err)
 	}
 
 	log.Info().Msgf("Deleting scripts secret: %s", p.scriptsSecret)
 	if err = p.client.CoreV1().Secrets(thelmaWorkloadsNamespace).Delete(context.Background(), p.scriptsSecret, metav1.DeleteOptions{}); err != nil {
-		return fmt.Errorf("error deleting cm: %v", err)
+		return errors.Errorf("error deleting cm: %v", err)
 	}
 
 	log.Info().Msgf("Deleting env secret: %s", p.envSecret)
 	if err = p.client.CoreV1().Secrets(thelmaWorkloadsNamespace).Delete(context.Background(), p.envSecret, metav1.DeleteOptions{}); err != nil {
-		return fmt.Errorf("error deleting secret: %v", err)
+		return errors.Errorf("error deleting secret: %v", err)
 	}
 
 	return nil

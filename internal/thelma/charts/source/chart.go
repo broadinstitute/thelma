@@ -2,6 +2,7 @@ package source
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"path"
 	"strings"
@@ -105,7 +106,7 @@ func (c *chart) BumpChartVersion(latestPublishedVersion string) (string, error) 
 		return nextVersion, err
 	}
 	if c.manifest.Version != nextVersion {
-		return nextVersion, fmt.Errorf("error updating %s chart version to %s in %s: version is still %s after update", c.name, nextVersion, manifestFile, c.manifest.Version)
+		return nextVersion, errors.Errorf("error updating %s chart version to %s in %s: version is still %s after update", c.name, nextVersion, manifestFile, c.manifest.Version)
 	}
 	return nextVersion, nil
 }
@@ -182,12 +183,12 @@ func (c *chart) SetDependencyVersion(dependencyName string, newVersion string) e
 				log.Debug().Msgf("updated version for dependency %s to %s in %s", dependencyName, newVersion, manifestFile)
 				return nil
 			} else {
-				return fmt.Errorf("error setting dependency %s to version %s in %s: dependency not found", dependencyName, newVersion, manifestFile)
+				return errors.Errorf("error setting dependency %s to version %s in %s: dependency not found", dependencyName, newVersion, manifestFile)
 			}
 		}
 	}
 
-	return fmt.Errorf("error setting dependency %s to version %s in %s: dependency not found", dependencyName, newVersion, manifestFile)
+	return errors.Errorf("error setting dependency %s to version %s in %s: dependency not found", dependencyName, newVersion, manifestFile)
 }
 
 func (c *chart) ManifestVersion() string {
@@ -227,7 +228,7 @@ func (c *chart) reloadManifest() error {
 	manifestFile := path.Join(c.path, chartManifestFile)
 	manifest, err := loadManifest(manifestFile)
 	if err != nil {
-		return fmt.Errorf("manifest reload failed: %v", err)
+		return errors.Errorf("manifest reload failed: %v", err)
 	}
 	log.Debug().Msgf("chart %s: reloaded manifest file %s", c.name, manifestFile)
 	c.manifest = manifest
@@ -239,11 +240,11 @@ func loadManifest(manifestFile string) (ChartManifest, error) {
 
 	content, err := os.ReadFile(manifestFile)
 	if err != nil {
-		return manifest, fmt.Errorf("error reading chart manifest %s: %v", manifestFile, err)
+		return manifest, errors.Errorf("error reading chart manifest %s: %v", manifestFile, err)
 	}
 
 	if err := yaml.Unmarshal(content, &manifest); err != nil {
-		return manifest, fmt.Errorf("error parsing chart manifest %s: %v", manifestFile, err)
+		return manifest, errors.Errorf("error parsing chart manifest %s: %v", manifestFile, err)
 	}
 	log.Debug().Msgf("loaded chart manifest from %s: %v", manifestFile, manifest)
 

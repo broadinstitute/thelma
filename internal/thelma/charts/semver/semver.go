@@ -2,6 +2,7 @@ package semver
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 	"strconv"
 	"strings"
@@ -24,17 +25,17 @@ func Compare(v string, w string) int {
 // MinorBump("1.2.3") -> "1.3.0"
 func MinorBump(version string) (string, error) {
 	if !IsValid(version) {
-		return "", fmt.Errorf("invalid semantic version %q", version)
+		return "", errors.Errorf("invalid semantic version %q", version)
 	}
 
 	tokens := strings.SplitN(version, ".", 3)
 	if len(tokens) < 2 {
-		return "", fmt.Errorf("invalid semantic version %q", version)
+		return "", errors.Errorf("invalid semantic version %q", version)
 	}
 	major := tokens[0]
 	minor, err := strconv.Atoi(tokens[1])
 	if err != nil {
-		return "", fmt.Errorf("invalid semantic version %q: %v", version, err)
+		return "", errors.Errorf("invalid semantic version %q: %v", version, err)
 	}
 
 	return fmt.Sprintf("%s.%d.0", major, minor+1), nil

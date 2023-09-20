@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"sort"
 	"sync"
@@ -130,7 +131,7 @@ func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statu
 		for {
 			select {
 			case <-timeout:
-				return lastStatus, fmt.Errorf("timed out waiting for healthy (%s)", lastStatus.Headline())
+				return lastStatus, errors.Errorf("timed out waiting for healthy (%s)", lastStatus.Headline())
 			case <-ticker.C:
 				lastStatus, err = s.status.Status(release)
 				if err != nil {

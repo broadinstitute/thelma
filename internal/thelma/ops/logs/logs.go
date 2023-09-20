@@ -9,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"strings"
 	"time"
@@ -83,7 +84,7 @@ func (l *logs) Logs(release terra.Release, opts ...LogsOption) error {
 	containers = filterContainers(containers, options.ContainerFilter)
 
 	if len(containers) == 0 {
-		return fmt.Errorf("found no matching containers for %s in %s", release.Name(), release.Destination().Name())
+		return errors.Errorf("found no matching containers for %s in %s", release.Name(), release.Destination().Name())
 	}
 	var _container container
 	if len(containers) == 1 {
@@ -238,7 +239,7 @@ func tryToPickCorrectContainer(containers []container) (container, error) {
 	for _, _container := range containers {
 		list = append(list, fmt.Sprintf("%s in %s", _container.containerName, _container.resourceName))
 	}
-	return container{}, fmt.Errorf("found multiple matching containers, please use flags to specify:\n%s", strings.Join(list, "\n"))
+	return container{}, errors.Errorf("found multiple matching containers, please use flags to specify:\n%s", strings.Join(list, "\n"))
 }
 
 func defaultLogsOptions() LogsOptions {

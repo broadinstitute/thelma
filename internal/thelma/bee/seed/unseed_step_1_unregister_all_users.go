@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"time"
 
@@ -21,44 +22,44 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 
 		vault, err := s.clientFactory.Vault()
 		if err != nil {
-			return fmt.Errorf("error getting vault client: %v", err)
+			return errors.Errorf("error getting vault client: %v", err)
 		}
 
 		config, err := s.configWithBasicDefaults()
 		if err != nil {
-			return fmt.Errorf("error getting Sam's database info: %v", err)
+			return errors.Errorf("error getting Sam's database info: %v", err)
 		}
 
 		secretPath := fmt.Sprintf(config.Sam.Database.Credentials.VaultPath, sam.Cluster().ProjectSuffix())
 		secret, err := vault.Logical().Read(secretPath)
 		if err != nil {
-			return fmt.Errorf("error getting Sam's database credentials from %s: %v", secretPath, err)
+			return errors.Errorf("error getting Sam's database credentials from %s: %v", secretPath, err)
 		}
 		dbUsername, exists := secret.Data[config.Sam.Database.Credentials.VaultUsernameKey]
 		if !exists {
-			return fmt.Errorf("secret at %s didn't contain a %s key for Sam's database username", secretPath, config.Sam.Database.Credentials.VaultUsernameKey)
+			return errors.Errorf("secret at %s didn't contain a %s key for Sam's database username", secretPath, config.Sam.Database.Credentials.VaultUsernameKey)
 		}
 		dbPassword, exists := secret.Data[config.Sam.Database.Credentials.VaultPasswordKey]
 		if !exists {
-			return fmt.Errorf("secret at %s didn't contain a %s key for Sam's database password", secretPath, config.Sam.Database.Credentials.VaultPasswordKey)
+			return errors.Errorf("secret at %s didn't contain a %s key for Sam's database password", secretPath, config.Sam.Database.Credentials.VaultPasswordKey)
 		}
 
 		localPort, stopFunc, err := s.kubectl.PortForward(sam, fmt.Sprintf("service/%s", config.Sam.Database.Service), config.Sam.Database.Port)
 		if err != nil {
-			return fmt.Errorf("error port-forwarding to Sam's database: %v", err)
+			return errors.Errorf("error port-forwarding to Sam's database: %v", err)
 		}
 		defer func() { _ = stopFunc() }()
 
 		db, err := sql.Open("pgx", fmt.Sprintf("user=%s password=%s host=localhost port=%d dbname=%s sslmode=disable",
 			dbUsername, dbPassword, localPort, config.Sam.Database.Name))
 		if err != nil {
-			return fmt.Errorf("error connecting to Sam's database: %v", err)
+			return errors.Errorf("error connecting to Sam's database: %v", err)
 		}
 		defer func() { _ = db.Close() }()
 
 		err = db.Ping()
 		if err != nil {
-			return fmt.Errorf("error pinging Sam's database: %v", err)
+			return errors.Errorf("error pinging Sam's database: %v", err)
 		}
 
 		dbCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -66,7 +67,7 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 
 		rows, err := db.QueryContext(dbCtx, config.Sam.ListUserQuery)
 		if err != nil {
-			return fmt.Errorf("error querying Sam's users: %v", err)
+			return errors.Errorf("error querying Sam's users: %v", err)
 		}
 		defer func() { _ = rows.Close() }()
 
@@ -74,7 +75,7 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 		for rows.Next() {
 			var email, id string
 			if err := rows.Scan(&email, &id); err != nil {
-				if err = opts.handleErrorWithForce(fmt.Errorf("error reading email/id for user: %v", err)); err != nil {
+				if err = opts.handleErrorWithForce(errors.Errorf("error reading email/id for user: %v", err)); err != nil {
 					return err
 				}
 			}
@@ -89,16 +90,16 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 		if len(userEmailToID) > 0 {
 			googleClient, err := s.googleAuthAs(sam)
 			if err != nil {
-				return fmt.Errorf("couldn't prepare Google authentication as Sam's SA: %v", err)
+				return errors.Errorf("couldn't prepare Google authentication as Sam's SA: %v", err)
 			}
 			terraClient, err := googleClient.Terra()
 			if err != nil {
-				return fmt.Errorf("error authenticating to Google: %v", err)
+				return errors.Errorf("error authenticating to Google: %v", err)
 			}
 
 			samEmail := terraClient.GoogleUserInfo().Email
 			if _, exists := userEmailToID[samEmail]; !exists {
-				if err := opts.handleErrorWithForce(fmt.Errorf("%s (Sam's SA) is not a Sam user and cannot unregister users", samEmail)); err != nil {
+				if err := opts.handleErrorWithForce(errors.Errorf("%s (Sam's SA) is not a Sam user and cannot unregister users", samEmail)); err != nil {
 					return err
 				}
 			}
@@ -108,7 +109,7 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 					log.Info().Msgf("unregistering %s", email)
 					_, _, err = terraClient.Sam(sam).UnregisterUser(id)
 					if err := opts.handleErrorWithForce(err); err != nil {
-						return fmt.Errorf("error unregistering %s (%s): %v", email, id, err)
+						return errors.Errorf("error unregistering %s (%s): %v", email, id, err)
 					}
 				} else {
 					log.Debug().Msgf("skipping %s for now since it is %s's own user, can't delete it yet", id, samEmail)
@@ -119,7 +120,7 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 				log.Info().Msgf("unregistering Sam's own %s user", samEmail)
 				_, _, err = terraClient.Sam(sam).UnregisterUser(samId)
 				if err := opts.handleErrorWithForce(err); err != nil {
-					return fmt.Errorf("error unregistering %s (%s): %v", samEmail, samId, err)
+					return errors.Errorf("error unregistering %s (%s): %v", samEmail, samId, err)
 				}
 			}
 		}

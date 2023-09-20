@@ -1,12 +1,12 @@
 package status
 
 import (
-	"fmt"
 	k8sclients "github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	argocdnames "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"sync"
 )
@@ -57,7 +57,7 @@ func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]*Status
 			Run: func(_ pool.StatusReporter) error {
 				status, err := r.Status(release)
 				if err != nil {
-					return fmt.Errorf("error generating status report for %s: %v", release.Name(), err)
+					return errors.Errorf("error generating status report for %s: %v", release.Name(), err)
 				}
 				mutex.Lock()
 				statuses[release] = status

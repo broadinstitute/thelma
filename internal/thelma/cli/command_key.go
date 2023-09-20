@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"regexp"
 	"strings"
 )
@@ -34,10 +34,10 @@ func validateCommandName(fullName string) error {
 	components := strings.Fields(fullName)
 	for _, component := range components {
 		if component == reservedRootCommandName {
-			return fmt.Errorf("invalid command key (%q is reserved): %v", reservedRootCommandName, fullName)
+			return errors.Errorf("invalid command key (%q is reserved): %v", reservedRootCommandName, fullName)
 		}
 		if !validCommandName.MatchString(component) {
-			return fmt.Errorf("invalid command key (each component must match %q): %v", validCommandName.String(), fullName)
+			return errors.Errorf("invalid command key (each component must match %q): %v", validCommandName.String(), fullName)
 		}
 	}
 	return nil
@@ -46,8 +46,9 @@ func validateCommandName(fullName string) error {
 // description returns a string description of the command, suitable for use in log and error messages. Identical
 // to longName except "root" is returned for the root command instead of the empty string.
 // eg. [] (root) -> "root"
-//     ["render"] -> "render"
-//     ["charts", "import"] -> "charts import"
+//
+//	["render"] -> "render"
+//	["charts", "import"] -> "charts import"
 func (n commandKey) description() string {
 	if n.isRoot() {
 		return reservedRootCommandName
@@ -57,26 +58,29 @@ func (n commandKey) description() string {
 
 // depth returns nest level for this command
 // eg. [] (root) -> 0
-//     ["render"] -> 1,
-//     ["charts", "import"] -> 2
+//
+//	["render"] -> 1,
+//	["charts", "import"] -> 2
 func (n commandKey) depth() int {
 	return len(n.nameComponents)
 }
 
 // longName returns unique long key for this command, including ancestors. Suitable for use as a hash key.
 // eg. [] (root) -> ""
-//     ["render"] -> "render"
-//     ["charts", "import"] -> "charts import"
-//     ["data", "import"] -> "data import"
+//
+//	["render"] -> "render"
+//	["charts", "import"] -> "charts import"
+//	["data", "import"] -> "data import"
 func (n commandKey) longName() string {
 	return strings.Join(n.nameComponents, " ")
 }
 
 // shortName returns short / leaf key of this command, without ancestors.
 // eg. [] (root) -> ""
-//     ["render"] -> "render"
-//     ["charts", "import"] -> "import"
-//     ["bee", "import"] -> "import"
+//
+//	["render"] -> "render"
+//	["charts", "import"] -> "import"
+//	["bee", "import"] -> "import"
 func (n commandKey) shortName() string {
 	if n.isRoot() { // avoid out of bounds for root command
 		return ""
@@ -91,9 +95,10 @@ func (n commandKey) isRoot() bool {
 
 // ancestors returns ancestor components of the command name
 // eg. ["render"] -> []
-//     ["charts", "import"] -> ["charts"]
-//     [] (root) -> []
-//     ["a", "b", "c"] -> ["a", "b"]
+//
+//	["charts", "import"] -> ["charts"]
+//	[] (root) -> []
+//	["a", "b", "c"] -> ["a", "b"]
 func (n commandKey) ancestors() []string {
 	if n.isRoot() {
 		return []string{}

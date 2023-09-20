@@ -2,8 +2,8 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net"
 	"os"
@@ -47,9 +47,9 @@ func ExpandAndVerifyExists(filePath string, description string) (string, error) 
 	}
 
 	if _, err := os.Stat(expanded); os.IsNotExist(err) {
-		return "", fmt.Errorf("%s does not exist: %s", description, expanded)
+		return "", errors.Errorf("%s does not exist: %s", description, expanded)
 	} else if err != nil {
-		return "", fmt.Errorf("error reading %s %s: %v", description, expanded, err)
+		return "", errors.Errorf("error reading %s %s: %v", description, expanded, err)
 	}
 
 	return expanded, nil
@@ -122,12 +122,12 @@ func CloseWarn(closer io.Closer, err error) error {
 func PathToRunningThelmaExecutable() (string, error) {
 	executable, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("error finding path to currently running executable: %v", err)
+		return "", errors.Errorf("error finding path to currently running executable: %v", err)
 	}
 
 	executable, err = filepath.EvalSymlinks(executable)
 	if err != nil {
-		return "", fmt.Errorf("error finding path to currently running executable: %v", err)
+		return "", errors.Errorf("error finding path to currently running executable: %v", err)
 	}
 
 	return executable, nil

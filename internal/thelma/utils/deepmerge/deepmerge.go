@@ -1,7 +1,7 @@
 package deepmerge
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"os"
 )
@@ -16,7 +16,7 @@ func Unmarshal(result interface{}, filenames ...string) error {
 
 	err = yaml.Unmarshal(merged, result)
 	if err != nil {
-		return fmt.Errorf("error unmarshaling merged yaml: %v", err)
+		return errors.Errorf("error unmarshaling merged yaml: %v", err)
 	}
 
 	return nil
@@ -41,7 +41,7 @@ func Merge(filenames ...string) ([]byte, error) {
 	// Now that we've merged the content, serialize back to yaml so we can deserialize into the expected type.
 	marshaled, err := yaml.Marshal(merged)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling yaml for deep merge: %v", err)
+		return nil, errors.Errorf("error marshaling yaml for deep merge: %v", err)
 	}
 
 	return marshaled, nil
@@ -89,17 +89,17 @@ func unmarshalYamlFileIfExists(file string) (map[string]interface{}, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error reading file %s: %v", file, err)
+		return nil, errors.Errorf("error reading file %s: %v", file, err)
 	}
 
 	content, err := os.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("error reading file %s: %v", file, err)
+		return nil, errors.Errorf("error reading file %s: %v", file, err)
 	}
 
 	var parsed map[string]interface{}
 	if err := yaml.Unmarshal(content, &parsed); err != nil {
-		return nil, fmt.Errorf("failed to parse yaml file %s: %v", file, err)
+		return nil, errors.Errorf("failed to parse yaml file %s: %v", file, err)
 	}
 
 	if parsed == nil {

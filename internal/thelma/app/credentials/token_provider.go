@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 	"github.com/broadinstitute/thelma/internal/thelma/app/env"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/term"
 	"os"
@@ -155,13 +156,13 @@ func (t tokenProvider) refreshToken(value []byte) ([]byte, error) {
 
 	if err = t.validateToken(newValue); err != nil {
 		// if this happens, there's likely a bug in the refresh function, so return an error
-		return nil, fmt.Errorf("refresh for %s returned invalid token: %v", t.options.EnvVar, err)
+		return nil, errors.Errorf("refresh for %s returned invalid token: %v", t.options.EnvVar, err)
 	}
 
 	log.Debug().Msgf("writing refreshed token %s to credential store", t.options.EnvVar)
 
 	if err = t.options.CredentialStore.Write(t.key, newValue); err != nil {
-		return nil, fmt.Errorf("error writing refreshed token %s to credential store: %v", t.options.EnvVar, err)
+		return nil, errors.Errorf("error writing refreshed token %s to credential store: %v", t.options.EnvVar, err)
 	}
 
 	return newValue, nil
@@ -190,7 +191,7 @@ func (t tokenProvider) getNewToken() ([]byte, error) {
 	} else if t.options.PromptEnabled {
 		value, err = t.promptForNewValue()
 	} else {
-		return nil, fmt.Errorf("could not issue new %s, no issueFn configured and input prompting is disabled", t.options.EnvVar)
+		return nil, errors.Errorf("could not issue new %s, no issueFn configured and input prompting is disabled", t.options.EnvVar)
 	}
 
 	if err != nil || len(value) == 0 {
@@ -199,11 +200,11 @@ func (t tokenProvider) getNewToken() ([]byte, error) {
 
 	err = t.validateToken(value)
 	if err != nil {
-		return nil, fmt.Errorf("new credential for %s is invalid: %v", t.options.EnvVar, err)
+		return nil, errors.Errorf("new credential for %s is invalid: %v", t.options.EnvVar, err)
 	}
 
 	if err := t.options.CredentialStore.Write(t.key, value); err != nil {
-		return nil, fmt.Errorf("failed to save new token value for %s: %v", t.options.EnvVar, err)
+		return nil, errors.Errorf("failed to save new token value for %s: %v", t.options.EnvVar, err)
 	}
 
 	return value, nil
@@ -212,7 +213,7 @@ func (t tokenProvider) getNewToken() ([]byte, error) {
 // promptForNewValue will prompt the user for a new token value
 func (t tokenProvider) promptForNewValue() ([]byte, error) {
 	if !utils.Interactive() {
-		return nil, fmt.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.options.EnvVar, t.options.EnvVar)
+		return nil, errors.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.options.EnvVar, t.options.EnvVar)
 	}
 
 	fmt.Print(t.options.PromptMessage)
@@ -220,7 +221,7 @@ func (t tokenProvider) promptForNewValue() ([]byte, error) {
 	// print empty newline since ReadPassword doesn't
 	fmt.Println()
 	if err != nil {
-		return nil, fmt.Errorf("error reading user input for credential %s: %v", t.options.EnvVar, err)
+		return nil, errors.Errorf("error reading user input for credential %s: %v", t.options.EnvVar, err)
 	}
 
 	return value, nil

@@ -1,7 +1,7 @@
 package sherlock
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -38,7 +38,7 @@ func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environme
 func (e *environments) Get(name string) (terra.Environment, error) {
 	env, exists := e.state.environments[name]
 	if !exists {
-		return nil, fmt.Errorf("environment %q does not exist", name)
+		return nil, errors.Errorf("environment %q does not exist", name)
 	}
 	return env, nil
 }
@@ -58,7 +58,7 @@ func (e *environments) EnableRelease(environmentName string, releaseName string)
 		return err
 	}
 	if environment.Lifecycle() != terra.Dynamic {
-		return fmt.Errorf("enabling releases is only supported for dynamic environments")
+		return errors.Errorf("enabling releases is only supported for dynamic environments")
 	}
 	return e.state.sherlock.EnableRelease(environment, releaseName)
 }
@@ -69,7 +69,7 @@ func (e *environments) DisableRelease(environmentName string, releaseName string
 		return err
 	}
 	if environment.Lifecycle() != terra.Dynamic {
-		return fmt.Errorf("disabling releases is only supported in dynamic environments")
+		return errors.Errorf("disabling releases is only supported in dynamic environments")
 	}
 	return e.state.sherlock.DisableRelease(environmentName, releaseName)
 }

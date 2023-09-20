@@ -14,6 +14,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/maps"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pwgen"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -166,7 +167,7 @@ func (k *kubernetes) getCredentialsForConnection(options api.ConnectionOptions) 
 	case api.ReadOnly:
 		return k.getLocalThelmaUserCredentials(readonlyUsername)
 	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", options.PrivilegeLevel))
+		panic(errors.Errorf("unsupported permission level: %#v", options.PrivilegeLevel))
 	}
 }
 
@@ -185,11 +186,11 @@ func (k *kubernetes) resetPassword(username string) (*api.Credentials, error) {
 	case api.MySQL:
 		panic("TODO")
 	default:
-		panic(fmt.Errorf("unsupported dbms type: %#v", f.dbms))
+		panic(errors.Errorf("unsupported dbms type: %#v", f.dbms))
 	}
 
 	if err = k.kubectl.Exec(k.kubectx, f.container, command); err != nil {
-		return nil, fmt.Errorf("error resetting password for %s: %v", username, err)
+		return nil, errors.Errorf("error resetting password for %s: %v", username, err)
 	}
 
 	return &api.Credentials{
@@ -214,7 +215,7 @@ func (k *kubernetes) getLocalThelmaUserCredentials(username string) (*api.Creden
 	}
 	password, exists := s[username]
 	if !exists {
-		return nil, fmt.Errorf("no password found for %s in secret %s", username, k.secretName())
+		return nil, errors.Errorf("no password found for %s in secret %s", username, k.secretName())
 	}
 	return &api.Credentials{
 		Username: username,
@@ -253,7 +254,7 @@ func (k *kubernetes) secretExists() (bool, error) {
 		return true, nil
 	}
 	// multiple secrets with the same name in the same namespace should be impossible
-	panic(fmt.Errorf("found multiple secrets with name %s (%d)", k.secretName(), len(secrets.Items)))
+	panic(errors.Errorf("found multiple secrets with name %s (%d)", k.secretName(), len(secrets.Items)))
 }
 
 func (k *kubernetes) secretName() string {

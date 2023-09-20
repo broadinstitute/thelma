@@ -2,7 +2,7 @@ package shell
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"io"
 	"strings"
@@ -56,7 +56,7 @@ func (lw *LoggingWriter) streamLinesToLog(p []byte) (n int, err error) {
 		if err == io.EOF {
 			return n, nil
 		} else if err != nil {
-			return n, fmt.Errorf("logging writer: error reading from buffer: %v", err)
+			return n, errors.Errorf("logging writer: error reading from buffer: %v", err)
 		}
 	}
 }

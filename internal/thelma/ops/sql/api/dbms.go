@@ -1,6 +1,8 @@
 package api
 
-import "fmt"
+import (
+	"github.com/pkg/errors"
+)
 
 // DBMS kind of database (MySQL or Postgres)
 type DBMS int64
@@ -17,7 +19,7 @@ func (d DBMS) String() string {
 	case MySQL:
 		return "MySQL"
 	default:
-		panic(fmt.Errorf("unknown dbms type: %#v", d))
+		panic(errors.Errorf("unknown dbms type: %#v", d))
 	}
 }
 
@@ -28,7 +30,7 @@ func (d DBMS) AdminUser() string {
 	case MySQL:
 		return "root"
 	default:
-		panic(fmt.Errorf("unknown dbms type: %#v", d))
+		panic(errors.Errorf("unknown dbms type: %#v", d))
 	}
 }
 
@@ -39,6 +41,6 @@ func (d DBMS) CLIClient() string {
 	case MySQL:
 		return "mysql"
 	default:
-		panic(fmt.Errorf("unknown dbms type: %#v", d))
+		panic(errors.Errorf("unknown dbms type: %#v", d))
 	}
 }

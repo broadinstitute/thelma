@@ -1,8 +1,8 @@
 package index
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/semver"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -33,12 +33,12 @@ type index struct {
 func LoadFromFile(filePath string) (*index, error) {
 	indexContent, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading index file %s: %v", filePath, err)
+		return nil, errors.Errorf("error reading index file %s: %v", filePath, err)
 	}
 
 	var _index index
 	if err := yaml.Unmarshal(indexContent, &_index); err != nil {
-		return nil, fmt.Errorf("error parsing index file %s: %v", filePath, err)
+		return nil, errors.Errorf("error parsing index file %s: %v", filePath, err)
 	}
 
 	return &_index, nil

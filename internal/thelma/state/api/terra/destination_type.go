@@ -1,7 +1,7 @@
 package terra
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,7 +58,7 @@ func (t *DestinationType) FromString(value string) error {
 		return nil
 	}
 
-	return fmt.Errorf("unknown destination type: %q", value)
+	return errors.Errorf("unknown destination type: %q", value)
 }
 
 func (t DestinationType) String() string {

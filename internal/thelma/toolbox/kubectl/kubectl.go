@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes/kubecfg"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
 	"os"
@@ -84,7 +85,7 @@ func (k *kubectl) ShutDown(env terra.Environment) error {
 func (k *kubectl) DeletePVCs(env terra.Environment) error {
 	if env.Lifecycle() != terra.Dynamic {
 		// Guard against kabooming data in long-lived static environments (such as, for example, prod)
-		return fmt.Errorf("DeletePVCs can only be called for dynamic environments")
+		return errors.Errorf("DeletePVCs can only be called for dynamic environments")
 	}
 	log.Info().Msgf("Deleting all PVCs in %s", env.Name())
 	return k.runForEnv(env, []string{"delete", "persistentvolumeclaims", "--all", "--wait=true"})
@@ -98,7 +99,7 @@ func (k *kubectl) CreateNamespace(env terra.Environment) error {
 func (k *kubectl) DeleteNamespace(env terra.Environment) error {
 	if env.Lifecycle() != terra.Dynamic {
 		// Guard against kabooming data in long-lived static environments (such as, for example, prod)
-		return fmt.Errorf("DeleteNamespace can only be called for dynamic environments")
+		return errors.Errorf("DeleteNamespace can only be called for dynamic environments")
 	}
 	log.Info().Msgf("Deleting environment namespace: %s", env.Namespace())
 	// Note: We supply --ignore-not-found because sometimes BEE creation fails before the namespace is created.
@@ -148,7 +149,7 @@ func (k *kubectl) PortForward(targetRelease terra.Release, targetResource string
 		}, nil
 	case <-time.After(10 * time.Second):
 		_ = subprocess.Stop()
-		return 0, nil, fmt.Errorf("kubectl port-forward output didn't yield a local port within 10 seconds, output: \n%s", output.String())
+		return 0, nil, errors.Errorf("kubectl port-forward output didn't yield a local port within 10 seconds, output: \n%s", output.String())
 	}
 }
 

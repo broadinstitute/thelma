@@ -9,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/maps"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
 )
@@ -69,7 +70,7 @@ func (c *command) ConfigureCobra(cobraCommand *cobra.Command) {
 	if err := cobraCommand.RegisterFlagCompletionFunc(flagNames.privilegeLevel, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return privLevels, cobra.ShellCompDirectiveDefault
 	}); err != nil {
-		panic(fmt.Errorf("failed to register cobra flag completion function for --%s: %v", flagNames.privilegeLevel, err))
+		panic(errors.Errorf("failed to register cobra flag completion function for --%s: %v", flagNames.privilegeLevel, err))
 	}
 }
 
@@ -85,7 +86,7 @@ func (c *command) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 
 	if flags.Changed(flagNames.googleInstance) {
 		if !flags.Changed(flagNames.googleProject) {
-			return fmt.Errorf("--%s requires a google project be specified with --%s", flagNames.googleInstance, flagNames.googleProject)
+			return errors.Errorf("--%s requires a google project be specified with --%s", flagNames.googleInstance, flagNames.googleProject)
 		}
 		conn.Provider = api.Google
 		conn.GoogleInstance.Project = c.flags.googleProject
@@ -105,7 +106,7 @@ func (c *command) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 			return err
 		}
 		if len(releases) != 1 {
-			return fmt.Errorf("found %d releases matching name %q, expected 1", len(releases), c.flags.chartRelease)
+			return errors.Errorf("found %d releases matching name %q, expected 1", len(releases), c.flags.chartRelease)
 		}
 		release := releases[0]
 		conn.Provider = api.Kubernetes
@@ -113,7 +114,7 @@ func (c *command) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		conn.Options.Release = release
 		conn.Options.ProxyCluster = release.Cluster()
 	} else {
-		return fmt.Errorf("either --%s or --%s must be specified", flagNames.googleInstance, flagNames.chartRelease)
+		return errors.Errorf("either --%s or --%s must be specified", flagNames.googleInstance, flagNames.chartRelease)
 	}
 
 	return c.child.Run(conn, app, ctx)
@@ -126,12 +127,12 @@ func (c *command) PostRun(app app.ThelmaApp, ctx cli.RunContext) error {
 func findProxyClusterForManuallySpecifiedDatabase(app app.ThelmaApp, cloudSQL api.GoogleInstance) (terra.Cluster, error) {
 	state, err := app.State()
 	if err != nil {
-		return nil, fmt.Errorf("error loading state: %v", err)
+		return nil, errors.Errorf("error loading state: %v", err)
 	}
 
 	clusters, err := state.Clusters().All()
 	if err != nil {
-		return nil, fmt.Errorf("error loading clusters from state: %v", err)
+		return nil, errors.Errorf("error loading clusters from state: %v", err)
 	}
 
 	var inProject []terra.Cluster
@@ -142,7 +143,7 @@ func findProxyClusterForManuallySpecifiedDatabase(app app.ThelmaApp, cloudSQL ap
 	}
 
 	if len(inProject) == 0 {
-		return nil, fmt.Errorf("can't connect to CloudSQL instances in project %q (it has no Terra K8s cluster)", cloudSQL.Project)
+		return nil, errors.Errorf("can't connect to CloudSQL instances in project %q (it has no Terra K8s cluster)", cloudSQL.Project)
 	}
 
 	// TODO - here we try to select a default cluster for projects that host multiple clusters.

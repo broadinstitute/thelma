@@ -1,10 +1,9 @@
 package validator
 
 import (
-	"fmt"
-
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubeconform"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 )
 
 // Mode determinations behavior of the post-render manifest validation. Default is skip.
@@ -28,7 +27,7 @@ func FromString(value string) (Mode, error) {
 	case "fail":
 		return Fail, nil
 	default:
-		return Skip, fmt.Errorf("unknown validation mode: %q", value)
+		return Skip, errors.Errorf("unknown validation mode: %q", value)
 	}
 }
 

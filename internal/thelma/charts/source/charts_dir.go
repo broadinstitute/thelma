@@ -1,7 +1,7 @@
 package source
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"path"
 	"path/filepath"
 	"strings"
@@ -69,7 +69,7 @@ func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (
 	chartsToPublish := chartNames
 	for _, chartName := range chartsToPublish {
 		if _, exists := d.charts[chartName]; !exists {
-			return nil, fmt.Errorf("chart %q does not exist in source dir %s", chartName, d.sourceDir)
+			return nil, errors.Errorf("chart %q does not exist in source dir %s", chartName, d.sourceDir)
 		}
 	}
 
@@ -177,7 +177,7 @@ func loadCharts(sourceDir string, shellRunner shell.Runner) (map[string]Chart, e
 	glob := path.Join(sourceDir, path.Join("*", chartManifestFile))
 	manifestFiles, err := filepath.Glob(glob)
 	if err != nil {
-		return nil, fmt.Errorf("error globbing charts with %q: %v", glob, err)
+		return nil, errors.Errorf("error globbing charts with %q: %v", glob, err)
 	}
 
 	// For each chart.yaml file, parse it and store in collection of chart objects
@@ -187,7 +187,7 @@ func loadCharts(sourceDir string, shellRunner shell.Runner) (map[string]Chart, e
 		// Create node for this chart
 		_chart, err := NewChart(path.Dir(manifestFile), shellRunner)
 		if err != nil {
-			return nil, fmt.Errorf("error creating chart from %s: %v", manifestFile, err)
+			return nil, errors.Errorf("error creating chart from %s: %v", manifestFile, err)
 		}
 		charts[_chart.Name()] = _chart
 	}

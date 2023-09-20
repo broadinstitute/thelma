@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"path"
 	"testing"
@@ -263,7 +264,7 @@ func (tc *testCfg) expectHelmFetch(success bool) {
 		call.Run(func(args mock.Arguments) {
 			fakeChartDir := path.Join(downloadDir, tc.input.Name)
 			if err := os.MkdirAll(fakeChartDir, 0775); err != nil {
-				panic(fmt.Errorf("failed to create fake fetch dir %s: %v", fakeChartDir, err))
+				panic(errors.Errorf("failed to create fake fetch dir %s: %v", fakeChartDir, err))
 			}
 		})
 	} else {

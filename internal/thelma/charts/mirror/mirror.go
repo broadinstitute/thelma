@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -169,18 +170,18 @@ func (m *mirror) fetchChart(chart ChartDefinition) error {
 func (m *mirror) loadConfig(configFile string) error {
 	data, err := os.ReadFile(configFile)
 	if err != nil {
-		return fmt.Errorf("error reading %s: %v", configFile, err)
+		return errors.Errorf("error reading %s: %v", configFile, err)
 	}
 	cfg := &config{}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("error parsing %s: %v", configFile, err)
+		return errors.Errorf("error parsing %s: %v", configFile, err)
 	}
 
 	repoMap := make(map[string]RepositoryDefinition)
 	for _, repoDefn := range cfg.Repositories {
 		_, exists := repoMap[repoDefn.Name]
 		if exists {
-			return fmt.Errorf("configuration error in %s: repository %s is defined more than once", configFile, repoDefn.Name)
+			return errors.Errorf("configuration error in %s: repository %s is defined more than once", configFile, repoDefn.Name)
 		}
 		repoMap[repoDefn.Name] = repoDefn
 	}
@@ -188,7 +189,7 @@ func (m *mirror) loadConfig(configFile string) error {
 	for i, chartDefn := range cfg.Charts {
 		tokens := strings.Split(chartDefn.Name, "/")
 		if len(tokens) != 2 {
-			return fmt.Errorf(`"configuration error in %s: chart name must be a string of form <repository>/<chart> (eg. "bitnami/mongodb"), got %q`, configFile, chartDefn.Name)
+			return errors.Errorf(`"configuration error in %s: chart name must be a string of form <repository>/<chart> (eg. "bitnami/mongodb"), got %q`, configFile, chartDefn.Name)
 		}
 
 		chartDefn.repoName = tokens[0]
@@ -196,7 +197,7 @@ func (m *mirror) loadConfig(configFile string) error {
 		cfg.Charts[i] = chartDefn
 
 		if _, exists := repoMap[chartDefn.repoName]; !exists {
-			return fmt.Errorf("configuration error in %s: chart %q references undefined repository %q", configFile, chartDefn.Name, chartDefn.repoName)
+			return errors.Errorf("configuration error in %s: chart %q references undefined repository %q", configFile, chartDefn.Name, chartDefn.repoName)
 		}
 	}
 

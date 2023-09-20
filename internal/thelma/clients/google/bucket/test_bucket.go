@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -114,7 +115,7 @@ func (b *testBucket) Close() error {
 				log.Debug().Msgf("couldn't delete %s, likely already deleted by test: %v", objectName, err)
 				// test likely deleted the object already
 			} else {
-				return fmt.Errorf("error cleaning up test object %s: %v", objectName, err)
+				return errors.Errorf("error cleaning up test object %s: %v", objectName, err)
 			}
 		}
 	}

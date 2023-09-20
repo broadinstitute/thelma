@@ -1,7 +1,6 @@
 package publish
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -10,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -123,7 +123,7 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 		ShellRunner: app.ShellRunner(),
 	}
 	if err := helmfile.NewConfigRepo(stubHelmfileOptions).HelmUpdate(); err != nil {
-		return nil, fmt.Errorf("error using helmfile for `helmfile repos`: %v", err)
+		return nil, errors.Errorf("error using helmfile for `helmfile repos`: %v", err)
 	}
 
 	pb, err := builders.Publisher(app, options.bucketName, options.dryRun)

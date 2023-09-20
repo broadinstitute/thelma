@@ -12,6 +12,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -97,7 +98,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 
 	slackClient, err := app.Clients().Slack()
 	if err != nil {
-		return fmt.Errorf("failed to construct Slack client: %v", err)
+		return errors.Errorf("failed to construct Slack client: %v", err)
 	}
 
 	var names []string

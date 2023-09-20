@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing/format"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"io"
@@ -56,7 +57,7 @@ func (p *printer) AddFlags(flags *pflag.FlagSet) {
 
 func (p *printer) VerifyFlags() error {
 	if !format.IsSupported(p.options.outputFormat) {
-		return fmt.Errorf("--%s must be one of %s; got %q", flagNames.outputFormat, utils.QuoteJoin(format.SupportedFormats()), p.options.outputFormat)
+		return errors.Errorf("--%s must be one of %s; got %q", flagNames.outputFormat, utils.QuoteJoin(format.SupportedFormats()), p.options.outputFormat)
 	}
 	return nil
 }

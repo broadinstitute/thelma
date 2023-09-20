@@ -1,7 +1,7 @@
 package seed
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"regexp"
 
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -98,7 +98,7 @@ func _ignore409Conflict(maybe409Err error) error {
 	matches, err := regexp.MatchString(pattern, maybe409Err.Error())
 
 	if err != nil {
-		panic(fmt.Errorf("invalid regular expression %q: %v", pattern, err))
+		panic(errors.Errorf("invalid regular expression %q: %v", pattern, err))
 	}
 
 	if !matches {

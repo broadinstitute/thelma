@@ -1,7 +1,7 @@
 package terra
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,7 +40,7 @@ func (r *ReleaseType) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 
-	return fmt.Errorf("unknown release type: %v", value.Value)
+	return errors.Errorf("unknown release type: %v", value.Value)
 }
 
 func (r ReleaseType) String() string {

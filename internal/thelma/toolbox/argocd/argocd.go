@@ -11,6 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -180,7 +181,7 @@ func BrowserLogin(thelmaConfig config.Config, shellRunner shell.Runner, iapToken
 		return err
 	}
 	if err = a.ensureLoggedIn(); err != nil {
-		return fmt.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
+		return errors.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
 	}
 	return nil
 }
@@ -204,19 +205,19 @@ func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken st
 		}
 		a.token = token
 		if err = a.ensureLoggedIn(); err != nil {
-			return nil, fmt.Errorf("error authenticating to ArgoCD with token pulled from Vault (path %s, key %s): %v", a.cfg.Vault.Path, a.cfg.Vault.Key, err)
+			return nil, errors.Errorf("error authenticating to ArgoCD with token pulled from Vault (path %s, key %s): %v", a.cfg.Vault.Path, a.cfg.Vault.Key, err)
 		}
 	} else if err := a.ensureLoggedIn(); err != nil {
 		log.Debug().Err(err).Msgf("argocd cli is not authenticated; will attempt browser login")
 
 		if !utils.Interactive() {
-			return nil, fmt.Errorf("ArgoCD client is not authenticated and shell is not interactive; please supply an ArgoCD token via THELMA_ARGOCD_TOKEN or run `thelma auth argocd` in an interactive shell")
+			return nil, errors.Errorf("ArgoCD client is not authenticated and shell is not interactive; please supply an ArgoCD token via THELMA_ARGOCD_TOKEN or run `thelma auth argocd` in an interactive shell")
 		}
 		if err := BrowserLogin(thelmaConfig, shellRunner, iapToken); err != nil {
 			return nil, err
 		}
 		if err = a.ensureLoggedIn(); err != nil {
-			return nil, fmt.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
+			return nil, errors.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
 		}
 	}
 	return a, nil
@@ -428,7 +429,7 @@ func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
 		return nil
 	case <-time.After(timeout):
 		timeoutCh <- true
-		return fmt.Errorf("timed out after %s waiting for Argo application %s to exist", timeout, appName)
+		return errors.Errorf("timed out after %s waiting for Argo application %s to exist", timeout, appName)
 	}
 }
 
@@ -628,7 +629,7 @@ func (a *argocd) ensureLoggedIn() error {
 		return err
 	}
 	if err != nil || !output.LoggedIn {
-		return fmt.Errorf("ArgoCD client is not authenticated; please run `thelma auth argocd` or supply an ArgoCD token via THELMA_ARGOCD_TOKEN")
+		return errors.Errorf("ArgoCD client is not authenticated; please run `thelma auth argocd` or supply an ArgoCD token via THELMA_ARGOCD_TOKEN")
 	}
 	return nil
 }
@@ -643,7 +644,7 @@ func (a *argocd) browserLogin() error {
 func (a *argocd) setRef(appName string, ref string) error {
 	err := a.runCommand([]string{"app", "set", appName, "--revision", ref, "--validate=false"})
 	if err != nil {
-		return fmt.Errorf("error setting %s to revision %q: %v", appName, ref, err)
+		return errors.Errorf("error setting %s to revision %q: %v", appName, ref, err)
 	}
 	return nil
 }
@@ -661,7 +662,7 @@ func (a *argocd) getApplication(appName string) (application, error) {
 	}
 
 	if err = yaml.Unmarshal(buf.Bytes(), &app); err != nil {
-		return app, fmt.Errorf("error unmarshalling argo app %s: %v", appName, err)
+		return app, errors.Errorf("error unmarshalling argo app %s: %v", appName, err)
 	}
 
 	return app, nil
@@ -681,7 +682,7 @@ func (a *argocd) runCommandAndParseYamlOutput(args []string, out interface{}) er
 
 	cmdOutput := buf.Bytes()
 	if err := yaml.Unmarshal(cmdOutput, out); err != nil {
-		return fmt.Errorf("error unmarshalling command output: %v", err)
+		return errors.Errorf("error unmarshalling command output: %v", err)
 	}
 
 	return nil
@@ -782,15 +783,15 @@ func readTokenFromVault(cfg argocdConfig, vaultClient *vaultapi.Client) (string,
 	log.Debug().Msgf("Attempting to read ArgoCD token from Vault (%s)", cfg.Vault.Path)
 	secret, err := vaultClient.Logical().Read(cfg.Vault.Path)
 	if err != nil {
-		return "", fmt.Errorf("error loading ArgoCD token from Vault path %s: %v", cfg.Vault.Path, err)
+		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: %v", cfg.Vault.Path, err)
 	}
 	v, exists := secret.Data[cfg.Vault.Key]
 	if !exists {
-		return "", fmt.Errorf("error loading ArgoCD token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
+		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
 	}
 	asStr, ok := v.(string)
 	if !ok {
-		return "", fmt.Errorf("error loading ArgoCD token from Vault path %s: expected string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
+		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: expected string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
 	}
 	logging.MaskSecret(asStr)
 	return asStr, nil

@@ -3,6 +3,7 @@ package testutils
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
+	"github.com/pkg/errors"
 	"math/rand"
 	"sort"
 	"strings"
@@ -35,7 +36,7 @@ func RandString(n int) string {
 // SliceIntoRandomIntervals slices a time.Duration into n random intervals
 func SliceIntoRandomIntervals(duration time.Duration, n int) []time.Duration {
 	if n < 0 {
-		panic(fmt.Errorf("can't divide duration into %d intervals", n))
+		panic(errors.Errorf("can't divide duration into %d intervals", n))
 	}
 	asInt64 := int64(duration)
 

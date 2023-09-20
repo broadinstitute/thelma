@@ -1,7 +1,7 @@
 package resolver
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"path"
 
@@ -47,7 +47,7 @@ func (r *localResolverImpl) chartExists(chartRelease ChartRelease) (bool, error)
 		if os.IsNotExist(err) {
 			return false, nil
 		} else {
-			return false, fmt.Errorf("error checking for chart at %s: %v", chartPath, err)
+			return false, errors.Errorf("error checking for chart at %s: %v", chartPath, err)
 		}
 	}
 
@@ -57,7 +57,7 @@ func (r *localResolverImpl) chartExists(chartRelease ChartRelease) (bool, error)
 func (r *localResolverImpl) sourceVersion(chartRelease ChartRelease) (string, error) {
 	chart, err := r.getChart(chartRelease.Name)
 	if err != nil {
-		return "", fmt.Errorf("error reading chart %s: %v", chartRelease.Name, err)
+		return "", errors.Errorf("error reading chart %s: %v", chartRelease.Name, err)
 	}
 
 	return chart.ManifestVersion(), nil
@@ -89,13 +89,13 @@ func (r *localResolverImpl) resolve(chartRelease ChartRelease) (ResolvedChart, e
 	}
 	dependencyCharts, err := r.determineChartDependencies(chart)
 	if err != nil {
-		return nil, fmt.Errorf("error determining dependencies of chart %s: %v", chart.Name(), err)
+		return nil, errors.Errorf("error determining dependencies of chart %s: %v", chart.Name(), err)
 	}
 	var desiredResolvedChart ResolvedChart
 	for _, dependencyChart := range dependencyCharts {
 		resolvedDependencyChart, err := r.cache.get(dependencyChart)
 		if err != nil {
-			return nil, fmt.Errorf("error resolving chart %s in %s, necessary for chart %s: %v", dependencyChart.Name(), dependencyChart.Path(), chart.Name(), err)
+			return nil, errors.Errorf("error resolving chart %s in %s, necessary for chart %s: %v", dependencyChart.Name(), dependencyChart.Path(), chart.Name(), err)
 		}
 		if dependencyChart.Name() == chart.Name() {
 			desiredResolvedChart = resolvedDependencyChart
@@ -106,7 +106,7 @@ func (r *localResolverImpl) resolve(chartRelease ChartRelease) (ResolvedChart, e
 
 func (r *localResolverImpl) resolverFn(chart source.Chart) (ResolvedChart, error) {
 	if err := chart.UpdateDependencies(); err != nil {
-		return nil, fmt.Errorf("error updating chart source directory %s: %v", chart.Path(), err)
+		return nil, errors.Errorf("error updating chart source directory %s: %v", chart.Path(), err)
 	}
 	return NewLocallyResolvedChart(chart.Path(), chart.ManifestVersion()), nil
 }
@@ -115,7 +115,7 @@ func (r *localResolverImpl) resolverFn(chart source.Chart) (ResolvedChart, error
 func (r *localResolverImpl) getChart(chartName string) (source.Chart, error) {
 	chart, err := source.NewChart(r.chartSourcePath(chartName), r.runner)
 	if err != nil {
-		return nil, fmt.Errorf("error reading chart %s in %s: %v", chartName, r.sourceDir, err)
+		return nil, errors.Errorf("error reading chart %s in %s: %v", chartName, r.sourceDir, err)
 	}
 	return chart, nil
 }
@@ -141,7 +141,7 @@ func (r *localResolverImpl) determineChartDependencies(chart source.Chart) ([]so
 
 		currentChart, err := r.getChart(currentChartName)
 		if err != nil {
-			return nil, fmt.Errorf(
+			return nil, errors.Errorf(
 				"error finding chart source locally while calculating depedencies. parent chart: %s, %v",
 				chart.Name(), err,
 			)
@@ -153,7 +153,7 @@ func (r *localResolverImpl) determineChartDependencies(chart source.Chart) ([]so
 
 	dependencyGraph, err := dependency.NewGraph(dependencies)
 	if err != nil {
-		return nil, fmt.Errorf("error constructing depdency graph in local resolver: %v", err)
+		return nil, errors.Errorf("error constructing depdency graph in local resolver: %v", err)
 	}
 
 	dependenciesToUpdate := make([]string, 0)
@@ -168,7 +168,7 @@ func (r *localResolverImpl) determineChartDependencies(chart source.Chart) ([]so
 	for _, chart := range dependenciesToUpdate {
 		sourceChart, err := r.getChart(chart)
 		if err != nil {
-			return nil, fmt.Errorf("error finding local source for chart: %s, %v", chart, err)
+			return nil, errors.Errorf("error finding local source for chart: %s, %v", chart, err)
 		}
 		chartsToUpdate = append(chartsToUpdate, sourceChart)
 	}

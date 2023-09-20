@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -158,14 +159,14 @@ func (r *ConfigRepo) renderArgocdProjectManifests(destination terra.Destination)
 	stateValues := stateval.BuildArgoProjectValues(destination)
 	stateValuesFile := r.scratchPath(destination.Name(), "argo", "project", stateValuesFilename)
 	if err := writeTemporaryValuesFile(stateValues, stateValuesFile); err != nil {
-		return fmt.Errorf("error generating argo project state values file for %s %s: %v", destination.Type(), destination.Name(), err)
+		return errors.Errorf("error generating argo project state values file for %s %s: %v", destination.Type(), destination.Name(), err)
 	}
 
 	// Generate chart values file with destinations
 	values := argocd.GetDestinationValues(destination)
 	valuesFile := r.scratchPath(destination.Name(), "argo", "project", valuesFilename)
 	if err := writeTemporaryValuesFile(values, valuesFile); err != nil {
-		return fmt.Errorf("error generating argo project values file for %s %s: %v", destination.Type(), destination.Name(), err)
+		return errors.Errorf("error generating argo project values file for %s %s: %v", destination.Type(), destination.Name(), err)
 	}
 
 	cmd := newCmd()
@@ -188,7 +189,7 @@ func (r *ConfigRepo) renderArgocdApplicationManifests(release terra.Release) err
 	stateValues := stateval.BuildArgoAppValues(release)
 	stateValuesFile := r.scratchPath(release.Destination().Name(), release.Name(), "argocd", "application", stateValuesFilename)
 	if err := writeTemporaryValuesFile(stateValues, stateValuesFile); err != nil {
-		return fmt.Errorf("error rendering argo app state values for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
+		return errors.Errorf("error rendering argo app state values for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
 	}
 
 	dir := fmt.Sprintf("terra-argocd-app-%s", release.Name())
@@ -222,7 +223,7 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 		Version: chartVersion,
 	})
 	if err != nil {
-		return fmt.Errorf("error resolving chart for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
+		return errors.Errorf("error resolving chart for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
 	}
 
 	outputDir := path.Join(r.outputDir, release.Destination().Name(), release.Name())
@@ -232,7 +233,7 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 
 	stateValuesFile := r.scratchPath(release.Destination().Name(), release.Name(), stateValuesFilename)
 	if err = writeTemporaryValuesFile(stateValues, stateValuesFile); err != nil {
-		return fmt.Errorf("error rendering state values for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
+		return errors.Errorf("error rendering state values for release %s in %s %s: %v", release.Name(), release.Destination().Type(), release.Destination().Name(), err)
 	}
 
 	cmd := newCmd()
@@ -292,34 +293,38 @@ func (r *ConfigRepo) runCmd(cmd shell.Command) error {
 // Old behavior
 // ------------
 // For regular releases:
-//  output/dev/helmfile-b47efc70-leonardo/leonardo
-//  ->
-//  output/dev/leonardo/leonardo
+//
+//	output/dev/helmfile-b47efc70-leonardo/leonardo
+//	->
+//	output/dev/leonardo/leonardo
 //
 // For ArgoCD:
-//  output/dev/helmfile-b47efc70-terra-argocd-app-leonardo/terra-argocd-app
-//  ->
-//  output/dev/terra-argocd-app-leonardo/terra-argocd-app
 //
-//  output/dev/helmfile-b47efc70-terra-argocd-project/terra-argocd-project
-//  ->
-//  output/dev/terra-argocd-project/terra-argocd-project
+//	output/dev/helmfile-b47efc70-terra-argocd-app-leonardo/terra-argocd-app
+//	->
+//	output/dev/terra-argocd-app-leonardo/terra-argocd-app
+//
+//	output/dev/helmfile-b47efc70-terra-argocd-project/terra-argocd-project
+//	->
+//	output/dev/terra-argocd-project/terra-argocd-project
 //
 // New behavior
 // ------------
 // For regular releases:
-//  output/dev/leonardo/helmfile-b47efc70-leonardo/leonardo
-//  ->
-//  output/dev/leonardo/leonardo
+//
+//	output/dev/leonardo/helmfile-b47efc70-leonardo/leonardo
+//	->
+//	output/dev/leonardo/leonardo
 //
 // For ArgoCD:
-//  output/dev/terra-argocd-app-leonardo/helmfile-b47efc70-terra-argocd-app-leonardo/terra-argocd-app
-//  ->
-//  output/dev/terra-argocd-app-leonardo/terra-argocd-app
 //
-//  output/dev/terra-argocd-project/helmfile-b47efc70-terra-argocd-project/terra-argocd-project
-//  ->
-//  output/dev/terra-argocd-project/terra-argocd-project
+//	output/dev/terra-argocd-app-leonardo/helmfile-b47efc70-terra-argocd-app-leonardo/terra-argocd-app
+//	->
+//	output/dev/terra-argocd-app-leonardo/terra-argocd-app
+//
+//	output/dev/terra-argocd-project/helmfile-b47efc70-terra-argocd-project/terra-argocd-project
+//	->
+//	output/dev/terra-argocd-project/terra-argocd-project
 //
 // normalizeOutputDir removes "helmfile-.*" directories from helmfile output paths.
 // this makes it possible to easily run diff -r on render outputs from different branches
@@ -327,11 +332,11 @@ func normalizeOutputDir(outputDir string) error {
 	glob := path.Join(outputDir, "helmfile-*", "*")
 	matches, err := filepath.Glob(glob)
 	if err != nil {
-		return fmt.Errorf("error globbing rendered templates %s: %v", glob, err)
+		return errors.Errorf("error globbing rendered templates %s: %v", glob, err)
 	}
 
 	if len(matches) != 1 {
-		return fmt.Errorf("expected exactly one match for %s, got %d: %v", glob, len(matches), matches)
+		return errors.Errorf("expected exactly one match for %s, got %d: %v", glob, len(matches), matches)
 	}
 
 	match := matches[0]
@@ -356,16 +361,16 @@ func (r *ConfigRepo) scratchPath(pathComponents ...string) string {
 // Marshal structured data to YAML and write to the given file
 func writeTemporaryValuesFile(values interface{}, filename string) error {
 	if err := os.MkdirAll(path.Dir(filename), 0775); err != nil {
-		return fmt.Errorf("error creating parent directories for temporary values file %s: %v", filename, err)
+		return errors.Errorf("error creating parent directories for temporary values file %s: %v", filename, err)
 
 	}
 	output, err := yaml.Marshal(values)
 	if err != nil {
-		return fmt.Errorf("error marshaling values for %s to YAML: %v (content: %v)", filename, err, values)
+		return errors.Errorf("error marshaling values for %s to YAML: %v (content: %v)", filename, err, values)
 	}
 
 	if err := os.WriteFile(filename, output, 0666); err != nil {
-		return fmt.Errorf("error writing temporary values file %s: %v", filename, err)
+		return errors.Errorf("error writing temporary values file %s: %v", filename, err)
 	}
 
 	return nil

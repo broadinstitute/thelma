@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"strings"
@@ -211,7 +212,7 @@ func (m *MockRunner) addOrderingCheck(cmd Command, mockCall *mock.Call) *Call {
 		if m.options.VerifyOrder {
 			if m.runCounter != order { // this command is out of order
 				if m.runCounter < len(m.expectedCommands) { // we have remaining expectations
-					err := fmt.Errorf(
+					err := errors.Errorf(
 						"Command received out of order (%d instead of %d). Expected:\n%v\nReceived:\n%v",
 						m.runCounter,
 						order,

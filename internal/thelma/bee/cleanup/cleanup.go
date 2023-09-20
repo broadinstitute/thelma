@@ -8,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/iterator"
 )
@@ -41,7 +42,7 @@ type cleanup struct {
 
 func (c *cleanup) Cleanup(bee terra.Environment) error {
 	if !bee.Lifecycle().IsDynamic() {
-		panic(fmt.Errorf("%s is not a dynamic environment, won't attempt to cleanup its resources", bee.Name()))
+		panic(errors.Errorf("%s is not a dynamic environment, won't attempt to cleanup its resources", bee.Name()))
 	}
 
 	return c.cleanupPubsubTopics(bee)
@@ -94,7 +95,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("error listing subscriptions for pubsub topic %s/%s: %v", projectId, topicId, err)
+			return errors.Errorf("error listing subscriptions for pubsub topic %s/%s: %v", projectId, topicId, err)
 		}
 		subs = append(subs, sub)
 	}
@@ -102,7 +103,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 	// delete subscriptions
 	for _, sub := range subs {
 		if err := sub.Delete(context.Background()); err != nil {
-			return fmt.Errorf("error deleting subscription %s for pubsub topic %s/%s: %v", sub.ID(), projectId, topicId, err)
+			return errors.Errorf("error deleting subscription %s for pubsub topic %s/%s: %v", sub.ID(), projectId, topicId, err)
 		}
 		log.Debug().Msgf("Deleted subscription: %s", sub.ID())
 	}
@@ -110,7 +111,7 @@ func (c *cleanup) deleteTopicAndSubscriptions(projectId string, topicId string) 
 	// delete the topic
 	err = topic.Delete(context.Background())
 	if err != nil {
-		return fmt.Errorf("error deleting pubsub topic %s/%s: %v", projectId, topicId, err)
+		return errors.Errorf("error deleting pubsub topic %s/%s: %v", projectId, topicId, err)
 	}
 
 	log.Debug().Msgf("Deleted topic: %s", topicId)

@@ -2,8 +2,8 @@ package meta
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 	"k8s.io/utils/strings/slices"
 	"reflect"
 	"strings"
@@ -54,11 +54,11 @@ func (d Decoder[T]) FromMap(m map[string]string) (*T, error) {
 		Result:     &a,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error decoding annotations: %v", err)
+		return nil, errors.Errorf("error decoding annotations: %v", err)
 	}
 
 	if err = decoder.Decode(withoutPrefix); err != nil {
-		return nil, fmt.Errorf("error decoding annotations: %v", err)
+		return nil, errors.Errorf("error decoding annotations: %v", err)
 	}
 	return &a, nil
 }
@@ -68,7 +68,7 @@ func (d Decoder[T]) ToMap(s T) (map[string]string, error) {
 
 	v := reflect.ValueOf(s)
 	if v.Kind() != reflect.Struct {
-		panic(fmt.Errorf("require struct, got %T", s))
+		panic(errors.Errorf("require struct, got %T", s))
 	}
 
 	for i := 0; i < v.NumField(); i++ {
@@ -93,7 +93,7 @@ func (d Decoder[T]) ToMap(s T) (map[string]string, error) {
 		} else {
 			data, err := json.Marshal(val.Interface())
 			if err != nil {
-				return nil, fmt.Errorf("error marshalling to JSON: %v", err)
+				return nil, errors.Errorf("error marshalling to JSON: %v", err)
 			}
 			s = string(data)
 		}
@@ -133,13 +133,13 @@ func UnmarshalNonStringFieldsFromJSON() mapstructure.DecodeHookFunc {
 
 		s, ok := data.(string)
 		if !ok {
-			return nil, fmt.Errorf("expected data to be a string, got %T", data)
+			return nil, errors.Errorf("expected data to be a string, got %T", data)
 		}
 
 		v := reflect.New(t)
 		p := v.Interface()
 		if err := json.Unmarshal([]byte(s), p); err != nil {
-			return nil, fmt.Errorf("error unmarshalling data: %v", err)
+			return nil, errors.Errorf("error unmarshalling data: %v", err)
 		}
 
 		return p, nil

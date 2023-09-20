@@ -1,7 +1,7 @@
 package terra
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"strings"
 )
@@ -63,7 +63,7 @@ func (l *Lifecycle) UnmarshalYAML(value *yaml.Node) error {
 	for _, l := range Lifecycles() {
 		supported = append(supported, l.String())
 	}
-	return fmt.Errorf("unknown lifecycle type %v, supported lifecycles are %s", value.Value, strings.Join(supported, ", "))
+	return errors.Errorf("unknown lifecycle type %v, supported lifecycles are %s", value.Value, strings.Join(supported, ", "))
 }
 
 // FromString will set the receiver's value to the one denoted by the given string
@@ -84,7 +84,7 @@ func (l *Lifecycle) FromString(value string) error {
 	for _, lifecycle := range Lifecycles() {
 		supported = append(supported, lifecycle.String())
 	}
-	return fmt.Errorf("unknown lifecycle type %v, supported lifecycles are %s", value, strings.Join(supported, ", "))
+	return errors.Errorf("unknown lifecycle type %v, supported lifecycles are %s", value, strings.Join(supported, ", "))
 }
 
 func (l Lifecycle) String() string {

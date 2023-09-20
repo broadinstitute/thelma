@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -111,7 +112,7 @@ func (suite *DirSuite) TestWithInstallerLock() {
 
 	err := suite.dir.WithInstallerLock(func() error {
 		count++
-		return fmt.Errorf("fake error")
+		return errors.Errorf("fake error")
 	})
 
 	require.Error(suite.T(), err)

@@ -1,11 +1,11 @@
 package slack
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/app/platform"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/slack-go/slack"
 )
@@ -75,7 +75,7 @@ func (s *Slack) SendDevopsAlert(title string, text string, ok bool) error {
 	}))
 
 	if err != nil {
-		return fmt.Errorf("couldn't send message to channel %s: %v", channelId, err)
+		return errors.Errorf("couldn't send message to channel %s: %v", channelId, err)
 	}
 	return nil
 }
@@ -89,17 +89,17 @@ func (s *Slack) SendDirectMessage(email string, markdown string) error {
 	}
 	user, err := s.client.GetUserByEmail(email)
 	if err != nil {
-		return fmt.Errorf("couldn't get user for %s: %v", email, err)
+		return errors.Errorf("couldn't get user for %s: %v", email, err)
 	} else if user == nil {
-		return fmt.Errorf("couldn't get user for %s: Slack didn't error but didn't return a user object either", email)
+		return errors.Errorf("couldn't get user for %s: Slack didn't error but didn't return a user object either", email)
 	}
 	channel, _, _, err := s.client.OpenConversation(&slack.OpenConversationParameters{
 		Users: []string{user.ID},
 	})
 	if err != nil {
-		return fmt.Errorf("couldn't open channel for %s user %s: %v", email, user.ID, err)
+		return errors.Errorf("couldn't open channel for %s user %s: %v", email, user.ID, err)
 	} else if channel == nil {
-		return fmt.Errorf("couldn't open channel for %s user %s: Slack didn't error but didn't return a channel object either", email, user.ID)
+		return errors.Errorf("couldn't open channel for %s user %s: Slack didn't error but didn't return a channel object either", email, user.ID)
 	}
 	_, _, err = s.client.PostMessage(channel.ID, slack.MsgOptionBlocks(slack.SectionBlock{
 		Type: slack.MBTSection,
@@ -109,7 +109,7 @@ func (s *Slack) SendDirectMessage(email string, markdown string) error {
 		},
 	}))
 	if err != nil {
-		return fmt.Errorf("couldn't send message to %s user channel %s: %v", email, channel.ID, err)
+		return errors.Errorf("couldn't send message to %s user channel %s: %v", email, channel.ID, err)
 	}
 	return nil
 }
@@ -129,7 +129,7 @@ func (s *Slack) requireClient() error {
 		}
 	}
 	if s.client == nil {
-		return fmt.Errorf("could not build Slack client")
+		return errors.Errorf("could not build Slack client")
 	} else {
 		return nil
 	}
@@ -139,15 +139,15 @@ func readTokenFromVault(cfg slackConfig, vaultClient *vaultapi.Client) (string, 
 	log.Debug().Msgf("Attempting to read Slack token from Vault (%s)", cfg.Vault.Path)
 	secret, err := vaultClient.Logical().Read(cfg.Vault.Path)
 	if err != nil {
-		return "", fmt.Errorf("error loading Slack token from Vault path %s: %v", cfg.Vault.Path, err)
+		return "", errors.Errorf("error loading Slack token from Vault path %s: %v", cfg.Vault.Path, err)
 	}
 	v, exists := secret.Data[cfg.Vault.Key]
 	if !exists {
-		return "", fmt.Errorf("error loading Slack token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
+		return "", errors.Errorf("error loading Slack token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
 	}
 	asStr, ok := v.(string)
 	if !ok {
-		return "", fmt.Errorf("error loading Slack token from Vault path %s: expecting string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
+		return "", errors.Errorf("error loading Slack token from Vault path %s: expecting string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
 	}
 	logging.MaskSecret(asStr)
 	return asStr, nil

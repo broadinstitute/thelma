@@ -1,8 +1,8 @@
 package google
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
+	"github.com/pkg/errors"
 	"google.golang.org/api/sqladmin/v1"
 	"strings"
 )
@@ -50,5 +50,5 @@ func parseCloudSQLVersion(version string) (api.DBMS, error) {
 	if strings.HasPrefix(version, "MYSQL") {
 		return api.MySQL, nil
 	}
-	return -1, fmt.Errorf("unsupported CloudSQL version: %q", version)
+	return -1, errors.Errorf("unsupported CloudSQL version: %q", version)
 }

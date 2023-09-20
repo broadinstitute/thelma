@@ -3,9 +3,9 @@ package dbms
 import (
 	"bytes"
 	_ "embed"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/podrun"
+	"github.com/pkg/errors"
 	"path"
 	"strconv"
 	"text/template"
@@ -86,7 +86,7 @@ func (p postgres) ensureTargetDatabaseSelected() error {
 	// thelma-sql-ro and thelma-sql-srw do not have default databases; if we try
 	// to connect without specifying one, psql will return an error
 	if p.conn.Options.Database == "" {
-		return fmt.Errorf("please specify a target database")
+		return errors.Errorf("please specify a target database")
 	}
 	return nil
 }
@@ -109,11 +109,11 @@ func (p postgres) renderPsqlrc(settings ClientSettings) ([]byte, error) {
 
 	t, err := template.New(scriptNames.psqlrc).Parse(psqlrcTemplate)
 	if err != nil {
-		panic(fmt.Errorf("error parsing internal template %s: %v", scriptNames.psqlrc, err))
+		panic(errors.Errorf("error parsing internal template %s: %v", scriptNames.psqlrc, err))
 	}
 	var buf bytes.Buffer
 	if err = t.Execute(&buf, ctx); err != nil {
-		return nil, fmt.Errorf("error rendering %s: %v", scriptNames.psqlrc, err)
+		return nil, errors.Errorf("error rendering %s: %v", scriptNames.psqlrc, err)
 	}
 	return buf.Bytes(), nil
 }

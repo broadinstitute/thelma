@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/flock"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 	"os"
@@ -61,7 +62,7 @@ func (r *releasesDir) CurrentVersion() (string, error) {
 	symlink := r.currentSymlinkPath()
 	resolved, err := filepath.EvalSymlinks(symlink)
 	if err != nil {
-		return "", fmt.Errorf("error resolving symlink %s: %v", symlink, err)
+		return "", errors.Errorf("error resolving symlink %s: %v", symlink, err)
 	}
 	return path.Base(resolved), nil
 }
@@ -85,7 +86,7 @@ func (r *releasesDir) UpdateCurrentReleaseSymlink(version string) error {
 	// create tmp dir
 	tmpDir, err := r.scratch.Mkdir("releases")
 	if err != nil {
-		return fmt.Errorf("error updating %s symbolic link: %v", r.currentSymlinkPath(), err)
+		return errors.Errorf("error updating %s symbolic link: %v", r.currentSymlinkPath(), err)
 	}
 
 	releaseDir := r.pathForVersion(version)
@@ -93,12 +94,12 @@ func (r *releasesDir) UpdateCurrentReleaseSymlink(version string) error {
 	// create a new symlink in tmp dir pointing at the release version directory
 	tmpLink := path.Join(tmpDir, "current.tmp")
 	if err = os.Symlink(releaseDir, tmpLink); err != nil {
-		return fmt.Errorf("error updating %s symbolic link: %v", r.currentSymlinkPath(), err)
+		return errors.Errorf("error updating %s symbolic link: %v", r.currentSymlinkPath(), err)
 	}
 
 	// then rename it on top of the existing symlink, which is atomic
 	if err = os.Rename(tmpLink, r.currentSymlinkPath()); err != nil {
-		return fmt.Errorf("error updating %s symbolic link: %v", r.currentSymlinkPath(), err)
+		return errors.Errorf("error updating %s symbolic link: %v", r.currentSymlinkPath(), err)
 	}
 
 	return nil
@@ -107,25 +108,25 @@ func (r *releasesDir) UpdateCurrentReleaseSymlink(version string) error {
 func (r *releasesDir) CopyUnpackedArchive(unpackDir string) error {
 	version, err := manifest.Version(unpackDir)
 	if err != nil {
-		return fmt.Errorf("error installing %s to release directory: %v", unpackDir, err)
+		return errors.Errorf("error installing %s to release directory: %v", unpackDir, err)
 	}
 
 	targetDir := r.pathForVersion(version)
 
 	exists, err := utils.FileExists(targetDir)
 	if err != nil {
-		return fmt.Errorf("error installing %s to release directory: %v", unpackDir, err)
+		return errors.Errorf("error installing %s to release directory: %v", unpackDir, err)
 	}
 
 	if exists {
 		log.Warn().Msgf("Release directory %s already exists; removing it", targetDir)
 		if err = os.RemoveAll(targetDir); err != nil {
-			return fmt.Errorf("error removing existing release directory %s: %v", targetDir, err)
+			return errors.Errorf("error removing existing release directory %s: %v", targetDir, err)
 		}
 	}
 
 	if err = os.Rename(unpackDir, targetDir); err != nil {
-		return fmt.Errorf("error moving unpacked release archive %s to release directory %s: %v", unpackDir, targetDir, err)
+		return errors.Errorf("error moving unpacked release archive %s to release directory %s: %v", unpackDir, targetDir, err)
 	}
 
 	return nil
@@ -134,7 +135,7 @@ func (r *releasesDir) CopyUnpackedArchive(unpackDir string) error {
 func (r *releasesDir) CleanupOldReleases(keepReleases int) error {
 	entries, err := os.ReadDir(r.dir)
 	if err != nil {
-		return fmt.Errorf("error cleaning up old Thelma releases: %v", err)
+		return errors.Errorf("error cleaning up old Thelma releases: %v", err)
 	}
 
 	currentVersion, err := r.CurrentVersion()
@@ -177,7 +178,7 @@ func (r *releasesDir) CleanupOldReleases(keepReleases int) error {
 		targetDir := r.pathForVersion(version)
 		log.Info().Msgf("Deleting old Thelma release directory: %s", targetDir)
 		if err = os.RemoveAll(targetDir); err != nil {
-			return fmt.Errorf("error cleaning up old Thelma releases: %v", err)
+			return errors.Errorf("error cleaning up old Thelma releases: %v", err)
 		}
 	}
 
@@ -195,7 +196,7 @@ func (r *releasesDir) WithInstallerLock(fn func() error) error {
 		// write pid to lock file after we obtain it, to help with debugging
 		pidStr := fmt.Sprintf("%d", os.Getpid())
 		if err := os.WriteFile(_lockFile, []byte(pidStr), 0644); err != nil {
-			return fmt.Errorf("error updating lock file %s: %v", _lockFile, err)
+			return errors.Errorf("error updating lock file %s: %v", _lockFile, err)
 		}
 
 		return fn()

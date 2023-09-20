@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
@@ -19,7 +20,7 @@ func (s *seeder) seedStep1CreateElasticsearch(appReleases map[string]terra.AppRe
 		}
 		localPort, stopFunc, err := s.kubectl.PortForward(elasticsearch, fmt.Sprintf("service/%s", config.Elasticsearch.Service), elasticsearch.Port())
 		if err != nil {
-			return fmt.Errorf("error port-forwarding to Elasticsearch: %v", err)
+			return errors.Errorf("error port-forwarding to Elasticsearch: %v", err)
 		}
 		defer func() { _ = stopFunc() }()
 
@@ -46,7 +47,7 @@ func _createIndex(client http.Client, protocol string, localElasticsearchPort in
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error creating %s: %v", index, err)
+		return errors.Errorf("error creating %s: %v", index, err)
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
@@ -55,7 +56,7 @@ func _createIndex(client http.Client, protocol string, localElasticsearchPort in
 	}
 	respBodyString := string(respBody)
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("%s status creating %s (%s)", resp.Status, index, respBodyString)
+		return errors.Errorf("%s status creating %s (%s)", resp.Status, index, respBodyString)
 	}
 	return nil
 }
@@ -77,7 +78,7 @@ func _setElasticsearchReplicas(client http.Client, protocol string, localElastic
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error setting replica count: %v", err)
+		return errors.Errorf("error setting replica count: %v", err)
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
@@ -86,7 +87,7 @@ func _setElasticsearchReplicas(client http.Client, protocol string, localElastic
 	}
 	respBodyString := string(respBody)
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("%s status setting replica count (%s)", resp.Status, respBodyString)
+		return errors.Errorf("%s status setting replica count (%s)", resp.Status, respBodyString)
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ package pool
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"runtime"
@@ -183,7 +184,7 @@ func (p *pool) aggregateErrors() error {
 	}
 
 	if count > 0 {
-		return fmt.Errorf("%d execution errors:\n%s", count, sb.String())
+		return errors.Errorf("%d execution errors:\n%s", count, sb.String())
 	}
 
 	return nil

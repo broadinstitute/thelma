@@ -1,12 +1,12 @@
 package start
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +55,7 @@ func (cmd *startCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	flags := ctx.CobraCommand().Flags()
 
 	if !flags.Changed(flagNames.name) {
-		return fmt.Errorf("no environment name specified; --%s is required", flagNames.name)
+		return errors.Errorf("no environment name specified; --%s is required", flagNames.name)
 	}
 
 	return nil

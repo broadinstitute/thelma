@@ -1,7 +1,6 @@
 package connector
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/dbms"
@@ -10,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/provider/google"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/provider/kubernetes"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -48,7 +48,7 @@ func New(conn api.Connection, clients clients.Clients) (Connector, error) {
 		panic("TODO")
 
 	default:
-		panic(fmt.Errorf("unsupported provider: %#v", conn.Provider))
+		panic(errors.Errorf("unsupported provider: %#v", conn.Provider))
 	}
 
 	_dbms, err := buildDBMSForProvider(conn, _provider)
@@ -126,7 +126,7 @@ func (c *connector) ensureInitialized() error {
 	}
 	if c.conn.Provider != api.Kubernetes {
 		// require explicit initialization for non-K8s dbs
-		return fmt.Errorf("database instance %s has not been initialized; please run `thelma sql init` and try again", c.conn.Instance().Name())
+		return errors.Errorf("database instance %s has not been initialized; please run `thelma sql init` and try again", c.conn.Instance().Name())
 	}
 	log.Info().Msgf("Auto-initializing database for Thelma connections")
 	return c.Init()

@@ -3,6 +3,7 @@ package pool
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -220,7 +221,7 @@ func successfulJob(desc string) *testJob {
 func failingJob(desc string) *testJob {
 	return &testJob{
 		description: desc,
-		err:         fmt.Errorf("whoopsies (%s)", desc),
+		err:         errors.Errorf("whoopsies (%s)", desc),
 	}
 }
 

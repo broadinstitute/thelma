@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
 	"os"
@@ -55,7 +56,7 @@ func (s *spawn) CurrentProcessIsSpawn() bool {
 func (s *spawn) Spawn(args ...string) error {
 	if s.CurrentProcessIsSpawn() {
 		// panic since this is a bug - spawned processes should not try to launch their own spawn
-		panic(fmt.Errorf("won't spawn child process %q, current process is already a Thelma spawn", strings.Join(args, " ")))
+		panic(errors.Errorf("won't spawn child process %q, current process is already a Thelma spawn", strings.Join(args, " ")))
 	}
 
 	// launch a `thelma update` command in the background
@@ -73,7 +74,7 @@ func (s *spawn) Spawn(args ...string) error {
 	cmd.Stdin = nil
 
 	if err = s.configureLogging(cmd); err != nil {
-		return fmt.Errorf("errof configuring logging for background process %q: %v", desc, err)
+		return errors.Errorf("errof configuring logging for background process %q: %v", desc, err)
 	}
 
 	// add our sentinel env var to the environment
@@ -90,13 +91,13 @@ func (s *spawn) Spawn(args ...string) error {
 	}
 
 	if err = cmd.Start(); err != nil {
-		return fmt.Errorf("error starting background process %q: %v", desc, err)
+		return errors.Errorf("error starting background process %q: %v", desc, err)
 	}
 	pid := cmd.Process.Pid
 
 	//  https://stackoverflow.com/questions/23031752/start-a-process-in-go-and-detach-from-it
 	if err = cmd.Process.Release(); err != nil {
-		return fmt.Errorf("error detaching background process %q: %v", desc, err)
+		return errors.Errorf("error detaching background process %q: %v", desc, err)
 	}
 
 	log.Debug().Msgf("%q started (pid %d) in background", desc, pid)
@@ -126,7 +127,7 @@ func (s *spawn) openLogFileAndSaveTo(ext string, setme *io.Writer) error {
 	file := path.Join(s.logsDir, name)
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		return fmt.Errorf("error opening %s for writing: %v", file, err)
+		return errors.Errorf("error opening %s for writing: %v", file, err)
 	}
 	*setme = f
 	return nil

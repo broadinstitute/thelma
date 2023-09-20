@@ -1,11 +1,11 @@
 package artifacts
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
 	"os"
@@ -83,11 +83,11 @@ func (m *manager) Writer(release terra.Release, _path string) (io.WriteCloser, e
 		outputFile := path.Join(m.options.Dir, relativePath)
 		parentDir := path.Dir(outputFile)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			return nil, fmt.Errorf("error creating artifact dir %s: %v", parentDir, err)
+			return nil, errors.Errorf("error creating artifact dir %s: %v", parentDir, err)
 		}
 		file, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("error creating artifact file %s: %v", outputFile, err)
+			return nil, errors.Errorf("error creating artifact file %s: %v", outputFile, err)
 		}
 		writeClosers = append(writeClosers, file)
 	}

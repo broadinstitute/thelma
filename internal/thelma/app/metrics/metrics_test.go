@@ -1,8 +1,8 @@
 package metrics
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -128,7 +128,7 @@ thelma_counter{_job="fixme",a="1",b="2",platform="jenkins"} 123
 					Name:   "fake_task",
 					Help:   "A fake task",
 					Labels: map[string]string{"id": "23"},
-				}, 1800*time.Millisecond, fmt.Errorf("this one failed"))
+				}, 1800*time.Millisecond, errors.Errorf("this one failed"))
 
 			},
 			expected: `# HELP thelma_fake_task_count A fake task

@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pwgen"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"path"
 	"time"
 )
@@ -58,11 +59,11 @@ func (p *passwordStoreImpl) fetch(instance api.GoogleInstance, username string) 
 	}
 	password, exists := secret.Data[passwordSecretKey]
 	if !exists {
-		return "", fmt.Errorf("vault secret at %s has no %s field; try re-running thelma sql init for this database", secretPath, passwordSecretKey)
+		return "", errors.Errorf("vault secret at %s has no %s field; try re-running thelma sql init for this database", secretPath, passwordSecretKey)
 	}
 	s, ok := password.(string)
 	if !ok {
-		return "", fmt.Errorf("vault secret at %s has unexpected value type for field %s (want string); try re-running thelma sql init for this database", secretPath, passwordSecretKey)
+		return "", errors.Errorf("vault secret at %s has unexpected value type for field %s (want string); try re-running thelma sql init for this database", secretPath, passwordSecretKey)
 	}
 	return s, nil
 }

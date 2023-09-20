@@ -1,10 +1,10 @@
 package auth
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ func NewAuthCommand() cli.ThelmaCommand {
 func ForProvider(provider credentials.TokenProvider, rc cli.RunContext) error {
 	cmd, ok := rc.Parent().(*authCommand)
 	if !ok {
-		panic(fmt.Errorf("unexpected parent command type: %v", rc.Parent()))
+		panic(errors.Errorf("unexpected parent command type: %v", rc.Parent()))
 	}
 
 	return cmd.handleAuth(provider, rc)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"sort"
@@ -87,13 +88,13 @@ func (e *enumFlag) validate(state terra.State, inputValues []string) (*valueSet,
 	collated := collateSelectorValues(inputValues)
 
 	if collated.Empty() {
-		return nil, fmt.Errorf("--%s: at least option must be speficied", e.flagName)
+		return nil, errors.Errorf("--%s: at least option must be speficied", e.flagName)
 	}
 
 	// handle ALL selector (--releases=ALL, --cluster=ALL, etc)
 	if collated.Exists(allSelector) {
 		if collated.Size() > 1 {
-			return nil, fmt.Errorf("--%s: either %s or individual %s can be specified, but not both: %s", e.flagName, allSelector, e.flagName, strings.Join(collated.Elements(), ", "))
+			return nil, errors.Errorf("--%s: either %s or individual %s can be specified, but not both: %s", e.flagName, allSelector, e.flagName, strings.Join(collated.Elements(), ", "))
 		}
 		return &valueSet{
 			isAllSelector: true,
@@ -105,14 +106,14 @@ func (e *enumFlag) validate(state terra.State, inputValues []string) (*valueSet,
 	if e.validValues != nil {
 		valid, err := e.validValues(state)
 		if err != nil {
-			return nil, fmt.Errorf("error identifying valid values for flag --%s: %v", e.flagName, err)
+			return nil, errors.Errorf("error identifying valid values for flag --%s: %v", e.flagName, err)
 		}
 
 		diff := collated.Difference(valid)
 		if !diff.Empty() {
 			unknown := diff.Elements()
 			sort.Strings(unknown)
-			return nil, fmt.Errorf("--%s: unknown %s %s", e.flagName, maybePlural(e.flagName), strings.Join(unknown, ", "))
+			return nil, errors.Errorf("--%s: unknown %s %s", e.flagName, maybePlural(e.flagName), strings.Join(unknown, ", "))
 		}
 	}
 

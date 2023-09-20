@@ -1,7 +1,7 @@
 package sqladmin
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/sqladmin/v1"
 	"time"
@@ -69,11 +69,11 @@ func (c client) ResetPassword(project string, instanceName string, username stri
 
 	op, err := req.Do()
 	if err != nil {
-		return fmt.Errorf("error resetting password for %s user %s: %v", instanceName, username, err)
+		return errors.Errorf("error resetting password for %s user %s: %v", instanceName, username, err)
 	}
 
 	if err = c.waitForOpToBeDone(op); err != nil {
-		return fmt.Errorf("error resetting password for %s: %v", username, err)
+		return errors.Errorf("error resetting password for %s: %v", username, err)
 	}
 
 	return nil
@@ -84,7 +84,7 @@ func (c client) DeleteUser(project string, instanceName string, username string)
 		project, instanceName,
 	).Name(username).Do()
 	if err != nil {
-		return fmt.Errorf("error deleting user %s from instance %s: %v", username, instanceName, err)
+		return errors.Errorf("error deleting user %s from instance %s: %v", username, instanceName, err)
 	}
 
 	return c.waitForOpToBeDone(op)
@@ -95,7 +95,7 @@ func (c client) AddUser(project string, instanceName string, user *sqladmin.User
 		project, instanceName, user,
 	).Do()
 	if err != nil {
-		return fmt.Errorf("error adding user %s to instance %s: %v", user.Name, instanceName, err)
+		return errors.Errorf("error adding user %s to instance %s: %v", user.Name, instanceName, err)
 	}
 
 	return c.waitForOpToBeDone(op)

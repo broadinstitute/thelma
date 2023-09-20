@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"strings"
 )
@@ -115,7 +116,7 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease) (google.Clients, erro
 		vaultPath = config.Auth.WorkspaceManager.VaultPath
 		vaultKey = config.Auth.WorkspaceManager.VaultKey
 	default:
-		return nil, fmt.Errorf("thelma doesn't know how to authenticate as %s", appRelease.Name())
+		return nil, errors.Errorf("thelma doesn't know how to authenticate as %s", appRelease.Name())
 	}
 	if strings.ContainsRune(vaultPath, '%') {
 		vaultPath = fmt.Sprintf(vaultPath, appRelease.Cluster().ProjectSuffix())
@@ -130,7 +131,7 @@ func (s *seeder) configWithBasicDefaults() (seedConfig, error) {
 	var config seedConfig
 	err := s.config.Unmarshal(configKey, &config)
 	if err != nil {
-		return config, fmt.Errorf("error reading seed config: %v", err)
+		return config, errors.Errorf("error reading seed config: %v", err)
 	}
 	return config, nil
 }

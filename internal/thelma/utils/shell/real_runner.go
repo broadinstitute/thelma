@@ -2,9 +2,9 @@ package shell
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"io"
@@ -139,7 +139,7 @@ func (s *realSubprocess) Stop() error {
 		return nil
 	}
 	if s.execCmd.Process == nil {
-		return fmt.Errorf("no process associated with command")
+		return errors.Errorf("no process associated with command")
 	} else {
 		if err := s.execCmd.Process.Signal(os.Interrupt); err != nil {
 			// Can't send SIGINT on Windows; it'll error, so send SIGKILL
@@ -159,7 +159,7 @@ func (s *realSubprocess) Stop() error {
 			return handleExecCmdError(s.cmd, err, s.logger, s.errBuf)
 		case <-time.After(3 * time.Second):
 			_ = s.execCmd.Process.Kill()
-			return fmt.Errorf("process did not exit after 3 seconds")
+			return errors.Errorf("process did not exit after 3 seconds")
 		}
 	}
 }

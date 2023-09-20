@@ -1,7 +1,7 @@
 package object
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"io"
 )
@@ -31,15 +31,15 @@ func (r *read) Content() []byte {
 func (r *read) Handler(object Object, logger zerolog.Logger) error {
 	reader, err := object.Handle.NewReader(object.Ctx)
 	if err != nil {
-		return fmt.Errorf("error reading object: %v", err)
+		return errors.Errorf("error reading object: %v", err)
 	}
 
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		return fmt.Errorf("error reading object: %v", err)
+		return errors.Errorf("error reading object: %v", err)
 	}
 	if err = reader.Close(); err != nil {
-		return fmt.Errorf("error closing object reader: %v", err)
+		return errors.Errorf("error closing object reader: %v", err)
 	}
 
 	logTransfer(logger, int64(len(content)))

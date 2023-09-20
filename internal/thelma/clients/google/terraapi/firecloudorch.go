@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/avast/retry-go"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"regexp"
@@ -108,7 +109,7 @@ func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string
 
 	requestBody, err := json.Marshal(bodyData)
 	if err != nil {
-		return nil, "", fmt.Errorf("error marshalling request body for %s %s: %v", method, url, err)
+		return nil, "", errors.Errorf("error marshalling request body for %s %s: %v", method, url, err)
 	}
 
 	requestFn := func() error {

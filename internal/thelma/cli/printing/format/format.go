@@ -2,7 +2,7 @@ package format
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"io"
 )
@@ -59,7 +59,7 @@ func (f *Format) FromString(value string) error {
 		*f = None
 		return nil
 	}
-	return fmt.Errorf("unknown format: %q", value)
+	return errors.Errorf("unknown format: %q", value)
 }
 
 // String returns a string representation of this format

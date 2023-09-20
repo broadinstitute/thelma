@@ -1,10 +1,10 @@
 package installer
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/releasebucket"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/releases"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -73,7 +73,7 @@ func (i *installer) ResolveVersions(versionOrTag string) (ResolvedVersions, erro
 func (i *installer) UpdateThelma(versionOrTag string) error {
 	resolved, err := i.ResolveVersions(versionOrTag)
 	if err != nil {
-		return fmt.Errorf("error updating Thelma: %v", err)
+		return errors.Errorf("error updating Thelma: %v", err)
 	}
 
 	if !resolved.UpdateNeeded() {
@@ -93,7 +93,7 @@ func (i *installer) updateThelmaUnsafe(versionOrTag string) error {
 	// (b) a new version of Thelma was released
 	resolved, err := i.ResolveVersions(versionOrTag)
 	if err != nil {
-		return fmt.Errorf("error updating Thelma: %v", err)
+		return errors.Errorf("error updating Thelma: %v", err)
 	}
 
 	if !resolved.UpdateNeeded() {
@@ -112,19 +112,19 @@ func (i *installer) updateThelmaUnsafe(versionOrTag string) error {
 	targetArchive := releasebucket.NewArchive(targetVersion)
 	unpackDir, err := i.bucket.DownloadAndUnpack(targetArchive)
 	if err != nil {
-		return fmt.Errorf("error installing Thelma %s: %v", targetVersion, err)
+		return errors.Errorf("error installing Thelma %s: %v", targetVersion, err)
 	}
 
 	if err = i.dir.CopyUnpackedArchive(unpackDir); err != nil {
-		return fmt.Errorf("error installing Thelma %s: %v", targetVersion, err)
+		return errors.Errorf("error installing Thelma %s: %v", targetVersion, err)
 	}
 
 	if err = i.dir.UpdateCurrentReleaseSymlink(targetVersion); err != nil {
-		return fmt.Errorf("error installing Thelma %s: %v", targetVersion, err)
+		return errors.Errorf("error installing Thelma %s: %v", targetVersion, err)
 	}
 
 	if err = i.dir.CleanupOldReleases(i.options.KeepReleases); err != nil {
-		return fmt.Errorf("error cleaning up release directory: %v", err)
+		return errors.Errorf("error cleaning up release directory: %v", err)
 	}
 
 	log.Info().Msgf("Thelma has been updated to %s", targetVersion)

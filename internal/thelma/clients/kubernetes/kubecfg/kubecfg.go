@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/pkg/errors"
 	"path"
 	"sort"
 	"sync"
@@ -262,7 +263,7 @@ func (c *kubeconfig) writeContext(ctx kubectx) error {
 		return c.writeContextUnsafe(ctx)
 	})
 	if err != nil {
-		return fmt.Errorf("error generating kubectx for cluster %s: %v", ctx.cluster.Name(), err)
+		return errors.Errorf("error generating kubectx for cluster %s: %v", ctx.cluster.Name(), err)
 	}
 	return nil
 }
@@ -390,7 +391,7 @@ func contextNameForRelease(release terra.Release) string {
 	}
 	appRelease, ok := release.(terra.AppRelease)
 	if !ok {
-		panic(fmt.Errorf("failed to cast to AppRelease: %v", appRelease))
+		panic(errors.Errorf("failed to cast to AppRelease: %v", appRelease))
 	}
 	if appRelease.Cluster().Name() != appRelease.Environment().DefaultCluster().Name() {
 		return appRelease.Environment().Name() + ctxDelimiter + release.Name()
