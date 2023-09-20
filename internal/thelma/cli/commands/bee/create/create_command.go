@@ -1,7 +1,7 @@
 package create
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"time"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -114,12 +114,12 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 	// if --name not specified, generate a name for this BEE
 	if ctx.CobraCommand().Flags().Changed(flagNames.name) {
 		if err := validate.EnvironmentName(cmd.options.Name); err != nil {
-			return fmt.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.options.Name, err)
+			return errors.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.options.Name, err)
 		}
 		cmd.options.GenerateName = false
 	} else {
 		if err := validate.EnvironmentNamePrefix(cmd.options.NamePrefix); err != nil {
-			return fmt.Errorf("--%s: %q is not a valid environment name prefix: %v", flagNames.namePrefix, cmd.options.NamePrefix, err)
+			return errors.Errorf("--%s: %q is not a valid environment name prefix: %v", flagNames.namePrefix, cmd.options.NamePrefix, err)
 		}
 		cmd.options.GenerateName = true
 	}
@@ -133,7 +133,7 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 		cmd.options.StopSchedule.Enabled = true
 		t, err := time.Parse(time.RFC3339, cmd.options.dailyStopTime)
 		if err != nil {
-			return fmt.Errorf("%s was an invalid time: %v", cmd.options.dailyStopTime, err)
+			return errors.Errorf("%s was an invalid time: %v", cmd.options.dailyStopTime, err)
 		}
 		cmd.options.StopSchedule.RepeatingTime = t
 	}
@@ -142,7 +142,7 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 		cmd.options.StartSchedule.Enabled = true
 		t, err := time.Parse(time.RFC3339, cmd.options.dailyStartTime)
 		if err != nil {
-			return fmt.Errorf("%s was an invalid time: %v", cmd.options.dailyStartTime, err)
+			return errors.Errorf("%s was an invalid time: %v", cmd.options.dailyStartTime, err)
 		}
 		cmd.options.StartSchedule.RepeatingTime = t
 		cmd.options.StartSchedule.Weekends = cmd.options.dailyStartWeekends
@@ -155,7 +155,7 @@ func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) er
 	}
 	_, err = bees.GetTemplate(cmd.options.Template)
 	if err != nil {
-		return fmt.Errorf("--%s: %v", flagNames.template, err)
+		return errors.Errorf("--%s: %v", flagNames.template, err)
 	}
 
 	// validate/load pin and seed options

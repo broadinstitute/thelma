@@ -1,7 +1,7 @@
 package render
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"os"
 	"path"
@@ -538,7 +538,7 @@ func TestRenderArgParsing(t *testing.T) {
 			}
 
 			// make sure no error was returned
-			if !assert.NoError(t, err, fmt.Errorf("renderCLI.execute() returned unexpected error: %v", err)) {
+			if !assert.NoError(t, err, errors.Errorf("renderCLI.execute() returned unexpected error: %v", err)) {
 				return
 			}
 

@@ -1,7 +1,7 @@
 package argocd
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,13 +38,13 @@ func (h *HealthStatus) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 
-	return fmt.Errorf("unknown health status: %v", value.Value)
+	return errors.Errorf("unknown health status: %v", value.Value)
 }
 
 func (h HealthStatus) MarshalYAML() (interface{}, error) {
 	str := h.String()
 	if str == "" {
-		return nil, fmt.Errorf("unknown health status: %v", h)
+		return nil, errors.Errorf("unknown health status: %v", h)
 	}
 	return str, nil
 }
@@ -88,13 +88,13 @@ func (s *SyncStatus) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 
-	return fmt.Errorf("unknown sync status: %v", value.Value)
+	return errors.Errorf("unknown sync status: %v", value.Value)
 }
 
 func (s SyncStatus) MarshalYAML() (interface{}, error) {
 	str := s.String()
 	if str == "" {
-		return nil, fmt.Errorf("unknown sync status: %v", s)
+		return nil, errors.Errorf("unknown sync status: %v", s)
 	}
 	return str, nil
 }

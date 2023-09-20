@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/env"
 	"github.com/broadinstitute/thelma/internal/thelma/app/name"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -124,7 +125,7 @@ func (r root) CreateDirectories() error {
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0700); err != nil {
-			return fmt.Errorf("error creating directory %s: %v", dir, err)
+			return errors.Errorf("error creating directory %s: %v", dir, err)
 		}
 	}
 

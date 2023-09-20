@@ -1,10 +1,10 @@
 package selector
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/sort"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -144,7 +144,7 @@ func (s *Selector) checkRequiredFlags(flags *pflag.FlagSet) error {
 		// "If -e isn't provided, and -c isn't provided, and the user hasn't passed just --exact-release instead of --r"
 		if !flags.Changed(flagNames.environment) && !flags.Changed(flagNames.cluster) &&
 			!(flags.Changed(flagNames.exactRelease) && !flags.Changed(flagNames.release)) {
-			return fmt.Errorf("please specify a target environment or cluster with the -e/-c flags, or specify only full Sherlock-style release names with --exact-release")
+			return errors.Errorf("please specify a target environment or cluster with the -e/-c flags, or specify only full Sherlock-style release names with --exact-release")
 		}
 	}
 	return nil
@@ -159,7 +159,7 @@ func checkIncompatibleFlags(flags *pflag.FlagSet) error {
 		if flags.Changed(unf) {
 			for _, inf := range intersectFlags {
 				if flags.Changed(inf) {
-					return fmt.Errorf("--%s cannot be combined with --%s", unf, inf)
+					return errors.Errorf("--%s cannot be combined with --%s", unf, inf)
 				}
 			}
 		}

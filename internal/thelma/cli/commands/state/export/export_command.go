@@ -1,7 +1,7 @@
 package export
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -15,7 +15,7 @@ import (
 const helpMessage = `Exports thelma's internal state to a destination`
 const prodSherlockHostName = "sherlock.dsp-devops.broadinstitute.org"
 
-var ErrExportDestinationForbidden = fmt.Errorf("state export to production sherlock: %s is not allowed", prodSherlockHostName)
+var ErrExportDestinationForbidden = errors.Errorf("state export to production sherlock: %s is not allowed", prodSherlockHostName)
 
 type options struct {
 	destinationURL string
@@ -52,11 +52,11 @@ func (cmd *exportCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 
 	iapToken, err := app.Clients().IAPToken()
 	if err != nil {
-		return fmt.Errorf("error retrieving iap token for exporter client: %v", err)
+		return errors.Errorf("error retrieving iap token for exporter client: %v", err)
 	}
 	client, err := sherlock_client.NewWithHostnameOverride(cmd.options.destinationURL, iapToken)
 	if err != nil {
-		return fmt.Errorf("error building exporter sherlock client")
+		return errors.Errorf("error building exporter sherlock client")
 	}
 
 	// check to make sure destination is not prod sherlock, this should not be allowed
@@ -73,17 +73,17 @@ func (cmd *exportCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	log.Info().Msgf("exporting state to: %s", cmd.options.destinationURL)
 	state, err := app.State()
 	if err != nil {
-		return fmt.Errorf("error retrieving Thelma state: %v", err)
+		return errors.Errorf("error retrieving Thelma state: %v", err)
 	}
 
 	stateExporter := sherlock.NewSherlockStateWriter(state, cmd.sherlockClient)
 
 	if err := stateExporter.WriteClusters(); err != nil {
-		return fmt.Errorf("erorr exporting clusters: %v", err)
+		return errors.Errorf("erorr exporting clusters: %v", err)
 	}
 
 	if err := stateExporter.WriteEnvironments(); err != nil {
-		return fmt.Errorf("erorr exporting environments: %v", err)
+		return errors.Errorf("erorr exporting environments: %v", err)
 	}
 
 	return nil

@@ -1,7 +1,7 @@
 package render
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"path"
 	"path/filepath"
 
@@ -151,7 +151,7 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 // PreRun argument validation and processing
 func (cmd *renderCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	if len(ctx.Args()) > 1 {
-		return fmt.Errorf("at most 1 positional arg is allowed, got %v", ctx.Args())
+		return errors.Errorf("at most 1 positional arg is allowed, got %v", ctx.Args())
 	}
 	flags := ctx.CobraCommand().Flags()
 
@@ -204,17 +204,17 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 	renderOptions := cmd.renderOptions
 
 	if len(selection.Releases) == 0 {
-		return fmt.Errorf("0 releases matched command-line arguments, nothing to render")
+		return errors.Errorf("0 releases matched command-line arguments, nothing to render")
 	}
 	renderOptions.Releases = selection.Releases
 
 	_scope, err := scope.FromString(flagVals.scope)
 	if err != nil {
-		return fmt.Errorf("--%s: invalid scope: %q", flagNames.scope, flagVals.scope)
+		return errors.Errorf("--%s: invalid scope: %q", flagNames.scope, flagVals.scope)
 	}
 	if selection.IsReleaseScoped {
 		if flags.Changed(flagNames.scope) && _scope != scope.Release {
-			return fmt.Errorf("--%s %q cannot be used when a release is specified", flagNames.scope, flagVals.scope)
+			return errors.Errorf("--%s %q cannot be used when a release is specified", flagNames.scope, flagVals.scope)
 		}
 		_scope = scope.Release
 	}
@@ -223,7 +223,7 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 	// output dir
 	if flags.Changed(flagNames.outputDir) {
 		if flags.Changed(flagNames.stdout) {
-			return fmt.Errorf("--%s cannot be used with --%s", flagNames.stdout, flagNames.outputDir)
+			return errors.Errorf("--%s cannot be used with --%s", flagNames.stdout, flagNames.outputDir)
 		}
 		dir, err := filepath.Abs(flagVals.outputDir)
 		if err != nil {
@@ -244,7 +244,7 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 	// parallelWorkers
 	if flags.Changed(flagNames.parallelWorkers) && flags.Changed(flagNames.stdout) {
 		// --parallel-workers renders manifests in parallel. For now we only support it for directory renders
-		return fmt.Errorf("--%s cannot be used with --%s", flagNames.parallelWorkers, flagNames.stdout)
+		return errors.Errorf("--%s cannot be used with --%s", flagNames.parallelWorkers, flagNames.stdout)
 	}
 	renderOptions.ParallelWorkers = flagVals.parallelWorkers
 
@@ -267,13 +267,13 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app a
 	case "deploy":
 		renderOptions.ResolverMode = resolver.Deploy
 	default:
-		return fmt.Errorf(`invalid value for --%s (must be "development" or "deploy"): %v`, flagNames.mode, flagVals.mode)
+		return errors.Errorf(`invalid value for --%s (must be "development" or "deploy"): %v`, flagNames.mode, flagVals.mode)
 	}
 
 	// validate mode
 	validateMode, err := validator.FromString(flagVals.validate)
 	if err != nil {
-		return fmt.Errorf("--%s: invalid validate mode: %q", flagNames.validate, flagVals.validate)
+		return errors.Errorf("--%s: invalid validate mode: %q", flagNames.validate, flagVals.validate)
 	}
 	renderOptions.Validate = validateMode
 
@@ -317,12 +317,12 @@ func (cmd *renderCommand) handleFlagAliases(flags *pflag.FlagSet) error {
 	// --apps is a legacy alias for --releases, so copy the user-supplied value over
 	if flags.Changed(flagNames.apps) {
 		if flags.Changed(selector.ReleasesFlagName) {
-			return fmt.Errorf("--%s is a legacy alias for --%s, please specify one or the other but not both", flagNames.apps, selector.ReleasesFlagName)
+			return errors.Errorf("--%s is a legacy alias for --%s, please specify one or the other but not both", flagNames.apps, selector.ReleasesFlagName)
 		}
 		_app := flags.Lookup(flagNames.apps).Value.String()
 		err := flags.Set(selector.ReleasesFlagName, _app)
 		if err != nil {
-			return fmt.Errorf("error setting --%s to --%s argument %q: %v", selector.ReleasesFlagName, flagNames.apps, _app, err)
+			return errors.Errorf("error setting --%s to --%s argument %q: %v", selector.ReleasesFlagName, flagNames.apps, _app, err)
 		}
 	}
 
@@ -334,25 +334,25 @@ func (cmd *renderCommand) checkIncompatibleFlags(flags *pflag.FlagSet, selection
 		if flags.Changed(flagNames.chartVersion) {
 			// Chart dir points at a local chart copy, chart version specifies which version to use, we can only
 			// use one or the other
-			return fmt.Errorf("only one of --%s or --%s may be specified", flagNames.chartDir, flagNames.chartVersion)
+			return errors.Errorf("only one of --%s or --%s may be specified", flagNames.chartDir, flagNames.chartVersion)
 		}
 	}
 
 	if !selection.SingleChart {
 		if flags.Changed(flagNames.chartVersion) || flags.Changed(flagNames.appVersion) || flags.Changed(flagNames.valuesFile) {
-			return fmt.Errorf("--%s, --%s, and --%s cannot be used with selectors that match multiple charts", flagNames.chartVersion, flagNames.appVersion, flagNames.valuesFile)
+			return errors.Errorf("--%s, --%s, and --%s cannot be used with selectors that match multiple charts", flagNames.chartVersion, flagNames.appVersion, flagNames.valuesFile)
 		}
 	}
 
 	if !selection.AppReleasesOnly {
 		if flags.Changed(flagNames.appVersion) {
-			return fmt.Errorf("--%s cannot be used for cluster releases", flagNames.appVersion)
+			return errors.Errorf("--%s cannot be used for cluster releases", flagNames.appVersion)
 		}
 	}
 
 	if flags.Changed(flagNames.argocd) {
 		if flags.Changed(flagNames.chartDir) || flags.Changed(flagNames.chartVersion) || flags.Changed(flagNames.appVersion) || flags.Changed(flagNames.valuesFile) {
-			return fmt.Errorf("--%s cannot be used with --%s, --%s, --%s, or --%s", flagNames.argocd, flagNames.chartDir, flagNames.chartVersion, flagNames.appVersion, flagNames.valuesFile)
+			return errors.Errorf("--%s cannot be used with --%s, --%s, --%s, or --%s", flagNames.argocd, flagNames.chartDir, flagNames.chartVersion, flagNames.appVersion, flagNames.valuesFile)
 		}
 	}
 

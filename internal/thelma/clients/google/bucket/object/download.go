@@ -1,7 +1,7 @@
 package object
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"io"
 	"os"
@@ -31,22 +31,22 @@ func (d *download) Handler(object Object, logger zerolog.Logger) error {
 	logger.Debug().Msg("opening file for writing")
 	fileWriter, err := os.Create(d.file)
 	if err != nil {
-		return fmt.Errorf("failed to open file: %v", err)
+		return errors.Errorf("failed to open file: %v", err)
 	}
 	objReader, err := object.Handle.NewReader(object.Ctx)
 	if err != nil {
-		return fmt.Errorf("error reading object: %v", err)
+		return errors.Errorf("error reading object: %v", err)
 	}
 
 	written, err := io.Copy(fileWriter, objReader)
 	if err != nil {
-		return fmt.Errorf("write failed: %v", err)
+		return errors.Errorf("write failed: %v", err)
 	}
 	if err = objReader.Close(); err != nil {
-		return fmt.Errorf("error closing object reader: %v", err)
+		return errors.Errorf("error closing object reader: %v", err)
 	}
 	if err = fileWriter.Close(); err != nil {
-		return fmt.Errorf("error closing file writer: %v", err)
+		return errors.Errorf("error closing file writer: %v", err)
 	}
 
 	logTransfer(logger, written)

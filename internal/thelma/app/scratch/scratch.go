@@ -1,8 +1,8 @@
 package scratch
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 )
@@ -41,7 +41,7 @@ func NewScratch(config config.Config) (Scratch, error) {
 	}
 	scratchRoot, err := os.MkdirTemp(cfg.TmpDir, rootPattern)
 	if err != nil {
-		return nil, fmt.Errorf("error creating scratch directory in %s for process: %v", cfg.TmpDir, err)
+		return nil, errors.Errorf("error creating scratch directory in %s for process: %v", cfg.TmpDir, err)
 	}
 
 	return &scratch{

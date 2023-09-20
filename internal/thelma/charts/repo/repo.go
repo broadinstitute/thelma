@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/lock"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
+	"github.com/pkg/errors"
 	"path"
 	"time"
 )
@@ -90,7 +91,7 @@ func (r *repo) IsLocked() bool {
 // Unlock unlocks the repository
 func (r *repo) Unlock() error {
 	if !r.IsLocked() {
-		return fmt.Errorf("repo is not locked")
+		return errors.Errorf("repo is not locked")
 	}
 
 	if err := r.locker.Unlock(r.lockId); err != nil {
@@ -105,7 +106,7 @@ func (r *repo) Unlock() error {
 // Lock locks the repository
 func (r *repo) Lock() error {
 	if r.IsLocked() {
-		return fmt.Errorf("repo is already locked")
+		return errors.Errorf("repo is already locked")
 	}
 
 	lockId, err := r.locker.Lock()

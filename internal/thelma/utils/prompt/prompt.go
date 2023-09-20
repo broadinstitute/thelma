@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/wordwrap"
 	"github.com/fatih/color"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"strings"
@@ -111,11 +112,11 @@ func (p *prompt) Confirm(message string, opts ...func(*ConfirmOptions)) (bool, e
 
 	for {
 		if _, err := fmt.Fprint(p.out, p.wrap(message, options.StyleOptions)); err != nil {
-			return false, fmt.Errorf("error prompting for user input: %v", err)
+			return false, errors.Errorf("error prompting for user input: %v", err)
 		}
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			return false, fmt.Errorf("error prompting for user input: %v", err)
+			return false, errors.Errorf("error prompting for user input: %v", err)
 		}
 
 		input = strings.TrimSpace(input)
@@ -134,7 +135,7 @@ func (p *prompt) Confirm(message string, opts ...func(*ConfirmOptions)) (bool, e
 		feedback := fmt.Sprintf(`Unrecognized input %q; please enter "y" or "n"`, input)
 		feedback = p.wrap(feedback, options.StyleOptions)
 		if _, err = fmt.Fprintln(p.out, feedback); err != nil {
-			return false, fmt.Errorf("error prompting for user input: %v", err)
+			return false, errors.Errorf("error prompting for user input: %v", err)
 		}
 	}
 }
@@ -164,7 +165,7 @@ func (p *prompt) verifyInteractive() error {
 		return nil
 	}
 	if !utils.Interactive() {
-		return fmt.Errorf("can't prompt for input; try re-running in an interactive shell")
+		return errors.Errorf("can't prompt for input; try re-running in an interactive shell")
 	}
 	return nil
 }

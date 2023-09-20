@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -74,7 +75,7 @@ func (a *AutoReleaser) UpdateReleaseVersion(chart Chart, newVersion string, last
 			if sherlockCanAlwaysSoftFail {
 				log.Warn().Err(err).Msgf("autorelease error on sherlock updater %d: %v", index, err)
 			} else {
-				return fmt.Errorf("autorelease error on sherlock updater %d: %v", index, err)
+				return errors.Errorf("autorelease error on sherlock updater %d: %v", index, err)
 			}
 		}
 	}

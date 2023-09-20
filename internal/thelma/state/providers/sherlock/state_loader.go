@@ -1,9 +1,9 @@
 package sherlock
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"time"
 )
@@ -175,7 +175,7 @@ retry:
 					},
 				}
 			default:
-				return nil, fmt.Errorf("unexpected destination type '%s' for release '%s'", stateRelease.DestinationType, stateRelease.Name)
+				return nil, errors.Errorf("unexpected destination type '%s' for release '%s'", stateRelease.DestinationType, stateRelease.Name)
 			}
 		}
 
@@ -187,5 +187,5 @@ retry:
 		s.cached = _state
 		return _state, nil
 	}
-	return nil, fmt.Errorf("ran out of retries trying to resolve race conditions while loading state from sherlock")
+	return nil, errors.Errorf("ran out of retries trying to resolve race conditions while loading state from sherlock")
 }

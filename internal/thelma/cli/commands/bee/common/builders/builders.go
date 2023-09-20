@@ -1,11 +1,11 @@
 package builders
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -43,7 +43,7 @@ func NewBees(thelmaApp app.ThelmaApp) (bee.Bees, error) {
 func newSeeder(thelma app.ThelmaApp) (seed.Seeder, error) {
 	_kubectl, err := thelma.Clients().Kubernetes().Kubectl()
 	if err != nil {
-		return nil, fmt.Errorf("error getting kubectl client: %v", err)
+		return nil, errors.Errorf("error getting kubectl client: %v", err)
 	}
 
 	return seed.New(_kubectl, thelma.Clients(), thelma.Config(), thelma.ShellRunner()), nil

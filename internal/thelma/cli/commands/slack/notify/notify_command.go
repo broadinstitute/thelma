@@ -1,9 +1,9 @@
 package notify
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -43,10 +43,10 @@ func (cmd *notifyCommand) PreRun(_ app.ThelmaApp, ctx cli.RunContext) error {
 	flags := ctx.CobraCommand().Flags()
 
 	if !flags.Changed(flagNames.userEmail) {
-		return fmt.Errorf("no user email specified; --%s is required", flagNames.userEmail)
+		return errors.Errorf("no user email specified; --%s is required", flagNames.userEmail)
 	}
 	if !flags.Changed(flagNames.markdown) {
-		return fmt.Errorf("no markdown specified; --%s is required", flagNames.markdown)
+		return errors.Errorf("no markdown specified; --%s is required", flagNames.markdown)
 	}
 
 	return nil

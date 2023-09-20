@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"regexp"
@@ -26,7 +26,7 @@ var versionsParsers = map[string]versionsParser{
 func parseVersions(format string, input []byte) (map[string]terra.VersionOverride, error) {
 	parser, exists := versionsParsers[format]
 	if !exists {
-		return nil, fmt.Errorf("--%s: invalid format %q (valid formats are: %s)", flagNames.versionsFormat, format, utils.QuoteJoin(versionFormats()))
+		return nil, errors.Errorf("--%s: invalid format %q (valid formats are: %s)", flagNames.versionsFormat, format, utils.QuoteJoin(versionFormats()))
 	}
 	overrides, err := parser(input)
 	if err != nil {
@@ -57,10 +57,10 @@ func normalizeImageTags(input map[string]terra.VersionOverride) map[string]terra
 
 // this is needed for backwards-compatibility with old/legacy Jenkins pipelines. Original code:
 //
-//    BRANCH_NAME=$(get_image_name $CONFIG)
-//    REGEX_TO_REPLACE_ILLEGAL_CHARACTERS_WITH_DASHES="s/[^a-zA-Z0-9_.\-]/-/g"
-//    REGEX_TO_REMOVE_DASHES_AND_PERIODS_FROM_BEGINNING="s/^[.\-]*//g"
-//    IMAGE=$(echo $BRANCH_NAME | sed -e $REGEX_TO_REPLACE_ILLEGAL_CHARACTERS_WITH_DASHES -e $REGEX_TO_REMOVE_DASHES_AND_PERIODS_FROM_BEGINNING | cut -c 1-127)  # https://docs.docker.com/engine/reference/commandline/tag/#:~:text=A%20tag%20name%20must%20be,a%20maximum%20of%20128%20characters.
+//	BRANCH_NAME=$(get_image_name $CONFIG)
+//	REGEX_TO_REPLACE_ILLEGAL_CHARACTERS_WITH_DASHES="s/[^a-zA-Z0-9_.\-]/-/g"
+//	REGEX_TO_REMOVE_DASHES_AND_PERIODS_FROM_BEGINNING="s/^[.\-]*//g"
+//	IMAGE=$(echo $BRANCH_NAME | sed -e $REGEX_TO_REPLACE_ILLEGAL_CHARACTERS_WITH_DASHES -e $REGEX_TO_REMOVE_DASHES_AND_PERIODS_FROM_BEGINNING | cut -c 1-127)  # https://docs.docker.com/engine/reference/commandline/tag/#:~:text=A%20tag%20name%20must%20be,a%20maximum%20of%20128%20characters.
 //
 // https://github.com/broadinstitute/firecloud-develop/blob/a8573a38698890031444166320db1a857f8a0834/run-context/fiab/scripts/FiaB_configs.sh#L125
 func normalizeImageTag(imageTag string) string {

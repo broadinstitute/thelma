@@ -1,7 +1,7 @@
 package sherlock
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
@@ -58,7 +58,7 @@ func (suite *environmentsSuite) TestDeleteEnvironmentError() {
 	mockEnvironments := make(map[string]*environment)
 	mockEnvironments["existing-env"] = mockEnvironment
 	mockStateReadWriter := mocks.NewStateReadWriter(suite.T())
-	mockStateReadWriter.On("DeleteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(nil, fmt.Errorf("some error"))
+	mockStateReadWriter.On("DeleteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(nil, errors.Errorf("some error"))
 	mockState := state{
 		sherlock:     mockStateReadWriter,
 		environments: mockEnvironments,

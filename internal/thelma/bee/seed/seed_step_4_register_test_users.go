@@ -1,8 +1,8 @@
 package seed
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,7 +20,7 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 			} else if sam.Cluster().ProjectSuffix() == "qa" {
 				users = seedConfig.TestUsers.QA
 			} else {
-				return fmt.Errorf("suffix %s of project %s maps to no test users", sam.Cluster().ProjectSuffix(), sam.Cluster().Project())
+				return errors.Errorf("suffix %s of project %s maps to no test users", sam.Cluster().ProjectSuffix(), sam.Cluster().Project())
 			}
 
 			googleClient, err := s.googleAuthAs(orch)

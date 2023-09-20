@@ -1,7 +1,6 @@
 package google
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/dbms"
@@ -10,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	googlesqladmin "google.golang.org/api/sqladmin/v1"
 	v1 "k8s.io/api/core/v1"
@@ -94,7 +94,7 @@ func (g *google) ClientSettings(overrides ...provider.ConnectionOverride) (dbms.
 	case api.Admin:
 		creds, err = g.getLocalAdminCredentials()
 	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PrivilegeLevel))
+		panic(errors.Errorf("unsupported permission level: %#v", g.connection.Options.PrivilegeLevel))
 	}
 
 	if err != nil {
@@ -348,7 +348,7 @@ func (g *google) addThelmaUsers(features features) error {
 			user.Type = cloudSqlAccountTypeBuiltIn
 			password := g.passwordStore.generate()
 			if err = g.passwordStore.save(g.connection.GoogleInstance, username, password); err != nil {
-				return fmt.Errorf("error saving generated password to Vault: %v", err)
+				return errors.Errorf("error saving generated password to Vault: %v", err)
 			}
 			user.Password = password
 		}
@@ -387,7 +387,7 @@ func (g *google) kubernetesServiceAccount() string {
 		// admin level uses password auth, not iam, so the SA doesn't actually matter
 		return googleSATemplates.readOnly.kubernetesSA
 	default:
-		panic(fmt.Errorf("unsupported permission level: %#v", g.connection.Options.PrivilegeLevel))
+		panic(errors.Errorf("unsupported permission level: %#v", g.connection.Options.PrivilegeLevel))
 	}
 }
 

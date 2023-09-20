@@ -3,6 +3,7 @@ package argocd
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -37,7 +38,7 @@ func ProjectName(destination terra.Destination) string {
 	case terra.Cluster:
 		return fmt.Sprintf("cluster-%s", t.Name())
 	default:
-		panic(fmt.Errorf("error generating destination values file: unknown destination type %s: %v", destination.Type().String(), destination))
+		panic(errors.Errorf("error generating destination values file: unknown destination type %s: %v", destination.Type().String(), destination))
 	}
 }
 

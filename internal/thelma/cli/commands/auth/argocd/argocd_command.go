@@ -1,10 +1,10 @@
 package argocd
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +31,7 @@ func (cmd *argocdCommand) PreRun(_ app.ThelmaApp, _ cli.RunContext) error {
 func (cmd *argocdCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 	iapToken, err := app.Clients().IAPToken()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve IAP token: %v", err)
+		return errors.Errorf("failed to retrieve IAP token: %v", err)
 	}
 	if err = argocd.BrowserLogin(app.Config(), app.ShellRunner(), iapToken); err != nil {
 		return err

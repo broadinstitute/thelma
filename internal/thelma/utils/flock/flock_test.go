@@ -1,7 +1,7 @@
 package flock
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"path"
@@ -39,7 +39,7 @@ func TestWithLockPreventsConcurrentExecution(t *testing.T) {
 				log.Debug().Msgf("[%d] got lock", id)
 				owner := atomic.LoadInt32(&lockOwner)
 				if owner != -1 {
-					return fmt.Errorf("[%d] another routine also owns the lock? %d", id, owner)
+					return errors.Errorf("[%d] another routine also owns the lock? %d", id, owner)
 				}
 				atomic.StoreInt32(&lockOwner, int32(id))
 
@@ -189,7 +189,7 @@ func TestWithLockReturnsCallbackError(t *testing.T) {
 
 	// We don't expect any timeouts here! Just want to make sure errors are correctly propagated to caller
 	err := locker.WithLock(func() error {
-		return fmt.Errorf("fake error from callback")
+		return errors.Errorf("fake error from callback")
 	})
 	assert.Error(t, err, "Expected error to propagate up from WithLock")
 	assert.Equal(t, "fake error from callback", err.Error())

@@ -1,11 +1,11 @@
 package vault
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 )
@@ -117,11 +117,11 @@ func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.
 					}
 				}
 
-				return nil, fmt.Errorf("could not issue new Vault token, failed to load Github PAT: %v", err)
+				return nil, errors.Errorf("could not issue new Vault token, failed to load Github PAT: %v", err)
 			}
 			vaultToken, err := login(unauthedClient, string(githubPAT))
 			if err != nil {
-				return nil, fmt.Errorf("failed to issue new Vault token: %v", err)
+				return nil, errors.Errorf("failed to issue new Vault token: %v", err)
 			}
 			return []byte(vaultToken), nil
 		}
@@ -193,7 +193,7 @@ func login(client *vaultapi.Client, githubToken string) (string, error) {
 
 	secret, err := _client.Logical().Write(githubLoginPath, map[string]interface{}{"token": githubToken})
 	if err != nil {
-		return "", fmt.Errorf("login request failed: %v", err)
+		return "", errors.Errorf("login request failed: %v", err)
 	}
 	return secret.Auth.ClientToken, nil
 }
@@ -211,7 +211,7 @@ func approleLogin(client *vaultapi.Client, roleId string, secretId string) (stri
 		"secret_id": secretId,
 	})
 	if err != nil {
-		return "", fmt.Errorf("approle login request failed: %v", err)
+		return "", errors.Errorf("approle login request failed: %v", err)
 	}
 	return secret.Auth.ClientToken, nil
 }

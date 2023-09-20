@@ -3,6 +3,7 @@ package render
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"strconv"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
@@ -124,7 +125,7 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 		return err
 	}
 	if len(jobs) == 0 {
-		return fmt.Errorf("no matching releases found")
+		return errors.Errorf("no matching releases found")
 	}
 
 	_pool := pool.New(jobs, func(options *pool.Options) {

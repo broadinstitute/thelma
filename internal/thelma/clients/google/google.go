@@ -13,6 +13,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	oauth2google "golang.org/x/oauth2/google"
@@ -146,15 +147,15 @@ func (g *google) Bucket(name string, options ...bucket.BucketOption) (bucket.Buc
 func (g *google) Terra() (terraapi.TerraClient, error) {
 	tokenSource, err := g.TokenSource()
 	if err != nil {
-		return nil, fmt.Errorf("error obtaining token source: %v", err)
+		return nil, errors.Errorf("error obtaining token source: %v", err)
 	}
 	oauth2Service, err := googleoauth.NewService(context.Background(), option.WithTokenSource(tokenSource))
 	if err != nil {
-		return nil, fmt.Errorf("error obtaining google oauth2 service: %v", err)
+		return nil, errors.Errorf("error obtaining google oauth2 service: %v", err)
 	}
 	info, err := oauth2Service.Userinfo.V2.Me.Get().Do()
 	if err != nil {
-		return nil, fmt.Errorf("error getting google user info: %v", err)
+		return nil, errors.Errorf("error getting google user info: %v", err)
 	}
 	log.Debug().Msgf("using Terra API client authenticated as %s", info.Email)
 	client := terraapi.NewClient(tokenSource, *info)
@@ -253,28 +254,28 @@ func (g *google) oauthCredentials() (*oauth2google.Credentials, error) {
 		log.Debug().Msg("Google clients will use application default credentials")
 		creds, err := oauth2google.FindDefaultCredentialsWithParams(context.Background(), params)
 		if err != nil {
-			return nil, fmt.Errorf("error loading Google Cloud ADC credentials: %v", err)
+			return nil, errors.Errorf("error loading Google Cloud ADC credentials: %v", err)
 		}
 		if cfg.Auth.ADC.VerifyBroadEmail {
 			tokenSource := creds.TokenSource
 			if err = g.verifyTokenUsesBroadEmail(context.Background(), tokenSource); err != nil {
-				return nil, fmt.Errorf("error verifying Google Cloud credentials: %v", err)
+				return nil, errors.Errorf("error verifying Google Cloud credentials: %v", err)
 			}
 		}
 		return creds, nil
 	case "vault-sa":
 		jsonKey, err := g.readServiceAccountKeyFromVault(cfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve service account key from Vault: %v", err)
+			return nil, errors.Errorf("failed to retrieve service account key from Vault: %v", err)
 		}
 		log.Debug().Msgf("Loaded Google service account key from Vault (%s .%s)", cfg.Auth.Vault.Path, cfg.Auth.Vault.Key)
 		creds, err := oauth2google.CredentialsFromJSONWithParams(context.Background(), jsonKey, params)
 		if err != nil {
-			return nil, fmt.Errorf("error loading Google Cloud JSON credentials: %v", err)
+			return nil, errors.Errorf("error loading Google Cloud JSON credentials: %v", err)
 		}
 		return creds, nil
 	default:
-		return nil, fmt.Errorf("invalid authentication type: %q", cfg.Auth.Type)
+		return nil, errors.Errorf("invalid authentication type: %q", cfg.Auth.Type)
 	}
 }
 
@@ -295,7 +296,7 @@ func (g *google) verifyTokenUsesBroadEmail(ctx context.Context, tokenSource oaut
 	}
 
 	if !strings.HasSuffix(info.Email, broadEmailSuffix) {
-		return fmt.Errorf(`
+		return errors.Errorf(`
 Current email %q does not end with %s! Please run
 
   gcloud auth login <you>@broadinstitute.org --update-adc
@@ -329,31 +330,31 @@ func (g *google) readServiceAccountKeyFromVault(cfg googleConfig) ([]byte, error
 
 	vaultClient, err := g.vaultFactory.Vault()
 	if err != nil {
-		return nil, fmt.Errorf("error reading Google service account key from Vault: %v", err)
+		return nil, errors.Errorf("error reading Google service account key from Vault: %v", err)
 	}
 	secret, err := vaultClient.Logical().Read(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading Google service account key from Vault: %v", err)
+		return nil, errors.Errorf("error reading Google service account key from Vault: %v", err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("error reading Google service account key from Vault: no secret at path %s", path)
+		return nil, errors.Errorf("error reading Google service account key from Vault: no secret at path %s", path)
 	}
 
 	if key == "" {
 		jsonBytes, err := json.Marshal(secret.Data)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing 'splatted' Google service account key from Vault: %s caused %v", path, err)
+			return nil, errors.Errorf("error parsing 'splatted' Google service account key from Vault: %s caused %v", path, err)
 		}
 		_serviceAccountKeyVaultCache[cacheKey] = jsonBytes
 		return jsonBytes, nil
 	} else {
 		value, exists := secret.Data[key]
 		if !exists {
-			return nil, fmt.Errorf("error reading Google service account key from Vault: missing key %s at path %s", key, path)
+			return nil, errors.Errorf("error reading Google service account key from Vault: missing key %s at path %s", key, path)
 		}
 		asString, ok := value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error reading Google service account key from Vault: invalid data for key %s at path %s", key, path)
+			return nil, errors.Errorf("error reading Google service account key from Vault: invalid data for key %s at path %s", key, path)
 		}
 		jsonBytes := []byte(asString)
 		_serviceAccountKeyVaultCache[cacheKey] = jsonBytes
@@ -369,7 +370,7 @@ func (g *google) loadConfig() (googleConfig, error) {
 	var cfg googleConfig
 	err := g.thelmaConfig.Unmarshal(configKey, &cfg)
 	if err != nil {
-		return cfg, fmt.Errorf("error reading Google client config: %v", err)
+		return cfg, errors.Errorf("error reading Google client config: %v", err)
 	}
 	return cfg, nil
 }

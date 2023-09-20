@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
@@ -67,7 +68,7 @@ func (s *FakeVaultServer) GetClient() *vaultapi.Client {
 	s.ConfigureClient(&cfg)
 	client, err := vaultapi.NewClient(&cfg)
 	if err != nil {
-		panic(fmt.Errorf("unexpected error configuring vault client for testing: %v", err))
+		panic(errors.Errorf("unexpected error configuring vault client for testing: %v", err))
 	}
 	return client
 }
@@ -94,7 +95,7 @@ func (s *FakeVaultServer) SetSecret(path string, data map[string]interface{}) {
 func (s *state) handleGithubLogin(r *http.Request) (*vaultapi.Secret, error) {
 	if r.Method != http.MethodPost &&
 		r.Method != http.MethodPut {
-		return nil, fmt.Errorf("expected PUT or POST request")
+		return nil, errors.Errorf("expected PUT or POST request")
 	}
 
 	var body struct {
@@ -107,7 +108,7 @@ func (s *state) handleGithubLogin(r *http.Request) (*vaultapi.Secret, error) {
 
 	if s.expectLogin.enabled {
 		if body.Token != s.expectLogin.githubToken {
-			return nil, fmt.Errorf("github token mismatch: expected %q, got %q", s.expectLogin.githubToken, body.Token)
+			return nil, errors.Errorf("github token mismatch: expected %q, got %q", s.expectLogin.githubToken, body.Token)
 		}
 	}
 
@@ -157,22 +158,22 @@ func (s *state) handleSecret(r *http.Request) (*vaultapi.Secret, error) {
 
 	}
 
-	return nil, fmt.Errorf("invalid method for secrets api: %s", r.Method)
+	return nil, errors.Errorf("invalid method for secrets api: %s", r.Method)
 }
 
 func (s *state) handleUnmatchedRequest(r *http.Request) (*vaultapi.Secret, error) {
-	panic(fmt.Errorf("no handler for request: %s %s", r.Method, r.URL.Path))
+	panic(errors.Errorf("no handler for request: %s %s", r.Method, r.URL.Path))
 }
 
 func writeSecretToResponseBody(secret *vaultapi.Secret, w http.ResponseWriter) {
 	body, err := json.Marshal(secret)
 	if err != nil {
-		panic(fmt.Errorf("error marshalling Vault secret to JSON (%v): %v", secret, err))
+		panic(errors.Errorf("error marshalling Vault secret to JSON (%v): %v", secret, err))
 	}
 
 	_, err = w.Write(body)
 	if err != nil {
-		panic(fmt.Errorf("error writing response body: %v", err))
+		panic(errors.Errorf("error writing response body: %v", err))
 	}
 }
 
@@ -207,11 +208,11 @@ func toHttpHandler(handler vaultApiHandler) http.Handler {
 func parseJsonRequestBody(r *http.Request, into interface{}) error {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(fmt.Errorf("error reading request body: %v", err))
+		panic(errors.Errorf("error reading request body: %v", err))
 	}
 
 	if err = json.Unmarshal(data, into); err != nil {
-		return fmt.Errorf("error unmarshalling request body: %v\n\n%s", err, string(data))
+		return errors.Errorf("error unmarshalling request body: %v\n\n%s", err, string(data))
 	}
 
 	return nil

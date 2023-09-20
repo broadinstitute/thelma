@@ -3,8 +3,8 @@ package lock
 import (
 	"cloud.google.com/go/storage"
 	"context"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
@@ -113,7 +113,7 @@ func (l *lock) waitForLock(object object.Object, logger zerolog.Logger) error {
 			attempt++
 			continue
 		case <-ctx.Done():
-			return fmt.Errorf("timed out after %s waiting for lock: %v", l.options.MaxWait, ctx.Err())
+			return errors.Errorf("timed out after %s waiting for lock: %v", l.options.MaxWait, ctx.Err())
 		}
 	}
 }
@@ -134,7 +134,7 @@ func (l *lock) deleteExpiredLock(object object.Object, logger zerolog.Logger) er
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("error reading attributes of lock object: %v", err)
+		return errors.Errorf("error reading attributes of lock object: %v", err)
 	}
 
 	lockAge := time.Since(attrs.Created)
@@ -158,7 +158,7 @@ func (l *lock) deleteExpiredLock(object object.Object, logger zerolog.Logger) er
 			logger.Warn().Msgf("Another process deleted the expired lock before we could")
 			return nil
 		}
-		return fmt.Errorf("error deleting expired lock file: %v", err)
+		return errors.Errorf("error deleting expired lock file: %v", err)
 	}
 
 	return nil

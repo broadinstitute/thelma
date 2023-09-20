@@ -1,8 +1,8 @@
 package sherlock_test
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
+	"github.com/pkg/errors"
 	"testing"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
@@ -44,7 +44,7 @@ func (suite *sherlockStateWriterSuite) TestSuccessfulStateWriter() {
 
 func (suite *sherlockStateWriterSuite) TestErrorWriteEnvironments() {
 	mockStateWriter := mocks.NewStateWriter(suite.T())
-	mockStateWriter.On("WriteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(nil, fmt.Errorf("some error"))
+	mockStateWriter.On("WriteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(nil, errors.Errorf("some error"))
 
 	stateWriter := sherlock.NewSherlockStateWriter(suite.state, mockStateWriter)
 	err := stateWriter.WriteEnvironments()
@@ -54,7 +54,7 @@ func (suite *sherlockStateWriterSuite) TestErrorWriteEnvironments() {
 
 func (suite *sherlockStateWriterSuite) TestErrorWriteClusters() {
 	mockStateWriter := mocks.NewStateWriter(suite.T())
-	mockStateWriter.On("WriteClusters", mock.AnythingOfType("[]terra.Cluster")).Return(fmt.Errorf("some error"))
+	mockStateWriter.On("WriteClusters", mock.AnythingOfType("[]terra.Cluster")).Return(errors.Errorf("some error"))
 
 	stateWriter := sherlock.NewSherlockStateWriter(suite.state, mockStateWriter)
 	err := stateWriter.WriteClusters()

@@ -8,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,7 +82,7 @@ func (r *runner) Create(spec Spec) (Pod, error) {
 		metav1.CreateOptions{},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error creating env secret: %v", err)
+		return nil, errors.Errorf("error creating env secret: %v", err)
 	}
 	log.Debug().Msgf("created env secret: %q", envSecret.Name)
 
@@ -99,7 +100,7 @@ func (r *runner) Create(spec Spec) (Pod, error) {
 		metav1.CreateOptions{},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error creating scripts secret: %v", err)
+		return nil, errors.Errorf("error creating scripts secret: %v", err)
 	}
 	log.Debug().Msgf("created scripts secret: %q", scriptSecret.Name)
 
@@ -160,13 +161,13 @@ func (r *runner) Create(spec Spec) (Pod, error) {
 		metav1.CreateOptions{},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error creating pod: %v", err)
+		return nil, errors.Errorf("error creating pod: %v", err)
 	}
 	log.Debug().Msgf("created pod: %q", _pod.Name)
 
 	log.Info().Msgf("Launched pod %s, waiting for it to become ready...", _pod.Name)
 	if err = r.waitForPodToBeReady(_pod, podReadinessTimeout); err != nil {
-		return nil, fmt.Errorf("error waiting for pod %s to be ready: %v", _pod.Name, err)
+		return nil, errors.Errorf("error waiting for pod %s to be ready: %v", _pod.Name, err)
 	}
 
 	return &pod{
@@ -189,7 +190,7 @@ func (r *runner) waitForPodToBeReady(_pod *v1.Pod, timeout time.Duration) error 
 		FieldSelector: fmt.Sprintf("metadata.name=%s", _pod.Name),
 	})
 	if err != nil {
-		return fmt.Errorf("error creating watch for pod %s: %v", _pod.Name, err)
+		return errors.Errorf("error creating watch for pod %s: %v", _pod.Name, err)
 	}
 
 	for event := range watch.ResultChan() {
@@ -224,7 +225,7 @@ func (r *runner) waitForPodToBeReady(_pod *v1.Pod, timeout time.Duration) error 
 		}
 	}
 
-	return fmt.Errorf("timed out after %s waiting for pod %s to be ready", timeout, _pod.Name)
+	return errors.Errorf("timed out after %s waiting for pod %s to be ready", timeout, _pod.Name)
 }
 
 func (r *runner) Cleanup() error {

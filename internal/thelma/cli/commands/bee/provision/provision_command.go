@@ -1,7 +1,6 @@
 package provision
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/bee"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -9,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/pinflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/seedflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee/common/views"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"strings"
@@ -76,11 +76,11 @@ func (cmd *provisionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 func (cmd *provisionCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	if !ctx.CobraCommand().Flags().Changed(flagNames.name) {
-		return fmt.Errorf("no environment name specified; --%s is required", flagNames.name)
+		return errors.Errorf("no environment name specified; --%s is required", flagNames.name)
 	}
 	if strings.TrimSpace(cmd.name) == "" {
 		log.Warn().Msg("Is Thelma running in CI? Check that you're setting the name of your environment when running your job")
-		return fmt.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
+		return errors.Errorf("no environment name specified; --%s was passed but no name was given", flagNames.name)
 	}
 	// validate/load pin and seed options
 	pinOptions, err := cmd.pinFlags.GetPinOptions(app, ctx)

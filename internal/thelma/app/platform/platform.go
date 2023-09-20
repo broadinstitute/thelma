@@ -2,6 +2,7 @@ package platform
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/user"
@@ -80,7 +81,7 @@ func (p Platform) String() string {
 	case Jenkins:
 		return "jenkins"
 	}
-	panic(fmt.Errorf("unrecognized platform: %#v", p))
+	panic(errors.Errorf("unrecognized platform: %#v", p))
 }
 
 // Link returns a link to the CI/CD logs for this Thelma run, if applicable
@@ -109,7 +110,7 @@ func (p *Platform) UnmarshalText(text []byte) error {
 	case "jenkins":
 		*p = Jenkins
 	default:
-		return fmt.Errorf("invalid platform: %q", s)
+		return errors.Errorf("invalid platform: %q", s)
 	}
 	return nil
 }

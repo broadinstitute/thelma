@@ -2,7 +2,6 @@
 package autoupdate
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/bootstrap"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/installer"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/releasebucket"
@@ -14,6 +13,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"k8s.io/utils/strings/slices"
 	"os"
 	"strings"
@@ -89,7 +89,7 @@ func (a *autoupdate) Update() error {
 
 func (a *autoupdate) UpdateTo(versionOrTag string) error {
 	if a.config.Enabled {
-		return fmt.Errorf("auto-update is enabled; please disable by " +
+		return errors.Errorf("auto-update is enabled; please disable by " +
 			"setting THELMA_AUTOUPDATE_ENABLED=false or adding autoupdate.enabled=false " +
 			"to ~/.thelma/config.yaml and re-run (otherwise this change will be overwritten!)")
 	}
@@ -114,11 +114,11 @@ func (a *autoupdate) StartBackgroundUpdateIfEnabled() error {
 
 	_installer, err := a.installer.Get()
 	if err != nil {
-		return fmt.Errorf("error initializing installer: %v", err)
+		return errors.Errorf("error initializing installer: %v", err)
 	}
 	resolved, err := _installer.ResolveVersions(a.config.Tag)
 	if err != nil {
-		return fmt.Errorf("error preparing background Thelma updates: %v", err)
+		return errors.Errorf("error preparing background Thelma updates: %v", err)
 	}
 	if !resolved.UpdateNeeded() {
 		return nil
@@ -137,7 +137,7 @@ func (a *autoupdate) Bootstrap() error {
 func (a *autoupdate) updateTo(versionOrTag string) error {
 	_installer, err := a.installer.Get()
 	if err != nil {
-		return fmt.Errorf("error initializing installer: %v", err)
+		return errors.Errorf("error initializing installer: %v", err)
 	}
 	return _installer.UpdateThelma(versionOrTag)
 }

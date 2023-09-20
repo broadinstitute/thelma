@@ -1,10 +1,10 @@
 package version
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/version"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ func (v *versionCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 func (v *versionCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	if len(ctx.Args()) != 0 {
-		return fmt.Errorf("expected 0 arguments, got: %v", ctx.Args())
+		return errors.Errorf("expected 0 arguments, got: %v", ctx.Args())
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"strings"
@@ -30,7 +31,7 @@ func newChecksummer(bucket bucket.Bucket) checksummer {
 func (s *checksummerImpl) verify(archive Archive, file string) error {
 	archiveSha245Sum, err := s.getReleaseArchiveSha256Sum(archive)
 	if err != nil {
-		return fmt.Errorf("error identifying sha256sum for Thelma version %s: %v", archive.Version(), err)
+		return errors.Errorf("error identifying sha256sum for Thelma version %s: %v", archive.Version(), err)
 	}
 
 	localSha256Sum, err := computeSha256Sum(file)
@@ -38,7 +39,7 @@ func (s *checksummerImpl) verify(archive Archive, file string) error {
 		return err
 	}
 	if localSha256Sum != archiveSha245Sum {
-		return fmt.Errorf("downloaded release archive %s has incorrect sha256sum (has %s, should be %s)", file, localSha256Sum, archiveSha245Sum)
+		return errors.Errorf("downloaded release archive %s has incorrect sha256sum (has %s, should be %s)", file, localSha256Sum, archiveSha245Sum)
 	}
 	return nil
 }
@@ -58,7 +59,7 @@ func (s *checksummerImpl) verify(archive Archive, file string) error {
 func (s *checksummerImpl) getReleaseArchiveSha256Sum(archive Archive) (string, error) {
 	checksumsContent, err := s.bucket.Read(archive.Sha256SumObjectPath())
 	if err != nil {
-		return "", fmt.Errorf("error reading checksum object gs://%s/%s: %v", s.bucket.Name(), archive.Sha256SumObjectPath(), err)
+		return "", errors.Errorf("error reading checksum object gs://%s/%s: %v", s.bucket.Name(), archive.Sha256SumObjectPath(), err)
 	}
 
 	sc := bufio.NewScanner(bytes.NewReader(checksumsContent))
@@ -68,24 +69,24 @@ func (s *checksummerImpl) getReleaseArchiveSha256Sum(archive Archive) (string, e
 			return strings.Fields(line)[0], nil
 		}
 	}
-	return "", fmt.Errorf("found no matching checksum for %s in gs://%s/%s", archive.Filename(), s.bucket.Name(), archive.Sha256SumObjectPath())
+	return "", errors.Errorf("found no matching checksum for %s in gs://%s/%s", archive.Filename(), s.bucket.Name(), archive.Sha256SumObjectPath())
 }
 
 // compute sha256sum for a local file
 func computeSha256Sum(file string) (string, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return "", fmt.Errorf("error computing sha256sum for %s: %v", file, err)
+		return "", errors.Errorf("error computing sha256sum for %s: %v", file, err)
 	}
 
 	h := sha256.New()
 	_, err = io.Copy(h, f)
 	if err != nil {
-		return "", fmt.Errorf("error computing sha256sum for %s: %v", file, err)
+		return "", errors.Errorf("error computing sha256sum for %s: %v", file, err)
 	}
 
 	if err = f.Close(); err != nil {
-		return "", fmt.Errorf("error computing sha256sum for %s: %v", file, err)
+		return "", errors.Errorf("error computing sha256sum for %s: %v", file, err)
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil)), nil

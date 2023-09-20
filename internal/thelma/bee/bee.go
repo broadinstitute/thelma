@@ -9,6 +9,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
+	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
@@ -148,7 +149,7 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 	}
 	if env == nil {
 		// don't think this could ever happen, but let's provide a useful error anyway
-		return nil, fmt.Errorf("error provisioning environment %q: missing from state", env.Name())
+		return nil, errors.Errorf("error provisioning environment %q: missing from state", env.Name())
 	}
 
 	bee := &Bee{
@@ -273,7 +274,7 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (*Bee, error) {
 		return nil, err
 	}
 	if env.PreventDeletion() {
-		return nil, fmt.Errorf("won't delete environment %s, deletion protection is enabled", env.Name())
+		return nil, errors.Errorf("won't delete environment %s, deletion protection is enabled", env.Name())
 	}
 
 	bee := &Bee{
@@ -340,7 +341,7 @@ func (b *bees) StartStopWith(name string, offline bool, options StartStopOptions
 	}
 	if env == nil {
 		// don't think this could ever happen, but let's provide a useful error anyway
-		return nil, fmt.Errorf("error re-loading environment %q: missing from state", env.Name())
+		return nil, errors.Errorf("error re-loading environment %q: missing from state", env.Name())
 	}
 
 	bee := &Bee{
@@ -471,10 +472,10 @@ func (b *bees) GetBee(name string) (terra.Environment, error) {
 		return nil, err
 	}
 	if env == nil {
-		return nil, fmt.Errorf("no BEE by the name %q exists", name)
+		return nil, errors.Errorf("no BEE by the name %q exists", name)
 	}
 	if env.Lifecycle() != terra.Dynamic {
-		return nil, fmt.Errorf("environment %s is not a BEE (lifecycle is %s)", name, env.Lifecycle())
+		return nil, errors.Errorf("environment %s is not a BEE (lifecycle is %s)", name, env.Lifecycle())
 	}
 	return env, nil
 }
@@ -492,7 +493,7 @@ func (b *bees) GetTemplate(name string) (terra.Environment, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, fmt.Errorf("no template by the name %q exists, valid templates are: %s", name, strings.Join(names, ", "))
+	return nil, errors.Errorf("no template by the name %q exists, valid templates are: %s", name, strings.Join(names, ", "))
 }
 
 func (b *bees) ResetStatefulSets(env terra.Environment) (map[terra.Release]*status.Status, error) {

@@ -1,9 +1,9 @@
 package dbms
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/podrun"
+	"github.com/pkg/errors"
 )
 
 // things we need to know:
@@ -67,6 +67,6 @@ func New(t api.DBMS, conn api.Connection) DBMS {
 	case api.MySQL:
 		return mysql{}
 	default:
-		panic(fmt.Errorf("unsupported DBMS: %#v", t))
+		panic(errors.Errorf("unsupported DBMS: %#v", t))
 	}
 }

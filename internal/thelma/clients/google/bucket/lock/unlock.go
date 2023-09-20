@@ -2,8 +2,8 @@ package lock
 
 import (
 	"cloud.google.com/go/storage"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket/object"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -34,7 +34,7 @@ func (u *unlock) Handler(object object.Object, logger zerolog.Logger) error {
 			logger.Warn().Msgf("Attempted to release lock, but another process has already claimed it")
 			return nil
 		}
-		return fmt.Errorf("error deleting lock: %v", err)
+		return errors.Errorf("error deleting lock: %v", err)
 	}
 
 	logger.Debug().Msgf("Successfully released lock")

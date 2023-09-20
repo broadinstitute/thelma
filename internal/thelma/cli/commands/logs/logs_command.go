@@ -1,13 +1,13 @@
 package logs
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/common"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/selector"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts/artifactsflags"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -71,7 +71,7 @@ func (cmd *logsCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 
 	if !cmd.options.export {
 		if len(selection.Releases) != 1 {
-			return fmt.Errorf("please specify exactly one chart release (matched %d)", len(selection.Releases))
+			return errors.Errorf("please specify exactly one chart release (matched %d)", len(selection.Releases))
 		}
 		return _logs.Logs(selection.Releases[0])
 	}

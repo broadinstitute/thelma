@@ -1,6 +1,6 @@
 package statefixtures
 
-import "fmt"
+import "github.com/pkg/errors"
 
 // FixtureName is an enum type for different fixtures in the fixtures/ directory.
 type FixtureName int
@@ -14,5 +14,5 @@ func (f FixtureName) String() string {
 	case Default:
 		return "default"
 	}
-	panic(fmt.Errorf("unknown fixture: %d", f))
+	panic(errors.Errorf("unknown fixture: %d", f))
 }

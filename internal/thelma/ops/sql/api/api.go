@@ -1,8 +1,8 @@
 package api
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -29,7 +29,7 @@ func (c Connection) Instance() Instance {
 	case Kubernetes:
 		return c.KubernetesInstance
 	default:
-		panic(fmt.Errorf("unknown platform: %#v", c.Provider))
+		panic(errors.Errorf("unknown platform: %#v", c.Provider))
 	}
 }
 

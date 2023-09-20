@@ -1,11 +1,11 @@
 package filterflags
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/flags"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"time"
@@ -69,7 +69,7 @@ func (f *filterFlags) GetFilter(thelmaApp app.ThelmaApp) (terra.EnvironmentFilte
 			return nil, err
 		}
 		if template == nil {
-			return nil, fmt.Errorf("--%s: no template by the name %q exists", flagNames.template, f.flagVals.template)
+			return nil, errors.Errorf("--%s: no template by the name %q exists", flagNames.template, f.flagVals.template)
 		}
 		filters = append(filters, filter.Environments().HasTemplate(template))
 	}

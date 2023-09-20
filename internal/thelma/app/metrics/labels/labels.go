@@ -5,9 +5,9 @@
 package labels
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 )
 
 var reservedLabelNames = set.NewStringSet("job")
@@ -26,7 +26,7 @@ func ForReleaseOrDestination(value interface{}, extra ...map[string]string) map[
 			ForDestination(t),
 		)
 	default:
-		panic(fmt.Errorf("unexpected type: %#v", t))
+		panic(errors.Errorf("unexpected type: %#v", t))
 	}
 
 	var all []map[string]string

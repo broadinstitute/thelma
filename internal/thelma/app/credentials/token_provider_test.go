@@ -3,6 +3,7 @@ package credentials
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -51,7 +52,7 @@ func Test_Token_Get(t *testing.T) {
 			key:  "my-token",
 			option: func(options *TokenOptions) {
 				options.ValidateFn = func(v []byte) error {
-					return fmt.Errorf("this token is super invalid")
+					return errors.Errorf("this token is super invalid")
 				}
 			},
 			setup: func(t *testing.T, tmpDir string) {
@@ -75,7 +76,7 @@ func Test_Token_Get(t *testing.T) {
 			key:  "my-token",
 			option: func(options *TokenOptions) {
 				options.IssueFn = func() ([]byte, error) {
-					return []byte{}, fmt.Errorf("totally failed to issue new token")
+					return []byte{}, errors.Errorf("totally failed to issue new token")
 				}
 			},
 			expectErr: "totally failed to issue new token",
@@ -92,7 +93,7 @@ func Test_Token_Get(t *testing.T) {
 				}
 				options.ValidateFn = func(v []byte) error {
 					if string(v) == "old-token-value" {
-						return fmt.Errorf("this token expired")
+						return errors.Errorf("this token expired")
 					}
 					return nil
 				}
@@ -110,7 +111,7 @@ func Test_Token_Get(t *testing.T) {
 					return []byte("new-token-value"), nil
 				}
 				options.ValidateFn = func(_ []byte) error {
-					return fmt.Errorf("token is not valid for some reason")
+					return errors.Errorf("token is not valid for some reason")
 				}
 			},
 			expectErr: "token is not valid for some reason",
@@ -127,7 +128,7 @@ func Test_Token_Get(t *testing.T) {
 				}
 				options.ValidateFn = func(v []byte) error {
 					if string(v) == "old-token-value" {
-						return fmt.Errorf("this token expired")
+						return errors.Errorf("this token expired")
 					}
 					return nil
 				}
@@ -145,7 +146,7 @@ func Test_Token_Get(t *testing.T) {
 					return []byte("refreshed-token-value"), nil
 				}
 				options.ValidateFn = func(v []byte) error {
-					return fmt.Errorf("token is invalid")
+					return errors.Errorf("token is invalid")
 				}
 			},
 			expectErr: "refresh for MY_TOKEN returned invalid token: token is invalid",
@@ -158,14 +159,14 @@ func Test_Token_Get(t *testing.T) {
 			},
 			option: func(options *TokenOptions) {
 				options.RefreshFn = func(_ []byte) ([]byte, error) {
-					return nil, fmt.Errorf("token too old to be refreshed")
+					return nil, errors.Errorf("token too old to be refreshed")
 				}
 				options.IssueFn = func() ([]byte, error) {
 					return []byte("new-token-value"), nil
 				}
 				options.ValidateFn = func(v []byte) error {
 					if string(v) == "old-token-value" {
-						return fmt.Errorf("this token expired")
+						return errors.Errorf("this token expired")
 					}
 					return nil
 				}

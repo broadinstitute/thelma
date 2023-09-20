@@ -1,8 +1,8 @@
 package pwgen
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -159,7 +159,7 @@ func countKinds(s string) counts {
 		} else if rs.special.Exists(r) {
 			c.special++
 		} else {
-			panic(fmt.Errorf("unrecognized character: %c", r))
+			panic(errors.Errorf("unrecognized character: %c", r))
 		}
 	}
 

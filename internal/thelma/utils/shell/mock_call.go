@@ -1,7 +1,7 @@
 package shell
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"io"
 )
@@ -57,7 +57,7 @@ func (c *Call) WithStderr(output string) *Call {
 func (c *Call) writeMockOutput(args mock.Arguments) error {
 	runOpts, ok := args.Get(1).(RunOptions)
 	if !ok {
-		panic(fmt.Errorf("shellmock.Call: type assertion failed: expected RunOpts, got: %v", args.Get(1)))
+		panic(errors.Errorf("shellmock.Call: type assertion failed: expected RunOpts, got: %v", args.Get(1)))
 	}
 	if err := writeMockOutputToStream(runOpts.Stdout, c.mockStdout); err != nil {
 		return err

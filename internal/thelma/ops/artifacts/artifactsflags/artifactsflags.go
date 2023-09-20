@@ -1,9 +1,9 @@
 package artifactsflags
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/flags"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -42,7 +42,7 @@ func (s *artifactsFlags) AddFlags(cobraCommand *cobra.Command) {
 
 func (s *artifactsFlags) GetOptions() (artifacts.Options, error) {
 	if s.options.Dir == "" && !s.options.Upload {
-		return s.options, fmt.Errorf("either --%s or --%s must be specified",
+		return s.options, errors.Errorf("either --%s or --%s must be specified",
 			s.flagOptions.NormalizedFlagName(flagNames.upload),
 			s.flagOptions.NormalizedFlagName(flagNames.dir),
 		)

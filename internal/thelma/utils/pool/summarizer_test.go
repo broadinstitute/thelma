@@ -3,7 +3,7 @@ package pool
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,7 +71,7 @@ func Test_Summarizer(t *testing.T) {
 				Message: "onion pending",
 			})
 			time.Sleep(5 * baseInterval)
-			return fmt.Errorf("whoopsies")
+			return errors.Errorf("whoopsies")
 		},
 	}
 

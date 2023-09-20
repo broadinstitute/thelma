@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 	"os"
@@ -60,7 +61,7 @@ func (r *releaseBucket) ResolveTagOrVersion(versionOrTag string) (string, error)
 		normalizedVersion = fmt.Sprintf("v%s", versionOrTag)
 	}
 	if !semver.IsValid(normalizedVersion) {
-		return "", fmt.Errorf("%q is not a valid Thelma tag or semantic version", versionOrTag)
+		return "", errors.Errorf("%q is not a valid Thelma tag or semantic version", versionOrTag)
 	}
 	return normalizedVersion, nil
 }
@@ -69,11 +70,11 @@ func (r *releaseBucket) ResolveTagOrVersion(versionOrTag string) (string, error)
 func (r *releaseBucket) fetchTags() (map[string]string, error) {
 	content, err := r.bucket.Read(tagsFile)
 	if err != nil {
-		return nil, fmt.Errorf("error loading %s from %s: %v", tagsFile, r.bucket.Name(), err)
+		return nil, errors.Errorf("error loading %s from %s: %v", tagsFile, r.bucket.Name(), err)
 	}
 	tags := make(map[string]string)
 	if err = json.Unmarshal(content, &tags); err != nil {
-		return nil, fmt.Errorf("error parsing %s from %s: %v", tagsFile, r.bucket.Name(), err)
+		return nil, errors.Errorf("error parsing %s from %s: %v", tagsFile, r.bucket.Name(), err)
 	}
 	return tags, nil
 }
@@ -91,7 +92,7 @@ func (r *releaseBucket) DownloadAndUnpack(archive Archive) (string, error) {
 	localArchive := path.Join(tmpDir, archive.Filename())
 
 	if err = r.bucket.Download(archive.ObjectPath(), localArchive); err != nil {
-		return "", fmt.Errorf("error downloading release archive gs://%s/%s to %s: %v", r.bucket.Name(), archive.ObjectPath(), localArchive, err)
+		return "", errors.Errorf("error downloading release archive gs://%s/%s to %s: %v", r.bucket.Name(), archive.ObjectPath(), localArchive, err)
 	}
 
 	// verify archive checksum
@@ -115,7 +116,7 @@ func (r *releaseBucket) DownloadAndUnpack(archive Archive) (string, error) {
 
 func (r *releaseBucket) unpack(localArchive string, unpackDir string) error {
 	if err := os.MkdirAll(unpackDir, 0755); err != nil {
-		return fmt.Errorf("error unpacking release archive %s: %v", localArchive, err)
+		return errors.Errorf("error unpacking release archive %s: %v", localArchive, err)
 	}
 
 	// this is a lot less verbose than trying to accomplish the same thing in go
@@ -130,7 +131,7 @@ func (r *releaseBucket) unpack(localArchive string, unpackDir string) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("error unpacking release archive %s: %v", localArchive, err)
+		return errors.Errorf("error unpacking release archive %s: %v", localArchive, err)
 	}
 
 	return nil
@@ -139,10 +140,10 @@ func (r *releaseBucket) unpack(localArchive string, unpackDir string) error {
 func (r *releaseBucket) verifyExistsInBucket(archive Archive) error {
 	exists, err := r.bucket.Exists(archive.ObjectPath())
 	if err != nil {
-		return fmt.Errorf("error validating release version %s: %v", archive.Version(), err)
+		return errors.Errorf("error validating release version %s: %v", archive.Version(), err)
 	}
 	if !exists {
-		return fmt.Errorf("release archive gs://%s/%s does not exist", r.bucket.Name(), archive.ObjectPath())
+		return errors.Errorf("release archive gs://%s/%s does not exist", r.bucket.Name(), archive.ObjectPath())
 	}
 	return nil
 }

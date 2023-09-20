@@ -1,7 +1,7 @@
 package lazy
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -23,7 +23,7 @@ func Test_LazyE(t *testing.T) {
 	l := NewLazyE[int](func() (int, error) {
 		counter++
 		if counter < 3 {
-			return counter, fmt.Errorf("counter < 3")
+			return counter, errors.Errorf("counter < 3")
 		}
 		return counter, nil
 	})

@@ -11,6 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -159,33 +160,33 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 		}, nil
 	}
 
-	return nil, fmt.Errorf("unknown iap provider type: %v", cfg.Provider)
+	return nil, errors.Errorf("unknown iap provider type: %v", cfg.Provider)
 }
 
 func readOAuthClientCredentialsFromVault(vaultClient *vaultapi.Client, cfg iapConfig) (*oauthCredentials, error) {
 	log.Debug().Msgf("Loading OAuth client credentials from Vault (%s)", cfg.OAuthCredentials.VaultPath)
 	secret, err := vaultClient.Logical().Read(cfg.OAuthCredentials.VaultPath)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving OAuth client credentials from Vault: %v", err)
+		return nil, errors.Errorf("error retrieving OAuth client credentials from Vault: %v", err)
 	}
 
 	if secret == nil {
-		return nil, fmt.Errorf("error retrieving OAuth client credentials from Vault: no secret at %s", cfg.OAuthCredentials.VaultPath)
+		return nil, errors.Errorf("error retrieving OAuth client credentials from Vault: no secret at %s", cfg.OAuthCredentials.VaultPath)
 	}
 
 	encodedCreds, exists := secret.Data[cfg.OAuthCredentials.VaultKey]
 	if !exists {
-		return nil, fmt.Errorf("OAuth client credential secret at %s has unexpected format (missing key %s)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
+		return nil, errors.Errorf("OAuth client credential secret at %s has unexpected format (missing key %s)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
 	}
 	_, isMap := encodedCreds.(map[string]interface{})
 	if !isMap {
-		return nil, fmt.Errorf("OAuth client credential secret at %s (key %s) has unexpected format (expected value to be map type)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
+		return nil, errors.Errorf("OAuth client credential secret at %s (key %s) has unexpected format (expected value to be map type)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
 	}
 
 	var oauthCreds oauthCredentials
 
 	if err := mapstructure.Decode(encodedCreds, &oauthCreds); err != nil {
-		return nil, fmt.Errorf("error decoding OAuth client credentials: %v", err)
+		return nil, errors.Errorf("error decoding OAuth client credentials: %v", err)
 	}
 
 	return &oauthCreds, nil
@@ -208,7 +209,7 @@ func getTokenFromWorkloadIdentity(cfg iapConfig, oauthConfig *oauth2.Config) ([]
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received non-200 response code from compute engine metadata: %v", resp.StatusCode)
+		return nil, errors.Errorf("received non-200 response code from compute engine metadata: %v", resp.StatusCode)
 	}
 	token, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -244,7 +245,7 @@ func refreshToken(token *oauth2.Token, oauthConfig *oauth2.Config) (*oauth2.Toke
 	tokenSource := oauthConfig.TokenSource(context.Background(), token)
 	token, err := tokenSource.Token()
 	if err != nil {
-		return nil, fmt.Errorf("error refreshing token: %v", err)
+		return nil, errors.Errorf("error refreshing token: %v", err)
 	}
 	return token, nil
 }
@@ -252,7 +253,7 @@ func refreshToken(token *oauth2.Token, oauthConfig *oauth2.Config) (*oauth2.Toke
 func validateToken(token *oauth2.Token) error {
 	idToken := token.Extra("id_token").(string)
 	if idToken == "" {
-		return fmt.Errorf("token validation failed: id token is misssing")
+		return errors.Errorf("token validation failed: id token is misssing")
 	}
 	return validateIdentityToken(idToken)
 }
@@ -271,26 +272,26 @@ func validateIdentityToken(idToken string) error {
 	// Build request
 	req, err := http.NewRequest(http.MethodGet, tokenValidationURL, nil)
 	if err != nil {
-		return fmt.Errorf("error constructing validation request: %v", err)
+		return errors.Errorf("error constructing validation request: %v", err)
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", idToken))
 
 	// Make request
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error making validation request: %v", err)
+		return errors.Errorf("error making validation request: %v", err)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error reading token validation response body: %v", err)
+		return errors.Errorf("error reading token validation response body: %v", err)
 	}
 	if err = resp.Body.Close(); err != nil {
-		return fmt.Errorf("error closing token validation response body: %v", err)
+		return errors.Errorf("error closing token validation response body: %v", err)
 	}
 
 	// Check for IAP header
 	if resp.Header.Get(tokenValidationIapResponseHeader) != "" {
-		return fmt.Errorf("token validation request was intercepted by IAP: %s (body: %q)", resp.Status, string(body))
+		return errors.Errorf("token validation request was intercepted by IAP: %s (body: %q)", resp.Status, string(body))
 	}
 
 	return nil
@@ -300,7 +301,7 @@ func unmarshalPersistentToken(data []byte) (*oauth2.Token, error) {
 	var ptoken persistentToken
 	err := json.Unmarshal(data, &ptoken)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling persistent token: %v", err)
+		return nil, errors.Errorf("error unmarshalling persistent token: %v", err)
 	}
 
 	token := &oauth2.Token{
@@ -354,7 +355,7 @@ func findRedirectURI(credentials *oauthCredentials) (string, int, error) {
 	}
 
 	if redirectURI == "" {
-		return "", 0, fmt.Errorf("unable to serve on any possible redirect URIs")
+		return "", 0, errors.Errorf("unable to serve on any possible redirect URIs")
 	}
 	log.Debug().Msgf("Using redirect URI of %s", redirectURI)
 

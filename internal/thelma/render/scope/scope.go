@@ -1,6 +1,8 @@
 package scope
 
-import "fmt"
+import (
+	"github.com/pkg/errors"
+)
 
 // Scope is an enum type representing different output formats
 type Scope int
@@ -24,7 +26,7 @@ func FromString(value string) (Scope, error) {
 	case "destination":
 		return Destination, nil
 	}
-	return All, fmt.Errorf("unknown format: %q", value)
+	return All, errors.Errorf("unknown format: %q", value)
 }
 
 // String returns a string representation of this format

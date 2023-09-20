@@ -1,7 +1,7 @@
 package sherlock
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"testing"
 
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
@@ -93,7 +93,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
 	stateSource := mocks.NewStateReadWriter(suite.T())
 	errMsg := "this is an error from sherlock"
-	stateSource.On("Clusters").Return(nil, fmt.Errorf(errMsg))
+	stateSource.On("Clusters").Return(nil, errors.Errorf(errMsg))
 
 	thelmaHome := suite.T().TempDir()
 	s := NewStateLoader(thelmaHome, stateSource)

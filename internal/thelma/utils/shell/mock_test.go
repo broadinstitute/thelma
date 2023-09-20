@@ -2,7 +2,7 @@ package shell
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"regexp"
 	"testing"
@@ -166,7 +166,7 @@ func TestMockRunnerCanMockErrors(t *testing.T) {
 	m := DefaultMockRunner()
 	m.Test(t)
 
-	m.ExpectCmd(CmdFromArgs("echo", "1")).Fails(fmt.Errorf("my error"))
+	m.ExpectCmd(CmdFromArgs("echo", "1")).Fails(errors.Errorf("my error"))
 
 	e := m.Run(CmdFromArgs("echo", "1"))
 	assert.Error(t, e, "error should not be nil")

@@ -1,8 +1,8 @@
 package seed
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,7 +20,7 @@ func (s *seeder) seedStep5CreateAgora(appReleases map[string]terra.AppRelease, o
 			} else if orch.Cluster().ProjectSuffix() == "qa" {
 				acls = seedConfig.Agora.Permissions.QA
 			} else {
-				err = fmt.Errorf("suffix %s of project %s maps to not Agora ACLs", orch.Cluster().ProjectSuffix(), orch.Cluster().Project())
+				err = errors.Errorf("suffix %s of project %s maps to not Agora ACLs", orch.Cluster().ProjectSuffix(), orch.Cluster().Project())
 				if err = opts.handleErrorWithForce(err); err != nil {
 					return err
 				}

@@ -1,7 +1,7 @@
 package object
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"io"
 )
@@ -41,10 +41,10 @@ func (w *write) Handler(object Object, logger zerolog.Logger) error {
 
 	written, err := w.writeContent(writer)
 	if err != nil {
-		return fmt.Errorf("error writing object: %v", err)
+		return errors.Errorf("error writing object: %v", err)
 	}
 	if err = writer.Close(); err != nil {
-		return fmt.Errorf("error closing writer: %v", err)
+		return errors.Errorf("error closing writer: %v", err)
 	}
 
 	logTransfer(logger, written)

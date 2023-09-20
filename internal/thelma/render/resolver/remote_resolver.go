@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -40,7 +41,7 @@ func (r *remoteResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChar
 	// Create a tmp dir for downloading and unpacking the chart
 	tmpDir := path.Join(r.scratchDir, fmt.Sprintf("%s-%s-%s", chartRelease.Repo, chartRelease.Name, chartRelease.Version))
 	if err := os.MkdirAll(tmpDir, 0775); err != nil {
-		return nil, fmt.Errorf("failed to make tmp dir in %s: %v", r.scratchDir, err)
+		return nil, errors.Errorf("failed to make tmp dir in %s: %v", r.scratchDir, err)
 	}
 	defer r.cleanupTmpDir(tmpDir)
 
@@ -59,7 +60,7 @@ func (r *remoteResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChar
 	}
 
 	if err := r.runner.Run(cmd); err != nil {
-		return nil, fmt.Errorf("error downloading chart %s/%s version %s to %s: %v", chartRelease.Repo, chartRelease.Name, chartRelease.Version, tmpDir, err)
+		return nil, errors.Errorf("error downloading chart %s/%s version %s to %s: %v", chartRelease.Repo, chartRelease.Name, chartRelease.Version, tmpDir, err)
 	}
 
 	// Move downloaded chart to correct location in the cache directory
@@ -71,7 +72,7 @@ func (r *remoteResolverImpl) resolverFn(chartRelease ChartRelease) (ResolvedChar
 		return nil, err
 	}
 	if len(entries) != 1 {
-		return nil, fmt.Errorf("expected exactly one file in %s, got: %v", tmpDir, entries)
+		return nil, errors.Errorf("expected exactly one file in %s, got: %v", tmpDir, entries)
 	}
 	tmpChartPath := path.Join(tmpDir, entries[0].Name())
 

@@ -11,6 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/go-openapi/strfmt"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"strings"
 	"time"
@@ -98,13 +99,13 @@ func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terr
 	existing, created, err := c.client.Environments.PostAPIV2Environments(
 		environments.NewPostAPIV2EnvironmentsParams().WithEnvironment(creatableEnvironment))
 	if err != nil {
-		return "", fmt.Errorf("error from Sherlock creating environment from '%s' template: %v", templateName, err)
+		return "", errors.Errorf("error from Sherlock creating environment from '%s' template: %v", templateName, err)
 	} else if existing != nil && existing.Payload != nil {
-		return "", fmt.Errorf("error handling Sherlock response, it didn't create a new environment and said that '%s' already matched the request", existing.Payload.Name)
+		return "", errors.Errorf("error handling Sherlock response, it didn't create a new environment and said that '%s' already matched the request", existing.Payload.Name)
 	} else if created != nil && created.Payload != nil {
 		return created.Payload.Name, nil
 	} else {
-		return "", fmt.Errorf("error reading Sherlock response, it didn't respond with an error but the client library couldn't parse a payload")
+		return "", errors.Errorf("error reading Sherlock response, it didn't respond with an error but the client library couldn't parse a payload")
 	}
 }
 
@@ -136,7 +137,7 @@ func (c *Client) PinEnvironmentVersions(environmentName string, versions map[str
 	_, _, err := c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
 		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock setting environment '%s' releases to overrides: %v", environmentName, err)
+		return errors.Errorf("error from Sherlock setting environment '%s' releases to overrides: %v", environmentName, err)
 	}
 	return nil
 }
@@ -148,7 +149,7 @@ func (c *Client) SetTerraHelmfileRefForEntireEnvironment(environment terra.Envir
 	_, err := c.client.Environments.PatchAPIV2EnvironmentsSelector(
 		environments.NewPatchAPIV2EnvironmentsSelectorParams().WithEnvironment(editableEnvironment).WithSelector(environment.Name()))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock setting environment '%s' terra-helmfile ref to '%s': %v", environment.Name(), terraHelmfileRef, err)
+		return errors.Errorf("error from Sherlock setting environment '%s' terra-helmfile ref to '%s': %v", environment.Name(), terraHelmfileRef, err)
 	}
 	var chartReleaseEntries []*models.V2controllersChangesetPlanRequestChartReleaseEntry
 	for _, release := range environment.Releases() {
@@ -163,7 +164,7 @@ func (c *Client) SetTerraHelmfileRefForEntireEnvironment(environment terra.Envir
 	_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
 		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock setting environment '%s' releases terra-helmfile ref to '%s': %v", environment.Name(), terraHelmfileRef, err)
+		return errors.Errorf("error from Sherlock setting environment '%s' releases terra-helmfile ref to '%s': %v", environment.Name(), terraHelmfileRef, err)
 	}
 	return nil
 }
@@ -176,7 +177,7 @@ func (c *Client) ResetEnvironmentAndPinToDev(environment terra.Environment) erro
 	_, err := c.client.Environments.PatchAPIV2EnvironmentsSelector(
 		environments.NewPatchAPIV2EnvironmentsSelectorParams().WithEnvironment(editableEnvironment).WithSelector(environment.Name()))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock unpinning environment '%s': %v", environment.Name(), err)
+		return errors.Errorf("error from Sherlock unpinning environment '%s': %v", environment.Name(), err)
 	}
 	changesetPlanRequest := &models.V2controllersChangesetPlanRequest{
 		Environments: []*models.V2controllersChangesetPlanRequestEnvironmentEntry{
@@ -189,7 +190,7 @@ func (c *Client) ResetEnvironmentAndPinToDev(environment terra.Environment) erro
 	_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
 		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock pinning environment '%s' to dev: %v", environment.Name(), err)
+		return errors.Errorf("error from Sherlock pinning environment '%s' to dev: %v", environment.Name(), err)
 	}
 	return nil
 }
@@ -221,7 +222,7 @@ func (c *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
 			if _, ok := err.(*environments.PostAPIV2EnvironmentsConflict); !ok {
-				return nil, fmt.Errorf("error creating cluster: %v", err)
+				return nil, errors.Errorf("error creating cluster: %v", err)
 			}
 			envAlreadyExists = true
 		}
@@ -259,7 +260,7 @@ func (c *Client) WriteClusters(cls []terra.Cluster) error {
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
 			if _, ok := err.(*clusters.PostAPIV2ClustersConflict); !ok {
-				return fmt.Errorf("error creating cluster: %v", err)
+				return errors.Errorf("error creating cluster: %v", err)
 			}
 		}
 
@@ -277,7 +278,7 @@ func (c *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) 
 		releases := env.Releases()
 		for _, release := range releases {
 			if err := c.deleteRelease(release); err != nil {
-				return nil, fmt.Errorf("error deleting chart release %s in environment %s: %v", release.Name(), env.Name(), err)
+				return nil, errors.Errorf("error deleting chart release %s in environment %s: %v", release.Name(), env.Name(), err)
 			}
 		}
 		params := environments.NewDeleteAPIV2EnvironmentsSelectorParams().
@@ -285,7 +286,7 @@ func (c *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) 
 
 		deletedEnv, err := c.client.Environments.DeleteAPIV2EnvironmentsSelector(params)
 		if err != nil {
-			return nil, fmt.Errorf("error deleting environment %s: %v", env.Name(), err)
+			return nil, errors.Errorf("error deleting environment %s: %v", env.Name(), err)
 		}
 		log.Debug().Msgf("%#v", deletedEnv)
 		deletedEnvs = append(deletedEnvs, deletedEnv.Payload.Name)
@@ -297,13 +298,13 @@ func (c *Client) EnableRelease(env terra.Environment, releaseName string) error 
 	// need to pull info about the template env in order to set chart and app versions
 	templateEnv, err := c.getEnvironment(env.Template())
 	if err != nil {
-		return fmt.Errorf("unable to fetch template %s: %v", env.Template(), err)
+		return errors.Errorf("unable to fetch template %s: %v", env.Template(), err)
 	}
 	templateEnvName := templateEnv.Name
 	// now look up the chart release to enable in the template
 	templateRelease, err := c.getChartRelease(templateEnvName, releaseName)
 	if err != nil {
-		return fmt.Errorf("unable to enable release, error retrieving from template: %v", err)
+		return errors.Errorf("unable to enable release, error retrieving from template: %v", err)
 	}
 
 	// enable the chart-release in environment
@@ -423,7 +424,7 @@ func (c *Client) writeAppRelease(environmentName string, release terra.AppReleas
 	if err != nil {
 		// Don't error if creating the chart results in 409 conflict
 		if _, ok := err.(*charts.PostAPIV2ChartsConflict); !ok {
-			return fmt.Errorf("error creating chart: %v", err)
+			return errors.Errorf("error creating chart: %v", err)
 		}
 	}
 	// check for a release name override
@@ -463,7 +464,7 @@ func (c *Client) writeAppRelease(environmentName string, release terra.AppReleas
 	_, _, err = c.client.ChartReleases.PostAPIV2ChartReleases(newChartReleaseRequestParams)
 	if err != nil {
 		if _, ok := err.(*chart_releases.PostAPIV2ChartReleasesConflict); !ok {
-			return fmt.Errorf("error creating chart release: %v", err)
+			return errors.Errorf("error creating chart release: %v", err)
 		}
 	}
 	return nil
@@ -487,7 +488,7 @@ func (c *Client) writeClusterRelease(release terra.ClusterRelease) error {
 	if err != nil {
 		// Don't error if creating the chart results in 409 conflict
 		if _, ok := err.(*charts.PostAPIV2ChartsConflict); !ok {
-			return fmt.Errorf("error creating chart: %v", err)
+			return errors.Errorf("error creating chart: %v", err)
 		}
 	}
 
@@ -521,7 +522,7 @@ func (c *Client) writeClusterRelease(release terra.ClusterRelease) error {
 	_, _, err = c.client.ChartReleases.PostAPIV2ChartReleases(newChartReleaseRequestParams)
 	if err != nil {
 		if _, ok := err.(*chart_releases.PostAPIV2ChartReleasesConflict); !ok {
-			return fmt.Errorf("error creating chart release: %v", err)
+			return errors.Errorf("error creating chart release: %v", err)
 		}
 	}
 	return nil

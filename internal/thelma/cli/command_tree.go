@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"sort"
 	"strings"
@@ -53,7 +54,7 @@ func newTree(commands map[string]ThelmaCommand) *node {
 			for i, k := range entries {
 				cmdNames[i] = fmt.Sprintf("%q", k.key.description())
 			}
-			panic(fmt.Errorf("could not find parent command for command %q, registered command names are:\n%v", entry.key.description(), strings.Join(cmdNames, "\n")))
+			panic(errors.Errorf("could not find parent command for command %q, registered command names are:\n%v", entry.key.description(), strings.Join(cmdNames, "\n")))
 		}
 
 		// add a node for this entry

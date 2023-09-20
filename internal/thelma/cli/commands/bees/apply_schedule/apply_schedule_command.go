@@ -11,6 +11,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/schedule"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"sync"
@@ -220,7 +221,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 	}
 	state, err = stateLoader.Reload()
 	if err != nil {
-		return fmt.Errorf("flipped BEEs but couldn't reload state: %v", err)
+		return errors.Errorf("flipped BEEs but couldn't reload state: %v", err)
 	}
 
 	var successfullyFlippedEnvs []terra.Environment

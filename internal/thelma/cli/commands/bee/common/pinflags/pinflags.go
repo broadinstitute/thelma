@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -78,7 +79,7 @@ func (p *pinFlags) loadReleaseOverrides(thelmaApp app.ThelmaApp, rc cli.RunConte
 	flags := rc.CobraCommand().Flags()
 	if flags.Changed(flagNames.fromEnv) {
 		if flags.Changed(flagNames.versionsFile) {
-			return nil, fmt.Errorf("either %s or %s can be specified, but not both", flagNames.versionsFile, flagNames.fromEnv)
+			return nil, errors.Errorf("either %s or %s can be specified, but not both", flagNames.versionsFile, flagNames.fromEnv)
 		}
 		return p.loadReleaseOverridesFromEnv(thelmaApp)
 	} else if flags.Changed(flagNames.versionsFile) {
@@ -114,7 +115,7 @@ func (p *pinFlags) loadReleaseOverridesFromEnv(thelmaApp app.ThelmaApp) (map[str
 		return nil, err
 	}
 	if env == nil {
-		return nil, fmt.Errorf("--%s: no such environment %q", flagNames.fromEnv, p.options.fromEnv)
+		return nil, errors.Errorf("--%s: no such environment %q", flagNames.fromEnv, p.options.fromEnv)
 	}
 
 	result := make(map[string]terra.VersionOverride)

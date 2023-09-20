@@ -22,13 +22,13 @@ package bootstrap
 
 import (
 	_ "embed"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate/releases"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/prompt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -174,12 +174,12 @@ func (b *bootstrapper) writeThelmaShellCompletionFile() error {
 	file := b.completionFile
 	f, err := os.OpenFile(file, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0755)
 	if err != nil {
-		return fmt.Errorf("error generating shell complation file %s: %v", file, err)
+		return errors.Errorf("error generating shell complation file %s: %v", file, err)
 	}
 
 	executable, err := utils.PathToRunningThelmaExecutable()
 	if err != nil {
-		return fmt.Errorf("error generating shell completion file %s: %v", file, err)
+		return errors.Errorf("error generating shell completion file %s: %v", file, err)
 	}
 
 	log.Info().Msgf("Writing shell completion script to %s...", file)
@@ -191,7 +191,7 @@ func (b *bootstrapper) writeThelmaShellCompletionFile() error {
 	})
 
 	if err != nil {
-		err = fmt.Errorf("error generating shell completion file %s: %v", file, err)
+		err = errors.Errorf("error generating shell completion file %s: %v", file, err)
 	}
 
 	return utils.CloseWarn(f, err)
@@ -202,7 +202,7 @@ func (b *bootstrapper) writeSkeletonConfigFile() error {
 	configFile := config.DefaultConfigFilePath(b.root)
 	exists, err := utils.FileExists(configFile)
 	if err != nil {
-		return fmt.Errorf("error generating skeleton Thelma config file: %v", err)
+		return errors.Errorf("error generating skeleton Thelma config file: %v", err)
 	}
 	if exists {
 		log.Warn().Msgf("%s exists; won't generate skeleton config file", configFile)
@@ -223,17 +223,17 @@ func renderTemplateToFile(templateString string, ctx interface{}, file string) e
 	templateName := path.Base(file)
 	tmpl, err := template.New(templateName).Parse(templateString)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse embedded template %s: %v", templateName, err))
+		panic(errors.Errorf("failed to parse embedded template %s: %v", templateName, err))
 	}
 
 	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
-		return fmt.Errorf("error opening %s for rendering: %v", file, err)
+		return errors.Errorf("error opening %s for rendering: %v", file, err)
 	}
 
 	err = tmpl.Execute(f, ctx)
 	if err != nil {
-		err = fmt.Errorf("failed to render file %s from template: %v", file, err)
+		err = errors.Errorf("failed to render file %s from template: %v", file, err)
 	}
 
 	return utils.CloseWarn(f, err)

@@ -1,13 +1,13 @@
 package _import
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/mirror"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/views"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"path"
@@ -55,7 +55,7 @@ func (cmd *importCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 
 func (cmd *importCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	if len(ctx.Args()) != 0 {
-		return fmt.Errorf("expected no positional arguments, got %v", ctx.Args())
+		return errors.Errorf("expected no positional arguments, got %v", ctx.Args())
 	}
 
 	if ctx.CobraCommand().Flags().Changed(flagNames.configFile) {

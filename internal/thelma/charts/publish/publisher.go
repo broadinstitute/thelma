@@ -1,11 +1,11 @@
 package publish
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/repo"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/repo/index"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path"
@@ -40,13 +40,13 @@ func NewPublisher(repo repo.Repo, runner shell.Runner, scratchDir string, dryRun
 	_stagingDir := &stagingDir{root: scratchDir}
 
 	if err := os.Mkdir(_stagingDir.chartDir(), 0755); err != nil {
-		return nil, fmt.Errorf("chart-publisher: failed to create chart dir: %v", err)
+		return nil, errors.Errorf("chart-publisher: failed to create chart dir: %v", err)
 	}
 
 	if dryRun {
 		log.Warn().Msgf("chart-publisher: not locking repo, this is a dry run")
 	} else if err := repo.Lock(); err != nil {
-		return nil, fmt.Errorf("chart-publisher: error locking repo: %v", err)
+		return nil, errors.Errorf("chart-publisher: error locking repo: %v", err)
 	}
 
 	_index, err := initializeIndex(repo, _stagingDir)
@@ -95,7 +95,7 @@ func (u *publisher) Publish() (int, error) {
 	}
 
 	if err := u.generateNewIndex(); err != nil {
-		return -1, fmt.Errorf("chart-publisher: failed to generate new index file: %v", err)
+		return -1, errors.Errorf("chart-publisher: failed to generate new index file: %v", err)
 	}
 
 	if u.dryRun {
@@ -105,12 +105,12 @@ func (u *publisher) Publish() (int, error) {
 
 	for _, chartFile := range chartFiles {
 		if err := u.uploadChart(chartFile); err != nil {
-			return -1, fmt.Errorf("chart-publisher: error uploading chart %s: %v", chartFile, err)
+			return -1, errors.Errorf("chart-publisher: error uploading chart %s: %v", chartFile, err)
 		}
 	}
 
 	if err := u.uploadIndex(); err != nil {
-		return -1, fmt.Errorf("chart-publisher: error uploading index: %v", err)
+		return -1, errors.Errorf("chart-publisher: error uploading index: %v", err)
 	}
 
 	return len(chartFiles), u.Close()
@@ -127,11 +127,11 @@ func (u *publisher) Close() error {
 	if u.dryRun {
 		log.Warn().Msgf("chart-publisher: not unlocking repo, this is a dry run")
 	} else if err := u.repo.Unlock(); err != nil {
-		return fmt.Errorf("chart-publisher: error unlocking repo: %v", err)
+		return errors.Errorf("chart-publisher: error unlocking repo: %v", err)
 	}
 
 	if err := os.RemoveAll(u.stagingDir.root); err != nil {
-		return fmt.Errorf("chart-publisher: error cleaning up staging dir: %v", err)
+		return errors.Errorf("chart-publisher: error cleaning up staging dir: %v", err)
 	}
 
 	u.closed = true
@@ -174,7 +174,7 @@ func (u *publisher) listChartFiles() ([]string, error) {
 	glob := path.Join(u.ChartDir(), "*.tgz")
 	chartFiles, err := filepath.Glob(glob)
 	if err != nil {
-		return nil, fmt.Errorf("chart-publisher: error globbing charts with %q: %v", glob, err)
+		return nil, errors.Errorf("chart-publisher: error globbing charts with %q: %v", glob, err)
 	}
 
 	return chartFiles, nil
@@ -184,17 +184,17 @@ func (u *publisher) listChartFiles() ([]string, error) {
 func initializeIndex(repo repo.Repo, stagingDir *stagingDir) (index.Index, error) {
 	exists, err := repo.HasIndex()
 	if err != nil {
-		return nil, fmt.Errorf("chart-publisher: error downloading index from repo: %v", err)
+		return nil, errors.Errorf("chart-publisher: error downloading index from repo: %v", err)
 	}
 	if exists {
 		if err := repo.DownloadIndex(stagingDir.prevIndexFile()); err != nil {
-			return nil, fmt.Errorf("chart-publisher: error downloading index from repo: %v", err)
+			return nil, errors.Errorf("chart-publisher: error downloading index from repo: %v", err)
 		}
 	} else {
 		log.Warn().Msgf("chart-publisher: repo has no index object, generating empty index file")
 		_, err = os.Create(stagingDir.prevIndexFile())
 		if err != nil {
-			return nil, fmt.Errorf("chart-publisher: error creating empty index file: %v", err)
+			return nil, errors.Errorf("chart-publisher: error creating empty index file: %v", err)
 		}
 	}
 

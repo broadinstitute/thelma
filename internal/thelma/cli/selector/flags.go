@@ -1,10 +1,10 @@
 package selector
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
 
@@ -20,7 +20,7 @@ func newReleasesFlag() *enumFlag {
 			// UX: make it possible for users to specify a release as the first positional arg instead of as a flag
 			if pflags.Changed(flagNames.release) {
 				if len(args) > 0 {
-					return nil, fmt.Errorf("releases can either be specified with the --%s flag or via positional argument, not both", ReleasesFlagName)
+					return nil, errors.Errorf("releases can either be specified with the --%s flag or via positional argument, not both", ReleasesFlagName)
 				}
 				return flagValues, nil
 			} else if len(args) > 0 {
@@ -32,7 +32,7 @@ func newReleasesFlag() *enumFlag {
 			} else {
 				// We have a lot of releases, and most developers want to render for a specific service,
 				// so force users to supply --releases=ALL if they _really_ want to render for all releases and not a specific release
-				return nil, fmt.Errorf(`please specify at least one release with --%s <RELEASE>, or select all releases with --%s %s`, ReleasesFlagName, ReleasesFlagName, allSelector)
+				return nil, errors.Errorf(`please specify at least one release with --%s <RELEASE>, or select all releases with --%s %s`, ReleasesFlagName, ReleasesFlagName, allSelector)
 			}
 		},
 
@@ -64,7 +64,7 @@ func newExactReleasesFlag() *enumFlag {
 			}
 			for _, flagValue := range flagValues {
 				if flagValue == allSelector {
-					return nil, fmt.Errorf("--%s cannot be used with %s, use --%s %s instead", flagNames.exactRelease, allSelector, flagNames.release, allSelector)
+					return nil, errors.Errorf("--%s cannot be used with %s, use --%s %s instead", flagNames.exactRelease, allSelector, flagNames.release, allSelector)
 				}
 			}
 			return flagValues, nil

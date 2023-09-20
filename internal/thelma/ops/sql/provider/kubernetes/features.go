@@ -8,6 +8,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/kubectl"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"strings"
@@ -51,14 +52,14 @@ func detectFeatures(r terra.Release, k8sclient k8sclient.Interface) (*features, 
 	}
 
 	if count == 0 {
-		return nil, fmt.Errorf("could not find a postgres or mysql statefulset for chart release %s", r.FullName())
+		return nil, errors.Errorf("could not find a postgres or mysql statefulset for chart release %s", r.FullName())
 	}
 	if count != 1 {
-		return nil, fmt.Errorf("expected exactly one mysql or postgres statefulset for chart release %s, found %d", r.FullName(), count)
+		return nil, errors.Errorf("expected exactly one mysql or postgres statefulset for chart release %s, found %d", r.FullName(), count)
 	}
 
 	if podSelector == nil {
-		return nil, fmt.Errorf("statefulset %s has nil pod selector", f.statefulsetName)
+		return nil, errors.Errorf("statefulset %s has nil pod selector", f.statefulsetName)
 	}
 
 	// identify pod in statefulset
@@ -71,16 +72,16 @@ func detectFeatures(r terra.Release, k8sclient k8sclient.Interface) (*features, 
 	}
 
 	if len(pods.Items) == 0 {
-		return nil, fmt.Errorf("could not find a running database pod in statefulset %s", f.statefulsetName)
+		return nil, errors.Errorf("could not find a running database pod in statefulset %s", f.statefulsetName)
 	}
 
 	if len(pods.Items) > 1 {
-		return nil, fmt.Errorf("expect exactly one running pod in statefulset %s, found %d", f.statefulsetName, len(pods.Items))
+		return nil, errors.Errorf("expect exactly one running pod in statefulset %s, found %d", f.statefulsetName, len(pods.Items))
 	}
 
 	pod := pods.Items[0]
 	if len(pod.Spec.Containers) != 1 {
-		return nil, fmt.Errorf("expect exactly one container in pod %s, found %d", pod.Name, len(pod.Spec.Containers))
+		return nil, errors.Errorf("expect exactly one container in pod %s, found %d", pod.Name, len(pod.Spec.Containers))
 	}
 	f.container = kubectl.Container{
 		Pod:       pod.Name,
@@ -106,10 +107,10 @@ func detectFeatures(r terra.Release, k8sclient k8sclient.Interface) (*features, 
 		}
 	}
 	if count == 0 {
-		return nil, fmt.Errorf("could not find service for statefulset %s", f.statefulsetName)
+		return nil, errors.Errorf("could not find service for statefulset %s", f.statefulsetName)
 	}
 	if count > 1 {
-		return nil, fmt.Errorf("expect exactly one service for statefulset %s, found %d", f.statefulsetName, count)
+		return nil, errors.Errorf("expect exactly one service for statefulset %s, found %d", f.statefulsetName, count)
 	}
 
 	f.serviceHostName = fmt.Sprintf("%s.%s.svc.cluster.local", f.serviceName, r.Namespace())

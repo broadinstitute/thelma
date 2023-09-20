@@ -3,6 +3,7 @@ package bucket
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/logid"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"sync"
@@ -54,7 +55,7 @@ func (i *operationLogger) operationFinished(err error) error {
 	if err != nil {
 		event.Str("status", "error")
 		event.Err(err)
-		returnErr := fmt.Errorf("%s %q failed: %v", i.operationKind, i.objectUrl(), err)
+		returnErr := errors.Errorf("%s %q failed: %v", i.operationKind, i.objectUrl(), err)
 		event.Msgf(returnErr.Error())
 		return returnErr
 	}

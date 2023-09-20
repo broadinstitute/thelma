@@ -1,9 +1,9 @@
 package podrun
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sql/api"
 	metadecoder "github.com/broadinstitute/thelma/internal/thelma/ops/sql/podrun/meta"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	gomaps "golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,11 +60,11 @@ func (c *commonMetadata) write(obj *metav1.ObjectMeta) {
 func createMetadata(conn api.Connection) (*commonMetadata, error) {
 	_labels, err := createLabels()
 	if err != nil {
-		return nil, fmt.Errorf("error encoding labels: %v", err)
+		return nil, errors.Errorf("error encoding labels: %v", err)
 	}
 	_annotations, err := createAnnotations(conn)
 	if err != nil {
-		return nil, fmt.Errorf("error encoding annotations: %v", err)
+		return nil, errors.Errorf("error encoding annotations: %v", err)
 	}
 
 	return &commonMetadata{

@@ -2,9 +2,9 @@ package statefixtures
 
 import (
 	"embed"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"path"
 )
@@ -30,13 +30,13 @@ type Fixture interface {
 func LoadFixture(name FixtureName) (Fixture, error) {
 	content, err := fixturesFS.ReadFile(path.Join("fixtures", name.String()+".yaml"))
 	if err != nil {
-		return nil, fmt.Errorf("error loading %s fixture: %v", name.String(), err)
+		return nil, errors.Errorf("error loading %s fixture: %v", name.String(), err)
 	}
 
 	var data FixtureData
 	err = yaml.Unmarshal(content, &data)
 	if err != nil {
-		return nil, fmt.Errorf("error loading %s fixture: %v", name.String(), err)
+		return nil, errors.Errorf("error loading %s fixture: %v", name.String(), err)
 	}
 
 	mocks := newBuilder(&data).buildMocks()

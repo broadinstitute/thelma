@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/chart_versions"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/environments"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -39,7 +40,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 	_, _, err := c.client.ChartVersions.PostAPIV2ChartVersions(
 		chart_versions.NewPostAPIV2ChartVersionsParams().WithChartVersion(chartVersion))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock creating chart version %s/%s: %v", chartSelector, newVersion, err)
+		return errors.Errorf("error from Sherlock creating chart version %s/%s: %v", chartSelector, newVersion, err)
 	}
 	var chartReleaseEntriesToUpdate []*models.V2controllersChangesetPlanRequestChartReleaseEntry
 	for _, chartReleaseSelector := range chartReleaseSelectors {
@@ -54,7 +55,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 	_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
 		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock updating chart releases to new version %s/%s: %v", chartSelector, newVersion, err)
+		return errors.Errorf("error from Sherlock updating chart releases to new version %s/%s: %v", chartSelector, newVersion, err)
 	} else {
 		log.Info().Msgf("updated chart releases in Sherlock to new version %s/%s: %v", chartSelector, newVersion, chartReleaseSelectors)
 	}
@@ -65,7 +66,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 			WithLifecycle(&templateString),
 	)
 	if err != nil {
-		return fmt.Errorf("error from Sherlock getting template environments: %v", err)
+		return errors.Errorf("error from Sherlock getting template environments: %v", err)
 	}
 	var chartReleasesToRefresh []string
 	latestString := "latest"
@@ -78,7 +79,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 				WithChartVersionResolver(&latestString),
 		)
 		if err != nil {
-			return fmt.Errorf("error from Sherlock getting latest chart releases in template %s: %v", template.Name, err)
+			return errors.Errorf("error from Sherlock getting latest chart releases in template %s: %v", template.Name, err)
 		} else {
 			for _, chartRelease := range chartReleasesUsingLatest.Payload {
 				chartReleasesToRefresh = append(chartReleasesToRefresh, chartRelease.Name)
@@ -93,7 +94,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 					WithChartVersionFollowChartRelease(&chartReleaseThatGotUpdated),
 			)
 			if err != nil {
-				return fmt.Errorf("error from Sherlock getting chart releases following %s in template %s: %v", chartReleaseThatGotUpdated, template.Name, err)
+				return errors.Errorf("error from Sherlock getting chart releases following %s in template %s: %v", chartReleaseThatGotUpdated, template.Name, err)
 			} else {
 				for _, chartRelease := range chartReleasesUsingFollow.Payload {
 					chartReleasesToRefresh = append(chartReleasesToRefresh, chartRelease.Name)
@@ -115,7 +116,7 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 		_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
 			changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 		if err != nil {
-			return fmt.Errorf("error from Sherlock refreshing template chart releases to reflect new version %s/%s: %v", chartSelector, newVersion, err)
+			return errors.Errorf("error from Sherlock refreshing template chart releases to reflect new version %s/%s: %v", chartSelector, newVersion, err)
 		} else {
 			log.Info().Msgf("refreshed template chart releases in Sherlock to reflect new version %s/%s: %v", chartSelector, newVersion, chartReleasesToRefresh)
 		}

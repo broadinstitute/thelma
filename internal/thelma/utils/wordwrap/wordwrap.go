@@ -1,9 +1,9 @@
 package wordwrap
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/leaanthony/go-ansi-parser"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"strings"
 	"unicode"
@@ -226,7 +226,7 @@ func nextQuoteState(previous quoteState, quoteCount int) quoteState {
 		} else if previous == ends || previous == outside {
 			return starts
 		} else {
-			panic(fmt.Errorf("unmatched quote state: %v", previous))
+			panic(errors.Errorf("unmatched quote state: %v", previous))
 		}
 	} else {
 		// this word is not a quote boundary - if we were previously at a boundary, transition to outside/inside

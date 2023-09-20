@@ -4,6 +4,7 @@ package assert
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -62,7 +63,7 @@ func withMessage(msgAndArgs ...interface{}) msg {
 func headAndTail(msgAndArgs []interface{}) (string, []interface{}) {
 	format, ok := msgAndArgs[0].(string)
 	if !ok {
-		panic(fmt.Errorf("first argument should be format string: %v", msgAndArgs))
+		panic(errors.Errorf("first argument should be format string: %v", msgAndArgs))
 	}
 	return format, msgAndArgs[1:]
 }

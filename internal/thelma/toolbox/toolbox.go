@@ -1,9 +1,9 @@
 package toolbox
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
+	"github.com/pkg/errors"
 	"path"
 	"path/filepath"
 )
@@ -30,12 +30,12 @@ const verifyTool = helm.ProgName
 func FindToolsDir() (string, error) {
 	exe, err := utils.PathToRunningThelmaExecutable()
 	if err != nil {
-		return "", fmt.Errorf("error resolving path to Thelma's bundled tools: %v", err)
+		return "", errors.Errorf("error resolving path to Thelma's bundled tools: %v", err)
 	}
 
 	toolsDir, err := findToolsDir(exe)
 	if err != nil {
-		return "", fmt.Errorf("error resolving path to Thelma's bundled tools: %v", err)
+		return "", errors.Errorf("error resolving path to Thelma's bundled tools: %v", err)
 	}
 
 	return toolsDir, nil
@@ -63,7 +63,7 @@ func validateToolsDir(toolsdir string) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("tools dir not found; %s does not exist", toolexe)
+		return errors.Errorf("tools dir not found; %s does not exist", toolexe)
 	}
 	return nil
 }

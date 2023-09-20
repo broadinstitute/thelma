@@ -1,7 +1,7 @@
 package dependency
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"sort"
 	"strings"
 )
@@ -174,7 +174,7 @@ func searchForCycles(node *graphNode, path map[string]string, checked map[string
 	}
 	for _, dep := range node.dependencies {
 		if _, exists := path[dep.chartName]; exists {
-			return fmt.Errorf("cycle detected: %s", pathToString(path, node.chartName, dep.chartName))
+			return errors.Errorf("cycle detected: %s", pathToString(path, node.chartName, dep.chartName))
 		}
 
 		path[dep.chartName] = node.chartName

@@ -1,8 +1,8 @@
 package argocd
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"sort"
 	"strings"
 )
@@ -46,7 +46,7 @@ func getArgoDestinations(destination terra.Destination) []ArgoDestination {
 	case terra.Cluster:
 		return argoDestinationsForCluster(t)
 	default:
-		panic(fmt.Errorf("error generating destination values file: unknown destination type %s: %v", destination.Type().String(), destination))
+		panic(errors.Errorf("error generating destination values file: unknown destination type %s: %v", destination.Type().String(), destination))
 	}
 }
 

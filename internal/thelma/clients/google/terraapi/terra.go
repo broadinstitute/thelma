@@ -1,8 +1,8 @@
 package terraapi
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	googleoauth "google.golang.org/api/oauth2/v2"
 	"io"
@@ -66,7 +66,7 @@ func (c *terraClient) doJsonRequest(method string, url string, body io.Reader) (
 		return response, "", err
 	}
 	if response.StatusCode > 299 {
-		return response, string(responseBody), fmt.Errorf("%s from %s (%s)", response.Status, url, responseBody)
+		return response, string(responseBody), errors.Errorf("%s from %s (%s)", response.Status, url, responseBody)
 	}
 	return response, string(responseBody), nil
 }
