@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/leaanthony/go-ansi-parser"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -321,7 +321,7 @@ func parseLogFile(logFile string) ([]testMessage, error) {
 			log.Warn().Msgf("log file %s does not exist, returning empty message list", logFile)
 			return messages, nil
 		} else {
-			return nil, fmt.Errorf("error reading log file %s: %v", logFile, err)
+			return nil, errors.Errorf("error reading log file %s: %v", logFile, err)
 		}
 	}
 
@@ -341,7 +341,7 @@ func parseLogFile(logFile string) ([]testMessage, error) {
 		var m testMessage
 		content := scanner.Bytes()
 		if err := json.Unmarshal(scanner.Bytes(), &m); err != nil {
-			return nil, fmt.Errorf("error parsing message on line %d of %s as JSON: %q", lineNumber, logFile, string(content))
+			return nil, errors.Errorf("error parsing message on line %d of %s as JSON: %q", lineNumber, logFile, string(content))
 		}
 		messages = append(messages, m)
 		lineNumber++

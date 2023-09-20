@@ -5,8 +5,10 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/wordwrap"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"os"
@@ -43,6 +45,10 @@ type logConfig struct {
 		// Set to true to include caller information (source file and line number) in log messages.
 		Enabled bool `default:"false"`
 	}
+	ErrTrace struct {
+		// Set to true to include stacktraces for errors
+		Enabled bool `default:"false"`
+	}
 }
 
 func init() {
@@ -52,6 +58,9 @@ func init() {
 // Bootstrap configure global zerolog logger with a basic console logger
 // to catch any messages that are logged before full Thelma initialization
 func Bootstrap() {
+	// Enable stack traces for errors
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
 	log.Logger = log.Output(globalWriter).Level(zerolog.DebugLevel)
 }
 
@@ -65,18 +74,18 @@ func MaskSecret(secret ...string) {
 func Initialize(thelmaConfig config.Config, thelmaRoot root.Root) error {
 	cfg, err := loadConfig(thelmaConfig, thelmaRoot)
 	if err != nil {
-		return fmt.Errorf("logging initialization failed: %v", err)
+		return errors.Errorf("logging initialization failed: %v", err)
 	}
 
 	// init new logger based on configuration
 	writer, err := newCompositeWriter(cfg, os.Stderr)
 	if err != nil {
-		return fmt.Errorf("logging initialization failed: %v", err)
+		return errors.Errorf("logging initialization failed: %v", err)
 	}
 
 	logger, err := newLogger(cfg, writer)
 	if err != nil {
-		return fmt.Errorf("logging initialization failed: %v", err)
+		return errors.Errorf("logging initialization failed: %v", err)
 	}
 
 	// replace default Zerolog logger with our custom logger
@@ -139,6 +148,11 @@ func newLogger(cfg *logConfig, compositeWriter zerolog.LevelWriter) (*zerolog.Lo
 	// Add pid to logs -- helps distinguish distinct thelma runs from each other
 	ctx = ctx.Int(pidField, os.Getppid())
 
+	// Add stack trace to errors
+	if cfg.ErrTrace.Enabled {
+		ctx = ctx.Stack()
+	}
+
 	logger := ctx.Logger()
 	return &logger, nil
 }
@@ -168,7 +182,7 @@ func newConsoleWriter(cfg *logConfig, consoleStream io.Writer) zerolog.LevelWrit
 
 func newFileWriter(cfg *logConfig) (zerolog.LevelWriter, error) {
 	if err := os.MkdirAll(cfg.File.Dir, 0700); err != nil {
-		return nil, fmt.Errorf("error creating log directory %s: %v", cfg.File.Dir, err)
+		return nil, errors.Errorf("error creating log directory %s: %v", cfg.File.Dir, err)
 	}
 	rollingWriter := &lumberjack.Logger{
 		Filename:   path.Join(cfg.File.Dir, logFile),
