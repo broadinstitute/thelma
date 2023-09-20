@@ -165,13 +165,9 @@ func (c *changedFiles) identifyImpactedCharts(inputFile string) (set.Set[string]
 
 func (c *changedFiles) addDependents(chartNames set.Set[string]) error {
 	var exists []string
-	var missing []string
 	for _, chartName := range chartNames.Elements() {
 		if c.chartsDir.Exists(chartName) {
 			exists = append(exists, chartName)
-		} else {
-			log.Debug().Msgf("chart %s does not exist in charts dir; won't automatically release dependents", chartName)
-			missing = append(missing, chartName)
 		}
 	}
 
