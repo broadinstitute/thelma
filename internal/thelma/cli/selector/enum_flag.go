@@ -88,7 +88,7 @@ func (e *enumFlag) validate(state terra.State, inputValues []string) (*valueSet,
 	collated := collateSelectorValues(inputValues)
 
 	if collated.Empty() {
-		return nil, errors.Errorf("--%s: at least option must be speficied", e.flagName)
+		return nil, errors.Errorf("--%s: at least one option must be specified", e.flagName)
 	}
 
 	// handle ALL selector (--releases=ALL, --cluster=ALL, etc)

@@ -40,6 +40,7 @@ thelma render cromwell --values-file=path/to/my-values.yaml
 
 # Render leonardo manifests to a directory other than $THELMA_HOME/output
 thelma render leonardo  --output-dir=/tmp/my-manifests
+
 `
 
 // defaultOutputDir name of default output directory
@@ -52,7 +53,7 @@ const defaultChartSourceDir = "charts"
 type renderCommand struct {
 	helmfileArgs  *helmfile.Args
 	renderOptions *render.Options
-	selector      *selector.Selector
+	selector      *selector.RenderSelector
 	flagVals      *flagValues
 }
 
@@ -113,7 +114,7 @@ func NewRenderCommand() cli.ThelmaCommand {
 	cmd := &renderCommand{
 		renderOptions: renderOptions,
 		helmfileArgs:  helmfileArgs,
-		selector:      selector.NewSelector(),
+		selector:      selector.NewRenderSelector(),
 		flagVals:      flagVals,
 	}
 
@@ -188,7 +189,7 @@ func (cmd *renderCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	return nil
 }
 
-func (cmd *renderCommand) getSelectedReleases(app app.ThelmaApp, flags *pflag.FlagSet, args []string) (*selector.Selection, error) {
+func (cmd *renderCommand) getSelectedReleases(app app.ThelmaApp, flags *pflag.FlagSet, args []string) (*selector.RenderSelection, error) {
 	state, err := app.State()
 	if err != nil {
 		return nil, err
@@ -199,7 +200,7 @@ func (cmd *renderCommand) getSelectedReleases(app app.ThelmaApp, flags *pflag.Fl
 }
 
 // fillRenderOptions populates an empty render.Options struct in accordance with user-supplied CLI options
-func (cmd *renderCommand) fillRenderOptions(selection *selector.Selection, app app.ThelmaApp, flags *pflag.FlagSet) error {
+func (cmd *renderCommand) fillRenderOptions(selection *selector.RenderSelection, app app.ThelmaApp, flags *pflag.FlagSet) error {
 	flagVals := cmd.flagVals
 	renderOptions := cmd.renderOptions
 
@@ -329,7 +330,7 @@ func (cmd *renderCommand) handleFlagAliases(flags *pflag.FlagSet) error {
 	return nil
 }
 
-func (cmd *renderCommand) checkIncompatibleFlags(flags *pflag.FlagSet, selection *selector.Selection) error {
+func (cmd *renderCommand) checkIncompatibleFlags(flags *pflag.FlagSet, selection *selector.RenderSelection) error {
 	if flags.Changed(flagNames.chartDir) {
 		if flags.Changed(flagNames.chartVersion) {
 			// Chart dir points at a local chart copy, chart version specifies which version to use, we can only

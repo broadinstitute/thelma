@@ -23,10 +23,7 @@ type syncCommand struct {
 
 func NewArgoCDSyncCommand() cli.ThelmaCommand {
 	return &syncCommand{
-		selector: selector.NewSelector(func(options *selector.Options) {
-			options.IncludeBulkFlags = false
-			options.RequireDestinationOrExact = true
-		}),
+		selector: selector.NewSelector(),
 	}
 }
 
@@ -70,7 +67,7 @@ func (cmd *syncCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 			options.SkipLegacyConfigsRestart = true
 		})
 	}
-	statuses, err := _sync.Sync(selection.Releases, cmd.options.maxParallel, opts...)
+	statuses, err := _sync.Sync(selection, cmd.options.maxParallel, opts...)
 
 	rc.SetOutput(common.ReleaseMapToStructuredView(statuses))
 	return err

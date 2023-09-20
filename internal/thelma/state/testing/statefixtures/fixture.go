@@ -6,6 +6,7 @@ import (
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+	"os"
 	"path"
 )
 
@@ -26,17 +27,42 @@ type Fixture interface {
 // Deprecated: this package was added for backwards compatibility when we
 // deleted gitops state; new tests that depend on state should set up their own mocks.
 //
-// Old tests should also ideally be refactored to mock their own state.
+// Old tests should also ideally be refactored to mock their own state or pass in their own fixture data
 func LoadFixture(name FixtureName) (Fixture, error) {
 	content, err := fixturesFS.ReadFile(path.Join("fixtures", name.String()+".yaml"))
 	if err != nil {
 		return nil, errors.Errorf("error loading %s fixture: %v", name.String(), err)
 	}
 
-	var data FixtureData
-	err = yaml.Unmarshal(content, &data)
+	fixure, err := parseFixtureData(content)
 	if err != nil {
 		return nil, errors.Errorf("error loading %s fixture: %v", name.String(), err)
+	}
+
+	return fixure, nil
+}
+
+// LoadFixture load a state fixture for use in tests.
+// See default state fixture o
+func LoadFixtureFromFile(file string) (Fixture, error) {
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return nil, errors.Errorf("error loading fixture from %s: %v", file, err)
+	}
+
+	fixure, err := parseFixtureData(content)
+	if err != nil {
+		return nil, errors.Errorf("error loading fixture from %s: %v", file, err)
+	}
+
+	return fixure, nil
+}
+
+func parseFixtureData(content []byte) (Fixture, error) {
+	var data FixtureData
+	err := yaml.Unmarshal(content, &data)
+	if err != nil {
+		return nil, err
 	}
 
 	mocks := newBuilder(&data).buildMocks()

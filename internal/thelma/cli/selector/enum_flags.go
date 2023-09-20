@@ -26,8 +26,8 @@ func newReleasesFlag() *enumFlag {
 			} else if len(args) > 0 {
 				return []string{args[0]}, nil
 			} else if pflags.Changed(flagNames.exactRelease) {
-				// If there's no releases specified but there are exact releases specified, act as if this flag had been
-				// set to ALL so we don't filter on it
+				// If there's no releases specified but there are exact releases specified, or a changed file list, act
+				// as if this flag had been set to ALL so we don't filter on it
 				return []string{allSelector}, nil
 			} else {
 				// We have a lot of releases, and most developers want to render for a specific service,
@@ -169,7 +169,7 @@ func newDestinationBasesFlag() *enumFlag {
 	}
 }
 
-// --environment-templates flag
+// --environment-template flag
 func newEnvironmentTemplatesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.environmentTemplate,
@@ -190,7 +190,7 @@ func newEnvironmentTemplatesFlag() *enumFlag {
 	}
 }
 
-// --environment-lifecycles flag
+// --environment-lifecycle flag
 func newEnvironmentLifecyclesFlag() *enumFlag {
 	return &enumFlag{
 		flagName:      flagNames.environmentLifecycle,
