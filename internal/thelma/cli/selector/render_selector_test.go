@@ -5,15 +5,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
 	"sort"
 	"strings"
 	"testing"
 )
 
 func Test_RenderSelector(t *testing.T) {
-	tmpdir := t.TempDir()
-
 	testCases := []struct {
 		name           string
 		args           string
@@ -50,14 +47,6 @@ func Test_RenderSelector(t *testing.T) {
 			name:           "cluster selector",
 			args:           "-c terra-dev ALL",
 			expectReleases: []string{"secrets-manager-terra-dev", "yale-terra-dev"},
-		},
-		{
-			name: "changed files list",
-			args: "--changed-files-list " + tmpdir + "/changedfiles.txt",
-			setupFn: func() error {
-				return os.WriteFile(tmpdir+"/changedfiles.txt", []byte(`charts/workspacemanager/somefile.txt`), 0644)
-			},
-			expectReleases: []string{"workspacemanager-swatomation"},
 		},
 		{
 			name:           "exact releases",

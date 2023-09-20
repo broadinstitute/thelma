@@ -47,12 +47,12 @@ func LoadFixture(name FixtureName) (Fixture, error) {
 func LoadFixtureFromFile(file string) (Fixture, error) {
 	content, err := os.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("error loading fixture from %s: %v", file, err)
+		return nil, errors.Errorf("error loading fixture from %s: %v", file, err)
 	}
 
 	fixure, err := parseFixtureData(content)
 	if err != nil {
-		return nil, fmt.Errorf("error loading fixture from %s: %v", file, err)
+		return nil, errors.Errorf("error loading fixture from %s: %v", file, err)
 	}
 
 	return fixure, nil
