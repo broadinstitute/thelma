@@ -2,6 +2,7 @@ package source
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -19,10 +20,13 @@ type ChartsDir interface {
 	GetCharts(name ...string) ([]Chart, error)
 	// UpdateDependentVersionConstraints go through all dependents and update version constraints to match new version
 	UpdateDependentVersionConstraints(chart Chart, newVersion string) error
-	// WithTransitiveDependents returns the given chart names plus all of their transitive dependents
+	// WithTransitiveDependents returns the given charts plus all of their transitive dependents
 	WithTransitiveDependents(chart []Chart) ([]Chart, error)
-	// DetermineDependenciesToUpdate returns the names of all charts in the given chart's dependency tree
-	DetermineDependenciesToUpdate(chart Chart) []string
+	// RecursivelyUpdateDependencies given a list of charts:
+	// * identify all transitive dependencies of those charts
+	// * sort the list of charts + dependencies in topological order
+	// * run `helm dependency update` on each chart in the list
+	RecursivelyUpdateDependencies(chart ...Chart) error
 }
 
 // NewChartsDir constructs a new ChartsDir
@@ -116,28 +120,62 @@ func (d *chartsDir) WithTransitiveDependents(charts []Chart) ([]Chart, error) {
 	return d.GetCharts(result...)
 }
 
-// DetermineDependenciesToUpdate returns the names of all charts in the given chart's dependency tree
-func (d *chartsDir) DetermineDependenciesToUpdate(chart Chart) []string {
-	localDependencies := make(map[string][]string)
-	localDependencies[chart.Name()] = chart.LocalDependencies()
-	chartsToProcess := make([]string, 0)
-	chartsToProcess = append(chartsToProcess, chart.LocalDependencies()...)
+// RecursivelyUpdateDependencies given a list of charts:
+// * identify all transitive dependencies of those charts
+// * sort the list of charts + dependencies in topological order
+// * run `helm dependency update` on each chart in the list
+func (d *chartsDir) RecursivelyUpdateDependencies(charts ...Chart) error {
+	withDependenciesNames, err := d.findTransitiveDependencies(charts...)
+	if err != nil {
+		return err
+	}
+
+	withDependencies, err := d.GetCharts(withDependenciesNames...)
+	if err != nil {
+		return err
+	}
+
+	for _, _chart := range withDependencies {
+		if err = _chart.UpdateDependencies(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// findTransitiveDependencies returns the names of all charts in the dependency trees of the given chart(s)
+// in topologically sorted order
+func (d *chartsDir) findTransitiveDependencies(charts ...Chart) ([]string, error) {
+	var chartsToProcess []string
+	visited := set.NewSet[string]()
+
+	for _, chart := range charts {
+		chartsToProcess = append(chartsToProcess, chart.Name())
+	}
 
 	for len(chartsToProcess) != 0 {
 		currentChartName := chartsToProcess[0]
 		chartsToProcess = chartsToProcess[1:]
-		currentChart := d.charts[currentChartName]
-		localDependencies[currentChart.Name()] = currentChart.LocalDependencies()
-		chartsToProcess = append(chartsToProcess, currentChart.LocalDependencies()...)
+
+		visited.Add(currentChartName)
+
+		currentChart, err := d.GetChart(currentChartName)
+		if err != nil {
+			return nil, errors.Errorf("error processing chart %q: %v", currentChartName, err)
+		}
+
+		for _, dep := range currentChart.LocalDependencies() {
+			if !visited.Exists(dep) {
+				chartsToProcess = append(chartsToProcess, dep)
+			}
+		}
 	}
 
-	dependenciesToUpdate := make([]string, 0)
-	for _chart := range localDependencies {
-		dependenciesToUpdate = append(dependenciesToUpdate, _chart)
-	}
+	dependenciesToUpdate := visited.Elements()
 	d.dependencyGraph.TopoSort(dependenciesToUpdate)
 
-	return dependenciesToUpdate
+	return dependenciesToUpdate, nil
 }
 
 func buildDependencyGraph(charts map[string]Chart) (*dependency.Graph, error) {

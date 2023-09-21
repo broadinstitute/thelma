@@ -20,50 +20,6 @@ func (_m *ChartsDir) EXPECT() *ChartsDir_Expecter {
 	return &ChartsDir_Expecter{mock: &_m.Mock}
 }
 
-// DetermineDependenciesToUpdate provides a mock function with given fields: chart
-func (_m *ChartsDir) DetermineDependenciesToUpdate(chart source.Chart) []string {
-	ret := _m.Called(chart)
-
-	var r0 []string
-	if rf, ok := ret.Get(0).(func(source.Chart) []string); ok {
-		r0 = rf(chart)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-
-	return r0
-}
-
-// ChartsDir_DetermineDependenciesToUpdate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DetermineDependenciesToUpdate'
-type ChartsDir_DetermineDependenciesToUpdate_Call struct {
-	*mock.Call
-}
-
-// DetermineDependenciesToUpdate is a helper method to define mock.On call
-//   - chart source.Chart
-func (_e *ChartsDir_Expecter) DetermineDependenciesToUpdate(chart interface{}) *ChartsDir_DetermineDependenciesToUpdate_Call {
-	return &ChartsDir_DetermineDependenciesToUpdate_Call{Call: _e.mock.On("DetermineDependenciesToUpdate", chart)}
-}
-
-func (_c *ChartsDir_DetermineDependenciesToUpdate_Call) Run(run func(chart source.Chart)) *ChartsDir_DetermineDependenciesToUpdate_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(source.Chart))
-	})
-	return _c
-}
-
-func (_c *ChartsDir_DetermineDependenciesToUpdate_Call) Return(_a0 []string) *ChartsDir_DetermineDependenciesToUpdate_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *ChartsDir_DetermineDependenciesToUpdate_Call) RunAndReturn(run func(source.Chart) []string) *ChartsDir_DetermineDependenciesToUpdate_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Exists provides a mock function with given fields: name
 func (_m *ChartsDir) Exists(name string) bool {
 	ret := _m.Called(name)
@@ -223,6 +179,61 @@ func (_c *ChartsDir_GetCharts_Call) Return(_a0 []source.Chart, _a1 error) *Chart
 }
 
 func (_c *ChartsDir_GetCharts_Call) RunAndReturn(run func(...string) ([]source.Chart, error)) *ChartsDir_GetCharts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RecursivelyUpdateDependencies provides a mock function with given fields: chart
+func (_m *ChartsDir) RecursivelyUpdateDependencies(chart ...source.Chart) error {
+	_va := make([]interface{}, len(chart))
+	for _i := range chart {
+		_va[_i] = chart[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(...source.Chart) error); ok {
+		r0 = rf(chart...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ChartsDir_RecursivelyUpdateDependencies_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecursivelyUpdateDependencies'
+type ChartsDir_RecursivelyUpdateDependencies_Call struct {
+	*mock.Call
+}
+
+// RecursivelyUpdateDependencies is a helper method to define mock.On call
+//   - chart ...source.Chart
+func (_e *ChartsDir_Expecter) RecursivelyUpdateDependencies(chart ...interface{}) *ChartsDir_RecursivelyUpdateDependencies_Call {
+	return &ChartsDir_RecursivelyUpdateDependencies_Call{Call: _e.mock.On("RecursivelyUpdateDependencies",
+		append([]interface{}{}, chart...)...)}
+}
+
+func (_c *ChartsDir_RecursivelyUpdateDependencies_Call) Run(run func(chart ...source.Chart)) *ChartsDir_RecursivelyUpdateDependencies_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]source.Chart, len(args)-0)
+		for i, a := range args[0:] {
+			if a != nil {
+				variadicArgs[i] = a.(source.Chart)
+			}
+		}
+		run(variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *ChartsDir_RecursivelyUpdateDependencies_Call) Return(_a0 error) *ChartsDir_RecursivelyUpdateDependencies_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ChartsDir_RecursivelyUpdateDependencies_Call) RunAndReturn(run func(...source.Chart) error) *ChartsDir_RecursivelyUpdateDependencies_Call {
 	_c.Call.Return(run)
 	return _c
 }

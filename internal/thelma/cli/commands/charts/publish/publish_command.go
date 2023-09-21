@@ -2,6 +2,7 @@ package publish
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/broadinstitute/thelma/internal/thelma/charts/releaser"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
@@ -133,8 +134,8 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	defer pb.CloseWarn()
 	publisher := pb.Publisher()
 
-	autoreleaser := &source.AutoReleaser{}
-	// If we're dry-running, the autoreleaser will be empty so we don't mutate anything.
+	updater := &releaser.DeployedVersionUpdater{}
+	// If we're dry-running, the updaters will be empty so we don't mutate anything.
 	if !options.dryRun {
 		if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
 			iapIdToken, err := app.Clients().IAPToken()
@@ -147,7 +148,7 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 					if err != nil {
 						return nil, err
 					}
-					autoreleaser.SherlockUpdaters = append(autoreleaser.SherlockUpdaters, client)
+					updater.SherlockUpdaters = append(updater.SherlockUpdaters, client)
 				}
 			}
 			for _, sherlockURL := range options.softFailSherlock {
@@ -156,18 +157,20 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 					if err != nil {
 						return nil, err
 					}
-					autoreleaser.SoftFailSherlockUpdaters = append(autoreleaser.SoftFailSherlockUpdaters, client)
+					updater.SoftFailSherlockUpdaters = append(updater.SoftFailSherlockUpdaters, client)
 				}
 			}
 		}
 	}
 
-	chartsDir, err := source.NewChartsDir(options.chartDir, publisher, app.ShellRunner(), autoreleaser)
+	chartsDir, err := source.NewChartsDir(options.chartDir, app.ShellRunner())
 	if err != nil {
 		return nil, err
 	}
 
-	chartVersions, err := chartsDir.PublishAndRelease(options.charts, options.description)
+	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher, updater)
+
+	chartVersions, err := chartReleaser.Release(options.charts, options.description)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ package releaser
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"strings"
 )
@@ -31,90 +32,194 @@ type ChartReleaser interface {
 	Release(chartsToPublish []string, changeDescription string) (publishedVersions map[string]string, err error)
 }
 
-func NewChartReleaser(sourceDir source.ChartsDir, publisher publish.Publisher, updater *DeployedVersionUpdater) ChartReleaser {
+func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher, updater *DeployedVersionUpdater) ChartReleaser {
 	return &chartReleaser{
-		sourceDir: sourceDir,
+		chartsDir: chartsDir,
 		publisher: publisher,
 		updater:   updater,
 	}
 }
 
 type chartReleaser struct {
-	sourceDir source.ChartsDir
+	chartsDir source.ChartsDir
 	publisher publish.Publisher
 	updater   *DeployedVersionUpdater
 }
 
+type versions struct {
+	// previous version of the chart
+	lastVersion string
+	// new version of the chart that will be published
+	newVersion string
+}
+
 func (r *chartReleaser) Release(chartNames []string, description string) (map[string]string, error) {
+	// make sure all charts exist in source dir
 	chartsToPublish := chartNames
 	for _, chartName := range chartsToPublish {
-		_, err := r.sourceDir.GetChart(chartName)
-		if err != nil {
-			return nil, err
+		if !r.chartsDir.Exists(chartName) {
+			return nil, errors.Errorf("chart %s does not exist in source directory", chartName)
 		}
 	}
 
-	log.Info().Msgf("%d charts will be published: %s", len(chartsToPublish), strings.Join(chartsToPublish, ", "))
-
-	publishedVersions := make(map[string]string, len(chartsToPublish))
-	lastVersions := make(map[string]string, len(chartsToPublish))
-	for _, chartName := range chartsToPublish {
-		_chart, err := r.sourceDir.GetChart(chartName)
-		if err != nil {
-			return nil, err
-		}
-
-		dependenciesToUpdate := r.sourceDir.DetermineDependenciesToUpdate(_chart)
-
-		lastVersions[chartName] = r.publisher.Index().MostRecentVersion(chartName)
-		newVersion, err := _chart.BumpChartVersion(lastVersions[chartName])
-		if err != nil {
-			return nil, err
-		}
-		if err := r.sourceDir.UpdateDependentVersionConstraints(_chart, newVersion); err != nil {
-			return nil, err
-		}
-		for _, chartToUpdate := range dependenciesToUpdate {
-			_chartToUpdate, err := r.sourceDir.GetChart(chartToUpdate)
-			if err != nil {
-				return nil, err
-			}
-			if err := _chartToUpdate.UpdateDependencies(); err != nil {
-				return nil, err
-			}
-		}
-
-		if err := _chart.GenerateDocs(); err != nil {
-			return nil, err
-		}
-
-		if err := _chart.PackageChart(r.publisher.ChartDir()); err != nil {
-			return nil, err
-		}
-
-		publishedVersions[chartName] = newVersion
-	}
-
-	count, err := r.publisher.Publish()
+	// add dependents
+	withDependents, err := r.withDependents(chartsToPublish)
 	if err != nil {
 		return nil, err
 	}
-	log.Info().Msgf("%d charts were uploaded to the repository", count)
+	chartsToPublish = withDependents
+
+	log.Info().Msgf("%d charts will be published: %s", len(chartsToPublish), strings.Join(chartsToPublish, ", "))
+
+	// identify new version for each chart and bump in Chart.yaml
+	chartVersions, err := r.bumpChartVersions(chartsToPublish)
+	if err != nil {
+		return nil, err
+	}
+
+	// run `helm dependency update` on all charts we're publishing, plus their transitive dependencies, in
+	// topological order
+	if err = r.updateAllDependencies(chartsToPublish); err != nil {
+		return nil, err
+	}
+
+	// generate docs and package charts in the publisher's staging directory
+	if err = r.packageCharts(chartsToPublish); err != nil {
+		return nil, err
+	}
+
+	// upload charts to helm repo
+	if err = r.publishCharts(); err != nil {
+		return nil, err
+	}
 
 	// We run the updater after publishing the charts to avoid an instance where a chart release points at a chart
 	// version that hasn't been published quite yet
+	return r.reportNewChartVersionsToSherlock(chartVersions, description)
+}
+
+// given a map of chart version info, reportNewChartVersionsToSherlock will report the new versions to Sherlock.
+//
+// Return:
+// a map representing the names and versions of charts that were published and released. Eg.
+//
+//	{
+//	  "foo": "1.2.3",
+//	  "bar": "0.2.0",
+//	}
+func (r *chartReleaser) reportNewChartVersionsToSherlock(chartVersions map[string]versions, description string) (map[string]string, error) {
+	publishedVersions := make(map[string]string, len(chartVersions))
+
 	if r.updater != nil {
-		for _, chartName := range chartsToPublish {
-			chart, err := r.sourceDir.GetChart(chartName)
+		for chartName, versions := range chartVersions {
+			chart, err := r.chartsDir.GetChart(chartName)
 			if err != nil {
 				return nil, err
 			}
-			err = r.updater.UpdateReleaseVersion(chart, publishedVersions[chartName], lastVersions[chartName], description)
+			err = r.updater.UpdateReleaseVersion(chart, versions.newVersion, versions.lastVersion, description)
 			if err != nil {
 				return publishedVersions, err
 			}
+			publishedVersions[chartName] = versions.newVersion
 		}
 	}
 
 	return publishedVersions, nil
+}
+
+func (r *chartReleaser) publishCharts() error {
+	count, err := r.publisher.Publish()
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("%d charts were uploaded to the repository", count)
+	return nil
+}
+
+func (r *chartReleaser) packageCharts(chartNames []string) error {
+	for _, chartName := range chartNames {
+		_chart, err := r.chartsDir.GetChart(chartName)
+		if err != nil {
+			return err
+		}
+
+		if err = _chart.GenerateDocs(); err != nil {
+			return err
+		}
+
+		if err = _chart.PackageChart(r.publisher.ChartDir()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *chartReleaser) updateAllDependencies(chartNames []string) error {
+	charts, err := r.chartsDir.GetCharts(chartNames...)
+	if err != nil {
+		return err
+	}
+	return r.chartsDir.RecursivelyUpdateDependencies(charts...)
+}
+
+func (r *chartReleaser) bumpChartVersions(chartNames []string) (map[string]versions, error) {
+	chartVersions := make(map[string]versions, len(chartNames))
+	for _, chartName := range chartNames {
+		releaseInfo, err := r.bumpChartVersion(chartName)
+		if err != nil {
+			return nil, err
+		}
+		chartVersions[chartName] = *releaseInfo
+	}
+	return chartVersions, nil
+}
+
+func (r *chartReleaser) bumpChartVersion(chartName string) (*versions, error) {
+	_chart, err := r.chartsDir.GetChart(chartName)
+	if err != nil {
+		return nil, err
+	}
+
+	// get last version of chart
+	lastVersion := r.publisher.Index().MostRecentVersion(chartName)
+	if err != nil {
+		return nil, err
+	}
+
+	// bump chart version in Chart.yaml
+	newVersion, err := _chart.BumpChartVersion(lastVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	// for all charts that depend on this chart, update their Chart.yaml files to use
+	// the new version of this chart
+	if err = r.chartsDir.UpdateDependentVersionConstraints(_chart, newVersion); err != nil {
+		return nil, err
+	}
+
+	return &versions{
+		lastVersion: lastVersion,
+		newVersion:  newVersion,
+	}, nil
+}
+
+// given a list of chart names, return the list of charts with dependents included, sorted topologically.
+// eg.
+// if "tps" -> "foundation" -> "ingress", then
+// withDependents("ingress") returns
+// ["ingress", "foundation", "tps"]
+func (r *chartReleaser) withDependents(chartNames []string) ([]string, error) {
+	asCharts, err := r.chartsDir.GetCharts(chartNames...)
+	if err != nil {
+		return nil, err
+	}
+
+	withDependents, err := r.chartsDir.WithTransitiveDependents(asCharts)
+	if err != nil {
+		return nil, err
+	}
+
+	return source.ChartNames(withDependents...), nil
 }
