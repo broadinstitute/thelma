@@ -408,7 +408,7 @@ func (c *Client) writeReleases(destinationName string, releases []terra.Release)
 
 func (c *Client) writeAppRelease(environmentName string, release terra.AppRelease) error {
 	log.Debug().Msgf("release name: %v", release.Name())
-	modelChart := models.V2controllersCreatableChart{
+	modelChart := models.SherlockChartV3Create{
 		Name:            release.ChartName(),
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     utils.Nullable(int64(release.Port())),
@@ -417,13 +417,13 @@ func (c *Client) writeAppRelease(environmentName string, release terra.AppReleas
 		LegacyConfigsEnabled: utils.Nullable(true),
 	}
 	// first try to create the chart
-	newChartRequestParams := charts.NewPostAPIV2ChartsParams().
+	newChartRequestParams := charts.NewPostAPIChartsV3Params().
 		WithChart(&modelChart)
 
-	_, _, err := c.client.Charts.PostAPIV2Charts(newChartRequestParams)
+	_, err := c.client.Charts.PostAPIChartsV3(newChartRequestParams)
 	if err != nil {
 		// Don't error if creating the chart results in 409 conflict
-		if _, ok := err.(*charts.PostAPIV2ChartsConflict); !ok {
+		if _, ok := err.(*charts.PostAPIChartsV3Conflict); !ok {
 			return errors.Errorf("error creating chart: %v", err)
 		}
 	}
@@ -471,7 +471,7 @@ func (c *Client) writeAppRelease(environmentName string, release terra.AppReleas
 }
 
 func (c *Client) writeClusterRelease(release terra.ClusterRelease) error {
-	modelChart := models.V2controllersCreatableChart{
+	modelChart := models.SherlockChartV3Create{
 		Name:            release.ChartName(),
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     nil,
@@ -481,13 +481,13 @@ func (c *Client) writeClusterRelease(release terra.ClusterRelease) error {
 	}
 
 	// first try to create the chart
-	newChartRequestParams := charts.NewPostAPIV2ChartsParams().
+	newChartRequestParams := charts.NewPostAPIChartsV3Params().
 		WithChart(&modelChart)
 
-	_, _, err := c.client.Charts.PostAPIV2Charts(newChartRequestParams)
+	_, err := c.client.Charts.PostAPIChartsV3(newChartRequestParams)
 	if err != nil {
 		// Don't error if creating the chart results in 409 conflict
-		if _, ok := err.(*charts.PostAPIV2ChartsConflict); !ok {
+		if _, ok := err.(*charts.PostAPIChartsV3Conflict); !ok {
 			return errors.Errorf("error creating chart: %v", err)
 		}
 	}
