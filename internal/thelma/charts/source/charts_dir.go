@@ -1,42 +1,39 @@
 package source
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"path"
 	"path/filepath"
-	"strings"
-
-	"github.com/broadinstitute/thelma/internal/thelma/charts/dependency"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	"github.com/rs/zerolog/log"
 )
 
 // ChartsDir represents a directory of Helm chart sources on the local filesystem.
 type ChartsDir interface {
-	// PublishAndRelease calculates out downstream dependents of the given charts, increments versions, publishes new
-	// chart packages to the Helm repo, and releases those new versions into our version systems courtesy of
-	// AutoReleaser.
-	//
-	// If chart `bar` depends on chart `foo`, just including `foo` in the chartNames will also publish and release
-	// `bar`.
-	//
-	// Returns a map representing the names and versions of charts that were published and released. Eg.
-	// {
-	//   "foo": "1.2.3",
-	//   "bar": "0.2.0",
-	// }
-	PublishAndRelease(chartNames []string, description string) (publishedVersions map[string]string, err error)
+	// Exists returns true if a chart by the given name exists in the directory
+	Exists(name string) bool
+	// GetChart returns a Chart for the chart with the given name, or an error if no chart by that name exists in source dir
+	GetChart(name string) (Chart, error)
+	// GetCharts returns the Chart objects for a set of charts with the given name(s), or an error if no chart(s) by that name exists in source dir
+	GetCharts(name ...string) ([]Chart, error)
+	// UpdateDependentVersionConstraints go through all dependents and update version constraints to match new version
+	UpdateDependentVersionConstraints(chart Chart, newVersion string) error
+	// WithTransitiveDependents returns the given charts plus all of their transitive dependents
+	WithTransitiveDependents(chart []Chart) ([]Chart, error)
+	// RecursivelyUpdateDependencies given a list of charts:
+	// * identify all transitive dependencies of those charts
+	// * sort the list of charts + dependencies in topological order
+	// * run `helm dependency update` on each chart in the list
+	RecursivelyUpdateDependencies(chart ...Chart) error
 }
 
 // NewChartsDir constructs a new ChartsDir
 func NewChartsDir(
 	sourceDir string,
-	publisher publish.Publisher,
 	shellRunner shell.Runner,
-	autoreleaser *AutoReleaser,
 ) (ChartsDir, error) {
-
 	charts, err := loadCharts(sourceDir, shellRunner)
 	if err != nil {
 		return nil, err
@@ -50,100 +47,67 @@ func NewChartsDir(
 	return &chartsDir{
 		sourceDir:       sourceDir,
 		charts:          charts,
-		publisher:       publisher,
-		autoreleaser:    autoreleaser,
 		dependencyGraph: dependencyGraph,
 	}, nil
+}
+
+func ChartNames(charts ...Chart) []string {
+	var names []string
+	for _, c := range charts {
+		names = append(names, c.Name())
+	}
+	return names
 }
 
 // implemeents ChartsDir interface
 type chartsDir struct {
 	sourceDir       string
 	charts          map[string]Chart
-	publisher       publish.Publisher
-	autoreleaser    *AutoReleaser
 	dependencyGraph *dependency.Graph
 }
 
-func (d *chartsDir) PublishAndRelease(chartNames []string, description string) (map[string]string, error) {
-	chartsToPublish := chartNames
-	for _, chartName := range chartsToPublish {
-		if _, exists := d.charts[chartName]; !exists {
-			return nil, errors.Errorf("chart %q does not exist in source dir %s", chartName, d.sourceDir)
-		}
+func (d *chartsDir) Exists(chartName string) bool {
+	_, exists := d.charts[chartName]
+	return exists
+}
+
+func (d *chartsDir) GetChart(chartName string) (Chart, error) {
+	_chart, exists := d.charts[chartName]
+
+	if !exists {
+		return nil, errors.Errorf("chart %q does not exist in source dir %s", chartName, d.sourceDir)
 	}
+	return _chart, nil
+}
 
-	// Add dependents.
-	chartsToPublish = d.withTransitiveDependents(chartsToPublish)
-
-	d.dependencyGraph.TopoSort(chartsToPublish)
-	log.Info().Msgf("%d charts will be published: %s", len(chartsToPublish), strings.Join(chartsToPublish, ", "))
-
-	publishedVersions := make(map[string]string, len(chartsToPublish))
-	lastVersions := make(map[string]string, len(chartsToPublish))
-	for _, chartName := range chartsToPublish {
-		_chart := d.charts[chartName]
-
-		dependenciesToUpdate := d.determineDependenciesToUpdate(_chart)
-
-		lastVersions[chartName] = d.publisher.Index().MostRecentVersion(chartName)
-		newVersion, err := _chart.BumpChartVersion(lastVersions[chartName])
+func (d *chartsDir) GetCharts(chartNames ...string) ([]Chart, error) {
+	var charts []Chart
+	for _, name := range chartNames {
+		_chart, err := d.GetChart(name)
 		if err != nil {
 			return nil, err
 		}
-		if err := d.updateDependentVersionConstraints(chartName, newVersion); err != nil {
-			return nil, err
-		}
-		for _, chartToUpdate := range dependenciesToUpdate {
-			_chartToUpdate := d.charts[chartToUpdate]
-			if err := _chartToUpdate.UpdateDependencies(); err != nil {
-				return nil, err
-			}
-		}
-
-		if err := _chart.GenerateDocs(); err != nil {
-			return nil, err
-		}
-
-		if err := _chart.PackageChart(d.publisher.ChartDir()); err != nil {
-			return nil, err
-		}
-
-		publishedVersions[chartName] = newVersion
+		charts = append(charts, _chart)
 	}
 
-	count, err := d.publisher.Publish()
-	if err != nil {
-		return nil, err
-	}
-	log.Info().Msgf("%d charts were uploaded to the repository", count)
-
-	// We run the autoreleaser after publishing the charts to avoid an instance where a chart release points at a chart
-	// version that hasn't been published quite yet
-	if d.autoreleaser != nil {
-		for _, chartName := range chartsToPublish {
-			err = d.autoreleaser.UpdateReleaseVersion(d.charts[chartName], publishedVersions[chartName], lastVersions[chartName], description)
-			if err != nil {
-				return publishedVersions, err
-			}
-		}
-	}
-
-	return publishedVersions, nil
+	return charts, nil
 }
 
-// Go through all dependents and update version constraints to match new version
-func (d *chartsDir) updateDependentVersionConstraints(chartName string, newVersion string) error {
-	for _, dependent := range d.dependencyGraph.GetDependents(chartName) {
+// UpdateDependentVersionConstraints go through all dependents and update version constraints to match new version
+func (d *chartsDir) UpdateDependentVersionConstraints(chart Chart, newVersion string) error {
+	for _, dependent := range d.dependencyGraph.GetDependents(chart.Name()) {
 		dependentChart := d.charts[dependent]
-		if err := dependentChart.SetDependencyVersion(chartName, newVersion); err != nil {
+		if err := dependentChart.SetDependencyVersion(chart.Name(), newVersion); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (d *chartsDir) withTransitiveDependents(chartNames []string) []string {
+// WithTransitiveDependents returns the given charts plus all of their transitive dependents, in topologically sorted order
+func (d *chartsDir) WithTransitiveDependents(charts []Chart) ([]Chart, error) {
+	chartNames := ChartNames(charts...)
+
 	result := d.dependencyGraph.WithTransitiveDependents(chartNames...)
 
 	diff := len(result) - len(chartNames)
@@ -151,7 +115,67 @@ func (d *chartsDir) withTransitiveDependents(chartNames []string) []string {
 		log.Info().Msgf("Identified %d additional downstream charts to publish", diff)
 	}
 
-	return result
+	d.dependencyGraph.TopoSort(result)
+
+	return d.GetCharts(result...)
+}
+
+// RecursivelyUpdateDependencies given a list of charts:
+// * identify all transitive dependencies of those charts
+// * sort the list of charts + dependencies in topological order
+// * run `helm dependency update` on each chart in the list
+func (d *chartsDir) RecursivelyUpdateDependencies(charts ...Chart) error {
+	withDependenciesNames, err := d.findTransitiveDependencies(charts...)
+	if err != nil {
+		return err
+	}
+
+	withDependencies, err := d.GetCharts(withDependenciesNames...)
+	if err != nil {
+		return err
+	}
+
+	for _, _chart := range withDependencies {
+		if err = _chart.UpdateDependencies(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// findTransitiveDependencies returns the names of all charts in the dependency trees of the given chart(s)
+// in topologically sorted order
+func (d *chartsDir) findTransitiveDependencies(charts ...Chart) ([]string, error) {
+	var chartsToProcess []string
+	visited := set.NewSet[string]()
+
+	for _, chart := range charts {
+		chartsToProcess = append(chartsToProcess, chart.Name())
+	}
+
+	for len(chartsToProcess) != 0 {
+		currentChartName := chartsToProcess[0]
+		chartsToProcess = chartsToProcess[1:]
+
+		visited.Add(currentChartName)
+
+		currentChart, err := d.GetChart(currentChartName)
+		if err != nil {
+			return nil, errors.Errorf("error processing chart %q: %v", currentChartName, err)
+		}
+
+		for _, dep := range currentChart.LocalDependencies() {
+			if !visited.Exists(dep) {
+				chartsToProcess = append(chartsToProcess, dep)
+			}
+		}
+	}
+
+	dependenciesToUpdate := visited.Elements()
+	d.dependencyGraph.TopoSort(dependenciesToUpdate)
+
+	return dependenciesToUpdate, nil
 }
 
 func buildDependencyGraph(charts map[string]Chart) (*dependency.Graph, error) {
@@ -193,27 +217,4 @@ func loadCharts(sourceDir string, shellRunner shell.Runner) (map[string]Chart, e
 	}
 
 	return charts, nil
-}
-
-func (d *chartsDir) determineDependenciesToUpdate(chart Chart) []string {
-	localDependencies := make(map[string][]string)
-	localDependencies[chart.Name()] = chart.LocalDependencies()
-	chartsToProcess := make([]string, 0)
-	chartsToProcess = append(chartsToProcess, chart.LocalDependencies()...)
-
-	for len(chartsToProcess) != 0 {
-		currentChartName := chartsToProcess[0]
-		chartsToProcess = chartsToProcess[1:]
-		currentChart := d.charts[currentChartName]
-		localDependencies[currentChart.Name()] = currentChart.LocalDependencies()
-		chartsToProcess = append(chartsToProcess, currentChart.LocalDependencies()...)
-	}
-
-	dependenciesToUpdate := make([]string, 0)
-	for _chart := range localDependencies {
-		dependenciesToUpdate = append(dependenciesToUpdate, _chart)
-	}
-	d.dependencyGraph.TopoSort(dependenciesToUpdate)
-
-	return dependenciesToUpdate
 }

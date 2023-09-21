@@ -16,6 +16,7 @@ type Index interface {
 	// HasVersion returns true if the index contains the given version for the given chart
 	HasVersion(chartName string, version string) bool
 	// MostRecentVersion returns the most recent / highest semantic version of the chart in the index
+	// returns "" if no version of the chart has been published yet
 	MostRecentVersion(chartName string) string
 }
 

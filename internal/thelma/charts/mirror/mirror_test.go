@@ -1,8 +1,8 @@
 package mirror
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
-	"github.com/broadinstitute/thelma/internal/thelma/charts/repo/index"
+	publishmocks "github.com/broadinstitute/thelma/internal/thelma/charts/publish/mocks"
+	indexmocks "github.com/broadinstitute/thelma/internal/thelma/charts/repo/index/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/stretchr/testify/assert"
@@ -12,8 +12,8 @@ import (
 func TestUploadToMirror(t *testing.T) {
 	chartDir := t.TempDir()
 
-	publisher := publish.NewMockPublisher()
-	_index := index.NewMockIndex()
+	publisher := publishmocks.NewPublisher(t)
+	_index := indexmocks.NewIndex(t)
 	runner := shell.DefaultMockRunner()
 
 	_index.On("HasVersion", "mongodb", "1.2.3").Return(false, nil)
