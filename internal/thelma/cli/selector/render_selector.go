@@ -1,6 +1,7 @@
 package selector
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
 	"github.com/spf13/cobra"
@@ -8,8 +9,9 @@ import (
 )
 
 type RenderSelector struct {
-	enumFlags     []*enumFlag
-	filterBuilder *filterBuilder
+	enumFlags        []*enumFlag
+	changedFilesFlag *changedFilesListFlag
+	filterBuilder    *filterBuilder
 }
 
 // RenderSelection describes the set of releases that match user-supplied CLI flags for a render selector
@@ -37,8 +39,9 @@ func NewRenderSelector() *RenderSelector {
 	}
 
 	return &RenderSelector{
-		enumFlags:     enumFlags,
-		filterBuilder: newFilterBuilder(),
+		enumFlags:        enumFlags,
+		changedFilesFlag: newChangedFilesList(),
+		filterBuilder:    newFilterBuilder(),
 	}
 }
 
@@ -47,9 +50,10 @@ func (s *RenderSelector) AddFlags(cobraCommand *cobra.Command) {
 	for _, flag := range s.enumFlags {
 		flag.addToCobraCommand(cobraCommand)
 	}
+	s.changedFilesFlag.addToCobraCommand(cobraCommand)
 }
 
-func (s *RenderSelector) GetSelection(state terra.State, pflags *pflag.FlagSet, args []string) (*RenderSelection, error) {
+func (s *RenderSelector) GetSelection(state terra.State, chartsDir source.ChartsDir, pflags *pflag.FlagSet, args []string) (*RenderSelection, error) {
 	if err := s.checkRequiredFlags(pflags); err != nil {
 		return nil, err
 	}
@@ -61,6 +65,9 @@ func (s *RenderSelector) GetSelection(state terra.State, pflags *pflag.FlagSet, 
 		if err := flag.processInput(s.filterBuilder, state, args, pflags); err != nil {
 			return nil, err
 		}
+	}
+	if err := s.changedFilesFlag.processInput(s.filterBuilder, state, chartsDir, args, pflags); err != nil {
+		return nil, err
 	}
 
 	releaseFilter := s.filterBuilder.combine()
@@ -77,7 +84,7 @@ func (s *RenderSelector) GetSelection(state terra.State, pflags *pflag.FlagSet, 
 	}, nil
 }
 
-func (s *RenderSelector) checkRequiredFlags(flags *pflag.FlagSet) error {
+func (s *RenderSelector) checkRequiredFlags(_ *pflag.FlagSet) error {
 	// no required flags yet
 	return nil
 }

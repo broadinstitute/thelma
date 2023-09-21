@@ -12,6 +12,8 @@ type ReleaseFilter interface {
 	And(ReleaseFilter) ReleaseFilter
 	// Or returns a new filter that matches this filter or another
 	Or(ReleaseFilter) ReleaseFilter
+	// Negate returns a new filter that matches the opposite of this filter
+	Negate() ReleaseFilter
 	// Filter given a list of releases, return the sublist that match this filter
 	Filter([]Release) []Release
 }
@@ -26,6 +28,8 @@ type DestinationFilter interface {
 	And(DestinationFilter) DestinationFilter
 	// Or returns a new filter that matches this filter or another
 	Or(DestinationFilter) DestinationFilter
+	// Negate returns a new filter that matches the opposite of this filter
+	Negate() DestinationFilter
 	// Filter given a list of destinations, return the sublist that match this filter
 	Filter([]Destination) []Destination
 }
@@ -40,6 +44,8 @@ type EnvironmentFilter interface {
 	And(EnvironmentFilter) EnvironmentFilter
 	// Or returns a new filter that matches this filter or another
 	Or(EnvironmentFilter) EnvironmentFilter
+	// Negate returns a new filter that matches the opposite of this filter
+	Negate() EnvironmentFilter
 	// Filter given a list of environments, return the sublist that match this filter
 	Filter([]Environment) []Environment
 }

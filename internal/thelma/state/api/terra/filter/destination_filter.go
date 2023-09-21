@@ -39,6 +39,15 @@ func (f destinationFilter) Or(other terra.DestinationFilter) terra.DestinationFi
 	}
 }
 
+func (f destinationFilter) Negate() terra.DestinationFilter {
+	return destinationFilter{
+		string: fmt.Sprintf(notFormat, f.String()),
+		matcher: func(destination terra.Destination) bool {
+			return !f.Matches(destination)
+		},
+	}
+}
+
 func (f destinationFilter) Filter(destinations []terra.Destination) []terra.Destination {
 	var result []terra.Destination
 	for _, destination := range destinations {

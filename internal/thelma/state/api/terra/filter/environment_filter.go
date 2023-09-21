@@ -39,6 +39,15 @@ func (f environmentFilter) Or(other terra.EnvironmentFilter) terra.EnvironmentFi
 	}
 }
 
+func (f environmentFilter) Negate() terra.EnvironmentFilter {
+	return environmentFilter{
+		string: fmt.Sprintf(notFormat, f.String()),
+		matcher: func(env terra.Environment) bool {
+			return !f.Matches(env)
+		},
+	}
+}
+
 func (f environmentFilter) Filter(environments []terra.Environment) []terra.Environment {
 	var result []terra.Environment
 	for _, environment := range environments {

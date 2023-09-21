@@ -1,6 +1,7 @@
 package selector
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/charts/changedfiles"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -25,6 +26,7 @@ var flagNames = struct {
 	environmentTemplate  string
 	destinationType      string
 	destinationBase      string
+	changedFilesList     string
 }{
 	release:              ReleasesFlagName,
 	exactRelease:         "exact-release",
@@ -34,6 +36,7 @@ var flagNames = struct {
 	environmentTemplate:  "environment-template",
 	destinationBase:      "destination-base",
 	destinationType:      "destination-type",
+	changedFilesList:     changedfiles.FlagName,
 }
 
 type Selector struct {

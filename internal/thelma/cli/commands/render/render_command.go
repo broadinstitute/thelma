@@ -1,6 +1,7 @@
 package render
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/pkg/errors"
 	"path"
 	"path/filepath"
@@ -40,6 +41,20 @@ thelma render cromwell --values-file=path/to/my-values.yaml
 
 # Render leonardo manifests to a directory other than $THELMA_HOME/output
 thelma render leonardo  --output-dir=/tmp/my-manifests
+
+# Render manifests for a list of charts that have been updated in a
+# PR, using a file trigger file.
+#
+# Note: A file trigger is text file containing a newline-separated
+# list of files in the terra-helmfile repo that have changed.
+# All paths in the file trigger should be relative.
+# Example:
+#
+#    charts/agora/templates/deployment.yaml
+#    charts/thurloe/values.yaml
+#    helmfile.yaml
+#
+thelma render ---file-trigger=./list-of-updated-files.txt
 
 `
 
@@ -195,8 +210,13 @@ func (cmd *renderCommand) getSelectedReleases(app app.ThelmaApp, flags *pflag.Fl
 		return nil, err
 	}
 
+	chartsDir, err := source.NewChartsDir(app.Paths().ChartsDir(), app.ShellRunner())
+	if err != nil {
+		return nil, err
+	}
+
 	// release selection
-	return cmd.selector.GetSelection(state, flags, args)
+	return cmd.selector.GetSelection(state, chartsDir, flags, args)
 }
 
 // fillRenderOptions populates an empty render.Options struct in accordance with user-supplied CLI options

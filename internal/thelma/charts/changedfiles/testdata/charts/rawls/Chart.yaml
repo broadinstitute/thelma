@@ -1,0 +1,12 @@
+apiVersion: v2
+name: rawls
+version: 1.2.3
+type: application
+dependencies:
+  - name: ingress
+    version: 1.2.3
+    repository: file://../ingress
+  - name: mysql
+    version: 1.2.3
+    condition: mysql.enabled
+    repository: file://../mysql

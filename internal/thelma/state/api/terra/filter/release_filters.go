@@ -11,6 +11,8 @@ type ReleaseFilters interface {
 	Any() terra.ReleaseFilter
 	// HasName returns a filter that matches releases with the given name(s)
 	HasName(releaseName ...string) terra.ReleaseFilter
+	// HasChartName returns a filter that matches releases with the given chart name(s)
+	HasChartName(releaseName ...string) terra.ReleaseFilter
 	// HasFullName returns a filter that matches release with the given full name(s)
 	HasFullName(releaseFullName ...string) terra.ReleaseFilter
 	// HasDestinationName returns a filter that matches releases with the given destination
@@ -48,6 +50,20 @@ func (r releaseFilters) HasName(releaseNames ...string) terra.ReleaseFilter {
 		matcher: func(r terra.Release) bool {
 			for _, name := range releaseNames {
 				if r.Name() == name {
+					return true
+				}
+			}
+			return false
+		},
+	}
+}
+
+func (r releaseFilters) HasChartName(chartNames ...string) terra.ReleaseFilter {
+	return releaseFilter{
+		string: fmt.Sprintf("hasChartName(%s)", join(quote(chartNames)...)),
+		matcher: func(r terra.Release) bool {
+			for _, name := range chartNames {
+				if r.ChartName() == name {
 					return true
 				}
 			}
