@@ -147,10 +147,10 @@ release: runtime-deps build ## Assemble thelma binary + runtime dependencies int
 checksum: # Generate sha256sum file for tarball archives in the release archive directory
 	env VERSION=${VERSION} ./scripts/checksum.sh ${RELEASE_ARCHIVE_DIR}
 
-test: init ## Run unit tests
+test: runtime-deps runtime-deps-symlink ## Run unit tests
 	go test -covermode=atomic -race -coverprofile=${COVERAGE_DIR} ./...
 
-smoke: runtime-deps ## Run unit and smoke tests
+smoke: runtime-deps runtime-deps-symlink ## Run unit and smoke tests
 	go test -tags smoke -covermode=atomic -race -coverprofile=${COVERAGE_DIR} ./...
 
 lint: ## Run golangci linter
