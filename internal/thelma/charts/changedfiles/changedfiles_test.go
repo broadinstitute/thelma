@@ -103,7 +103,7 @@ values/cluster/global.yaml.gotmpl
 		{
 			name: "app global values and yale value",
 			input: `
-values/app/yale/bee.yaml.gotmpl
+values/cluster/yale/bee.yaml.gotmpl
 values/app/global/bee.yaml.gotmpl
 `,
 			expectCharts:   []string{"rawls", "sam", "workspacemanager", "yale"},
