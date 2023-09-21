@@ -25,7 +25,7 @@ func newReleasesFlag() *enumFlag {
 				return flagValues, nil
 			} else if len(args) > 0 {
 				return []string{args[0]}, nil
-			} else if pflags.Changed(flagNames.exactRelease) {
+			} else if pflags.Changed(flagNames.exactRelease) || pflags.Changed(flagNames.changedFilesList) {
 				// If there's no releases specified but there are exact releases specified, or a changed file list, act
 				// as if this flag had been set to ALL so we don't filter on it
 				return []string{allSelector}, nil

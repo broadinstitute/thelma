@@ -8,6 +8,7 @@ import (
 // this file constants and helpers for string representations of filters
 const andFormat = "and(%s)"
 const orFormat = "or(%s)"
+const notFormat = "not(%s)"
 const anyString = "any()"
 
 func quote(strings []string) []string {
