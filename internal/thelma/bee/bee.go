@@ -22,6 +22,7 @@ import (
 )
 
 const generatorArgoApp = "terra-bee-generator"
+const beeDocLink = "https://broadworkbench.atlassian.net/wiki/spaces/IA/pages/2839576631/How+to+BEE"
 
 type Bees interface {
 	DeleteWith(name string, options DeleteOptions) (*Bee, error)
@@ -198,10 +199,11 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 				for _, release := range env.Releases() {
 					if release.IsAppRelease() && release.ChartName() == "terraui" {
 						if terraui, ok := release.(terra.AppRelease); ok {
-							markdown += fmt.Sprintf(" Terra's UI is at %s", terraui.URL())
+							markdown += fmt.Sprintf(" Terra's UI is at %s.", terraui.URL())
 						}
 					}
 				}
+				markdown += fmt.Sprintf(" You'll probably want to set up your BEE with a billing account, <%s|instructions available here>.", beeDocLink)
 				if err := b.slack.SendDirectMessage(env.Owner(), markdown); err != nil {
 					log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
 				}
