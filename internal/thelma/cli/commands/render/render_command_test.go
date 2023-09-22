@@ -1,6 +1,7 @@
 package render
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -217,18 +218,14 @@ func TestRenderArgParsing(t *testing.T) {
 			},
 		},
 		{
-			description: "--changed-files-list should set release name",
+			description: "no releases match command line arguments but --exit-zero-no-matching-releases is set",
 			setupFn: func(tc *testConfig) error {
 				changedFilesList := t.TempDir() + "/changed-files.txt"
-				require.NoError(t, os.WriteFile(changedFilesList, []byte("values/app/datarepo/live/alpha.yaml"), 0644))
+				require.NoError(t, os.WriteFile(changedFilesList, []byte(".an-irrelevant-change.txt"), 0644))
 
-				tc.options.SetArgs(Args("render --changed-files-list=%s", changedFilesList))
+				tc.options.SetArgs(Args("render --changed-files-list=%s --exit-zero-no-matching-releases", changedFilesList))
 				tc.expected.renderOptions.Scope = scope.Release
-				tc.expected.renderOptions.Releases = []terra.Release{
-					fixture.Release("datarepo", "alpha"),
-					fixture.Release("datarepo", "staging"),
-					fixture.Release("datarepo", "prod"),
-				}
+				tc.expected.renderOptions.Releases = []terra.Release{}
 				return nil
 			},
 		},
@@ -497,10 +494,6 @@ func TestRenderArgParsing(t *testing.T) {
 		t.Run(testCase.description, func(t *testing.T) {
 			options := cli.DefaultOptions()
 
-			// Replace render's RunE with a noop function,
-			// We're just testing argument parsing, so only test pre-/post- run hooks here
-			options.SkipRun(true)
-
 			expected := &expectedAttrs{
 				renderOptions: &render.Options{},
 				helmfileArgs:  &helmfile.Args{},
@@ -540,9 +533,10 @@ func TestRenderArgParsing(t *testing.T) {
 			}
 
 			// execute the test parsing code
-			cmd := NewRenderCommand().(*renderCommand)
+			wrapper := newTestWrapper()
+			cmd := newRenderCommand(wrapper)
 			options.AddCommand("render", cmd)
-			err := cli.NewWithOptions(options).Execute()
+			err = cli.NewWithOptions(options).Execute()
 
 			// if error was expected, check it
 			if testCase.expectedError != nil {
@@ -590,4 +584,14 @@ func defaultReleases(fixture statefixtures.Fixture) []terra.Release {
 			filter.Destinations().IsEnvironmentMatching(filter.Environments().HasLifecycleName("static", "template"))),
 	)
 	return f.Filter(fixture.AllReleases())
+}
+
+func newTestWrapper() renderWrapper {
+	return &testWrapper{}
+}
+
+type testWrapper struct{}
+
+func (t *testWrapper) doRender(_ app.ThelmaApp, _ *render.Options, _ *helmfile.Args) error {
+	return nil
 }
