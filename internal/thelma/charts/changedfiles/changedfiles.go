@@ -70,6 +70,8 @@ type globalFileMatches struct {
 	includeClusterReleases bool
 	// include all releases
 	includeAllReleases bool
+	// releaseNames is a list of named releases that were updated
+	releaseNames set.Set[string]
 }
 
 func (c *changedFiles) ChartList(inputFile string) ([]string, error) {
@@ -111,7 +113,12 @@ func (c *changedFiles) identifyImpactedCharts(inputFile string) (set.Set[string]
 		return nil, errors.Errorf("error parsing %s: %v", inputFile, err)
 	}
 
-	var matches globalFileMatches
+	matches := globalFileMatches{
+		includeEnvReleases:     false,
+		includeClusterReleases: false,
+		includeAllReleases:     false,
+		releaseNames:           set.NewSet[string](),
+	}
 	chartNames := set.NewSet[string]()
 
 	for _, updatedFileName := range updatedFiles {
@@ -134,8 +141,8 @@ func (c *changedFiles) identifyImpactedCharts(inputFile string) (set.Set[string]
 		} else if regexp.MustCompile("^values/[^/]").MatchString(cleaned) {
 			component := pathIndex(cleaned, 2)
 			// remove any . extensions like .yaml, .yaml.gotmpl
-			chartName := strings.Split(component, ".")[0]
-			chartNames.Add(chartName)
+			releaseName := strings.Split(component, ".")[0]
+			matches.releaseNames.Add(releaseName)
 
 		} else if regexp.MustCompile("^helmfile.yaml$").MatchString(cleaned) {
 			matches.includeAllReleases = true
@@ -192,8 +199,8 @@ func matchesToReleaseFilter(matches globalFileMatches) terra.ReleaseFilter {
 		return filter.Releases().Any()
 	}
 
-	// start by matching no releases
-	_filter := filter.Releases().Any().Negate()
+	// start by matching any releases with the given names
+	_filter := filter.Releases().HasName(matches.releaseNames.Elements()...)
 
 	// include all env releases if needed
 	if matches.includeEnvReleases {

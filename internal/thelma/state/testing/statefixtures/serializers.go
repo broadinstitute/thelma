@@ -40,6 +40,7 @@ type Chart struct {
 
 type Release struct {
 	FullName            string
+	Name                string
 	Repo                string
 	Chart               string
 	Cluster             string
@@ -52,6 +53,13 @@ type Release struct {
 	Port                int
 	Protocol            string
 	Subdomain           string
+}
+
+func (r Release) name() string {
+	if r.Name != "" {
+		return r.Name
+	}
+	return r.Chart
 }
 
 func (r Release) key() string {
