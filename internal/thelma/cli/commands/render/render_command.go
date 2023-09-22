@@ -1,7 +1,6 @@
 package render
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/charts/changedfiles"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/pkg/errors"
 	"path"
@@ -67,63 +66,71 @@ const defaultChartSourceDir = "charts"
 
 // renderCommand contains state and configuration for executing a render from the command-line
 type renderCommand struct {
-	helmfileArgs         *helmfile.Args
-	renderOptions        *render.Options
-	selector             *selector.RenderSelector
-	flagVals             *flagValues
-	exitWithoutRendering bool
+	helmfileArgs  *helmfile.Args
+	renderOptions *render.Options
+	selector      *selector.RenderSelector
+	flagVals      *flagValues
+	wrapper       renderWrapper
 }
 
 // flagNames the names of all `render`'s CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	chartVersion    string
-	appVersion      string
-	valuesFile      string
-	argocd          string
-	outputDir       string
-	stdout          string
-	debug           string
-	parallelWorkers string
-	mode            string
-	apps            string
-	chartDir        string
-	scope           string
-	validate        string
+	chartVersion               string
+	appVersion                 string
+	valuesFile                 string
+	argocd                     string
+	outputDir                  string
+	stdout                     string
+	debug                      string
+	parallelWorkers            string
+	mode                       string
+	apps                       string
+	chartDir                   string
+	scope                      string
+	validate                   string
+	exitZeroNoMatchingReleases string
 }{
-	argocd:          "argocd",
-	chartDir:        "chart-dir",
-	chartVersion:    "chart-version",
-	appVersion:      "app-version",
-	valuesFile:      "values-file",
-	outputDir:       "output-dir",
-	stdout:          "stdout",
-	debug:           "debug",
-	parallelWorkers: "parallel-workers",
-	mode:            "mode",
-	apps:            "apps",
-	scope:           "scope",
-	validate:        "validate",
+	argocd:                     "argocd",
+	chartDir:                   "chart-dir",
+	chartVersion:               "chart-version",
+	appVersion:                 "app-version",
+	valuesFile:                 "values-file",
+	outputDir:                  "output-dir",
+	stdout:                     "stdout",
+	debug:                      "debug",
+	parallelWorkers:            "parallel-workers",
+	mode:                       "mode",
+	apps:                       "apps",
+	scope:                      "scope",
+	validate:                   "validate",
+	exitZeroNoMatchingReleases: "exit-zero-no-matching-releases",
 }
 
 // flagValues is a struct for capturing flag values that are parsed by Cobra.
 type flagValues struct {
-	argocd          bool
-	chartVersion    string
-	appVersion      string
-	valuesFile      []string
-	outputDir       string
-	stdout          bool
-	debug           bool
-	parallelWorkers int
-	mode            string
-	apps            string
-	chartDir        string
-	scope           string
-	validate        string
+	argocd                     bool
+	chartVersion               string
+	appVersion                 string
+	valuesFile                 []string
+	outputDir                  string
+	stdout                     bool
+	debug                      bool
+	parallelWorkers            int
+	mode                       string
+	apps                       string
+	chartDir                   string
+	scope                      string
+	validate                   string
+	exitZeroNoMatchingReleases bool
 }
 
 // NewRenderCommand constructs a new renderCommand
 func NewRenderCommand() cli.ThelmaCommand {
+	return newRenderCommand(newRenderWrapper())
+}
+
+// package-private constructor for use in tests
+func newRenderCommand(wrapper renderWrapper) *renderCommand {
 	flagVals := &flagValues{}
 	helmfileArgs := &helmfile.Args{}
 	renderOptions := &render.Options{}
@@ -133,6 +140,7 @@ func NewRenderCommand() cli.ThelmaCommand {
 		helmfileArgs:  helmfileArgs,
 		selector:      selector.NewRenderSelector(),
 		flagVals:      flagVals,
+		wrapper:       wrapper,
 	}
 
 	return cmd
@@ -155,6 +163,7 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.flagVals.mode, flagNames.mode, "development", `Either "development" (render from chart source directory) or "deploy" (render using released chart versions). Defaults to "development"`)
 	cobraCommand.Flags().StringVar(&cmd.flagVals.scope, flagNames.scope, "all", `One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types)`)
 	cobraCommand.Flags().StringVar(&cmd.flagVals.validate, flagNames.validate, "skip", `One of "skip" (no validation on render output), "warn" (print validation of render output but don't fail), or "fail" (exit with error if render output validation fails)`)
+	cobraCommand.Flags().BoolVar(&cmd.flagVals.exitZeroNoMatchingReleases, flagNames.exitZeroNoMatchingReleases, false, `Use to make Thelma exit with status code 0 if no chart releases match command-line arguments. Useful for CI/CD pipelines.`)
 
 	// Single-chart flags -- these can only be used for renders of a single chart
 	cobraCommand.Flags().StringVar(&cmd.flagVals.chartVersion, flagNames.chartVersion, "", "Override chart version")
@@ -198,10 +207,15 @@ func (cmd *renderCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *renderCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
-	if cmd.exitWithoutRendering {
-		return nil
+	if len(cmd.renderOptions.Releases) == 0 {
+		if cmd.flagVals.exitZeroNoMatchingReleases {
+			log.Info().Msg("0 releases matched command-line arguments, nothing to render")
+		} else {
+			return errors.Errorf("0 releases matched command-line arguments, nothing to render")
+		}
 	}
-	return render.DoRender(app, cmd.renderOptions, cmd.helmfileArgs)
+
+	return cmd.wrapper.doRender(app, cmd.renderOptions, cmd.helmfileArgs)
 }
 
 func (cmd *renderCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
@@ -229,15 +243,6 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.RenderSelection,
 	flagVals := cmd.flagVals
 	renderOptions := cmd.renderOptions
 
-	if len(selection.Releases) == 0 {
-		// if the user specified --changed-files, we should not error out if no releases matched
-		if selection.ChangedFilesList {
-			log.Info().Msgf("0 releases matched --%s, nothing to render", changedfiles.FlagName)
-			cmd.exitWithoutRendering = true
-		} else {
-			return errors.Errorf("0 releases matched command-line arguments, nothing to render")
-		}
-	}
 	renderOptions.Releases = selection.Releases
 
 	_scope, err := scope.FromString(flagVals.scope)
