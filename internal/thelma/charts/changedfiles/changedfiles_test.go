@@ -71,16 +71,16 @@ values/app/global/live.yaml.gotmpl
 			input: `
 values/cluster/global/terra.yaml
 `,
-			expectCharts:   []string{"secrets-manager", "yale"},
-			expectReleases: []string{"secrets-manager-terra-dev", "yale-terra-dev", "yale-terra-staging"},
+			expectCharts:   []string{"secrets-manager", "sherlock", "yale"},
+			expectReleases: []string{"secrets-manager-terra-dev", "sherlock-dev-fake-tools", "yale-terra-dev", "yale-terra-staging"},
 		},
 		{
 			name: "helmfile.yaml",
 			input: `
 helmfile.yaml
 `,
-			expectCharts:   []string{"rawls", "sam", "secrets-manager", "workspacemanager", "yale"},
-			expectReleases: []string{"datarepo-my-bee", "rawls-staging", "sam-dev", "secrets-manager-terra-dev", "workspacemanager-swatomation", "yale-terra-dev", "yale-terra-staging"},
+			expectCharts:   []string{"rawls", "sam", "secrets-manager", "sherlock", "workspacemanager", "yale"},
+			expectReleases: []string{"datarepo-my-bee", "rawls-staging", "sam-dev", "secrets-manager-terra-dev", "sherlock-dev-fake-tools", "workspacemanager-swatomation", "yale-terra-dev", "yale-terra-staging"},
 		},
 		{
 			name: "app and cluster globals",
@@ -88,8 +88,8 @@ helmfile.yaml
 values/app/global/live/dev.yaml
 values/cluster/global.yaml.gotmpl
 `,
-			expectCharts:   []string{"rawls", "sam", "secrets-manager", "workspacemanager", "yale"},
-			expectReleases: []string{"datarepo-my-bee", "rawls-staging", "sam-dev", "secrets-manager-terra-dev", "workspacemanager-swatomation", "yale-terra-dev", "yale-terra-staging"},
+			expectCharts:   []string{"rawls", "sam", "secrets-manager", "sherlock", "workspacemanager", "yale"},
+			expectReleases: []string{"datarepo-my-bee", "rawls-staging", "sam-dev", "secrets-manager-terra-dev", "sherlock-dev-fake-tools", "workspacemanager-swatomation", "yale-terra-dev", "yale-terra-staging"},
 		},
 		{
 			name: "cluster global values and rawls value",
@@ -97,8 +97,8 @@ values/cluster/global.yaml.gotmpl
 values/app/rawls.yaml.gotmpl
 values/cluster/global.yaml.gotmpl
 `,
-			expectCharts:   []string{"rawls", "secrets-manager", "yale"},
-			expectReleases: []string{"rawls-staging", "secrets-manager-terra-dev", "yale-terra-dev", "yale-terra-staging"},
+			expectCharts:   []string{"rawls", "secrets-manager", "sherlock", "yale"},
+			expectReleases: []string{"rawls-staging", "secrets-manager-terra-dev", "sherlock-dev-fake-tools", "yale-terra-dev", "yale-terra-staging"},
 		},
 		{
 			name: "app global values and yale value",
@@ -155,6 +155,14 @@ values/app/datarepo.yaml
 `,
 			expectCharts:   nil,
 			expectReleases: []string{"datarepo-my-bee"},
+		},
+		{
+			name: "release with name that does not match chart name",
+			input: `
+values/cluster/sherlock-dev/tools/dsp-tools.yaml
+`,
+			expectCharts:   []string{"sherlock"},
+			expectReleases: []string{"sherlock-dev-fake-tools"},
 		},
 	}
 

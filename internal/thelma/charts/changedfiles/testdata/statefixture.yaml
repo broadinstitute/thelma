@@ -17,6 +17,12 @@ clusters:
     project: fake-project
     location: us-central1-a
     requiresuitable: false
+  - name: fake-tools
+    base: tools
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+    requiresuitable: false
 environments:
   - name: dev
     base: live
@@ -57,9 +63,11 @@ charts:
     repo: terra-helm
   - name: workspacemanager
     repo: terra-helm
-  - name: yale
-    repo: terra-helm
   - name: secrets-manager
+    repo: terra-helm
+  - name: sherlock
+    repo: terra-helm
+  - name: yale
     repo: terra-helm
 releases:
     - fullname: sam-dev
@@ -71,7 +79,7 @@ releases:
       appversion: some-sha
       chartversion: 4.5.6
       subdomain: sam
-      protocol: sam
+      protocol: https
       port: 443
     - fullname: rawls-staging
       repo: terra-helm
@@ -82,7 +90,7 @@ releases:
       appversion: some-sha
       chartversion: 2.20.1
       subdomain: rawls
-      protocol: rawls
+      protocol: https
       port: 443
     - fullname: workspacemanager-swatomation
       repo: terra-helm
@@ -93,7 +101,7 @@ releases:
       appversion: some-sha
       chartversion: 13.14.15
       subdomain: workspacemanager
-      protocol: workspacemanager
+      protocol: https
       port: 443
     - fullname: yale-terra-dev
       repo: terra-helm
@@ -128,5 +136,15 @@ releases:
       appversion: some-sha
       chartversion: 7.8.9
       subdomain: datarepo
-      protocol: datarepo
+      protocol: https
+      port: 443
+    - fullname: sherlock-dev-fake-tools
+      name: sherlock-dev # sherlock has a custom name that does not match its chart
+      repo: terra-helm
+      chart: sherlock
+      cluster: fake-tools
+      namespace: sherlock-dev
+      chartversion: 4.5.6
+      subdomain: sherlock
+      protocol: https
       port: 443
