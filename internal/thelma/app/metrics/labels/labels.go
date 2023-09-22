@@ -41,12 +41,12 @@ func ForReleaseOrDestination(value interface{}, extra ...map[string]string) map[
 //	{
 //	  "release": "leonardo",
 //	  "env": "dev",
-//	  "cluster": "terra-dev",
+//	  "target_cluster": "terra-dev",
 //	}
 func ForRelease(release terra.Release) map[string]string {
 	labels := make(map[string]string)
 	labels["release"] = release.Name()
-	labels["cluster"] = release.Cluster().Name()
+	labels["target_cluster"] = release.Cluster().Name()
 	if release.Destination().IsEnvironment() {
 		labels["env"] = release.Destination().Name()
 	} else {
@@ -60,22 +60,22 @@ func ForRelease(release terra.Release) map[string]string {
 //
 //	{
 //	  "env": "dev",
-//	  "cluster": "",
+//	  "target_cluster": "",
 //	}
 //
 // For the terra-dev-cluster:
 //
 //	{
 //	  "env": "",
-//	  "cluster": "terra-dev",
+//	  "target_cluster": "terra-dev",
 //	}
 func ForDestination(dest terra.Destination) map[string]string {
 	labels := make(map[string]string)
 	if dest.IsCluster() {
-		labels["cluster"] = dest.Name()
+		labels["target_cluster"] = dest.Name()
 		labels["env"] = ""
 	} else if dest.IsEnvironment() {
-		labels["cluster"] = ""
+		labels["target_cluster"] = ""
 		labels["env"] = dest.Name()
 	}
 	return labels

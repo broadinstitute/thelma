@@ -1,9 +1,10 @@
 package labels
 
 import (
+	"testing"
+
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_ForReleaseDestination(t *testing.T) {
@@ -29,63 +30,63 @@ func Test_ForReleaseDestination(t *testing.T) {
 
 	t.Run("for destination: dev env", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"env":     "dev",
-			"cluster": "",
+			"env":            "dev",
+			"target_cluster": "",
 		}, ForDestination(devEnv))
 	})
 
 	t.Run("for destination: dev cluster", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"env":     "",
-			"cluster": "terra-dev",
+			"env":            "",
+			"target_cluster": "terra-dev",
 		}, ForDestination(devCluster))
 	})
 
 	t.Run("for release: leo dev", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"release": "leonardo",
-			"env":     "dev",
-			"cluster": "terra-dev",
+			"release":        "leonardo",
+			"env":            "dev",
+			"target_cluster": "terra-dev",
 		}, ForRelease(leoDev))
 	})
 
 	t.Run("for release: yale dev cluster", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"release": "yale",
-			"env":     "",
-			"cluster": "terra-dev",
+			"release":        "yale",
+			"env":            "",
+			"target_cluster": "terra-dev",
 		}, ForRelease(yaleDev))
 	})
 
 	t.Run("for release or destination: dev env", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"release": "",
-			"env":     "dev",
-			"cluster": "",
+			"release":        "",
+			"env":            "dev",
+			"target_cluster": "",
 		}, ForReleaseOrDestination(devEnv))
 	})
 
 	t.Run("for release or destination: dev cluster", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"release": "",
-			"env":     "",
-			"cluster": "terra-dev",
+			"release":        "",
+			"env":            "",
+			"target_cluster": "terra-dev",
 		}, ForReleaseOrDestination(devCluster))
 	})
 
 	t.Run("for release or destination: leonardo dev", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"release": "leonardo",
-			"env":     "dev",
-			"cluster": "terra-dev",
+			"release":        "leonardo",
+			"env":            "dev",
+			"target_cluster": "terra-dev",
 		}, ForReleaseOrDestination(leoDev))
 	})
 
 	t.Run("for release or destination: yale terra-dev", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
-			"release": "yale",
-			"env":     "",
-			"cluster": "terra-dev",
+			"release":        "yale",
+			"env":            "",
+			"target_cluster": "terra-dev",
 		}, ForReleaseOrDestination(yaleDev))
 	})
 }
