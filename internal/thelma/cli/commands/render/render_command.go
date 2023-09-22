@@ -210,6 +210,7 @@ func (cmd *renderCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
 	if len(cmd.renderOptions.Releases) == 0 {
 		if cmd.flagVals.exitZeroNoMatchingReleases {
 			log.Info().Msg("0 releases matched command-line arguments, nothing to render")
+			return nil
 		} else {
 			return errors.Errorf("0 releases matched command-line arguments, nothing to render")
 		}
