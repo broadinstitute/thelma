@@ -233,6 +233,18 @@ func TestRenderArgParsing(t *testing.T) {
 			},
 		},
 		{
+			description: "--changed-files-list should not return an error if no matching releases are found",
+			setupFn: func(tc *testConfig) error {
+				changedFilesList := t.TempDir() + "/changed-files.txt"
+				require.NoError(t, os.WriteFile(changedFilesList, []byte(".some-irrelevant-change.txt"), 0644))
+
+				tc.options.SetArgs(Args("render --changed-files-list=%s", changedFilesList))
+				tc.expected.renderOptions.Scope = scope.Release
+				tc.expected.renderOptions.Releases = []terra.Release{}
+				return nil
+			},
+		},
+		{
 			description: "first positional should set release name",
 			setupFn: func(tc *testConfig) error {
 				tc.options.SetArgs(Args("render -r datarepo"))

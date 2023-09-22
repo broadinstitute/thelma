@@ -1,6 +1,7 @@
 package render
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/charts/changedfiles"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/pkg/errors"
 	"path"
@@ -66,10 +67,11 @@ const defaultChartSourceDir = "charts"
 
 // renderCommand contains state and configuration for executing a render from the command-line
 type renderCommand struct {
-	helmfileArgs  *helmfile.Args
-	renderOptions *render.Options
-	selector      *selector.RenderSelector
-	flagVals      *flagValues
+	helmfileArgs         *helmfile.Args
+	renderOptions        *render.Options
+	selector             *selector.RenderSelector
+	flagVals             *flagValues
+	exitWithoutRendering bool
 }
 
 // flagNames the names of all `render`'s CLI flags are kept in a struct so they can be easily referenced in error messages
@@ -196,6 +198,9 @@ func (cmd *renderCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *renderCommand) Run(app app.ThelmaApp, _ cli.RunContext) error {
+	if cmd.exitWithoutRendering {
+		return nil
+	}
 	return render.DoRender(app, cmd.renderOptions, cmd.helmfileArgs)
 }
 
@@ -225,7 +230,13 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.RenderSelection,
 	renderOptions := cmd.renderOptions
 
 	if len(selection.Releases) == 0 {
-		return errors.Errorf("0 releases matched command-line arguments, nothing to render")
+		// if the user specified --changed-files, we should not error out if no releases matched
+		if selection.ChangedFilesList {
+			log.Info().Msgf("0 releases matched --%s, nothing to render", changedfiles.FlagName)
+			cmd.exitWithoutRendering = true
+		} else {
+			return errors.Errorf("0 releases matched command-line arguments, nothing to render")
+		}
 	}
 	renderOptions.Releases = selection.Releases
 
