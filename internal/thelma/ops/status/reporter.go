@@ -90,7 +90,7 @@ func (r *reporter) buildUnhealthyResourceList(appStatus argocd.ApplicationStatus
 
 	_eventMatcher, err := r.buildEventMatcher(release)
 	if err != nil {
-		log.Warn().Err(err).Msgf("failed to load events from Kubernetes API for %s; disabling rich status reports", release.FullName())
+		log.Debug().Err(err).Msgf("failed to load events from Kubernetes API for %s; disabling rich status reports", release.FullName())
 		return unhealthyResources
 	}
 
