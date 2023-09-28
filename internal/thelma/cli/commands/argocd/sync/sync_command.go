@@ -35,7 +35,7 @@ func (cmd *syncCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	// Release selector flags -- these flags determine which Argo apps will be synced
 	cmd.selector.AddFlags(cobraCommand)
 
-	cobraCommand.Flags().IntVarP(&cmd.options.maxParallel, "max-parallel", "p", 15, "Max number of ArgoCD apps to sync simultaneously")
+	cobraCommand.Flags().IntVarP(&cmd.options.maxParallel, "max-parallel", "p", 30, "Max number of ArgoCD apps to sync simultaneously")
 	cobraCommand.Flags().BoolVar(&cmd.options.refreshOnly, "refresh-only", false, "If set, only hard-refresh ArgoCD instead of also syncing it")
 }
 
