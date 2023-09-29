@@ -1,15 +1,16 @@
 package terraapi
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	googleoauth "google.golang.org/api/oauth2/v2"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"time"
 )
 
 func Test_OrchClientRetriesFailedRequests(t *testing.T) {
@@ -84,9 +85,9 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 					tokenSource: testutils.NewFakeTokenSource("fake-token"),
 					userInfo:    googleoauth.Userinfo{},
 					httpClient:  *fakeOrchServer.Client(),
+					retryDelay:  5 * time.Millisecond,
 				},
 				appRelease: orchRelease,
-				retryDelay: 5 * time.Millisecond,
 			}
 
 			_, _, err := client.RegisterProfile(

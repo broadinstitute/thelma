@@ -48,7 +48,7 @@ func (c *samClient) AcceptToS() (*http.Response, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	return c.doJsonRequest(http.MethodPost, fmt.Sprintf("%s/register/user/v1/termsofservice", c.appRelease.URL()), bytes.NewBuffer(body))
+	return c.doJsonRequestWithRetries(http.MethodPost, fmt.Sprintf("%s/register/user/v1/termsofservice", c.appRelease.URL()), bytes.NewBuffer(body))
 }
 
 func (c *samClient) UnregisterUser(id string) (*http.Response, string, error) {
