@@ -1,16 +1,12 @@
 package terraapi
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/avast/retry-go"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"net/http"
 	"regexp"
 	"time"
+
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 )
 
 // BEE seeding occasionally fails, with Orch occasionally encountering connection timeouts, resets, or DNS errors
@@ -39,9 +35,7 @@ type FirecloudOrchClient interface {
 
 type firecloudOrchClient struct {
 	*terraClient
-	appRelease    terra.AppRelease
-	retryAttempts uint
-	retryDelay    time.Duration
+	appRelease terra.AppRelease
 }
 
 func (c *firecloudOrchClient) RegisterProfile(firstName string, lastName string, title string, contactEmail string, institute string, institutionalProgram string, programLocationCity string, programLocationState string, programLocationCountry string, pi string, nonProfitStatus string) (*http.Response, string, error) {
@@ -90,61 +84,4 @@ func (c *firecloudOrchClient) AgoraSetConfigACLs(name string, namespace string, 
 
 func (c *firecloudOrchClient) AgoraSetNamespaceACLs(namespace string, acls interface{}) (*http.Response, string, error) {
 	return c.doJsonRequestWithRetries(http.MethodPost, fmt.Sprintf("%s/api/configurations/%s/permissions", c.appRelease.URL(), namespace), acls)
-}
-
-func (c *firecloudOrchClient) doJsonRequestWithRetries(method string, url string, bodyData interface{}) (*http.Response, string, error) {
-	retryAttempts := c.retryAttempts
-	if retryAttempts == 0 {
-		retryAttempts = defaultRetryAttempts
-	}
-
-	retryDelay := c.retryDelay
-	if retryDelay == 0 {
-		retryDelay = defaultRetryDelay
-	}
-
-	var resp *http.Response
-	var responseBody string
-	var err error
-
-	requestBody, err := json.Marshal(bodyData)
-	if err != nil {
-		return nil, "", errors.Errorf("error marshalling request body for %s %s: %v", method, url, err)
-	}
-
-	requestFn := func() error {
-		resp, responseBody, err = c.doJsonRequest(method, url, bytes.NewBuffer(requestBody))
-		return err
-	}
-
-	var count int
-	if retryErr := retry.Do(
-		requestFn,
-		retry.Attempts(retryAttempts),
-		retry.DelayType(retry.FixedDelay),
-		retry.Delay(retryDelay),
-		retry.OnRetry(func(n uint, err error) {
-			count++
-			log.Warn().Err(err).Msgf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
-		}),
-		retry.RetryIf(isRetryableError),
-	); retryErr != nil {
-		return nil, "", retryErr
-	}
-
-	if count > 0 {
-		log.Info().Msgf("%s %s succeeded after %d retries", method, url, count)
-	}
-
-	return resp, responseBody, nil
-}
-
-func isRetryableError(err error) bool {
-	msg := err.Error()
-	for _, matcher := range unretryableErrors {
-		if matcher.MatchString(msg) {
-			return false
-		}
-	}
-	return true
 }

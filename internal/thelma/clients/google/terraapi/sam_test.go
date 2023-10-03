@@ -13,7 +13,7 @@ import (
 	googleoauth "google.golang.org/api/oauth2/v2"
 )
 
-func Test_OrchClientRetriesFailedRequests(t *testing.T) {
+func Test_SamClientRetriesFailedRequests(t *testing.T) {
 	testCases := []struct {
 		name              string
 		retryableErrCount int
@@ -48,9 +48,9 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var requestCount int
 
-			fakeOrchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fakeSamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requestCount++
-				if r.URL.Path != "/register/profile" {
+				if r.URL.Path != "/register/user/v1/termsofservice" {
 					t.Errorf("expected to request '/register/profile', got: %s", r.URL.Path)
 				}
 
@@ -75,29 +75,22 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 					t.Errorf("error writing fake http response: %v", err)
 				}
 			}))
-			defer fakeOrchServer.Close()
+			defer fakeSamServer.Close()
 
-			orchRelease := mocks.NewAppRelease(t)
-			orchRelease.On("URL").Return(fakeOrchServer.URL)
+			samRelease := mocks.NewAppRelease(t)
+			samRelease.On("URL").Return(fakeSamServer.URL)
 
-			client := &firecloudOrchClient{
+			client := &samClient{
 				terraClient: &terraClient{
 					tokenSource: testutils.NewFakeTokenSource("fake-token"),
 					userInfo:    googleoauth.Userinfo{},
-					httpClient:  *fakeOrchServer.Client(),
+					httpClient:  *fakeSamServer.Client(),
 					retryDelay:  5 * time.Millisecond,
 				},
-				appRelease: orchRelease,
+				appRelease: samRelease,
 			}
 
-			_, _, err := client.RegisterProfile(
-				"Jane", "Doe",
-				"Owner", "jdoe@broadinstitute.org",
-				"None", "None",
-				"None", "None", "None",
-				"None", "None",
-			)
-
+			_, _, err := client.AcceptToS()
 			assert.Equal(t, tc.retryableErrCount+1, requestCount)
 
 			if tc.expectErr {

@@ -44,11 +44,10 @@ func (c *samClient) FcServiceAccounts(memberEmails []string, cloud string, actio
 }
 
 func (c *samClient) AcceptToS() (*http.Response, string, error) {
-	body, err := json.Marshal("app.terra.bio/#terms-of-service")
-	if err != nil {
-		return nil, "", err
-	}
-	return c.doJsonRequest(http.MethodPost, fmt.Sprintf("%s/register/user/v1/termsofservice", c.appRelease.URL()), bytes.NewBuffer(body))
+	// request body should be url where the TOS are hosted in prod - not sure why
+	// I assume sam may be hard coded to expect this
+	body := "app.terra.bio/#terms-of-service"
+	return c.doJsonRequestWithRetries(http.MethodPost, fmt.Sprintf("%s/register/user/v1/termsofservice", c.appRelease.URL()), body)
 }
 
 func (c *samClient) UnregisterUser(id string) (*http.Response, string, error) {

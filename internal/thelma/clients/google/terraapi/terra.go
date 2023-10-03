@@ -1,12 +1,18 @@
 package terraapi
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
-	googleoauth "google.golang.org/api/oauth2/v2"
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/avast/retry-go"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/oauth2"
+	googleoauth "google.golang.org/api/oauth2/v2"
 )
 
 type TerraClient interface {
@@ -16,9 +22,11 @@ type TerraClient interface {
 }
 
 type terraClient struct {
-	tokenSource oauth2.TokenSource
-	userInfo    googleoauth.Userinfo
-	httpClient  http.Client
+	tokenSource   oauth2.TokenSource
+	userInfo      googleoauth.Userinfo
+	httpClient    http.Client
+	retryAttempts uint
+	retryDelay    time.Duration
 }
 
 func NewClient(tokenSource oauth2.TokenSource, userInfo googleoauth.Userinfo) TerraClient {
@@ -69,4 +77,61 @@ func (c *terraClient) doJsonRequest(method string, url string, body io.Reader) (
 		return response, string(responseBody), errors.Errorf("%s from %s (%s)", response.Status, url, responseBody)
 	}
 	return response, string(responseBody), nil
+}
+
+func (c *terraClient) doJsonRequestWithRetries(method string, url string, bodyData interface{}) (*http.Response, string, error) {
+	retryAttempts := c.retryAttempts
+	if retryAttempts == 0 {
+		retryAttempts = defaultRetryAttempts
+	}
+
+	retryDelay := c.retryDelay
+	if retryDelay == 0 {
+		retryDelay = defaultRetryDelay
+	}
+
+	var resp *http.Response
+	var responseBody string
+	var err error
+
+	requestBody, err := json.Marshal(bodyData)
+	if err != nil {
+		return nil, "", errors.Errorf("error marshalling request body for %s %s: %v", method, url, err)
+	}
+
+	requestFn := func() error {
+		resp, responseBody, err = c.doJsonRequest(method, url, bytes.NewBuffer(requestBody))
+		return err
+	}
+
+	var count int
+	if retryErr := retry.Do(
+		requestFn,
+		retry.Attempts(retryAttempts),
+		retry.DelayType(retry.FixedDelay),
+		retry.Delay(retryDelay),
+		retry.OnRetry(func(n uint, err error) {
+			count++
+			log.Warn().Err(err).Msgf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
+		}),
+		retry.RetryIf(isRetryableError),
+	); retryErr != nil {
+		return nil, "", retryErr
+	}
+
+	if count > 0 {
+		log.Info().Msgf("%s %s succeeded after %d retries", method, url, count)
+	}
+
+	return resp, responseBody, nil
+}
+
+func isRetryableError(err error) bool {
+	msg := err.Error()
+	for _, matcher := range unretryableErrors {
+		if matcher.MatchString(msg) {
+			return false
+		}
+	}
+	return true
 }
