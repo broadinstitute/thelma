@@ -159,7 +159,7 @@ func (suite *sherlockClientSuite) TestFetchReleasesError() {
 func newMockSherlockServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v2/environments", mockEnvironmentsHandler())
-	mux.HandleFunc("/api/v2/clusters", mockClustersHandler())
+	mux.HandleFunc("/api/clusters/v3", mockClustersHandler())
 	mux.HandleFunc("/api/v2/chart-releases", mockChartReleasesHandler())
 	return httptest.NewServer(mux)
 }
@@ -167,7 +167,7 @@ func newMockSherlockServer() *httptest.Server {
 func newMockErroringSherlockServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v2/environments", mockErroringHandler())
-	mux.HandleFunc("/api/v2/clusters", mockErroringHandler())
+	mux.HandleFunc("/api/clusters/v3", mockErroringHandler())
 	mux.HandleFunc("/api/v2/chart-releases", mockErroringHandler())
 	mux.HandleFunc("/api/charts/v3", mockErroringHandler())
 	return httptest.NewServer(mux)

@@ -132,7 +132,7 @@ func newMockConflictServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/charts/v3", mock409ConflictHandler())
 	mux.HandleFunc("/api/v2/environments", mock409ConflictHandler())
-	mux.HandleFunc("/api/v2/clusters", mock409ConflictHandler())
+	mux.HandleFunc("/api/clusters/v3", mock409ConflictHandler())
 	mux.HandleFunc("/api/v2/chart-releases", mock409ConflictHandler())
 	return httptest.NewServer(mux)
 }
@@ -140,7 +140,7 @@ func newMockConflictServer() *httptest.Server {
 func newMockErroringSherlockServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v2/environments", mockErroringHandler())
-	mux.HandleFunc("/api/v2/clusters", mockErroringHandler())
+	mux.HandleFunc("/api/clusters/v3", mockErroringHandler())
 	mux.HandleFunc("/api/v2/chart-releases", mockErroringHandler())
 	mux.HandleFunc("/api/charts/v3", mockErroringHandler())
 	return httptest.NewServer(mux)
@@ -149,7 +149,7 @@ func newMockErroringSherlockServer() *httptest.Server {
 func newMockSuccessfulCreateServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v2/environments", mockSuccessfulCreateHandler())
-	mux.HandleFunc("/api/v2/clusters", mockSuccessfulCreateHandler())
+	mux.HandleFunc("/api/clusters/v3", mockSuccessfulCreateHandler())
 	mux.HandleFunc("/api/v2/chart-releases", mockSuccessfulCreateHandler())
 	mux.HandleFunc("/api/charts/v3", mockSuccessfulCreateHandler())
 	return httptest.NewServer(mux)
