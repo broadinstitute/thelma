@@ -256,7 +256,7 @@ func (c *Client) WriteClusters(cls []terra.Cluster) error {
 		newCluster := toModelCreatableCluster(cluster)
 		newClusterRequestParams := clusters.NewPostAPIClustersV3Params().
 			WithCluster(newCluster)
-		_, _, err := c.client.Clusters.PostAPIClustersV3(newClusterRequestParams)
+		_, err := c.client.Clusters.PostAPIClustersV3(newClusterRequestParams)
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
 			if _, ok := err.(*clusters.PostAPIClustersV3Conflict); !ok {
@@ -364,7 +364,7 @@ func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartRelease
 	}
 }
 
-func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatableCluster {
+func toModelCreatableCluster(cluster terra.Cluster) *models.SherlockClusterV3Create {
 	// Hard coding to google for now since we don't have azure clusters
 	provider := "google"
 	// if Helmfile ref isn't set it should default to head
@@ -374,7 +374,7 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.V2controllersCreatab
 	} else {
 		helmfileRef = cluster.TerraHelmfileRef()
 	}
-	return &models.V2controllersCreatableCluster{
+	return &models.SherlockClusterV3Create{
 		Address:             cluster.Address(),
 		Base:                cluster.Base(),
 		Name:                cluster.Name(),
