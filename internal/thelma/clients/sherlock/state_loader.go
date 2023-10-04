@@ -14,7 +14,7 @@ type StateLoader interface {
 }
 
 type Cluster struct {
-	*models.V2controllersCluster
+	*models.SherlockClusterV3
 }
 
 type Clusters []Cluster
@@ -53,7 +53,7 @@ func (c *Client) Environments() (Environments, error) {
 	return environments, nil
 }
 
-func wrapClusters(cls ...*models.V2controllersCluster) Clusters {
+func wrapClusters(cls ...*models.SherlockClusterV3) Clusters {
 	clusters := make([]Cluster, 0)
 	for _, cluster := range cls {
 		clusters = append(clusters, Cluster{cluster})
@@ -63,8 +63,8 @@ func wrapClusters(cls ...*models.V2controllersCluster) Clusters {
 }
 
 func (c *Client) Clusters() (Clusters, error) {
-	params := clusters.NewGetAPIV2ClustersParams()
-	clustersResponse, err := c.client.Clusters.GetAPIV2Clusters(params)
+	params := clusters.NewGetAPIClustersV3Params()
+	clustersResponse, err := c.client.Clusters.GetAPIClustersV3(params)
 	if err != nil {
 		return nil, err
 	}

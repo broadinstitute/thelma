@@ -194,7 +194,7 @@ func mockEnvironmentsHandler() http.HandlerFunc {
 func mockClustersHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]*models.V2controllersCluster{
+		_ = json.NewEncoder(w).Encode([]*models.SherlockClusterV3{
 			{
 				Address:       "1.2.3.4",
 				Base:          "terra",

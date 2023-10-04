@@ -108,7 +108,7 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 	mock.On("Clusters").Return(
 		sherlock.Clusters{
 			sherlock.Cluster{
-				&models.V2controllersCluster{
+				&models.SherlockClusterV3{
 					Name:                "terra-dev",
 					GoogleProject:       "dev-proj",
 					Address:             "10.10.10.10",
@@ -119,7 +119,7 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 				},
 			},
 			sherlock.Cluster{
-				&models.V2controllersCluster{
+				&models.SherlockClusterV3{
 					Name:                "terra-prod",
 					GoogleProject:       "prod-proj",
 					Address:             "10.10.10.11",
@@ -130,7 +130,7 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 				},
 			},
 			sherlock.Cluster{
-				&models.V2controllersCluster{
+				&models.SherlockClusterV3{
 					Name:                "terra-qa-bees",
 					GoogleProject:       "broad-dsde-qa",
 					Address:             "10.10.10.12",

@@ -254,12 +254,12 @@ func (c *Client) WriteClusters(cls []terra.Cluster) error {
 			continue
 		}
 		newCluster := toModelCreatableCluster(cluster)
-		newClusterRequestParams := clusters.NewPostAPIV2ClustersParams().
+		newClusterRequestParams := clusters.NewPostAPIClustersV3Params().
 			WithCluster(newCluster)
-		_, _, err := c.client.Clusters.PostAPIV2Clusters(newClusterRequestParams)
+		_, _, err := c.client.Clusters.PostAPIClustersV3(newClusterRequestParams)
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
-			if _, ok := err.(*clusters.PostAPIV2ClustersConflict); !ok {
+			if _, ok := err.(*clusters.PostAPIClustersV3Conflict); !ok {
 				return errors.Errorf("error creating cluster: %v", err)
 			}
 		}
