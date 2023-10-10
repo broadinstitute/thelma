@@ -29,7 +29,7 @@ type ChartVersionUpdater interface {
 }
 
 func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error {
-	chartVersion := &models.V2controllersCreatableChartVersion{
+	chartVersion := &models.SherlockChartVersionV3Create{
 		Chart:        chartSelector,
 		ChartVersion: newVersion,
 		Description:  description,
@@ -37,8 +37,8 @@ func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion strin
 	if lastVersion != "" {
 		chartVersion.ParentChartVersion = fmt.Sprintf("%s/%s", chartSelector, lastVersion)
 	}
-	_, _, err := c.client.ChartVersions.PostAPIV2ChartVersions(
-		chart_versions.NewPostAPIV2ChartVersionsParams().WithChartVersion(chartVersion))
+	_, err := c.client.ChartVersions.PostAPIChartVersionsV3(
+		chart_versions.NewPostAPIChartVersionsV3Params().WithChartVersion(chartVersion))
 	if err != nil {
 		return errors.Errorf("error from Sherlock creating chart version %s/%s: %v", chartSelector, newVersion, err)
 	}
