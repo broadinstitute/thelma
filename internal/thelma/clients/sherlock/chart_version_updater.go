@@ -15,7 +15,8 @@ type ChartVersionUpdater interface {
 	//
 	// 1. Report new chart version to Sherlock (meaning there's a new latest chart version)
 	// 2. Update given chart releases (via chartReleaseSelectors) to point at the latest chart version and refresh to get the new latest version
-	// 3. Refresh template chart releases that either:
+	//    - 9 times out of 10 this means `dev/${chartSelector}` based on how .autorelease.yaml file gets defaulted
+	// 3. Refresh **template** chart releases that either:
 	//    - already follow latest chart version (so step 1 means they'd have an update if we didn't catch them in step 2)
 	//    - follow a chart release we just updated in step 2 (so step 2 means they'd have an update)
 	UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error
