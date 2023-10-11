@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/chart_versions"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/environments"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -35,7 +36,7 @@ func (c *Client) reportNewChartVersion(chartSelector string, newVersion string, 
 	_, err := c.client.ChartVersions.PostAPIChartVersionsV3(
 		chart_versions.NewPostAPIChartVersionsV3Params().WithChartVersion(chartVersion))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock: %w", err)
+		return errors.Errorf("error from Sherlock: %v", err)
 	}
 	return nil
 }
@@ -55,7 +56,7 @@ func (c *Client) setChartReleasesToLatestChartVersion(chartReleaseSelectors ...s
 	_, _, err := c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
 		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
-		return fmt.Errorf("error from Sherlock: %w", err)
+		return errors.Errorf("error from Sherlock: %v", err)
 	}
 	return nil
 }
@@ -69,7 +70,7 @@ func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, up
 			WithLifecycle(&templateString),
 	)
 	if err != nil {
-		return []string{}, fmt.Errorf("error from Sherlock getting template environments: %w", err)
+		return []string{}, errors.Errorf("error from Sherlock getting template environments: %v", err)
 	}
 
 	// Assemble list of all the downstream template chart releases we should update
@@ -86,7 +87,7 @@ func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, up
 				WithChartVersionResolver(&latestString),
 		)
 		if err != nil {
-			return []string{}, fmt.Errorf("error from Sherlock getting latest chart releases in template %s: %w", template.Name, err)
+			return []string{}, errors.Errorf("error from Sherlock getting latest chart releases in template %s: %v", template.Name, err)
 		} else {
 			for _, chartRelease := range chartReleasesUsingLatest.Payload {
 				chartReleasesToRefresh = append(chartReleasesToRefresh, chartRelease.Name)
@@ -104,7 +105,7 @@ func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, up
 					WithChartVersionFollowChartRelease(&chartReleaseThatGotUpdated),
 			)
 			if err != nil {
-				return []string{}, fmt.Errorf("error from Sherlock getting chart releases following %s in template %s: %w", chartReleaseThatGotUpdated, template.Name, err)
+				return []string{}, errors.Errorf("error from Sherlock getting chart releases following %s in template %s: %v", chartReleaseThatGotUpdated, template.Name, err)
 			} else {
 				for _, chartRelease := range chartReleasesUsingFollow.Payload {
 					chartReleasesToRefresh = append(chartReleasesToRefresh, chartRelease.Name)
@@ -127,7 +128,7 @@ func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, up
 		_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
 			changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 		if err != nil {
-			return []string{}, fmt.Errorf("error from Sherlock: %w", err)
+			return []string{}, errors.Errorf("error from Sherlock: %v", err)
 		}
 	}
 
@@ -136,17 +137,17 @@ func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, up
 
 func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error {
 	if err := c.reportNewChartVersion(chartSelector, newVersion, lastVersion, description); err != nil {
-		return fmt.Errorf("error reporting chart version %s/%s: %w", chartSelector, newVersion, err)
+		return errors.Errorf("error reporting chart version %s/%s: %v", chartSelector, newVersion, err)
 	}
 
 	if err := c.setChartReleasesToLatestChartVersion(chartReleaseSelectors...); err != nil {
-		return fmt.Errorf("error setting chart releases to latest chart version (%s/%s): %w", chartSelector, newVersion, err)
+		return errors.Errorf("error setting chart releases to latest chart version (%s/%s): %v", chartSelector, newVersion, err)
 	} else {
 		log.Info().Msgf("updated chart releases in Sherlock to new version %s/%s: %v", chartSelector, newVersion, chartReleaseSelectors)
 	}
 
 	if refreshedChartReleases, err := c.refreshDownstreamTemplateChartReleases(chartSelector, chartReleaseSelectors...); err != nil {
-		return fmt.Errorf("error refreshing downstream template chart releases after reporting new chart version (%s/%s) and updating the following direct chart releases (%v): %w", chartSelector, newVersion, chartReleaseSelectors, err)
+		return errors.Errorf("error refreshing downstream template chart releases after reporting new chart version (%s/%s) and updating the following direct chart releases (%v): %v", chartSelector, newVersion, chartReleaseSelectors, err)
 	} else if len(refreshedChartReleases) > 0 {
 		log.Info().Msgf("updated further downstream template chart releases in Sherlock to reflect new version %s/%s: %v", chartSelector, newVersion, refreshedChartReleases)
 	} else {
