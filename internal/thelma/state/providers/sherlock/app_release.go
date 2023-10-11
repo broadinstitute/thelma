@@ -8,15 +8,10 @@ import (
 )
 
 type appRelease struct {
-	appVersion string
-	subdomain  string
-	protocol   string
-	port       int
+	subdomain string
+	protocol  string
+	port      int
 	release
-}
-
-func (r *appRelease) AppVersion() string {
-	return r.appVersion
 }
 
 func (r *appRelease) Environment() terra.Environment {

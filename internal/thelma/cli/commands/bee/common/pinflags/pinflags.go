@@ -122,7 +122,7 @@ func (p *pinFlags) loadReleaseOverridesFromEnv(thelmaApp app.ThelmaApp) (map[str
 	for _, release := range env.Releases() {
 		var appVersion string
 		if release.IsAppRelease() {
-			appVersion = release.(terra.AppRelease).AppVersion()
+			appVersion = release.AppVersion()
 		}
 		override := terra.VersionOverride{
 			AppVersion:          appVersion,

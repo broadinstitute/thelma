@@ -147,6 +147,7 @@ retry:
 						destination:         _clusters[stateRelease.Cluster],
 						helmfileRef:         *stateRelease.HelmfileRef,
 						firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
+						appVersion:          stateRelease.AppVersionExact,
 					},
 				}
 			case "environment":
@@ -155,10 +156,9 @@ retry:
 					helmfileOverlays = []string{"offline"}
 				}
 				_environments[stateRelease.Environment].releases[stateRelease.Name] = &appRelease{
-					appVersion: stateRelease.AppVersionExact,
-					subdomain:  stateRelease.Subdomain,
-					protocol:   stateRelease.Protocol,
-					port:       int(stateRelease.Port),
+					subdomain: stateRelease.Subdomain,
+					protocol:  stateRelease.Protocol,
+					port:      int(stateRelease.Port),
 					release: release{
 						name:                stateRelease.Name,
 						enabled:             true,
@@ -172,6 +172,7 @@ retry:
 						helmfileRef:         *stateRelease.HelmfileRef,
 						firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
 						helmfileOverlays:    helmfileOverlays,
+						appVersion:          stateRelease.AppVersionExact,
 					},
 				}
 			default:
