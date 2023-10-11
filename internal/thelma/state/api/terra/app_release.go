@@ -1,7 +1,6 @@
 package terra
 
 type AppRelease interface {
-	AppVersion() string
 	Environment() Environment
 	// Subdomain returns the slug that this AppRelease uses inside its Environment. Defaults to chart Release.Name.
 	// E.g. "leonardo"

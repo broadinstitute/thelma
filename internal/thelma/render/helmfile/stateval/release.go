@@ -19,18 +19,12 @@ type Release struct {
 }
 
 func forRelease(release terra.Release) Release {
-	// app version is omitted for cluster releases
-	var appVersion string
-	if release.IsAppRelease() {
-		appVersion = release.(terra.AppRelease).AppVersion()
-	}
-
 	return Release{
 		Name:       release.Name(),
 		ChartName:  release.ChartName(),
 		Type:       release.Type().String(),
 		Namespace:  release.Namespace(),
-		AppVersion: appVersion,
+		AppVersion: release.AppVersion(),
 		Overlays:   release.HelmfileOverlays(),
 	}
 }

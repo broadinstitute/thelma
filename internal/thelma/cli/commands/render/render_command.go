@@ -382,12 +382,6 @@ func (cmd *renderCommand) checkIncompatibleFlags(flags *pflag.FlagSet, selection
 		}
 	}
 
-	if !selection.AppReleasesOnly {
-		if flags.Changed(flagNames.appVersion) {
-			return errors.Errorf("--%s cannot be used for cluster releases", flagNames.appVersion)
-		}
-	}
-
 	if flags.Changed(flagNames.argocd) {
 		if flags.Changed(flagNames.chartDir) || flags.Changed(flagNames.chartVersion) || flags.Changed(flagNames.appVersion) || flags.Changed(flagNames.valuesFile) {
 			return errors.Errorf("--%s cannot be used with --%s, --%s, --%s, or --%s", flagNames.argocd, flagNames.chartDir, flagNames.chartVersion, flagNames.appVersion, flagNames.valuesFile)
