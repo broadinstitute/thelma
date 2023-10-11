@@ -60,6 +60,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	suite.Assert().NoError(err)
 	prodClusterReleases := prodCluster.Releases()
 	suite.Assert().Equal("sam-prod", prodClusterReleases[0].Name())
+	suite.Assert().Equal("12.13.14", prodClusterReleases[0].AppVersion())
 
 	onlineBeeEnv, err := _environments.Get("bee-online")
 	suite.Assert().NoError(err)
@@ -227,7 +228,7 @@ func setStateExpectations(mock *mocks.StateReadWriter) {
 			sherlock.Release{
 				&models.V2controllersChartRelease{
 					DestinationType:   "cluster",
-					AppVersionExact:   "1.0.0",
+					AppVersionExact:   "12.13.14",
 					Chart:             "sam",
 					ChartVersionExact: "0.42.0",
 					Cluster:           "terra-prod",
