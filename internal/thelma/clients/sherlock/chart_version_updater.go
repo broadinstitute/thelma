@@ -20,15 +20,9 @@ type ChartVersionUpdater interface {
 	//    - already follow latest chart version (so step 1 means they'd have an update if we didn't catch them in step 2)
 	//    - follow a chart release we just updated in step 2 (so step 2 means they'd have an update)
 	UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error
-
-	// Does step 1 of UpdateForNewChartVersion
-	reportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error
-	// Does step 2 of UpdateForNewChartVersion
-	setChartReleasesToLatestChartVersion(chartReleaseSelectors ...string) error
-	// Does step 3 of UpdateForNewChartVersion
-	refreshDownstreamTemplateChartReleases(chartSelector string, updatedChartReleases ...string) (refreshedChartReleases []string, err error)
 }
 
+// Step 1 of UpdateForNewChartVersion
 func (c *Client) reportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
 	chartVersion := &models.SherlockChartVersionV3Create{
 		Chart:        chartSelector,
@@ -46,6 +40,7 @@ func (c *Client) reportNewChartVersion(chartSelector string, newVersion string, 
 	return nil
 }
 
+// Step 2 of UpdateForNewChartVersion
 func (c *Client) setChartReleasesToLatestChartVersion(chartReleaseSelectors ...string) error {
 	var chartReleaseEntriesToUpdate []*models.V2controllersChangesetPlanRequestChartReleaseEntry
 	for _, chartReleaseSelector := range chartReleaseSelectors {
@@ -65,6 +60,7 @@ func (c *Client) setChartReleasesToLatestChartVersion(chartReleaseSelectors ...s
 	return nil
 }
 
+// Step 3 of UpdateForNewChartVersion
 func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, updatedChartReleases ...string) (refreshedChartReleases []string, err error) {
 	// Get list of template environments
 	templateString := "template"
