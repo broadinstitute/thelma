@@ -158,7 +158,7 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 		rf.HasDestinationName("dev"),
 	))
 	require.NoError(t, err)
-	assert.Equal(t, "2d309b1645a0", devSam[0].(terra.AppRelease).AppVersion())
+	assert.Equal(t, "2d309b1645a0", devSam[0].AppVersion())
 	assert.Equal(t, "0.34.0", devSam[0].ChartVersion())
 
 	prodSam, err := state.Releases().Filter(rf.And(
@@ -166,7 +166,7 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 		rf.HasDestinationName("prod"),
 	))
 	require.NoError(t, err)
-	assert.Equal(t, "8f69c32bd9fe", prodSam[0].(terra.AppRelease).AppVersion())
+	assert.Equal(t, "8f69c32bd9fe", prodSam[0].AppVersion())
 	assert.Equal(t, "0.33.0", prodSam[0].ChartVersion())
 
 	chipmunkSam, err := state.Releases().Filter(rf.And(
@@ -174,7 +174,7 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 		rf.HasDestinationName("fiab-funky-chipmunk"),
 	))
 	require.NoError(t, err)
-	assert.Equal(t, "2d309b1645a0", chipmunkSam[0].(terra.AppRelease).AppVersion())
+	assert.Equal(t, "2d309b1645a0", chipmunkSam[0].AppVersion())
 	assert.Equal(t, "0.34.0", chipmunkSam[0].ChartVersion())
 
 	walrusSam, err := state.Releases().Filter(rf.And(
@@ -182,7 +182,7 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 		rf.HasDestinationName("fiab-nerdy-walrus"),
 	))
 	require.NoError(t, err)
-	assert.Equal(t, "1.2.3", walrusSam[0].(terra.AppRelease).AppVersion())
+	assert.Equal(t, "1.2.3", walrusSam[0].AppVersion())
 	assert.Equal(t, "0.34.0", walrusSam[0].ChartVersion())
 
 	snowflakeSam, err := state.Releases().Filter(rf.And(
@@ -197,7 +197,7 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 		rf.HasDestinationName("fiab-special-snowflake"),
 	))
 	require.NoError(t, err)
-	assert.Equal(t, "cead2f9206b5", snowflakeRawls[0].(terra.AppRelease).AppVersion())
+	assert.Equal(t, "cead2f9206b5", snowflakeRawls[0].AppVersion())
 	assert.Equal(t, "100.200.300", snowflakeRawls[0].ChartVersion())
 	assert.Equal(t, "my-terra-helmfile-branch", snowflakeRawls[0].TerraHelmfileRef())
 	assert.Equal(t, "", snowflakeRawls[0].FirecloudDevelopRef())

@@ -74,7 +74,7 @@ func DescribeBeeEnv(bee terra.Environment, opts ...DescribeOption) BeeDetail {
 
 		if !options.OmitVersions {
 			if release.IsAppRelease() {
-				details.AppVersion = release.(terra.AppRelease).AppVersion()
+				details.AppVersion = release.AppVersion()
 			}
 			details.ChartVersion = release.ChartVersion()
 		}

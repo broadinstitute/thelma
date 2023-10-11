@@ -20,6 +20,7 @@ type release struct {
 	helmfileRef         string
 	firecloudDevelopRef string
 	helmfileOverlays    []string
+	appVersion          string
 }
 
 // FullName provides the entire name of the chart release, globally unique as enforced by Sherlock. Name provides
@@ -92,4 +93,8 @@ func (r *release) FirecloudDevelopRef() string {
 
 func (r *release) HelmfileOverlays() []string {
 	return r.helmfileOverlays
+}
+
+func (r *release) AppVersion() string {
+	return r.appVersion
 }

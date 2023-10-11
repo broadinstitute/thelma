@@ -18,4 +18,5 @@ type Release interface {
 	TerraHelmfileRef() string
 	FirecloudDevelopRef() string
 	HelmfileOverlays() []string
+	AppVersion() string
 }

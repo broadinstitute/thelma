@@ -253,10 +253,8 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 
 	logEvent := log.Info().
 		Str("chartVersion", resolvedChart.Version()).
-		Str("chartSource", resolvedChart.SourceDescription())
-	if release.IsAppRelease() {
-		logEvent.Str("appVersion", stateValues.Release.AppVersion)
-	}
+		Str("chartSource", resolvedChart.SourceDescription()).
+		Str("appVersion", stateValues.Release.AppVersion)
 	logEvent.Msgf("Rendering %s in %s", release.Name(), release.Destination().Name())
 
 	return r.runHelmfile(cmd)
@@ -378,14 +376,10 @@ func writeTemporaryValuesFile(values interface{}, filename string) error {
 
 // Override app version in state values if it was set on the command line with --app-version
 func overrideAppVersionIfNeeded(release terra.Release, args *Args, stateValues stateval.AppValues) stateval.AppValues {
-	if release.Type() == terra.AppReleaseType {
-		if args.AppVersion != nil {
-			originalVersion := stateValues.Release.AppVersion
-			log.Debug().Msgf("Overriding default app version %s for release %s with %s", originalVersion, release.Name(), *args.AppVersion)
-			stateValues.Release.AppVersion = *args.AppVersion
-		}
-	} else if args.AppVersion != nil {
-		log.Warn().Msgf("Ignoring --app-version %s; --app-version is not supported for cluster releases", *args.AppVersion)
+	if args.AppVersion != nil {
+		originalVersion := stateValues.Release.AppVersion
+		log.Debug().Msgf("Overriding default app version %s for release %s with %s", originalVersion, release.Name(), *args.AppVersion)
+		stateValues.Release.AppVersion = *args.AppVersion
 	}
 
 	return stateValues
