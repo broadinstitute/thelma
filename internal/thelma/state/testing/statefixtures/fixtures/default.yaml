@@ -345,7 +345,7 @@ releases:
       cluster: terra-staging
       namespace: yale
       environment: ""
-      appversion: ""
+      appversion: 1.2.3
       chartversion: 0.6.0
     - fullname: diskmanager-terra-dev
       repo: terra-helm

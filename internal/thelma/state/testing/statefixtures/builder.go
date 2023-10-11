@@ -164,6 +164,7 @@ func (b *builder) addAppReleaseToSet(r Release) {
 
 func (b *builder) addClusterReleaseToSet(r Release) {
 	release := &statemocks.ClusterRelease{}
+	release.EXPECT().AppVersion().Return(r.AppVersion)
 	release.EXPECT().ChartName().Return(r.Chart)
 	release.EXPECT().ChartVersion().Return(r.ChartVersion)
 	release.EXPECT().Cluster().Return(b.clusterSet[r.Cluster])

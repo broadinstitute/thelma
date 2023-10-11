@@ -179,11 +179,6 @@ func TestRenderArgParsing(t *testing.T) {
 			expectedError: regexp.MustCompile("--parallel-workers cannot be used with --stdout"),
 		},
 		{
-			description:   "--cluster and --app-version incompatible",
-			arguments:     Args("render --cluster terra-perf -r yale --app-version=0.0.1"),
-			expectedError: regexp.MustCompile("--app-version cannot be used for cluster releases"),
-		},
-		{
 			description:   "--exact-release ALL invalid",
 			arguments:     Args("render --exact-release ALL"),
 			expectedError: regexp.MustCompile("--exact-release cannot be used with ALL"),
@@ -347,6 +342,19 @@ func TestRenderArgParsing(t *testing.T) {
 				tc.expected.renderOptions.Scope = scope.Release
 				tc.expected.renderOptions.Releases = []terra.Release{
 					fixture.Release("leonardo", "dev"),
+				}
+				tc.expected.helmfileArgs.AppVersion = &version
+				return nil
+			},
+		},
+		{
+			description: "--app-version should set app version for cluster releases",
+			arguments:   Args("render -c terra-dev -r yale --app-version 10.20.30"),
+			setupFn: func(tc *testConfig) error {
+				version := "10.20.30"
+				tc.expected.renderOptions.Scope = scope.Release
+				tc.expected.renderOptions.Releases = []terra.Release{
+					fixture.Release("yale", "terra-dev"),
 				}
 				tc.expected.helmfileArgs.AppVersion = &version
 				return nil
