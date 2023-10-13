@@ -10,6 +10,8 @@ import (
 
 	authenticationv1 "k8s.io/client-go/kubernetes/typed/authentication/v1"
 
+	authenticationv1alpha1 "k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
+
 	authenticationv1beta1 "k8s.io/client-go/kubernetes/typed/authentication/v1beta1"
 
 	authorizationv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
@@ -23,6 +25,8 @@ import (
 	batchv1beta1 "k8s.io/client-go/kubernetes/typed/batch/v1beta1"
 
 	certificatesv1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
+
+	certificatesv1alpha1 "k8s.io/client-go/kubernetes/typed/certificates/v1alpha1"
 
 	certificatesv1beta1 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 
@@ -44,6 +48,8 @@ import (
 
 	extensionsv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 
+	flowcontrolv1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
+
 	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 
 	flowcontrolv1beta2 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta2"
@@ -51,6 +57,8 @@ import (
 	mock "github.com/stretchr/testify/mock"
 
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
+
+	networkingv1alpha1 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
 
 	networkingv1beta1 "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 
@@ -84,11 +92,15 @@ import (
 
 	v1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 
-	v1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
+	v1alpha1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1alpha1"
+
+	v1alpha2 "k8s.io/client-go/kubernetes/typed/resource/v1alpha2"
 
 	v1beta1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1"
 
 	v1beta2 "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
+
+	v1beta3 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
 
 	v2 "k8s.io/client-go/kubernetes/typed/autoscaling/v2"
 
@@ -149,6 +161,49 @@ func (_c *KubeClient_AdmissionregistrationV1_Call) Return(_a0 v1.Admissionregist
 }
 
 func (_c *KubeClient_AdmissionregistrationV1_Call) RunAndReturn(run func() v1.AdmissionregistrationV1Interface) *KubeClient_AdmissionregistrationV1_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AdmissionregistrationV1alpha1 provides a mock function with given fields:
+func (_m *KubeClient) AdmissionregistrationV1alpha1() v1alpha1.AdmissionregistrationV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 v1alpha1.AdmissionregistrationV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() v1alpha1.AdmissionregistrationV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(v1alpha1.AdmissionregistrationV1alpha1Interface)
+		}
+	}
+
+	return r0
+}
+
+// KubeClient_AdmissionregistrationV1alpha1_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdmissionregistrationV1alpha1'
+type KubeClient_AdmissionregistrationV1alpha1_Call struct {
+	*mock.Call
+}
+
+// AdmissionregistrationV1alpha1 is a helper method to define mock.On call
+func (_e *KubeClient_Expecter) AdmissionregistrationV1alpha1() *KubeClient_AdmissionregistrationV1alpha1_Call {
+	return &KubeClient_AdmissionregistrationV1alpha1_Call{Call: _e.mock.On("AdmissionregistrationV1alpha1")}
+}
+
+func (_c *KubeClient_AdmissionregistrationV1alpha1_Call) Run(run func()) *KubeClient_AdmissionregistrationV1alpha1_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *KubeClient_AdmissionregistrationV1alpha1_Call) Return(_a0 v1alpha1.AdmissionregistrationV1alpha1Interface) *KubeClient_AdmissionregistrationV1alpha1_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *KubeClient_AdmissionregistrationV1alpha1_Call) RunAndReturn(run func() v1alpha1.AdmissionregistrationV1alpha1Interface) *KubeClient_AdmissionregistrationV1alpha1_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -364,6 +419,49 @@ func (_c *KubeClient_AuthenticationV1_Call) Return(_a0 authenticationv1.Authenti
 }
 
 func (_c *KubeClient_AuthenticationV1_Call) RunAndReturn(run func() authenticationv1.AuthenticationV1Interface) *KubeClient_AuthenticationV1_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AuthenticationV1alpha1 provides a mock function with given fields:
+func (_m *KubeClient) AuthenticationV1alpha1() authenticationv1alpha1.AuthenticationV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 authenticationv1alpha1.AuthenticationV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() authenticationv1alpha1.AuthenticationV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(authenticationv1alpha1.AuthenticationV1alpha1Interface)
+		}
+	}
+
+	return r0
+}
+
+// KubeClient_AuthenticationV1alpha1_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AuthenticationV1alpha1'
+type KubeClient_AuthenticationV1alpha1_Call struct {
+	*mock.Call
+}
+
+// AuthenticationV1alpha1 is a helper method to define mock.On call
+func (_e *KubeClient_Expecter) AuthenticationV1alpha1() *KubeClient_AuthenticationV1alpha1_Call {
+	return &KubeClient_AuthenticationV1alpha1_Call{Call: _e.mock.On("AuthenticationV1alpha1")}
+}
+
+func (_c *KubeClient_AuthenticationV1alpha1_Call) Run(run func()) *KubeClient_AuthenticationV1alpha1_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *KubeClient_AuthenticationV1alpha1_Call) Return(_a0 authenticationv1alpha1.AuthenticationV1alpha1Interface) *KubeClient_AuthenticationV1alpha1_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *KubeClient_AuthenticationV1alpha1_Call) RunAndReturn(run func() authenticationv1alpha1.AuthenticationV1alpha1Interface) *KubeClient_AuthenticationV1alpha1_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -794,6 +892,49 @@ func (_c *KubeClient_CertificatesV1_Call) Return(_a0 certificatesv1.Certificates
 }
 
 func (_c *KubeClient_CertificatesV1_Call) RunAndReturn(run func() certificatesv1.CertificatesV1Interface) *KubeClient_CertificatesV1_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CertificatesV1alpha1 provides a mock function with given fields:
+func (_m *KubeClient) CertificatesV1alpha1() certificatesv1alpha1.CertificatesV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 certificatesv1alpha1.CertificatesV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() certificatesv1alpha1.CertificatesV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(certificatesv1alpha1.CertificatesV1alpha1Interface)
+		}
+	}
+
+	return r0
+}
+
+// KubeClient_CertificatesV1alpha1_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CertificatesV1alpha1'
+type KubeClient_CertificatesV1alpha1_Call struct {
+	*mock.Call
+}
+
+// CertificatesV1alpha1 is a helper method to define mock.On call
+func (_e *KubeClient_Expecter) CertificatesV1alpha1() *KubeClient_CertificatesV1alpha1_Call {
+	return &KubeClient_CertificatesV1alpha1_Call{Call: _e.mock.On("CertificatesV1alpha1")}
+}
+
+func (_c *KubeClient_CertificatesV1alpha1_Call) Run(run func()) *KubeClient_CertificatesV1alpha1_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *KubeClient_CertificatesV1alpha1_Call) Return(_a0 certificatesv1alpha1.CertificatesV1alpha1Interface) *KubeClient_CertificatesV1alpha1_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *KubeClient_CertificatesV1alpha1_Call) RunAndReturn(run func() certificatesv1alpha1.CertificatesV1alpha1Interface) *KubeClient_CertificatesV1alpha1_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1229,15 +1370,15 @@ func (_c *KubeClient_ExtensionsV1beta1_Call) RunAndReturn(run func() extensionsv
 }
 
 // FlowcontrolV1alpha1 provides a mock function with given fields:
-func (_m *KubeClient) FlowcontrolV1alpha1() v1alpha1.FlowcontrolV1alpha1Interface {
+func (_m *KubeClient) FlowcontrolV1alpha1() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface {
 	ret := _m.Called()
 
-	var r0 v1alpha1.FlowcontrolV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() v1alpha1.FlowcontrolV1alpha1Interface); ok {
+	var r0 flowcontrolv1alpha1.FlowcontrolV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v1alpha1.FlowcontrolV1alpha1Interface)
+			r0 = ret.Get(0).(flowcontrolv1alpha1.FlowcontrolV1alpha1Interface)
 		}
 	}
 
@@ -1261,12 +1402,12 @@ func (_c *KubeClient_FlowcontrolV1alpha1_Call) Run(run func()) *KubeClient_Flowc
 	return _c
 }
 
-func (_c *KubeClient_FlowcontrolV1alpha1_Call) Return(_a0 v1alpha1.FlowcontrolV1alpha1Interface) *KubeClient_FlowcontrolV1alpha1_Call {
+func (_c *KubeClient_FlowcontrolV1alpha1_Call) Return(_a0 flowcontrolv1alpha1.FlowcontrolV1alpha1Interface) *KubeClient_FlowcontrolV1alpha1_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *KubeClient_FlowcontrolV1alpha1_Call) RunAndReturn(run func() v1alpha1.FlowcontrolV1alpha1Interface) *KubeClient_FlowcontrolV1alpha1_Call {
+func (_c *KubeClient_FlowcontrolV1alpha1_Call) RunAndReturn(run func() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface) *KubeClient_FlowcontrolV1alpha1_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1357,6 +1498,49 @@ func (_c *KubeClient_FlowcontrolV1beta2_Call) RunAndReturn(run func() flowcontro
 	return _c
 }
 
+// FlowcontrolV1beta3 provides a mock function with given fields:
+func (_m *KubeClient) FlowcontrolV1beta3() v1beta3.FlowcontrolV1beta3Interface {
+	ret := _m.Called()
+
+	var r0 v1beta3.FlowcontrolV1beta3Interface
+	if rf, ok := ret.Get(0).(func() v1beta3.FlowcontrolV1beta3Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(v1beta3.FlowcontrolV1beta3Interface)
+		}
+	}
+
+	return r0
+}
+
+// KubeClient_FlowcontrolV1beta3_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FlowcontrolV1beta3'
+type KubeClient_FlowcontrolV1beta3_Call struct {
+	*mock.Call
+}
+
+// FlowcontrolV1beta3 is a helper method to define mock.On call
+func (_e *KubeClient_Expecter) FlowcontrolV1beta3() *KubeClient_FlowcontrolV1beta3_Call {
+	return &KubeClient_FlowcontrolV1beta3_Call{Call: _e.mock.On("FlowcontrolV1beta3")}
+}
+
+func (_c *KubeClient_FlowcontrolV1beta3_Call) Run(run func()) *KubeClient_FlowcontrolV1beta3_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *KubeClient_FlowcontrolV1beta3_Call) Return(_a0 v1beta3.FlowcontrolV1beta3Interface) *KubeClient_FlowcontrolV1beta3_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *KubeClient_FlowcontrolV1beta3_Call) RunAndReturn(run func() v1beta3.FlowcontrolV1beta3Interface) *KubeClient_FlowcontrolV1beta3_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InternalV1alpha1 provides a mock function with given fields:
 func (_m *KubeClient) InternalV1alpha1() apiserverinternalv1alpha1.InternalV1alpha1Interface {
 	ret := _m.Called()
@@ -1439,6 +1623,49 @@ func (_c *KubeClient_NetworkingV1_Call) Return(_a0 networkingv1.NetworkingV1Inte
 }
 
 func (_c *KubeClient_NetworkingV1_Call) RunAndReturn(run func() networkingv1.NetworkingV1Interface) *KubeClient_NetworkingV1_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// NetworkingV1alpha1 provides a mock function with given fields:
+func (_m *KubeClient) NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 networkingv1alpha1.NetworkingV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() networkingv1alpha1.NetworkingV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(networkingv1alpha1.NetworkingV1alpha1Interface)
+		}
+	}
+
+	return r0
+}
+
+// KubeClient_NetworkingV1alpha1_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NetworkingV1alpha1'
+type KubeClient_NetworkingV1alpha1_Call struct {
+	*mock.Call
+}
+
+// NetworkingV1alpha1 is a helper method to define mock.On call
+func (_e *KubeClient_Expecter) NetworkingV1alpha1() *KubeClient_NetworkingV1alpha1_Call {
+	return &KubeClient_NetworkingV1alpha1_Call{Call: _e.mock.On("NetworkingV1alpha1")}
+}
+
+func (_c *KubeClient_NetworkingV1alpha1_Call) Run(run func()) *KubeClient_NetworkingV1alpha1_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *KubeClient_NetworkingV1alpha1_Call) Return(_a0 networkingv1alpha1.NetworkingV1alpha1Interface) *KubeClient_NetworkingV1alpha1_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *KubeClient_NetworkingV1alpha1_Call) RunAndReturn(run func() networkingv1alpha1.NetworkingV1alpha1Interface) *KubeClient_NetworkingV1alpha1_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1826,6 +2053,49 @@ func (_c *KubeClient_RbacV1beta1_Call) Return(_a0 rbacv1beta1.RbacV1beta1Interfa
 }
 
 func (_c *KubeClient_RbacV1beta1_Call) RunAndReturn(run func() rbacv1beta1.RbacV1beta1Interface) *KubeClient_RbacV1beta1_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ResourceV1alpha2 provides a mock function with given fields:
+func (_m *KubeClient) ResourceV1alpha2() v1alpha2.ResourceV1alpha2Interface {
+	ret := _m.Called()
+
+	var r0 v1alpha2.ResourceV1alpha2Interface
+	if rf, ok := ret.Get(0).(func() v1alpha2.ResourceV1alpha2Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(v1alpha2.ResourceV1alpha2Interface)
+		}
+	}
+
+	return r0
+}
+
+// KubeClient_ResourceV1alpha2_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResourceV1alpha2'
+type KubeClient_ResourceV1alpha2_Call struct {
+	*mock.Call
+}
+
+// ResourceV1alpha2 is a helper method to define mock.On call
+func (_e *KubeClient_Expecter) ResourceV1alpha2() *KubeClient_ResourceV1alpha2_Call {
+	return &KubeClient_ResourceV1alpha2_Call{Call: _e.mock.On("ResourceV1alpha2")}
+}
+
+func (_c *KubeClient_ResourceV1alpha2_Call) Run(run func()) *KubeClient_ResourceV1alpha2_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *KubeClient_ResourceV1alpha2_Call) Return(_a0 v1alpha2.ResourceV1alpha2Interface) *KubeClient_ResourceV1alpha2_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *KubeClient_ResourceV1alpha2_Call) RunAndReturn(run func() v1alpha2.ResourceV1alpha2Interface) *KubeClient_ResourceV1alpha2_Call {
 	_c.Call.Return(run)
 	return _c
 }
