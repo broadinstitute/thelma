@@ -33,8 +33,8 @@ func (c *Client) reportNewChartVersion(chartSelector string, newVersion string, 
 	if lastVersion != "" {
 		chartVersion.ParentChartVersion = fmt.Sprintf("%s/%s", chartSelector, lastVersion)
 	}
-	_, err := c.client.ChartVersions.PostAPIChartVersionsV3(
-		chart_versions.NewPostAPIChartVersionsV3Params().WithChartVersion(chartVersion))
+	_, err := c.client.ChartVersions.PutAPIChartVersionsV3(
+		chart_versions.NewPutAPIChartVersionsV3Params().WithChartVersion(chartVersion))
 	if err != nil {
 		return errors.Errorf("error from Sherlock: %v", err)
 	}
