@@ -60,17 +60,32 @@ func argoDestinationsForCluster(cluster terra.Cluster) []ArgoDestination {
 }
 
 func argoDestinationsForEnvironment(environment terra.Environment) []ArgoDestination {
-	clusterAddresses := make(map[string]bool)
+	clusterAddressesAndNamespaces := make(map[string][]string)
+
+releaseLoop:
 	for _, release := range environment.Releases() {
-		clusterAddresses[release.ClusterAddress()] = true
+		addressToAdd := release.ClusterAddress()
+		namespaceToAdd := release.Namespace()
+		if recordedNamespaces, exists := clusterAddressesAndNamespaces[addressToAdd]; !exists {
+			clusterAddressesAndNamespaces[addressToAdd] = []string{namespaceToAdd}
+		} else {
+			for _, recordedNamespace := range recordedNamespaces {
+				if recordedNamespace == namespaceToAdd {
+					continue releaseLoop
+				}
+			}
+			clusterAddressesAndNamespaces[addressToAdd] = append(recordedNamespaces, namespaceToAdd)
+		}
 	}
 
 	var destinations []ArgoDestination
-	for address := range clusterAddresses {
-		destinations = append(destinations, ArgoDestination{
-			Server:    address,
-			Namespace: environment.Namespace(),
-		})
+	for address, namespaces := range clusterAddressesAndNamespaces {
+		for _, namespace := range namespaces {
+			destinations = append(destinations, ArgoDestination{
+				Server:    address,
+				Namespace: namespace,
+			})
+		}
 	}
 
 	return destinations
