@@ -59,6 +59,10 @@ type seedConfig struct {
 			VaultPath string `default:"secret/dsde/terra/kernel/dev/dev/workspace/app-sa"`
 			VaultKey  string `default:"key.json"`
 		}
+		TSPS struct {
+			VaultPath string `default:"secret/dsde/firecloud/%s/tsps/tsps-account.json"`
+			VaultKey  string `default:""`
+		}
 	}
 	TestUsers struct {
 		Dev []TestUser
@@ -115,6 +119,9 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease) (google.Clients, erro
 	case "workspacemanager":
 		vaultPath = config.Auth.WorkspaceManager.VaultPath
 		vaultKey = config.Auth.WorkspaceManager.VaultKey
+	case "tsps":
+		vaultPath = config.Auth.TSPS.VaultPath
+		vaultKey = config.Auth.TSPS.VaultKey
 	default:
 		return nil, errors.Errorf("thelma doesn't know how to authenticate as %s", appRelease.Name())
 	}
