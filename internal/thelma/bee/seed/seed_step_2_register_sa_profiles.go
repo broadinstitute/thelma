@@ -69,7 +69,7 @@ func (s *seeder) seedStep2RegisterSaProfiles(appReleases map[string]terra.AppRel
 		}
 
 		if tsps, tspsPresent := appReleases["tsps"]; tspsPresent {
-			log.Info().Msgf("registering TSPS SA profilw with %s", orch.Host())
+			log.Info().Msgf("registering TSPS SA profile with %s", orch.Host())
 			err = opts.handleErrorWithForce(s._registerSaProfile(tsps, orch))
 			if err != nil {
 				return err
