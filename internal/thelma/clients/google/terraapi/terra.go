@@ -3,6 +3,8 @@ package terraapi
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"io"
 	"net/http"
 	"time"
@@ -19,6 +21,11 @@ type TerraClient interface {
 	FirecloudOrch(release terra.AppRelease) FirecloudOrchClient
 	Sam(release terra.AppRelease) SamClient
 	GoogleUserInfo() googleoauth.Userinfo
+
+	// SetPoolStatusReporter makes the TerraClient play nice inside a pool.Job by
+	// redirecting console output to the pool.StatusReporter rather than to
+	// the normal logger.
+	SetPoolStatusReporter(reporter pool.StatusReporter)
 }
 
 type terraClient struct {
@@ -27,10 +34,17 @@ type terraClient struct {
 	httpClient    http.Client
 	retryAttempts uint
 	retryDelay    time.Duration
+
+	// Optional pool.StatusReporter to use in place of normal logging when present
+	statusReporter pool.StatusReporter
 }
 
 func NewClient(tokenSource oauth2.TokenSource, userInfo googleoauth.Userinfo) TerraClient {
 	return &terraClient{tokenSource: tokenSource, userInfo: userInfo, httpClient: http.Client{}}
+}
+
+func (c *terraClient) SetPoolStatusReporter(reporter pool.StatusReporter) {
+	c.statusReporter = reporter
 }
 
 func (c *terraClient) FirecloudOrch(appRelease terra.AppRelease) FirecloudOrchClient {
@@ -112,7 +126,18 @@ func (c *terraClient) doJsonRequestWithRetries(method string, url string, bodyDa
 		retry.Delay(retryDelay),
 		retry.OnRetry(func(n uint, err error) {
 			count++
-			log.Warn().Err(err).Msgf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
+			errorString := fmt.Sprintf("%s %s failed (attempt %d of %d): %v", method, url, n, defaultRetryAttempts, err)
+			if c.statusReporter != nil {
+				c.statusReporter.Update(pool.Status{
+					Message: errorString,
+					Context: map[string]interface{}{
+						"retries": count,
+					},
+				})
+			} else {
+				log.Warn().Err(err).Msg(errorString)
+			}
+
 		}),
 		retry.RetryIf(isRetryableError),
 	); retryErr != nil {
@@ -120,7 +145,17 @@ func (c *terraClient) doJsonRequestWithRetries(method string, url string, bodyDa
 	}
 
 	if count > 0 {
-		log.Info().Msgf("%s %s succeeded after %d retries", method, url, count)
+		infoString := fmt.Sprintf("%s %s succeeded after %d retries", method, url, count)
+		if c.statusReporter != nil {
+			c.statusReporter.Update(pool.Status{
+				Message: infoString,
+				Context: map[string]interface{}{
+					"retries": count,
+				},
+			})
+		} else {
+			log.Info().Msg(infoString)
+		}
 	}
 
 	return resp, responseBody, nil
