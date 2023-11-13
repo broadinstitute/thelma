@@ -40,6 +40,7 @@ var flagNames = struct {
 	step6ExtraUser           string
 	noSteps                  string
 	registerSelfShortcut     string
+	registrationParallelism  string
 }{
 	force:                    "force",
 	step1CreateElasticsearch: "step-1-create-elasticsearch",
@@ -50,6 +51,7 @@ var flagNames = struct {
 	step6ExtraUser:           "step-6-extra-user",
 	noSteps:                  "no-steps",
 	registerSelfShortcut:     "me",
+	registrationParallelism:  "registration-parallelism",
 }
 
 type seedFlags struct {
@@ -84,6 +86,9 @@ func (s *seedFlags) AddFlags(cobraCommand *cobra.Command) {
 
 	cobraCommand.Flags().BoolVar(&s.seedOptions.RegisterSelfShortcut, s.withPrefix(flagNames.registerSelfShortcut), false, "shorthand for --step-6-extra-user use-adc")
 	s.maybeHide(cobraCommand, flagNames.registerSelfShortcut)
+
+	cobraCommand.Flags().IntVar(&s.seedOptions.RegistrationParallelism, s.withPrefix(flagNames.registrationParallelism), 20, "how many users/SAs should be registered/unregistered at once")
+	s.maybeHide(cobraCommand, flagNames.registrationParallelism)
 
 	s.addShorthand(cobraCommand, flagNames.force, "f")
 	s.addShorthand(cobraCommand, flagNames.step6ExtraUser, "u")

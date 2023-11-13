@@ -10,8 +10,9 @@ import (
 )
 
 type commonOptions struct {
-	Force   bool
-	NoSteps bool
+	Force                   bool
+	NoSteps                 bool
+	RegistrationParallelism int
 }
 
 type SeedOptions struct {

@@ -34,10 +34,12 @@ var flagNames = struct {
 	force                   string
 	step1UnregisterAllUsers string
 	noSteps                 string
+	registrationParallelism string
 }{
 	force:                   "force",
 	step1UnregisterAllUsers: "step-1-unregister-all-users",
 	noSteps:                 "no-steps",
+	registrationParallelism: "registration-parallelism",
 }
 
 type unseedFlags struct {
@@ -54,6 +56,9 @@ func (s *unseedFlags) AddFlags(cobraCommand *cobra.Command) {
 
 	cobraCommand.Flags().BoolVar(&s.unseedOptions.NoSteps, s.withPrefix(flagNames.noSteps), false, "convenience flag to skip all unspecified steps, which would otherwise run by default")
 	s.maybeHide(cobraCommand, flagNames.noSteps)
+
+	cobraCommand.Flags().IntVar(&s.unseedOptions.RegistrationParallelism, s.withPrefix(flagNames.registrationParallelism), 20, "how many users/SAs should be registered/unregistered at once")
+	s.maybeHide(cobraCommand, flagNames.registrationParallelism)
 
 	s.addShorthand(cobraCommand, flagNames.force, "f")
 }
