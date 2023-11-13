@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"time"
@@ -104,16 +107,55 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 				}
 			}
 
-			for email, id := range userEmailToID {
+			var jobs []pool.Job
+			for unsafeEmail, unsafeID := range userEmailToID {
+				email := unsafeEmail
+				id := unsafeID
 				if email != samEmail {
-					log.Info().Msgf("unregistering %s", email)
-					_, _, err = terraClient.Sam(sam).UnregisterUser(id)
-					if err := opts.handleErrorWithForce(err); err != nil {
-						return errors.Errorf("error unregistering %s (%s): %v", email, id, err)
-					}
+					jobs = append(jobs, pool.Job{
+						Name: email,
+						Run: func(reporter pool.StatusReporter) error {
+							var err error
+							reporter.Update(pool.Status{
+								Message: "Authenticating",
+							})
+							var googleClient google.Clients
+							googleClient, err = s.googleAuthAs(sam)
+							if err = opts.handleErrorWithForce(err); err != nil {
+								return err
+							}
+							var terraClient terraapi.TerraClient
+							terraClient, err = googleClient.Terra()
+							if err = opts.handleErrorWithForce(err); err != nil {
+								return err
+							}
+							terraClient.SetPoolStatusReporter(reporter)
+							reporter.Update(pool.Status{
+								Message: "Unregistering",
+							})
+							_, _, err = terraClient.Sam(sam).UnregisterUser(id)
+							if err := opts.handleErrorWithForce(err); err != nil {
+								return errors.Errorf("error unregistering %s (%s): %v", email, id, err)
+							}
+							reporter.Update(pool.Status{
+								Message: "Unregistered",
+							})
+							return nil
+						},
+					})
 				} else {
 					log.Debug().Msgf("skipping %s for now since it is %s's own user, can't delete it yet", id, samEmail)
 				}
+			}
+
+			err = pool.New(jobs, func(o *pool.Options) {
+				o.NumWorkers = opts.RegistrationParallelism
+				o.Summarizer.Enabled = true
+				o.Metrics.Enabled = false
+				o.StopProcessingOnError = !opts.Force
+			}).Execute()
+			if err = opts.handleErrorWithForce(err); err != nil {
+				return err
 			}
 
 			if samId, exists := userEmailToID[samEmail]; exists {
