@@ -197,7 +197,7 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 				var markdown string
 				if err != nil {
 					// If you try to actually include the error here, Slack will try to parse it and it'll be quite unhappy.
-					markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE didn't come up properly; see the link and contact #dsp-devops-champions for more information.", env.Name(), env.Name())
+					markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE didn't come up properly; see the link and contact <#CADM7MZ35> for more information.", env.Name(), env.Name())
 				} else {
 					markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is ready to go!", env.Name(), env.Name())
 					for _, release := range env.Releases() {
