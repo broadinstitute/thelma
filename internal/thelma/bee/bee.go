@@ -158,25 +158,23 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 	}
 
 	err = b.kubectl.CreateNamespace(env)
-	if err != nil {
-		return bee, err
+
+	if err == nil {
+		env, err = b.PinVersions(env, options.PinOptions)
+		bee.Environment = env
 	}
 
-	env, err = b.PinVersions(env, options.PinOptions)
-	if err != nil {
-		return bee, err
-	}
-	bee.Environment = env
-
-	if err = b.RefreshBeeGenerator(); err != nil {
-		return bee, err
+	if err == nil {
+		err = b.RefreshBeeGenerator()
 	}
 
-	if err = b.argocd.WaitExist(argocd_names.GeneratorName(env)); err != nil {
-		return bee, err
+	if err == nil {
+		err = b.argocd.WaitExist(argocd_names.GeneratorName(env))
 	}
 
-	err = b.provisionBeeApps(bee, options.ProvisionExistingOptions)
+	if err == nil {
+		err = b.provisionBeeApps(bee, options.ProvisionExistingOptions)
+	}
 
 	if err == nil && options.Seed {
 		log.Info().Msgf("Seeding BEE with test data")
@@ -195,15 +193,23 @@ func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error
 		if env.Owner() != "" {
 			if b.slack != nil {
 				log.Info().Msgf("Notifying %s", env.Owner())
-				markdown := fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is ready to go!", env.Name(), env.Name())
-				for _, release := range env.Releases() {
-					if release.IsAppRelease() && release.ChartName() == "terraui" {
-						if terraui, ok := release.(terra.AppRelease); ok {
-							markdown += fmt.Sprintf(" Terra's UI is at %s.", terraui.URL())
+
+				var markdown string
+				if err != nil {
+					// If you try to actually include the error here, Slack will try to parse it and it'll be quite unhappy.
+					markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE didn't come up properly; see the link and contact <#CADM7MZ35> for more information.", env.Name(), env.Name())
+				} else {
+					markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is ready to go!", env.Name(), env.Name())
+					for _, release := range env.Releases() {
+						if release.IsAppRelease() && release.ChartName() == "terraui" {
+							if terraui, ok := release.(terra.AppRelease); ok {
+								markdown += fmt.Sprintf(" Terra's UI is at %s.", terraui.URL())
+							}
 						}
 					}
+					markdown += fmt.Sprintf(" You'll probably want to set up your BEE with a billing account, <%s|instructions available here>.", beeDocLink)
 				}
-				markdown += fmt.Sprintf(" You'll probably want to set up your BEE with a billing account, <%s|instructions available here>.", beeDocLink)
+
 				if err := b.slack.SendDirectMessage(env.Owner(), markdown); err != nil {
 					log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
 				}
