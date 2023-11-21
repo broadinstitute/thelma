@@ -46,8 +46,7 @@ func (c *samClient) FcServiceAccounts(memberEmails []string, cloud string, actio
 func (c *samClient) AcceptToS() (*http.Response, string, error) {
 	// request body should be url where the TOS are hosted in prod - not sure why
 	// I assume sam may be hard coded to expect this
-	body := "app.terra.bio/#terms-of-service"
-	return c.doJsonRequestWithRetries(http.MethodPost, fmt.Sprintf("%s/register/user/v1/termsofservice", c.appRelease.URL()), body)
+	return c.doJsonRequestWithRetries(http.MethodPut, fmt.Sprintf("%s/api/termsOfService/v1/user/self/accept", c.appRelease.URL()), "")
 }
 
 func (c *samClient) UnregisterUser(id string) (*http.Response, string, error) {

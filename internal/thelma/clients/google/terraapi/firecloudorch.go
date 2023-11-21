@@ -25,7 +25,7 @@ var unretryableErrors = []*regexp.Regexp{
 }
 
 type FirecloudOrchClient interface {
-	RegisterProfile(firstName string, lastName string, title string, contactEmail string, institute string, institutionalProgram string, programLocationCity string, programLocationState string, programLocationCountry string, pi string, nonProfitStatus string) (*http.Response, string, error)
+	RegisterWithProfile(firstName string, lastName string, title string, contactEmail string, institute string, institutionalProgram string, programLocationCity string, programLocationState string, programLocationCountry string, pi string, nonProfitStatus string) (*http.Response, string, error)
 	AgoraMakeMethod(data interface{}) (*http.Response, string, error)
 	AgoraSetMethodACLs(name string, namespace string, acls interface{}) (*http.Response, string, error)
 	AgoraMakeConfig(data interface{}) (*http.Response, string, error)
@@ -38,8 +38,8 @@ type firecloudOrchClient struct {
 	appRelease terra.AppRelease
 }
 
-func (c *firecloudOrchClient) RegisterProfile(firstName string, lastName string, title string, contactEmail string, institute string, institutionalProgram string, programLocationCity string, programLocationState string, programLocationCountry string, pi string, nonProfitStatus string) (*http.Response, string, error) {
-	bodyStruct := struct {
+func (c *firecloudOrchClient) RegisterWithProfile(firstName string, lastName string, title string, contactEmail string, institute string, institutionalProgram string, programLocationCity string, programLocationState string, programLocationCountry string, pi string, nonProfitStatus string) (*http.Response, string, error) {
+	profileStruct := struct {
 		FirstName              string `json:"firstName"`
 		LastName               string `json:"lastName"`
 		Title                  string `json:"title"`
@@ -64,7 +64,14 @@ func (c *firecloudOrchClient) RegisterProfile(firstName string, lastName string,
 		Pi:                     pi,
 		NonProfitStatus:        nonProfitStatus,
 	}
-	return c.doJsonRequestWithRetries(http.MethodPost, fmt.Sprintf("%s/register/profile", c.appRelease.URL()), bodyStruct)
+	bodyStruct := struct {
+		AcceptsTermsOfService bool        `json:"acceptsTermsOfService"`
+		Profile               interface{} `json:"profile"`
+	}{
+		AcceptsTermsOfService: true,
+		Profile:               profileStruct,
+	}
+	return c.doJsonRequestWithRetries(http.MethodPost, fmt.Sprintf("%s/api/users/v1/registerWithProfile", c.appRelease.URL()), bodyStruct)
 }
 func (c *firecloudOrchClient) AgoraMakeMethod(data interface{}) (*http.Response, string, error) {
 	return c.doJsonRequestWithRetries(http.MethodPost, fmt.Sprintf("%s/api/methods", c.appRelease.URL()), data)

@@ -50,21 +50,11 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 						reporter.Update(pool.Status{
 							Message: "Registering",
 						})
-						_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile(
+						_, _, err = terraClient.FirecloudOrch(orch).RegisterWithProfile(
 							user.FirstName, user.LastName, user.Role, user.Email,
 							"Hogwarts", "dsde",
 							"Cambridge", "MA", "USA",
 							"Remus Lupin", "Non-Profit")
-						if err = opts.handleErrorWithForce(err); err != nil {
-							return err
-						}
-						reporter.Update(pool.Status{
-							Message: "Approving TOS",
-						})
-						_, _, err = terraClient.Sam(sam).AcceptToS()
-						if err = opts.handleErrorWithForce(err); err != nil {
-							return err
-						}
 						reporter.Update(pool.Status{
 							Message: "Registered",
 						})

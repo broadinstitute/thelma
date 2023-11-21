@@ -90,7 +90,7 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 				appRelease: orchRelease,
 			}
 
-			_, _, err := client.RegisterProfile(
+			_, _, err := client.RegisterWithProfile(
 				"Jane", "Doe",
 				"Owner", "jdoe@broadinstitute.org",
 				"None", "None",

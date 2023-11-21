@@ -101,7 +101,7 @@ func (s *seeder) seedStep6ExtraUser(appReleases map[string]terra.AppRelease, opt
 					}
 				}
 
-				_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile(
+				_, _, err = terraClient.FirecloudOrch(orch).RegisterWithProfile(
 					firstName, lastName,
 					"Owner", terraClient.GoogleUserInfo().Email,
 					"None", "None",
