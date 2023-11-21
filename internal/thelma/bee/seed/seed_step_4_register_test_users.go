@@ -55,6 +55,9 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 							"Hogwarts", "dsde",
 							"Cambridge", "MA", "USA",
 							"Remus Lupin", "Non-Profit")
+						if err = opts.handleErrorWithForce(err); err != nil {
+							return err
+						}
 						reporter.Update(pool.Status{
 							Message: "Registered",
 						})
