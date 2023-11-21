@@ -50,8 +50,8 @@ func Test_SamClientRetriesFailedRequests(t *testing.T) {
 
 			fakeSamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requestCount++
-				if r.URL.Path != "/register/user/v1/termsofservice" {
-					t.Errorf("expected to request '/register/profile', got: %s", r.URL.Path)
+				if r.URL.Path != "/api/termsOfService/v1/user/self/accept" {
+					t.Errorf("expected to request '/api/termsOfService/v1/user/self/accept', got: %s", r.URL.Path)
 				}
 
 				var status int
