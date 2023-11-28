@@ -10,6 +10,7 @@ import (
 	"golang.org/x/term"
 	"os"
 	"strings"
+	"sync"
 )
 
 // TokenOptions configuration options for a TokenProvider
@@ -77,143 +78,182 @@ func (c credentials) NewTokenProvider(key string, options ...TokenOption) TokenP
 type tokenProvider struct {
 	key     string
 	options TokenOptions
+	mutex   sync.RWMutex
 }
 
 func (t *tokenProvider) Get() ([]byte, error) {
-	value := t.readFromEnv()
-	if len(value) != 0 {
+	if value, err := t.getViaReadOnly(); err != nil {
+		return nil, fmt.Errorf("%T.getViaReadOnly() error: %w", t, err)
+	} else if len(value) > 0 {
+		return value, nil
+	} else if value, err = t.getViaReadWrite(); err != nil {
+		return nil, fmt.Errorf("%T.getViaReadWrite() error: %w", t, err)
+	} else {
 		return value, nil
 	}
-
-	value, err := t.readFromStore()
-	if err != nil {
-		return nil, err
-	}
-	if len(value) != 0 {
-		return value, nil
-	}
-
-	return t.getNewToken()
 }
 
 func (t *tokenProvider) Reissue() ([]byte, error) {
-	return t.getNewToken()
+	if err := t.resetViaReadWrite(); err != nil {
+		return nil, fmt.Errorf("%T.resetViaReadWrite() error: %w", t, err)
+	} else {
+		return t.Get()
+	}
 }
 
-// readFromEnv looks up a credential from the environment, checking with and without the THELMA_ prefix
-// for example, ReadFromEnv("VAULT_TOKEN") will:
-// (1) check for an environment variable THELMA_VAULT_TOKEN and return it if it exists
-// (2) return the value of the VAULT_TOKEN environment variable
-func (t *tokenProvider) readFromEnv() []byte {
-	value := os.Getenv(env.WithEnvPrefix(t.options.EnvVar))
-	if len(value) != 0 {
-		return []byte(value)
-	}
-	return []byte(os.Getenv(t.options.EnvVar))
-}
-
-// readFromStore looks up a token value in the credential store.
-// If no value exists, the empty string is returned.
-// If a value for the token exists it is not valid, readFromStore will attempt to refresh the token,
-// returning the empty string if it can't be refreshed.
-func (t *tokenProvider) readFromStore() ([]byte, error) {
-	exists, err := t.options.CredentialStore.Exists(t.key)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
+// getViaReadOnly attempts to get a token, only reading. It may return nothing if a valid token wasn't readily available.
+// It obtains a read lock on the tokenProvider and releases it before returning.
+func (t *tokenProvider) getViaReadOnly() ([]byte, error) {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	if value, err := t.tryGetTokenOnlyReading(); err != nil {
+		return nil, fmt.Errorf("%T.tryGetTokenOnlyReading() error: %w", t, err)
+	} else if len(value) > 0 && t.validateToken(value) == nil {
+		return value, nil
+	} else {
 		return nil, nil
 	}
-
-	storedValue, err := t.options.CredentialStore.Read(t.key)
-	if err != nil {
-		return nil, err
-	}
-
-	err = t.validateToken(storedValue)
-	if err != nil {
-		log.Debug().Msgf("found value for %s in credential store, but validation function failed: %v", t.options.EnvVar, err)
-		return t.refreshToken(storedValue)
-	}
-
-	return storedValue, nil
 }
 
-// refreshToken - return nil, nil if the token could not be refreshed or refresh failed
-// returns an error if an exception (eg. error writing to credential store) occurs
-// returns a non-nil value and no error if the token was successfully refreshed
-func (t *tokenProvider) refreshToken(value []byte) ([]byte, error) {
+// getViaReadWrite gets a token, reading and possibly writing. It will always return either a token or an error.
+// It obtains a read/write lock on the tokenProvider and releases it before returning.
+func (t *tokenProvider) getViaReadWrite() ([]byte, error) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	// We read first in case another goroutine wrote while we were waiting for the lock,
+	// also to get even a potentially invalid token to try to refresh.
+	if value, err := t.tryGetTokenOnlyReading(); err != nil {
+		return nil, fmt.Errorf("%T.tryGetTokenOnlyReading() error: %w", t, err)
+	} else if len(value) > 0 {
+		if err = t.validateToken(value); err == nil {
+			return value, nil
+		} else if value, err = t.tryGetAndWriteRefreshedToken(value); err != nil {
+			return nil, fmt.Errorf("%T.tryGetAndWriteRefreshedToken() error: %w", t, err)
+		} else if len(value) > 0 {
+			return value, nil
+		}
+	}
+
+	// If we get here, make a new token from scratch
+	if value, err := t.mustGetAndWriteNewToken(); err != nil {
+		return nil, fmt.Errorf("%T.mustGetAndWriteNewToken() error: %w", t, err)
+	} else if len(value) > 0 {
+		return value, nil
+	} else {
+		return nil, fmt.Errorf("%T.mustGetAndWriteNewToken() returned no error but no token either", t)
+	}
+}
+
+// resetViaReadWrite resets internal state.
+// It obtains a read/write lock on the tokenProvider and releases it before returning.
+func (t *tokenProvider) resetViaReadWrite() error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	if exists, err := t.options.CredentialStore.Exists(t.key); err != nil {
+		return fmt.Errorf("%T.Exists(%q) error: %w", t.options.CredentialStore, t.key, err)
+	} else if exists {
+		if err = t.options.CredentialStore.Remove(t.key); err != nil {
+			return fmt.Errorf("%T.Remove(%q) error: %w", t.options.CredentialStore, t.key, err)
+		}
+	}
+	return nil
+}
+
+// tryGetTokenOnlyReading attempts to get a token with only read access. It does not validate the token.
+// It assumes the caller has locked the tokenProvider.
+// It may return nothing if a token wasn't readily available.
+func (t *tokenProvider) tryGetTokenOnlyReading() ([]byte, error) {
+	// Short-circuit if we find a token in the environment
+	for _, envVariableToCheck := range []string{env.WithEnvPrefix(t.options.EnvVar), t.options.EnvVar} {
+		if value := os.Getenv(envVariableToCheck); len(value) > 0 {
+			log.Trace().
+				Str("variable", envVariableToCheck).
+				Str("key", t.key).
+				Type("type", t).
+				Msgf("os.Getenv(%q) returned a value for %s, short-circuiting", envVariableToCheck, t.key)
+			return []byte(value), nil
+		}
+	}
+
+	if existsInStore, err := t.options.CredentialStore.Exists(t.key); err != nil {
+		return nil, fmt.Errorf("%T.Exists(%q) error: %w", t.options.CredentialStore, t.key, err)
+	} else if !existsInStore {
+		return nil, nil
+	} else if value, err := t.options.CredentialStore.Read(t.key); err != nil {
+		return nil, fmt.Errorf("%T.Read(%q) error: %w", t.options.CredentialStore, t.key, err)
+	} else {
+		return value, nil
+	}
+}
+
+// tryGetAndWriteRefreshedToken attempts to get a refreshed token using read and write access. It validates the token.
+// It assumes the caller has locked the tokenProvider.
+// It may return nothing if it wasn't able to refresh the token.
+func (t *tokenProvider) tryGetAndWriteRefreshedToken(value []byte) ([]byte, error) {
 	if t.options.RefreshFn == nil {
 		return nil, nil
-	}
-
-	log.Debug().Msgf("attempting to refresh token for %s", t.options.EnvVar)
-	newValue, err := t.options.RefreshFn(value)
-	if err != nil {
-		log.Debug().Msgf("failed to refresh token %s: %v", t.options.EnvVar, err)
+	} else if newValue, err := t.options.RefreshFn(value); err != nil {
+		log.Trace().
+			Err(err).
+			Str("key", t.key).
+			Type("type", t).
+			Msgf("RefreshFn(%T.Read(%q)) error: %v", t.options.CredentialStore, t.key, err)
 		return nil, nil
+	} else if err = t.validateToken(newValue); err != nil {
+		return nil, fmt.Errorf("%T.validateToken(RefreshFn(%T.Read(%q))) error: %w", t, t.options.CredentialStore, t.key, err)
+	} else if err = t.options.CredentialStore.Write(t.key, newValue); err != nil {
+		return nil, fmt.Errorf("%T.Write(%q, /* ... /*)) error: %w", t.options.CredentialStore, t.key, err)
+	} else {
+		return newValue, nil
 	}
-
-	if err = t.validateToken(newValue); err != nil {
-		// if this happens, there's likely a bug in the refresh function, so return an error
-		return nil, errors.Errorf("refresh for %s returned invalid token: %v", t.options.EnvVar, err)
-	}
-
-	log.Debug().Msgf("writing refreshed token %s to credential store", t.options.EnvVar)
-
-	if err = t.options.CredentialStore.Write(t.key, newValue); err != nil {
-		return nil, errors.Errorf("error writing refreshed token %s to credential store: %v", t.options.EnvVar, err)
-	}
-
-	return newValue, nil
 }
 
-func (t *tokenProvider) validateToken(value []byte) error {
-	if t.options.ValidateFn == nil {
-		// no validation function provided, assume value is valid
-		return nil
-	}
-
-	return t.options.ValidateFn(value)
-}
-
-// getNewToken will attempt to get a new token value by either
-// (1) invoking the issueFn callback
-// (2) prompting the user for input
-// If a new value is successfully obtained (and validated), token is stored and return to user
-func (t *tokenProvider) getNewToken() ([]byte, error) {
+// mustGetAndWriteNewToken makes a new token using read and write access. It validates the token.
+// It assumes the caller has locked the tokenProvider.
+// It will always return either a token or an error.
+func (t *tokenProvider) mustGetAndWriteNewToken() ([]byte, error) {
 	var value []byte
 	var err error
 
 	if t.options.IssueFn != nil {
-		log.Info().Msgf("Attempting to issue new %s", t.options.EnvVar)
-		value, err = t.options.IssueFn()
+		if value, err = t.options.IssueFn(); err != nil {
+			err = fmt.Errorf("%T.IssueFn() for %s error: %w", t, t.key, err)
+		} else if len(value) == 0 {
+			err = fmt.Errorf("%T.IssueFn() for %s returned no error but no token either", t, t.key)
+		}
 	} else if t.options.PromptEnabled {
-		value, err = t.promptForNewValue()
+		if value, err = t.promptForNewValue(); err != nil {
+			err = fmt.Errorf("%T.promptForNewValue() for %s error: %w", t, t.key, err)
+		} else if value == nil {
+			err = fmt.Errorf("%T.promptForNewValue() for %s returned no error but no token either (user entered empty value?)", t, t.key)
+		}
 	} else {
-		return nil, errors.Errorf("could not issue new %s, no issueFn configured and input prompting is disabled", t.options.EnvVar)
+		return nil, fmt.Errorf("could not issue new %s token; no IssueFn set and input prompting is disabled", t.key)
 	}
 
-	if err != nil || len(value) == 0 {
-		return value, err
-	}
-
-	err = t.validateToken(value)
 	if err != nil {
-		return nil, errors.Errorf("new credential for %s is invalid: %v", t.options.EnvVar, err)
+		return nil, err
+	} else if err = t.validateToken(value); err != nil {
+		return nil, fmt.Errorf("%T.validateToken(/* ... /*)) for %s error: %w", t, t.key, err)
+	} else if err = t.options.CredentialStore.Write(t.key, value); err != nil {
+		return nil, fmt.Errorf("%T.Write(%q, /* ... /*)) error: %w", t, t.key, err)
+	} else {
+		return value, nil
 	}
+}
 
-	if err := t.options.CredentialStore.Write(t.key, value); err != nil {
-		return nil, errors.Errorf("failed to save new token value for %s: %v", t.options.EnvVar, err)
+func (t *tokenProvider) validateToken(value []byte) error {
+	if t.options.ValidateFn == nil {
+		return nil
+	} else {
+		return t.options.ValidateFn(value)
 	}
-
-	return value, nil
 }
 
 // promptForNewValue will prompt the user for a new token value
 func (t *tokenProvider) promptForNewValue() ([]byte, error) {
 	if !utils.Interactive() {
-		return nil, errors.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.options.EnvVar, t.options.EnvVar)
+		return nil, errors.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.key, t.options.EnvVar)
 	}
 
 	fmt.Print(t.options.PromptMessage)
@@ -221,7 +261,7 @@ func (t *tokenProvider) promptForNewValue() ([]byte, error) {
 	// print empty newline since ReadPassword doesn't
 	fmt.Println()
 	if err != nil {
-		return nil, errors.Errorf("error reading user input for credential %s: %v", t.options.EnvVar, err)
+		return nil, errors.Errorf("error reading user input for credential %s: %v", t.key, err)
 	}
 
 	return value, nil

@@ -11,6 +11,48 @@ import (
 	"testing"
 )
 
+type storeThatLikesToError struct {
+	errorOnRead   bool
+	bluffRead     string
+	errorOnWrite  bool
+	errorOnExists bool
+	bluffExists   bool
+	errorOnRemove bool
+	delegate      stores.Store
+}
+
+func (s storeThatLikesToError) Read(key string) ([]byte, error) {
+	if s.errorOnRead {
+		return nil, errors.Errorf("read error")
+	} else if s.bluffRead != "" {
+		return []byte(s.bluffRead), nil
+	}
+	return s.delegate.Read(key)
+}
+
+func (s storeThatLikesToError) Exists(key string) (bool, error) {
+	if s.errorOnExists {
+		return false, errors.Errorf("exists error")
+	} else if s.bluffExists {
+		return true, nil
+	}
+	return s.delegate.Exists(key)
+}
+
+func (s storeThatLikesToError) Write(key string, credential []byte) error {
+	if s.errorOnWrite {
+		return errors.Errorf("write error")
+	}
+	return s.delegate.Write(key, credential)
+}
+
+func (s storeThatLikesToError) Remove(key string) error {
+	if s.errorOnRemove {
+		return errors.Errorf("remove error")
+	}
+	return s.delegate.Remove(key)
+}
+
 func Test_Token_Get(t *testing.T) {
 	fakeEnvVar := fmt.Sprintf("FAKE_TOKEN_ENV_VAR_%d", os.Getpid())
 
@@ -25,7 +67,7 @@ func Test_Token_Get(t *testing.T) {
 		{
 			name:      "with defaults: should return error if token does not exist",
 			key:       "my-token",
-			expectErr: "could not issue new MY_TOKEN",
+			expectErr: "^.*could not issue new my-token token; no IssueFn set and input prompting is disabled$",
 		},
 		{
 			name: "with defaults: should return value in environment variable if defined",
@@ -58,7 +100,7 @@ func Test_Token_Get(t *testing.T) {
 			setup: func(t *testing.T, tmpDir string) {
 				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("token-value"), 0600))
 			},
-			expectErr: "could not issue new MY_TOKEN",
+			expectErr: "^.*could not issue new my-token token; no IssueFn set and input prompting is disabled$",
 		},
 		{
 			name: "with issueFn: should issue new token if token does not exist",
@@ -136,6 +178,27 @@ func Test_Token_Get(t *testing.T) {
 			expectValue: "refreshed-token-value",
 		},
 		{
+			name: "with refreshFn and validateFn: returns errors from writing newly refreshed token",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.RefreshFn = func(_ []byte) ([]byte, error) {
+					return []byte("refreshed-token-value"), nil
+				}
+				options.ValidateFn = func(v []byte) error {
+					if string(v) == "old-token-value" {
+						return errors.Errorf("this token expired")
+					}
+					return nil
+				}
+				options.CredentialStore = storeThatLikesToError{
+					bluffExists:  true,
+					bluffRead:    "old-token-value",
+					errorOnWrite: true,
+				}
+			},
+			expectErr: "^.*write error$",
+		},
+		{
 			name: "with refreshFn and validateFn: should return error if refresh returns invalid token",
 			key:  "my-token",
 			setup: func(t *testing.T, tmpDir string) {
@@ -149,7 +212,7 @@ func Test_Token_Get(t *testing.T) {
 					return errors.Errorf("token is invalid")
 				}
 			},
-			expectErr: "refresh for MY_TOKEN returned invalid token: token is invalid",
+			expectErr: "^.*token is invalid$",
 		},
 		{
 			name: "with issueFn, refreshFn and validateFn: should issue new token if refresh fails",
@@ -174,12 +237,69 @@ func Test_Token_Get(t *testing.T) {
 			expectValue: "new-token-value",
 		},
 		{
+			name: "with issueFn, refreshFn and validateFn: returns errors from writing newly issued token",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.RefreshFn = func(_ []byte) ([]byte, error) {
+					return nil, errors.Errorf("token too old to be refreshed")
+				}
+				options.IssueFn = func() ([]byte, error) {
+					return []byte("new-token-value"), nil
+				}
+				options.ValidateFn = func(v []byte) error {
+					if string(v) == "old-token-value" {
+						return errors.Errorf("this token expired")
+					}
+					return nil
+				}
+				options.CredentialStore = storeThatLikesToError{
+					bluffExists:  true,
+					bluffRead:    "old-token-value",
+					errorOnWrite: true,
+				}
+			},
+			expectErr: "^.*write error$",
+		},
+		{
 			name: "with prompt enabled: return error because shell is not interactive",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
 				options.PromptEnabled = true
 			},
 			expectErr: "shell is not interactive",
+		},
+		{
+			name: "with issueFn: errors if result is empty",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.IssueFn = func() ([]byte, error) {
+					return []byte{}, nil
+				}
+			},
+			expectErr: ".*returned no error but no token either.*",
+		},
+		{
+			name: "returns errors from CredentialStore.Exists",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = storeThatLikesToError{
+					errorOnExists: true,
+					delegate:      stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*exists error$",
+		},
+		{
+			name: "returns errors from CredentialStore.Read",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = storeThatLikesToError{
+					bluffExists: true,
+					errorOnRead: true,
+					delegate:    stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*read error$",
 		},
 	}
 
@@ -236,6 +356,29 @@ func Test_Token_Reissue(t *testing.T) {
 				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("old-token-value"), 0600))
 			},
 			expectValue: "new-token-value",
+		},
+		{
+			name: "returns errors from CredentialStore.Exists",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = storeThatLikesToError{
+					errorOnExists: true,
+					delegate:      stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*exists error$",
+		},
+		{
+			name: "returns errors from CredentialStore.Remove",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = storeThatLikesToError{
+					bluffExists:   true,
+					errorOnRemove: true,
+					delegate:      stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*remove error$",
 		},
 	}
 
