@@ -25,6 +25,9 @@ func Test_DirectoryStore(t *testing.T) {
 	credential, err := s.Read("my-key")
 	require.NoError(t, err)
 	assert.Equal(t, "super secret", string(credential))
+
+	err = s.Remove("my-key")
+	require.NoError(t, err)
 }
 
 func Test_MapStore(t *testing.T) {
@@ -44,4 +47,7 @@ func Test_MapStore(t *testing.T) {
 	credential, err := s.Read("my-key")
 	require.NoError(t, err)
 	assert.Equal(t, "super secret", string(credential))
+
+	err = s.Remove("my-key")
+	require.NoError(t, err)
 }
