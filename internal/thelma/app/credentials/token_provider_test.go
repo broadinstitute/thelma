@@ -446,7 +446,7 @@ func Test_TokenProvider_concurrency(t *testing.T) {
 		issuerMutex.Lock()
 		defer issuerMutex.Unlock()
 		if issuerCalled {
-			return nil, fmt.Errorf("issuer already called")
+			return nil, errors.Errorf("issuer already called")
 		} else {
 			issuerCalled = true
 			return []byte("new-token-value"), nil

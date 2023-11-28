@@ -88,11 +88,11 @@ type tokenProvider struct {
 
 func (t *tokenProvider) Get() ([]byte, error) {
 	if value, err := t.getViaReadOnly(); err != nil {
-		return nil, fmt.Errorf("%T.getViaReadOnly() error: %w", t, err)
+		return nil, errors.Errorf("%T.getViaReadOnly() error: %v", t, err)
 	} else if len(value) > 0 {
 		return value, nil
 	} else if value, err = t.getViaReadWrite(); err != nil {
-		return nil, fmt.Errorf("%T.getViaReadWrite() error: %w", t, err)
+		return nil, errors.Errorf("%T.getViaReadWrite() error: %v", t, err)
 	} else {
 		return value, nil
 	}
@@ -100,7 +100,7 @@ func (t *tokenProvider) Get() ([]byte, error) {
 
 func (t *tokenProvider) Reissue() ([]byte, error) {
 	if err := t.resetViaReadWrite(); err != nil {
-		return nil, fmt.Errorf("%T.resetViaReadWrite() error: %w", t, err)
+		return nil, errors.Errorf("%T.resetViaReadWrite() error: %v", t, err)
 	} else {
 		return t.Get()
 	}
@@ -112,7 +112,7 @@ func (t *tokenProvider) getViaReadOnly() ([]byte, error) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 	if value, err := t.tryGetTokenOnlyReading(); err != nil {
-		return nil, fmt.Errorf("%T.tryGetTokenOnlyReading() error: %w", t, err)
+		return nil, errors.Errorf("%T.tryGetTokenOnlyReading() error: %v", t, err)
 	} else if len(value) > 0 && t.validateToken(value) == nil {
 		return value, nil
 	} else {
@@ -128,12 +128,12 @@ func (t *tokenProvider) getViaReadWrite() ([]byte, error) {
 	// We read first in case another goroutine wrote while we were waiting for the lock,
 	// also to get even a potentially invalid token to try to refresh.
 	if value, err := t.tryGetTokenOnlyReading(); err != nil {
-		return nil, fmt.Errorf("%T.tryGetTokenOnlyReading() error: %w", t, err)
+		return nil, errors.Errorf("%T.tryGetTokenOnlyReading() error: %v", t, err)
 	} else if len(value) > 0 {
 		if err = t.validateToken(value); err == nil {
 			return value, nil
 		} else if value, err = t.tryGetAndWriteRefreshedToken(value); err != nil {
-			return nil, fmt.Errorf("%T.tryGetAndWriteRefreshedToken() error: %w", t, err)
+			return nil, errors.Errorf("%T.tryGetAndWriteRefreshedToken() error: %v", t, err)
 		} else if len(value) > 0 {
 			return value, nil
 		}
@@ -141,11 +141,11 @@ func (t *tokenProvider) getViaReadWrite() ([]byte, error) {
 
 	// If we get here, make a new token from scratch
 	if value, err := t.mustGetAndWriteNewToken(); err != nil {
-		return nil, fmt.Errorf("%T.mustGetAndWriteNewToken() error: %w", t, err)
+		return nil, errors.Errorf("%T.mustGetAndWriteNewToken() error: %v", t, err)
 	} else if len(value) > 0 {
 		return value, nil
 	} else {
-		return nil, fmt.Errorf("%T.mustGetAndWriteNewToken() returned no error but no token either", t)
+		return nil, errors.Errorf("%T.mustGetAndWriteNewToken() returned no error but no token either", t)
 	}
 }
 
@@ -155,10 +155,10 @@ func (t *tokenProvider) resetViaReadWrite() error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if exists, err := t.options.CredentialStore.Exists(t.key); err != nil {
-		return fmt.Errorf("%T.Exists(%q) error: %w", t.options.CredentialStore, t.key, err)
+		return errors.Errorf("%T.Exists(%q) error: %v", t.options.CredentialStore, t.key, err)
 	} else if exists {
 		if err = t.options.CredentialStore.Remove(t.key); err != nil {
-			return fmt.Errorf("%T.Remove(%q) error: %w", t.options.CredentialStore, t.key, err)
+			return errors.Errorf("%T.Remove(%q) error: %v", t.options.CredentialStore, t.key, err)
 		}
 	}
 	return nil
@@ -185,11 +185,11 @@ func (t *tokenProvider) tryGetTokenOnlyReading() ([]byte, error) {
 	}
 
 	if existsInStore, err := t.options.CredentialStore.Exists(t.key); err != nil {
-		return nil, fmt.Errorf("%T.Exists(%q) error: %w", t.options.CredentialStore, t.key, err)
+		return nil, errors.Errorf("%T.Exists(%q) error: %v", t.options.CredentialStore, t.key, err)
 	} else if !existsInStore {
 		return nil, nil
 	} else if value, err := t.options.CredentialStore.Read(t.key); err != nil {
-		return nil, fmt.Errorf("%T.Read(%q) error: %w", t.options.CredentialStore, t.key, err)
+		return nil, errors.Errorf("%T.Read(%q) error: %v", t.options.CredentialStore, t.key, err)
 	} else {
 		return value, nil
 	}
@@ -209,9 +209,9 @@ func (t *tokenProvider) tryGetAndWriteRefreshedToken(value []byte) ([]byte, erro
 			Msgf("RefreshFn(%T.Read(%q)) error: %v", t.options.CredentialStore, t.key, err)
 		return nil, nil
 	} else if err = t.validateToken(newValue); err != nil {
-		return nil, fmt.Errorf("%T.validateToken(RefreshFn(%T.Read(%q))) error: %w", t, t.options.CredentialStore, t.key, err)
+		return nil, errors.Errorf("%T.validateToken(RefreshFn(%T.Read(%q))) error: %v", t, t.options.CredentialStore, t.key, err)
 	} else if err = t.options.CredentialStore.Write(t.key, newValue); err != nil {
-		return nil, fmt.Errorf("%T.Write(%q, /* ... /*)) error: %w", t.options.CredentialStore, t.key, err)
+		return nil, errors.Errorf("%T.Write(%q, /* ... /*)) error: %v", t.options.CredentialStore, t.key, err)
 	} else {
 		return newValue, nil
 	}
@@ -226,26 +226,26 @@ func (t *tokenProvider) mustGetAndWriteNewToken() ([]byte, error) {
 
 	if t.options.IssueFn != nil {
 		if value, err = t.options.IssueFn(); err != nil {
-			err = fmt.Errorf("%T.IssueFn() for %s error: %w", t, t.key, err)
+			err = errors.Errorf("%T.IssueFn() for %s error: %v", t, t.key, err)
 		} else if len(value) == 0 {
-			err = fmt.Errorf("%T.IssueFn() for %s returned no error but no token either", t, t.key)
+			err = errors.Errorf("%T.IssueFn() for %s returned no error but no token either", t, t.key)
 		}
 	} else if t.options.PromptEnabled {
 		if value, err = t.promptForNewValue(); err != nil {
-			err = fmt.Errorf("%T.promptForNewValue() for %s error: %w", t, t.key, err)
+			err = errors.Errorf("%T.promptForNewValue() for %s error: %v", t, t.key, err)
 		} else if value == nil {
-			err = fmt.Errorf("%T.promptForNewValue() for %s returned no error but no token either (user entered empty value?)", t, t.key)
+			err = errors.Errorf("%T.promptForNewValue() for %s returned no error but no token either (user entered empty value?)", t, t.key)
 		}
 	} else {
-		return nil, fmt.Errorf("could not issue new %s token; no IssueFn set and input prompting is disabled", t.key)
+		return nil, errors.Errorf("could not issue new %s token; no IssueFn set and input prompting is disabled", t.key)
 	}
 
 	if err != nil {
 		return nil, err
 	} else if err = t.validateToken(value); err != nil {
-		return nil, fmt.Errorf("%T.validateToken(/* ... /*)) for %s error: %w", t, t.key, err)
+		return nil, errors.Errorf("%T.validateToken(/* ... /*)) for %s error: %v", t, t.key, err)
 	} else if err = t.options.CredentialStore.Write(t.key, value); err != nil {
-		return nil, fmt.Errorf("%T.Write(%q, /* ... /*)) error: %w", t, t.key, err)
+		return nil, errors.Errorf("%T.Write(%q, /* ... /*)) error: %v", t, t.key, err)
 	} else {
 		return value, nil
 	}
