@@ -28,6 +28,10 @@ func Test_DirectoryStore(t *testing.T) {
 
 	err = s.Remove("my-key")
 	require.NoError(t, err)
+
+	exists, err = s.Exists("my-key")
+	require.NoError(t, err)
+	assert.False(t, exists)
 }
 
 func Test_MapStore(t *testing.T) {
