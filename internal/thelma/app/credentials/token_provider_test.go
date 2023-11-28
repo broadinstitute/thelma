@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"path"
+	"sync"
 	"testing"
 )
 
@@ -433,4 +434,43 @@ func Test_TokenProvider_Reissue(t *testing.T) {
 			assert.Equal(t, tc.expectValue, string(val))
 		})
 	}
+}
+
+// Test_TokenProvider_concurrency isn't perfect, but it would likely fail if TokenProvider weren't
+// properly locking reads and writes. We're making an issuer that will fail if called more than once
+// and validating that even with 100 concurrent goroutines, it only gets called once.
+func Test_TokenProvider_concurrency(t *testing.T) {
+	var issuerMutex sync.Mutex
+	var issuerCalled bool
+	issuerThatWillFailIfRunMoreThanOnce := func() ([]byte, error) {
+		issuerMutex.Lock()
+		defer issuerMutex.Unlock()
+		if issuerCalled {
+			return nil, fmt.Errorf("issuer already called")
+		} else {
+			issuerCalled = true
+			return []byte("new-token-value"), nil
+		}
+	}
+
+	storeDir := t.TempDir()
+	store, err := stores.NewDirectoryStore(storeDir)
+	require.NoError(t, err)
+	creds := NewWithStore(store)
+	tok := creds.NewTokenProvider("my-token", func(options *TokenOptions) {
+		options.IssueFn = issuerThatWillFailIfRunMoreThanOnce
+	})
+
+	var wg sync.WaitGroup
+	goroutineFn := func() {
+		defer wg.Done()
+		token, err := tok.Get()
+		require.NoError(t, err)
+		assert.Equal(t, "new-token-value", string(token))
+	}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go goroutineFn()
+	}
+	wg.Wait()
 }
