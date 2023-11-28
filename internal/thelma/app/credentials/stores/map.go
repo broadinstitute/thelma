@@ -24,3 +24,8 @@ func (s mapStore) Write(key string, token []byte) error {
 	s._map[key] = token
 	return nil
 }
+
+func (s mapStore) Remove(key string) error {
+	delete(s._map, key)
+	return nil
+}
