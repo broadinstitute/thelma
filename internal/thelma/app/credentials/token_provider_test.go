@@ -3,6 +3,7 @@ package credentials
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
+	"github.com/broadinstitute/thelma/internal/thelma/app/env"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,7 @@ func (s storeThatLikesToError) Remove(key string) error {
 	return s.delegate.Remove(key)
 }
 
-func Test_Token_Get(t *testing.T) {
+func Test_TokenProvider_Get(t *testing.T) {
 	fakeEnvVar := fmt.Sprintf("FAKE_TOKEN_ENV_VAR_%d", os.Getpid())
 
 	testCases := []struct {
@@ -73,10 +74,34 @@ func Test_Token_Get(t *testing.T) {
 			name: "with defaults: should return value in environment variable if defined",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
-				options.EnvVar = fakeEnvVar
+				options.EnvVars = []string{fakeEnvVar}
 			},
 			setup: func(t *testing.T, tmpDir string) {
 				err := os.Setenv(fakeEnvVar, "token-from-env")
+				require.NoError(t, err)
+			},
+			expectValue: "token-from-env",
+		},
+		{
+			name: "with defaults: should return value in environment variable if defined, picking from multiple",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.EnvVars = []string{fakeEnvVar, fakeEnvVar + "_2", fakeEnvVar + "_3"}
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				err := os.Setenv(fakeEnvVar, "token-from-env")
+				require.NoError(t, err)
+			},
+			expectValue: "token-from-env",
+		},
+		{
+			name: "with defaults: should return value in environment variable if defined with prefix",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.EnvVars = []string{fakeEnvVar}
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				err := os.Setenv(env.WithEnvPrefix(fakeEnvVar), "token-from-env")
 				require.NoError(t, err)
 			},
 			expectValue: "token-from-env",
@@ -331,7 +356,7 @@ func Test_Token_Get(t *testing.T) {
 	}
 }
 
-func Test_Token_Reissue(t *testing.T) {
+func Test_TokenProvider_Reissue(t *testing.T) {
 	testCases := []struct {
 		name        string
 		key         string
