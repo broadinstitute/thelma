@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-type storeThatLikesToError struct {
+type mockStore struct {
 	errorOnRead   bool
 	bluffRead     string
 	errorOnWrite  bool
@@ -23,7 +23,7 @@ type storeThatLikesToError struct {
 	delegate      stores.Store
 }
 
-func (s storeThatLikesToError) Read(key string) ([]byte, error) {
+func (s mockStore) Read(key string) ([]byte, error) {
 	if s.errorOnRead {
 		return nil, errors.Errorf("read error")
 	} else if s.bluffRead != "" {
@@ -32,7 +32,7 @@ func (s storeThatLikesToError) Read(key string) ([]byte, error) {
 	return s.delegate.Read(key)
 }
 
-func (s storeThatLikesToError) Exists(key string) (bool, error) {
+func (s mockStore) Exists(key string) (bool, error) {
 	if s.errorOnExists {
 		return false, errors.Errorf("exists error")
 	} else if s.bluffExists {
@@ -41,14 +41,14 @@ func (s storeThatLikesToError) Exists(key string) (bool, error) {
 	return s.delegate.Exists(key)
 }
 
-func (s storeThatLikesToError) Write(key string, credential []byte) error {
+func (s mockStore) Write(key string, credential []byte) error {
 	if s.errorOnWrite {
 		return errors.Errorf("write error")
 	}
 	return s.delegate.Write(key, credential)
 }
 
-func (s storeThatLikesToError) Remove(key string) error {
+func (s mockStore) Remove(key string) error {
 	if s.errorOnRemove {
 		return errors.Errorf("remove error")
 	}
@@ -216,7 +216,7 @@ func Test_TokenProvider_Get(t *testing.T) {
 					}
 					return nil
 				}
-				options.CredentialStore = storeThatLikesToError{
+				options.CredentialStore = mockStore{
 					bluffExists:  true,
 					bluffRead:    "old-token-value",
 					errorOnWrite: true,
@@ -278,7 +278,7 @@ func Test_TokenProvider_Get(t *testing.T) {
 					}
 					return nil
 				}
-				options.CredentialStore = storeThatLikesToError{
+				options.CredentialStore = mockStore{
 					bluffExists:  true,
 					bluffRead:    "old-token-value",
 					errorOnWrite: true,
@@ -308,7 +308,7 @@ func Test_TokenProvider_Get(t *testing.T) {
 			name: "returns errors from CredentialStore.Exists",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
-				options.CredentialStore = storeThatLikesToError{
+				options.CredentialStore = mockStore{
 					errorOnExists: true,
 					delegate:      stores.NewMapStore(),
 				}
@@ -319,7 +319,7 @@ func Test_TokenProvider_Get(t *testing.T) {
 			name: "returns errors from CredentialStore.Read",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
-				options.CredentialStore = storeThatLikesToError{
+				options.CredentialStore = mockStore{
 					bluffExists: true,
 					errorOnRead: true,
 					delegate:    stores.NewMapStore(),
@@ -387,7 +387,7 @@ func Test_TokenProvider_Reissue(t *testing.T) {
 			name: "returns errors from CredentialStore.Exists",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
-				options.CredentialStore = storeThatLikesToError{
+				options.CredentialStore = mockStore{
 					errorOnExists: true,
 					delegate:      stores.NewMapStore(),
 				}
@@ -398,7 +398,7 @@ func Test_TokenProvider_Reissue(t *testing.T) {
 			name: "returns errors from CredentialStore.Remove",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
-				options.CredentialStore = storeThatLikesToError{
+				options.CredentialStore = mockStore{
 					bluffExists:   true,
 					errorOnRemove: true,
 					delegate:      stores.NewMapStore(),
