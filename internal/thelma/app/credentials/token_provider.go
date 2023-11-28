@@ -15,13 +15,15 @@ import (
 
 // TokenOptions configuration options for a TokenProvider
 type TokenOptions struct {
-	// EnvVar (optional) environment variable to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "vault-token" -> "VAULT_TOKEN")
-	EnvVar string
+	// EnvVars (optional) environment variables to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "vault-token" -> "VAULT_TOKEN").
+	// Ideally only one environment variable should be used, but multiple are supported for backwards compatibility.
+	EnvVars []string
 	// PromptEnabled (optional) if true, user will be prompted to manually enter a token value if one does not exist in credential store.
 	PromptEnabled bool
 	// PromptMessage (optional) Override default prompt message ("Please enter VAULT_TOKEN: ")
 	PromptMessage string
-	// ValidateFn (optional) Optional function for validating a token. If supplied, stored credentials will be validated before being returned to caller
+	// ValidateFn (optional) Optional function for validating a token. If supplied, stored credentials will be validated before being returned to caller.
+	// This function can be called quite frequently in Goroutine scenarios, so offline validation is ideal.
 	ValidateFn func([]byte) error
 	// RefreshFn (optional) Optional function for refreshing a token. Called if a stored credential turns out to be invalid. If an error is returned, IssueFn will be called to issue a new credential.
 	RefreshFn func([]byte) ([]byte, error)
@@ -34,18 +36,21 @@ type TokenOptions struct {
 // TokenOption function for configuring a token's Options
 type TokenOption func(*TokenOptions)
 
-// TokenProvider manages a token used for authentication, possibly stored on the local filesystem
+// TokenProvider manages a token used for authentication, possibly stored on the local filesystem.
+// The exported methods are Goroutine-safe.
 type TokenProvider interface {
-	// Get returns the value of the token. Based on the token's options, it will attempt to resolve a value for
-	// the token by:
-	// (1) Looking it up in environment variables
-	// (2) Looking it up in local credential store (~/.thelma/credentials)
-	// (3) Issue a new token (if issuer function configured)
-	// (4) Prompting user for value (if enabled)
-	// If none of the token resolution options succeed an error is returned.
+	// Get provides a token value based on the configuration of the TokenProvider. The overall flow is as follows:
+	//
+	// 1. If a match for any TokenOptions.EnvVars is found, immediately return that value
+	// 2. If a match for the key is found in the TokenOptions.CredentialStore:
+	//    - If it is valid per TokenOptions.ValidateFn, return it
+	//    - If it is invalid but TokenOptions.RefreshFn is provided, attempt to refresh the token and validate, store, and return it
+	//      (errors from TokenOptions.RefreshFn will cause the flow to continue to step 3)
+	// 3. If TokenOptions.IssueFn is provided, issue a new token and validate, store, and return it
+	// 4. If TokenOptions.IssueFn isn't provided but TokenOptions.PromptEnabled is true and the session is interactive,
+	//    prompt the user for a new token value and validate, store, and return it
 	Get() ([]byte, error)
-	// Reissue forces re-issue of the token, without checking environment variables or for a valid existing
-	// credential in the store
+	// Reissue clears the state of the TokenProvider and then calls Get (which will usually then issue a new token).
 	Reissue() ([]byte, error)
 }
 
@@ -57,12 +62,12 @@ func (c credentials) NewTokenProvider(key string, options ...TokenOption) TokenP
 	}
 
 	// set defaults if they were not set in option functions
-	if opts.EnvVar == "" {
-		opts.EnvVar = keyToEnvVar(key)
+	if len(opts.EnvVars) == 0 {
+		opts.EnvVars = []string{keyToEnvVar(key)}
 	}
 
 	if opts.PromptMessage == "" {
-		opts.PromptMessage = fmt.Sprintf("Please enter %s: ", opts.EnvVar)
+		opts.PromptMessage = fmt.Sprintf("Please enter %s: ", key)
 	}
 
 	if opts.CredentialStore == nil {
@@ -164,13 +169,17 @@ func (t *tokenProvider) resetViaReadWrite() error {
 // It may return nothing if a token wasn't readily available.
 func (t *tokenProvider) tryGetTokenOnlyReading() ([]byte, error) {
 	// Short-circuit if we find a token in the environment
-	for _, envVariableToCheck := range []string{env.WithEnvPrefix(t.options.EnvVar), t.options.EnvVar} {
-		if value := os.Getenv(envVariableToCheck); len(value) > 0 {
+	envVarsToCheck := t.options.EnvVars
+	for _, envVarNeedingPrefix := range t.options.EnvVars {
+		envVarsToCheck = append(envVarsToCheck, env.WithEnvPrefix(envVarNeedingPrefix))
+	}
+	for _, envVarToCheck := range envVarsToCheck {
+		if value := os.Getenv(envVarToCheck); len(value) > 0 {
 			log.Trace().
-				Str("variable", envVariableToCheck).
+				Str("variable", envVarToCheck).
 				Str("key", t.key).
 				Type("type", t).
-				Msgf("os.Getenv(%q) returned a value for %s, short-circuiting", envVariableToCheck, t.key)
+				Msgf("os.Getenv(%q) returned a value for %s, short-circuiting", envVarToCheck, t.key)
 			return []byte(value), nil
 		}
 	}
@@ -253,7 +262,7 @@ func (t *tokenProvider) validateToken(value []byte) error {
 // promptForNewValue will prompt the user for a new token value
 func (t *tokenProvider) promptForNewValue() ([]byte, error) {
 	if !utils.Interactive() {
-		return nil, errors.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.key, t.options.EnvVar)
+		return nil, errors.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.key, t.options.EnvVars[0])
 	}
 
 	fmt.Print(t.options.PromptMessage)
