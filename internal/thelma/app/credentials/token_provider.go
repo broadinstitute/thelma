@@ -262,6 +262,7 @@ func (t *tokenProvider) validateToken(value []byte) error {
 // promptForNewValue will prompt the user for a new token value
 func (t *tokenProvider) promptForNewValue() ([]byte, error) {
 	if !utils.Interactive() {
+		// Safe to access opts.EnvVars[0] since we set a default in NewTokenProvider
 		return nil, errors.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.key, t.options.EnvVars[0])
 	}
 
