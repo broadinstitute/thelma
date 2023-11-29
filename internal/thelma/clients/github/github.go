@@ -99,7 +99,7 @@ func WithDefaults(config config.Config, creds credentials.Credentials, vaultClie
 }
 
 func buildLocalGithubTokenProvider(creds credentials.Credentials) credentials.TokenProvider {
-	return creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
 		options.PromptEnabled = true
 
 		options.PromptMessage = `
@@ -111,7 +111,7 @@ Enter Personal Access Token: `
 }
 
 func buildVaultGithubTokenProvider(creds credentials.Credentials, vault *vault.Client, path, key string) credentials.TokenProvider {
-	return creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
 		options.IssueFn = func() ([]byte, error) {
 			accessTokenSecret, err := vault.Logical().Read(path)
 			if err != nil {

@@ -9,8 +9,15 @@ import (
 const configKey = "credentials"
 
 type Credentials interface {
-	// NewTokenProvider returns a new TokenProvider for the given key
-	NewTokenProvider(key string, opts ...TokenOption) TokenProvider
+	// GetTokenProvider returns a TokenProvider for the given key, applying the given options if a new TokenProvider is
+	// created to fulfill the request. If a TokenProvider already exists for the given key, it will be returned.
+	// It's important for callers to be consistent with the options they pass in, at least for a given Thelma execution,
+	// since the options are only used on the first call for a given key.
+	//
+	// The caching means that there will only ever be one TokenProvider for a given key, so the TokenProvider's
+	// concurrency-safety guarantees will reliably apply (and the caller doesn't need to worry about caching the
+	// response of this function).
+	GetTokenProvider(key string, opts ...TokenOption) TokenProvider
 }
 
 type credentialsConfig struct {

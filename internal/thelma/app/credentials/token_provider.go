@@ -54,30 +54,49 @@ type TokenProvider interface {
 	Reissue() ([]byte, error)
 }
 
-// NewTokenProvider returns a new TokenProvider
-func (c credentials) NewTokenProvider(key string, options ...TokenOption) TokenProvider {
-	var opts TokenOptions
-	for _, option := range options {
-		option(&opts)
-	}
+var (
+	TokenProviders      = map[string]TokenProvider{}
+	tokenProvidersMutex = sync.RWMutex{}
+)
 
-	// set defaults if they were not set in option functions
-	if len(opts.EnvVars) == 0 {
-		opts.EnvVars = []string{keyToEnvVar(key)}
+// GetTokenProvider (see docs on Credentials)
+func (c credentials) GetTokenProvider(key string, options ...TokenOption) TokenProvider {
+	tokenProvidersMutex.RLock()
+	if tp, ok := TokenProviders[key]; ok {
+		tokenProvidersMutex.RUnlock()
+		return tp
 	}
+	tokenProvidersMutex.RUnlock()
+	tokenProvidersMutex.Lock()
+	defer tokenProvidersMutex.Unlock()
+	if tp, ok := TokenProviders[key]; ok {
+		return tp
+	} else {
+		var opts TokenOptions
+		for _, option := range options {
+			option(&opts)
+		}
 
-	if opts.PromptMessage == "" {
-		opts.PromptMessage = fmt.Sprintf("Please enter %s: ", key)
+		// set defaults if they were not set in option functions
+		if len(opts.EnvVars) == 0 {
+			opts.EnvVars = []string{keyToEnvVar(key)}
+		}
+
+		if opts.PromptMessage == "" {
+			opts.PromptMessage = fmt.Sprintf("Please enter %s: ", key)
+		}
+
+		if opts.CredentialStore == nil {
+			opts.CredentialStore = c.defaultStore
+		}
+
+		TokenProviders[key] = withMasking(&tokenProvider{
+			key:     key,
+			options: opts,
+		})
+
+		return TokenProviders[key]
 	}
-
-	if opts.CredentialStore == nil {
-		opts.CredentialStore = c.defaultStore
-	}
-
-	return withMasking(&tokenProvider{
-		key:     key,
-		options: opts,
-	})
 }
 
 type tokenProvider struct {
@@ -262,7 +281,7 @@ func (t *tokenProvider) validateToken(value []byte) error {
 // promptForNewValue will prompt the user for a new token value
 func (t *tokenProvider) promptForNewValue() ([]byte, error) {
 	if !utils.Interactive() {
-		// Safe to access opts.EnvVars[0] since we set a default in NewTokenProvider
+		// Safe to access opts.EnvVars[0] since we set a default in GetTokenProvider
 		return nil, errors.Errorf("can't prompt for %s (shell is not interactive), try passing in via environment variable %s", t.key, t.options.EnvVars[0])
 	}
 

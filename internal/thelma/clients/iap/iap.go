@@ -115,7 +115,7 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 
 	// if workload identity is enabled, try to issue an IAP token that way first, falling back to user credentials
 	if cfg.Provider == "workloadidentity" {
-		return creds.NewTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
+		return creds.GetTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
 			options.IssueFn = func() ([]byte, error) {
 				return getTokenFromWorkloadIdentity(cfg, oauthConfig)
 			}
@@ -127,7 +127,7 @@ func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, va
 
 	// else use browser provider
 	if cfg.Provider == "browser" {
-		provider := creds.NewTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
+		provider := creds.GetTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
 			options.IssueFn = func() ([]byte, error) {
 				token, err := issueNewToken(oauthConfig, oauthCreds, runner)
 				if err != nil {

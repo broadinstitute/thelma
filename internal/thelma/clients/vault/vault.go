@@ -96,7 +96,7 @@ func buildClientOptions(thelmaConfig config.Config, clientOptions ...ClientOptio
 func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.Credentials, opts *ClientOptions) credentials.TokenProvider {
 	githubToken := buildGithubTokenProvider(unauthedClient, creds)
 
-	return creds.NewTokenProvider(vaultTokenCredentialKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(vaultTokenCredentialKey, func(options *credentials.TokenOptions) {
 		// Use custom credential store that stores token at ~/.vault-token instead ~/.thelma/credentials
 		options.CredentialStore = opts.CredentialStore
 
@@ -134,7 +134,7 @@ func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.
 }
 
 func buildGithubTokenProvider(unauthedClient *vaultapi.Client, creds credentials.Credentials) credentials.TokenProvider {
-	return creds.NewTokenProvider(githubTokenCredentialKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(githubTokenCredentialKey, func(options *credentials.TokenOptions) {
 		options.PromptEnabled = true
 
 		options.PromptMessage = `

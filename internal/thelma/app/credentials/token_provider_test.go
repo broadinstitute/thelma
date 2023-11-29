@@ -343,8 +343,11 @@ func Test_TokenProvider_Get(t *testing.T) {
 			if tc.option != nil {
 				options = append(options, tc.option)
 			}
-			tok := creds.NewTokenProvider(tc.key, options...)
+			tok := creds.GetTokenProvider(tc.key, options...)
 			val, err := tok.Get()
+			tokenProvidersMutex.RLock()
+			TokenProviders = map[string]TokenProvider{}
+			tokenProvidersMutex.RUnlock()
 
 			if tc.expectErr != "" {
 				require.Error(t, err)
@@ -422,8 +425,11 @@ func Test_TokenProvider_Reissue(t *testing.T) {
 			if tc.option != nil {
 				options = append(options, tc.option)
 			}
-			tok := creds.NewTokenProvider(tc.key, options...)
+			tok := creds.GetTokenProvider(tc.key, options...)
 			val, err := tok.Reissue()
+			tokenProvidersMutex.RLock()
+			TokenProviders = map[string]TokenProvider{}
+			tokenProvidersMutex.RUnlock()
 
 			if tc.expectErr != "" {
 				require.Error(t, err)
@@ -457,7 +463,7 @@ func Test_TokenProvider_concurrency(t *testing.T) {
 	store, err := stores.NewDirectoryStore(storeDir)
 	require.NoError(t, err)
 	creds := NewWithStore(store)
-	tok := creds.NewTokenProvider("my-token", func(options *TokenOptions) {
+	tok := creds.GetTokenProvider("my-token", func(options *TokenOptions) {
 		options.IssueFn = issuerThatWillFailIfRunMoreThanOnce
 	})
 
@@ -473,4 +479,8 @@ func Test_TokenProvider_concurrency(t *testing.T) {
 		go goroutineFn()
 	}
 	wg.Wait()
+
+	tokenProvidersMutex.RLock()
+	TokenProviders = map[string]TokenProvider{}
+	tokenProvidersMutex.RUnlock()
 }
