@@ -53,3 +53,7 @@ func (s vaultStore) Write(key string, credential []byte) error {
 	log.Info().Msgf("Saving new Vault token to %s", s.tokenFile)
 	return os.WriteFile(s.tokenFile, credential, 0600)
 }
+
+func (s vaultStore) Remove(key string) error {
+	return os.Remove(s.tokenFile)
+}

@@ -3,15 +3,59 @@ package credentials
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials/stores"
+	"github.com/broadinstitute/thelma/internal/thelma/app/env"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
 	"path"
+	"sync"
 	"testing"
 )
 
-func Test_Token_Get(t *testing.T) {
+type mockStore struct {
+	errorOnRead   bool
+	bluffRead     string
+	errorOnWrite  bool
+	errorOnExists bool
+	bluffExists   bool
+	errorOnRemove bool
+	delegate      stores.Store
+}
+
+func (s mockStore) Read(key string) ([]byte, error) {
+	if s.errorOnRead {
+		return nil, errors.Errorf("read error")
+	} else if s.bluffRead != "" {
+		return []byte(s.bluffRead), nil
+	}
+	return s.delegate.Read(key)
+}
+
+func (s mockStore) Exists(key string) (bool, error) {
+	if s.errorOnExists {
+		return false, errors.Errorf("exists error")
+	} else if s.bluffExists {
+		return true, nil
+	}
+	return s.delegate.Exists(key)
+}
+
+func (s mockStore) Write(key string, credential []byte) error {
+	if s.errorOnWrite {
+		return errors.Errorf("write error")
+	}
+	return s.delegate.Write(key, credential)
+}
+
+func (s mockStore) Remove(key string) error {
+	if s.errorOnRemove {
+		return errors.Errorf("remove error")
+	}
+	return s.delegate.Remove(key)
+}
+
+func Test_TokenProvider_Get(t *testing.T) {
 	fakeEnvVar := fmt.Sprintf("FAKE_TOKEN_ENV_VAR_%d", os.Getpid())
 
 	testCases := []struct {
@@ -25,16 +69,40 @@ func Test_Token_Get(t *testing.T) {
 		{
 			name:      "with defaults: should return error if token does not exist",
 			key:       "my-token",
-			expectErr: "could not issue new MY_TOKEN",
+			expectErr: "^.*could not issue new my-token token; no IssueFn set and input prompting is disabled$",
 		},
 		{
 			name: "with defaults: should return value in environment variable if defined",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
-				options.EnvVar = fakeEnvVar
+				options.EnvVars = []string{fakeEnvVar}
 			},
 			setup: func(t *testing.T, tmpDir string) {
 				err := os.Setenv(fakeEnvVar, "token-from-env")
+				require.NoError(t, err)
+			},
+			expectValue: "token-from-env",
+		},
+		{
+			name: "with defaults: should return value in environment variable if defined, picking from multiple",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.EnvVars = []string{fakeEnvVar, fakeEnvVar + "_2", fakeEnvVar + "_3"}
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				err := os.Setenv(fakeEnvVar, "token-from-env")
+				require.NoError(t, err)
+			},
+			expectValue: "token-from-env",
+		},
+		{
+			name: "with defaults: should return value in environment variable if defined with prefix",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.EnvVars = []string{fakeEnvVar}
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				err := os.Setenv(env.WithEnvPrefix(fakeEnvVar), "token-from-env")
 				require.NoError(t, err)
 			},
 			expectValue: "token-from-env",
@@ -58,7 +126,7 @@ func Test_Token_Get(t *testing.T) {
 			setup: func(t *testing.T, tmpDir string) {
 				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("token-value"), 0600))
 			},
-			expectErr: "could not issue new MY_TOKEN",
+			expectErr: "^.*could not issue new my-token token; no IssueFn set and input prompting is disabled$",
 		},
 		{
 			name: "with issueFn: should issue new token if token does not exist",
@@ -136,6 +204,27 @@ func Test_Token_Get(t *testing.T) {
 			expectValue: "refreshed-token-value",
 		},
 		{
+			name: "with refreshFn and validateFn: returns errors from writing newly refreshed token",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.RefreshFn = func(_ []byte) ([]byte, error) {
+					return []byte("refreshed-token-value"), nil
+				}
+				options.ValidateFn = func(v []byte) error {
+					if string(v) == "old-token-value" {
+						return errors.Errorf("this token expired")
+					}
+					return nil
+				}
+				options.CredentialStore = mockStore{
+					bluffExists:  true,
+					bluffRead:    "old-token-value",
+					errorOnWrite: true,
+				}
+			},
+			expectErr: "^.*write error$",
+		},
+		{
 			name: "with refreshFn and validateFn: should return error if refresh returns invalid token",
 			key:  "my-token",
 			setup: func(t *testing.T, tmpDir string) {
@@ -149,7 +238,7 @@ func Test_Token_Get(t *testing.T) {
 					return errors.Errorf("token is invalid")
 				}
 			},
-			expectErr: "refresh for MY_TOKEN returned invalid token: token is invalid",
+			expectErr: "^.*token is invalid$",
 		},
 		{
 			name: "with issueFn, refreshFn and validateFn: should issue new token if refresh fails",
@@ -174,12 +263,69 @@ func Test_Token_Get(t *testing.T) {
 			expectValue: "new-token-value",
 		},
 		{
+			name: "with issueFn, refreshFn and validateFn: returns errors from writing newly issued token",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.RefreshFn = func(_ []byte) ([]byte, error) {
+					return nil, errors.Errorf("token too old to be refreshed")
+				}
+				options.IssueFn = func() ([]byte, error) {
+					return []byte("new-token-value"), nil
+				}
+				options.ValidateFn = func(v []byte) error {
+					if string(v) == "old-token-value" {
+						return errors.Errorf("this token expired")
+					}
+					return nil
+				}
+				options.CredentialStore = mockStore{
+					bluffExists:  true,
+					bluffRead:    "old-token-value",
+					errorOnWrite: true,
+				}
+			},
+			expectErr: "^.*write error$",
+		},
+		{
 			name: "with prompt enabled: return error because shell is not interactive",
 			key:  "my-token",
 			option: func(options *TokenOptions) {
 				options.PromptEnabled = true
 			},
 			expectErr: "shell is not interactive",
+		},
+		{
+			name: "with issueFn: errors if result is empty",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.IssueFn = func() ([]byte, error) {
+					return []byte{}, nil
+				}
+			},
+			expectErr: ".*returned no error but no token either.*",
+		},
+		{
+			name: "returns errors from CredentialStore.Exists",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = mockStore{
+					errorOnExists: true,
+					delegate:      stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*exists error$",
+		},
+		{
+			name: "returns errors from CredentialStore.Read",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = mockStore{
+					bluffExists: true,
+					errorOnRead: true,
+					delegate:    stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*read error$",
 		},
 	}
 
@@ -211,7 +357,7 @@ func Test_Token_Get(t *testing.T) {
 	}
 }
 
-func Test_Token_Reissue(t *testing.T) {
+func Test_TokenProvider_Reissue(t *testing.T) {
 	testCases := []struct {
 		name        string
 		key         string
@@ -236,6 +382,29 @@ func Test_Token_Reissue(t *testing.T) {
 				require.NoError(t, os.WriteFile(path.Join(tmpDir, "my-token"), []byte("old-token-value"), 0600))
 			},
 			expectValue: "new-token-value",
+		},
+		{
+			name: "returns errors from CredentialStore.Exists",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = mockStore{
+					errorOnExists: true,
+					delegate:      stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*exists error$",
+		},
+		{
+			name: "returns errors from CredentialStore.Remove",
+			key:  "my-token",
+			option: func(options *TokenOptions) {
+				options.CredentialStore = mockStore{
+					bluffExists:   true,
+					errorOnRemove: true,
+					delegate:      stores.NewMapStore(),
+				}
+			},
+			expectErr: "^.*remove error$",
 		},
 	}
 
@@ -265,4 +434,43 @@ func Test_Token_Reissue(t *testing.T) {
 			assert.Equal(t, tc.expectValue, string(val))
 		})
 	}
+}
+
+// Test_TokenProvider_concurrency isn't perfect, but it would likely fail if TokenProvider weren't
+// properly locking reads and writes. We're making an issuer that will fail if called more than once
+// and validating that even with 100 concurrent goroutines, it only gets called once.
+func Test_TokenProvider_concurrency(t *testing.T) {
+	var issuerMutex sync.Mutex
+	var issuerCalled bool
+	issuerThatWillFailIfRunMoreThanOnce := func() ([]byte, error) {
+		issuerMutex.Lock()
+		defer issuerMutex.Unlock()
+		if issuerCalled {
+			return nil, errors.Errorf("issuer already called")
+		} else {
+			issuerCalled = true
+			return []byte("new-token-value"), nil
+		}
+	}
+
+	storeDir := t.TempDir()
+	store, err := stores.NewDirectoryStore(storeDir)
+	require.NoError(t, err)
+	creds := NewWithStore(store)
+	tok := creds.NewTokenProvider("my-token", func(options *TokenOptions) {
+		options.IssueFn = issuerThatWillFailIfRunMoreThanOnce
+	})
+
+	var wg sync.WaitGroup
+	goroutineFn := func() {
+		defer wg.Done()
+		token, err := tok.Get()
+		require.NoError(t, err)
+		assert.Equal(t, "new-token-value", string(token))
+	}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go goroutineFn()
+	}
+	wg.Wait()
 }

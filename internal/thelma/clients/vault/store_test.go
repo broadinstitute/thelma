@@ -29,7 +29,14 @@ func Test_VaultTokenStore(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, exists)
 
-	credential, err := s.Read("my-key")
+	credential, err := s.Read("ignored")
 	require.NoError(t, err)
 	assert.Equal(t, string(fakeToken), string(credential))
+
+	err = s.Remove("ignored")
+	require.NoError(t, err)
+
+	exists, err = s.Exists("ignored")
+	require.NoError(t, err)
+	assert.False(t, exists)
 }
