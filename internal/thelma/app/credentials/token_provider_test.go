@@ -497,7 +497,7 @@ func Test_GetTokenProvider_concurrency(t *testing.T) {
 		defer wg.Done()
 		tokenProviderReferences[i] = creds.GetTokenProvider("my-token")
 	}
-	for index, _ := range tokenProviderReferences {
+	for index := range tokenProviderReferences {
 		wg.Add(1)
 		go goroutineFn(index)
 	}
