@@ -18,19 +18,19 @@ const (
 
 func getOidcRequestValues() (_requestUrl, _requestToken string, err error) {
 	if requestUrl, requestUrlPresent := os.LookupEnv(ghaOidcRequestUrlEnvVar); !requestUrlPresent {
-		err = fmt.Errorf("GitHub Actions did not inject %s into this job, either the job permissions are incorrect or it is being run from a fork (see `id-token` at %s)", ghaOidcRequestUrlEnvVar, ghaOidcPermissionsDocUrl)
+		err = errors.Errorf("GitHub Actions did not inject %s into this job, either the job permissions are incorrect or it is being run from a fork (see `id-token` at %s)", ghaOidcRequestUrlEnvVar, ghaOidcPermissionsDocUrl)
 		return
 	} else if requestUrl == "" {
-		err = fmt.Errorf("%s was specifically set to empty", ghaOidcRequestUrlEnvVar)
+		err = errors.Errorf("%s was specifically set to empty", ghaOidcRequestUrlEnvVar)
 		return
 	} else {
 		_requestUrl = requestUrl
 	}
 	if requestToken, requestTokenPresent := os.LookupEnv(ghaOidcRequestTokenEnvVar); !requestTokenPresent {
-		err = fmt.Errorf("GitHub Actions did not inject %s into this job, either the job permissions are incorrect or it is being run from a fork (see `id-token` at %s)", ghaOidcRequestTokenEnvVar, ghaOidcPermissionsDocUrl)
+		err = errors.Errorf("GitHub Actions did not inject %s into this job, either the job permissions are incorrect or it is being run from a fork (see `id-token` at %s)", ghaOidcRequestTokenEnvVar, ghaOidcPermissionsDocUrl)
 		return
 	} else if requestToken == "" {
-		err = fmt.Errorf("%s was specifically set to empty", ghaOidcRequestTokenEnvVar)
+		err = errors.Errorf("%s was specifically set to empty", ghaOidcRequestTokenEnvVar)
 	} else {
 		_requestToken = requestToken
 	}
