@@ -496,3 +496,30 @@ func Test_TokenProvider_concurrency(t *testing.T) {
 	TokenProviders = map[string]TokenProvider{}
 	tokenProvidersMutex.RUnlock()
 }
+
+func Test_GetTokenProvider_concurrency(t *testing.T) {
+	storeDir := t.TempDir()
+	store, err := stores.NewDirectoryStore(storeDir)
+	require.NoError(t, err)
+	creds := NewWithStore(store)
+
+	tokenProviderReferences := make([]TokenProvider, 100)
+	var wg sync.WaitGroup
+	goroutineFn := func(i int) {
+		defer wg.Done()
+		tokenProviderReferences[i] = creds.GetTokenProvider("my-token")
+	}
+	for index := range tokenProviderReferences {
+		wg.Add(1)
+		go goroutineFn(index)
+	}
+	wg.Wait()
+
+	for _, tp := range tokenProviderReferences {
+		assert.Same(t, tokenProviderReferences[0], tp)
+	}
+
+	tokenProvidersMutex.RLock()
+	TokenProviders = map[string]TokenProvider{}
+	tokenProvidersMutex.RUnlock()
+}
