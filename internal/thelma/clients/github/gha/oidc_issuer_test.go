@@ -74,10 +74,7 @@ func Test_getOidcToken(t *testing.T) {
 				mockStatusCode = statusCode
 				tokenBytes, err := getOidcToken()
 				require.NoError(t, err)
-				var token string
-				err = json.Unmarshal(tokenBytes, &token)
-				require.NoError(t, err)
-				require.Equal(t, mockOidcResponseToken, token)
+				require.Equal(t, mockOidcResponseToken, string(tokenBytes))
 			}
 		})
 	})
