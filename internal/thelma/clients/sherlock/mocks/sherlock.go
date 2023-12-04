@@ -320,6 +320,47 @@ func (_c *Client_Environments_Call) RunAndReturn(run func() (sherlock.Environmen
 	return _c
 }
 
+// GetStatus provides a mock function with given fields:
+func (_m *Client) GetStatus() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Client_GetStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetStatus'
+type Client_GetStatus_Call struct {
+	*mock.Call
+}
+
+// GetStatus is a helper method to define mock.On call
+func (_e *Client_Expecter) GetStatus() *Client_GetStatus_Call {
+	return &Client_GetStatus_Call{Call: _e.mock.On("GetStatus")}
+}
+
+func (_c *Client_GetStatus_Call) Run(run func()) *Client_GetStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Client_GetStatus_Call) Return(_a0 error) *Client_GetStatus_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Client_GetStatus_Call) RunAndReturn(run func() error) *Client_GetStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PinEnvironmentVersions provides a mock function with given fields: environmentName, versions
 func (_m *Client) PinEnvironmentVersions(environmentName string, versions map[string]terra.VersionOverride) error {
 	ret := _m.Called(environmentName, versions)

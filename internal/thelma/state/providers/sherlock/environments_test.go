@@ -18,7 +18,7 @@ func TestEnvironmentsSuite(t *testing.T) {
 }
 
 func (suite *environmentsSuite) TestDeleteNonExistingEnvironment() {
-	mockStateReadWriter := mocks.NewStateReadWriter(suite.T())
+	mockStateReadWriter := mocks.NewClient(suite.T())
 	mockStateReadWriter.AssertNotCalled(suite.T(), "DeleteEnvironments", mock.AnythingOfType("[]terra.Environment"))
 	mockState := state{
 		sherlock: mockStateReadWriter,
@@ -38,7 +38,7 @@ func (suite *environmentsSuite) TestDeleteExistingEnvironment() {
 	}
 	mockEnvironments := make(map[string]*environment)
 	mockEnvironments["existing-env"] = mockEnvironment
-	mockStateReadWriter := mocks.NewStateReadWriter(suite.T())
+	mockStateReadWriter := mocks.NewClient(suite.T())
 	mockStateReadWriter.On("DeleteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return([]string{"existing-env"}, nil)
 	mockState := state{
 		sherlock:     mockStateReadWriter,
@@ -57,7 +57,7 @@ func (suite *environmentsSuite) TestDeleteEnvironmentError() {
 	}
 	mockEnvironments := make(map[string]*environment)
 	mockEnvironments["existing-env"] = mockEnvironment
-	mockStateReadWriter := mocks.NewStateReadWriter(suite.T())
+	mockStateReadWriter := mocks.NewClient(suite.T())
 	mockStateReadWriter.On("DeleteEnvironments", mock.AnythingOfType("[]terra.Environment")).Return(nil, errors.Errorf("some error"))
 	mockState := state{
 		sherlock:     mockStateReadWriter,

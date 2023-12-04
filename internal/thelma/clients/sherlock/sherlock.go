@@ -21,6 +21,7 @@ type Client interface {
 	StateLoader
 	StateWriter
 	ChartVersionUpdater
+	GetStatus() error
 }
 
 type Options struct {
@@ -89,9 +90,9 @@ func extractSchemeAndHost(addr string) (string, string, error) {
 	return sherlockHost, sherlockURL.Scheme, nil
 }
 
-// getStatus is used in tests to verify that an initialized Client
+// GetStatus is used in tests to verify that an initialized Client
 // can successfully issue a request against a remote sherlock backend
-func (c *clientImpl) getStatus() error {
+func (c *clientImpl) GetStatus() error {
 	params := misc.NewGetStatusParams()
 	_, err := c.client.Misc.GetStatus(params)
 	return err
