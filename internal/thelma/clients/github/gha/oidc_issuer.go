@@ -70,12 +70,14 @@ func getOidcToken() ([]byte, error) {
 
 	// This type isn't really documented but you can infer it based on the example at
 	// https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-cloud-providers#requesting-the-jwt-using-environment-variables
+	// and at
+	// https://github.com/actions/toolkit/blob/main/packages/core/src/oidc-utils.ts#L7-L9
 	type responseJson struct {
-		Value json.RawMessage `json:"value"`
+		Value string `json:"value"`
 	}
 	var result responseJson
 	if err = json.Unmarshal(body, &result); err != nil {
 		return nil, errors.Errorf("failed to unmarshal response body from %s: %v", requestUrl, err)
 	}
-	return result.Value, nil
+	return []byte(result.Value), nil
 }
