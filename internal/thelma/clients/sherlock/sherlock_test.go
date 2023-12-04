@@ -40,7 +40,7 @@ func Test_NewClient(t *testing.T) {
 			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 		})
 
-		err = client.getStatus()
+		err = client.GetStatus()
 		require.NoError(t, err)
 	})
 
@@ -62,7 +62,7 @@ func Test_NewClient(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = client.getStatus()
+		err = client.GetStatus()
 		require.NoError(t, err)
 	})
 }
