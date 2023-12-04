@@ -69,7 +69,7 @@ jobs:
       version: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -108,7 +108,7 @@ jobs:
     needs: [bump, cache-go-deps]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -148,7 +148,7 @@ jobs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -195,7 +195,7 @@ jobs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -240,7 +240,7 @@ jobs:
     needs: [bump, build-linux-amd64, build-darwin-amd64, build-darwin-arm64]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -313,7 +313,7 @@ jobs:
       image-name-with-tag: ${{ steps.image-name.outputs.tagged }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -377,7 +377,7 @@ jobs:
     needs: [bump, dockerize-and-push, sign-and-notarize]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
