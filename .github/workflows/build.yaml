@@ -63,6 +63,7 @@ env:
   THELMA_MACOS_APP_PWD: ${{ secrets.THELMA_MACOS_APP_PWD }}
 jobs:
   bump:
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.tag.outputs.tag }}
@@ -82,6 +83,7 @@ jobs:
           WITH_V: true
 
   cache-go-deps:
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current code
