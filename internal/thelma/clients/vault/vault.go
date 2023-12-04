@@ -138,10 +138,10 @@ func buildGithubTokenProvider(unauthedClient *vaultapi.Client, creds credentials
 		options.PromptEnabled = true
 
 		options.PromptMessage = `
-A GitHub Personal Access Token is required to authenticate to Vault.
+A GitHub Personal Access ReturnString is required to authenticate to Vault.
 You can generate a new PAT at https://github.com/settings/tokens (select ONLY the read:org scope).
 
-Enter Personal Access Token: `
+Enter Personal Access ReturnString: `
 
 		// The GitHub PAT is valid if it can be used to authenticate to Vault
 		options.ValidateFn = func(githubPat []byte) error {

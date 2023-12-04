@@ -76,6 +76,10 @@ func Test_TokenProvider_Get(t *testing.T) {
 			key:  "my-token",
 			option: func(options *TokenOptions) {
 				options.EnvVars = []string{fakeEnvVar}
+				options.ValidateFn = func(_ []byte) error {
+					t.Fatal("should not have called ValidateFn when short-circuiting")
+					return nil
+				}
 			},
 			setup: func(t *testing.T, tmpDir string) {
 				err := os.Setenv(fakeEnvVar, "token-from-env")
@@ -88,6 +92,10 @@ func Test_TokenProvider_Get(t *testing.T) {
 			key:  "my-token",
 			option: func(options *TokenOptions) {
 				options.EnvVars = []string{fakeEnvVar, fakeEnvVar + "_2", fakeEnvVar + "_3"}
+				options.ValidateFn = func(_ []byte) error {
+					t.Fatal("should not have called ValidateFn when short-circuiting")
+					return nil
+				}
 			},
 			setup: func(t *testing.T, tmpDir string) {
 				err := os.Setenv(fakeEnvVar, "token-from-env")
@@ -100,6 +108,10 @@ func Test_TokenProvider_Get(t *testing.T) {
 			key:  "my-token",
 			option: func(options *TokenOptions) {
 				options.EnvVars = []string{fakeEnvVar}
+				options.ValidateFn = func(_ []byte) error {
+					t.Fatal("should not have called ValidateFn when short-circuiting")
+					return nil
+				}
 			},
 			setup: func(t *testing.T, tmpDir string) {
 				err := os.Setenv(env.WithEnvPrefix(fakeEnvVar), "token-from-env")

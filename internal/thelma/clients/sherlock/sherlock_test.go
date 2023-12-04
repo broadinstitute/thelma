@@ -3,9 +3,9 @@ package sherlock
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
@@ -26,7 +26,7 @@ func Test_NewClient(t *testing.T) {
 	t.Run("just iap", func(t *testing.T) {
 		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
-			require.Empty(t, r.Header.Get(sherlockGithubActionsOidcHeader))
+			require.Empty(t, r.Header.Get(sherlockGhaOidcHeader))
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(mockOkResponse{Ok: true})
 		}))
@@ -35,12 +35,10 @@ func Test_NewClient(t *testing.T) {
 		thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
 		require.NoError(t, err)
 
-		// Don't assume that the environment variable will be empty... clear it and then clean up the side effect.
-		oldEnv := os.Getenv(githubActionsOidcTokenEnvVar)
-		_ = os.Setenv(githubActionsOidcTokenEnvVar, "")
-		client, err := New(thelmaConfig, testIapToken)
-		require.NoError(t, err)
-		_ = os.Setenv(githubActionsOidcTokenEnvVar, oldEnv)
+		client, err := NewClient(testIapToken, func(options *Options) {
+			options.ConfigSource = thelmaConfig
+			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
+		})
 
 		err = client.getStatus()
 		require.NoError(t, err)
@@ -49,7 +47,7 @@ func Test_NewClient(t *testing.T) {
 	t.Run("iap and gha", func(t *testing.T) {
 		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
-			require.Equal(t, testGhaToken, r.Header.Get(sherlockGithubActionsOidcHeader))
+			require.Equal(t, testGhaToken, r.Header.Get(sherlockGhaOidcHeader))
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(mockOkResponse{Ok: true})
 		}))
@@ -58,12 +56,11 @@ func Test_NewClient(t *testing.T) {
 		thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
 		require.NoError(t, err)
 
-		// Easiest just to modify this env var from the test... but at least we'll clean up the side effect when we're done.
-		oldEnv := os.Getenv(githubActionsOidcTokenEnvVar)
-		_ = os.Setenv(githubActionsOidcTokenEnvVar, testGhaToken)
-		client, err := New(thelmaConfig, testIapToken)
+		client, err := NewClient(testIapToken, func(options *Options) {
+			options.ConfigSource = thelmaConfig
+			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnString: testGhaToken}
+		})
 		require.NoError(t, err)
-		_ = os.Setenv(githubActionsOidcTokenEnvVar, oldEnv)
 
 		err = client.getStatus()
 		require.NoError(t, err)
@@ -106,7 +103,9 @@ func (suite *sherlockClientSuite) TearDownSuite() {
 }
 
 func (suite *sherlockClientSuite) TestFetchEnvironments() {
-	client, err := New(suite.config, "fake")
+	client, err := NewClient("fake", func(options *Options) {
+		options.ConfigSource = suite.config
+	})
 	suite.Assert().NoError(err)
 	envs, err := client.Environments()
 	suite.Assert().NoError(err)
@@ -116,7 +115,9 @@ func (suite *sherlockClientSuite) TestFetchEnvironments() {
 }
 
 func (suite *sherlockClientSuite) TestFetchClusters() {
-	client, err := New(suite.config, "fake")
+	client, err := NewClient("fake", func(options *Options) {
+		options.ConfigSource = suite.config
+	})
 	suite.Assert().NoError(err)
 	clusters, err := client.Clusters()
 	suite.Assert().NoError(err)
@@ -126,7 +127,9 @@ func (suite *sherlockClientSuite) TestFetchClusters() {
 }
 
 func (suite *sherlockClientSuite) TestFetchReleases() {
-	client, err := New(suite.config, "fake")
+	client, err := NewClient("fake", func(options *Options) {
+		options.ConfigSource = suite.config
+	})
 	suite.Assert().NoError(err)
 	releases, err := client.Releases()
 	suite.Assert().NoError(err)
@@ -136,21 +139,27 @@ func (suite *sherlockClientSuite) TestFetchReleases() {
 }
 
 func (suite *sherlockClientSuite) TestFetchEnvironmentsError() {
-	client, err := New(suite.errConfig, "fake")
+	client, err := NewClient("fake", func(options *Options) {
+		options.ConfigSource = suite.errConfig
+	})
 	suite.Assert().NoError(err)
 	_, err = client.Environments()
 	suite.Assert().Error(err)
 }
 
 func (suite *sherlockClientSuite) TestFetchClustersError() {
-	client, err := New(suite.errConfig, "fake")
+	client, err := NewClient("fake", func(options *Options) {
+		options.ConfigSource = suite.errConfig
+	})
 	suite.Assert().NoError(err)
 	_, err = client.Clusters()
 	suite.Assert().Error(err)
 }
 
 func (suite *sherlockClientSuite) TestFetchReleasesError() {
-	client, err := New(suite.errConfig, "fake")
+	client, err := NewClient("fake", func(options *Options) {
+		options.ConfigSource = suite.errConfig
+	})
 	suite.Assert().NoError(err)
 	_, err = client.Releases()
 	suite.Assert().Error(err)

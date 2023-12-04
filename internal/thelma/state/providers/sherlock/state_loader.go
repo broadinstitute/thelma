@@ -9,12 +9,12 @@ import (
 )
 
 type stateLoader struct {
-	sherlock   sherlock.StateReadWriter
+	sherlock   sherlock.Client
 	thelmaHome string
 	cached     terra.State
 }
 
-func NewStateLoader(thelmaHome string, sherlock sherlock.StateReadWriter) terra.StateLoader {
+func NewStateLoader(thelmaHome string, sherlock sherlock.Client) terra.StateLoader {
 	return &stateLoader{
 		thelmaHome: thelmaHome,
 		sherlock:   sherlock,
