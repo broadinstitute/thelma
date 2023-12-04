@@ -40,7 +40,7 @@ func wrapEnvironments(envs ...*models.V2controllersEnvironment) Environments {
 	return environments
 }
 
-func (c *Client) Environments() (Environments, error) {
+func (c *clientImpl) Environments() (Environments, error) {
 	params := environments.NewGetAPIV2EnvironmentsParams()
 	environmentsResponse, err := c.client.Environments.GetAPIV2Environments(params)
 	if err != nil {
@@ -62,7 +62,7 @@ func wrapClusters(cls ...*models.SherlockClusterV3) Clusters {
 	return clusters
 }
 
-func (c *Client) Clusters() (Clusters, error) {
+func (c *clientImpl) Clusters() (Clusters, error) {
 	params := clusters.NewGetAPIClustersV3Params()
 	clustersResponse, err := c.client.Clusters.GetAPIClustersV3(params)
 	if err != nil {
@@ -84,7 +84,7 @@ func wrapReleases(rs ...*models.V2controllersChartRelease) Releases {
 	return releases
 }
 
-func (c *Client) Releases() (Releases, error) {
+func (c *clientImpl) Releases() (Releases, error) {
 	response, err := c.client.ChartReleases.GetAPIV2ChartReleases(
 		chart_releases.NewGetAPIV2ChartReleasesParams())
 	if err != nil {

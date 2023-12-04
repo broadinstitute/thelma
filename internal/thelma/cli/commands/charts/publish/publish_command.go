@@ -193,7 +193,9 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 			}
 			for _, sherlockURL := range options.sherlock {
 				if sherlockURL != "" {
-					client, err := sherlock.NewWithHostnameOverride(sherlockURL, iapIdToken)
+					client, err := sherlock.NewClient(iapIdToken, func(options *sherlock.Options) {
+						options.Addr = sherlockURL
+					})
 					if err != nil {
 						return nil, err
 					}
@@ -202,7 +204,9 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 			}
 			for _, sherlockURL := range options.softFailSherlock {
 				if sherlockURL != "" {
-					client, err := sherlock.NewWithHostnameOverride(sherlockURL, iapIdToken)
+					client, err := sherlock.NewClient(iapIdToken, func(options *sherlock.Options) {
+						options.Addr = sherlockURL
+					})
 					if err != nil {
 						return nil, err
 					}

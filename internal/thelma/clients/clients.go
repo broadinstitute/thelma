@@ -2,6 +2,7 @@
 package clients
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/clients/github/gha"
 	"sync"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
@@ -40,7 +41,7 @@ type Clients interface {
 	// Kubernetes returns a factory for Kubernetes clients
 	Kubernetes() kubernetes.Clients
 	// Sherlock returns a swagger API client for a sherlock server instance
-	Sherlock() (*sherlock.Client, error)
+	Sherlock() (sherlock.Client, error)
 	// Slack returns a wrapper around the official API client
 	Slack() (*slack.Slack, error)
 }
@@ -116,12 +117,19 @@ func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
 	return argocd.New(c.thelmaConfig, c.runner, iapToken, vaultClient)
 }
 
-func (c *clients) Sherlock() (*sherlock.Client, error) {
+func (c *clients) Sherlock() (sherlock.Client, error) {
 	iapToken, err := c.IAPToken()
 	if err != nil {
 		return nil, err
 	}
-	return sherlock.New(c.thelmaConfig, iapToken)
+	ghaOidcProvider, err := gha.NewGhaOidcProvider(c.thelmaConfig, c.creds)
+	if err != nil {
+		return nil, err
+	}
+	return sherlock.NewClient(iapToken, func(options *sherlock.Options) {
+		options.ConfigSource = c.thelmaConfig
+		options.GhaOidcTokenProvider = ghaOidcProvider
+	})
 }
 
 func (c *clients) Kubernetes() kubernetes.Clients {

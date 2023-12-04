@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"testing"
 
 	"github.com/mcuadros/go-defaults"
 	"github.com/rs/zerolog/log"
@@ -173,4 +174,21 @@ func JoinSelector(labels map[string]string) string {
 	}
 	sort.Strings(list)
 	return strings.Join(list, ",")
+}
+
+func OverrideEnvVarForTest(t *testing.T, variable string, value string, test func()) {
+	original, originalPresent := os.LookupEnv(variable)
+	err := os.Setenv(variable, value)
+	if err != nil {
+		t.Fatalf("error setting %s: %v", variable, err)
+	}
+	test()
+	if originalPresent {
+		err = os.Setenv(variable, original)
+	} else {
+		err = os.Unsetenv(variable)
+	}
+	if err != nil {
+		t.Fatalf("error resetting %s: %v", variable, err)
+	}
 }

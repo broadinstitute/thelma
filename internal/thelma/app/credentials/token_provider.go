@@ -130,8 +130,10 @@ func (t *tokenProvider) Reissue() ([]byte, error) {
 func (t *tokenProvider) getViaReadOnly() ([]byte, error) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	if value, err := t.tryGetTokenOnlyReading(); err != nil {
+	if value, shortCircuited, err := t.tryGetTokenOnlyReading(); err != nil {
 		return nil, errors.Errorf("%T.tryGetTokenOnlyReading() error: %v", t, err)
+	} else if shortCircuited {
+		return value, nil
 	} else if len(value) > 0 && t.validateToken(value) == nil {
 		return value, nil
 	} else {
@@ -146,8 +148,10 @@ func (t *tokenProvider) getViaReadWrite() ([]byte, error) {
 	defer t.mutex.Unlock()
 	// We read first in case another goroutine wrote while we were waiting for the lock,
 	// also to get even a potentially invalid token to try to refresh.
-	if value, err := t.tryGetTokenOnlyReading(); err != nil {
+	if value, shortCircuited, err := t.tryGetTokenOnlyReading(); err != nil {
 		return nil, errors.Errorf("%T.tryGetTokenOnlyReading() error: %v", t, err)
+	} else if shortCircuited {
+		return value, nil
 	} else if len(value) > 0 {
 		if err = t.validateToken(value); err == nil {
 			return value, nil
@@ -184,9 +188,10 @@ func (t *tokenProvider) resetViaReadWrite() error {
 }
 
 // tryGetTokenOnlyReading attempts to get a token with only read access. It does not validate the token.
+// It will return a true boolean if short-circuiting occurred.
 // It assumes the caller has locked the tokenProvider.
 // It may return nothing if a token wasn't readily available.
-func (t *tokenProvider) tryGetTokenOnlyReading() ([]byte, error) {
+func (t *tokenProvider) tryGetTokenOnlyReading() ([]byte, bool, error) {
 	// Short-circuit if we find a token in the environment
 	envVarsToCheck := t.options.EnvVars
 	for _, envVarNeedingPrefix := range t.options.EnvVars {
@@ -199,18 +204,18 @@ func (t *tokenProvider) tryGetTokenOnlyReading() ([]byte, error) {
 				Str("key", t.key).
 				Type("type", t).
 				Msgf("os.Getenv(%q) returned a value for %s, short-circuiting", envVarToCheck, t.key)
-			return []byte(value), nil
+			return []byte(value), true, nil
 		}
 	}
 
 	if existsInStore, err := t.options.CredentialStore.Exists(t.key); err != nil {
-		return nil, errors.Errorf("%T.Exists(%q) error: %v", t.options.CredentialStore, t.key, err)
+		return nil, false, errors.Errorf("%T.Exists(%q) error: %v", t.options.CredentialStore, t.key, err)
 	} else if !existsInStore {
-		return nil, nil
+		return nil, false, nil
 	} else if value, err := t.options.CredentialStore.Read(t.key); err != nil {
-		return nil, errors.Errorf("%T.Read(%q) error: %v", t.options.CredentialStore, t.key, err)
+		return nil, false, errors.Errorf("%T.Read(%q) error: %v", t.options.CredentialStore, t.key, err)
 	} else {
-		return value, nil
+		return value, false, nil
 	}
 }
 

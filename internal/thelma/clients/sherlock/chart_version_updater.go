@@ -24,7 +24,7 @@ type ChartVersionUpdater interface {
 }
 
 // Step 1 of UpdateForNewChartVersion
-func (c *Client) reportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
+func (c *clientImpl) reportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
 	chartVersion := &models.SherlockChartVersionV3Create{
 		Chart:        chartSelector,
 		ChartVersion: newVersion,
@@ -42,7 +42,7 @@ func (c *Client) reportNewChartVersion(chartSelector string, newVersion string, 
 }
 
 // Step 2 of UpdateForNewChartVersion
-func (c *Client) setChartReleasesToLatestChartVersion(chartReleaseSelectors ...string) error {
+func (c *clientImpl) setChartReleasesToLatestChartVersion(chartReleaseSelectors ...string) error {
 	var chartReleaseEntriesToUpdate []*models.V2controllersChangesetPlanRequestChartReleaseEntry
 	for _, chartReleaseSelector := range chartReleaseSelectors {
 		chartReleaseEntriesToUpdate = append(chartReleaseEntriesToUpdate, &models.V2controllersChangesetPlanRequestChartReleaseEntry{
@@ -62,7 +62,7 @@ func (c *Client) setChartReleasesToLatestChartVersion(chartReleaseSelectors ...s
 }
 
 // Step 3 of UpdateForNewChartVersion
-func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, updatedChartReleases ...string) (refreshedChartReleases []string, err error) {
+func (c *clientImpl) refreshDownstreamTemplateChartReleases(chartSelector string, updatedChartReleases ...string) (refreshedChartReleases []string, err error) {
 	// Get list of template environments
 	templateString := "template"
 	templates, err := c.client.Environments.GetAPIV2Environments(
@@ -135,7 +135,7 @@ func (c *Client) refreshDownstreamTemplateChartReleases(chartSelector string, up
 	return chartReleasesToRefresh, nil
 }
 
-func (c *Client) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error {
+func (c *clientImpl) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error {
 	if err := c.reportNewChartVersion(chartSelector, newVersion, lastVersion, description); err != nil {
 		return errors.Errorf("error reporting chart version %s/%s: %v", chartSelector, newVersion, err)
 	}
