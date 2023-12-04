@@ -39,6 +39,7 @@ func Test_NewClient(t *testing.T) {
 			options.ConfigSource = thelmaConfig
 			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 		})
+		require.NoError(t, err)
 
 		err = client.GetStatus()
 		require.NoError(t, err)
