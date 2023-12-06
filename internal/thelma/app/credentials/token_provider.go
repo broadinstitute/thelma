@@ -33,6 +33,7 @@ type TokenOptions struct {
 type BaseTokenOptions struct {
 	// EnvVars (optional) environment variables to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "vault-token" -> "VAULT_TOKEN").
 	// Ideally only one environment variable should be used, but multiple are supported for backwards compatibility.
+	// Environment variables will be checked both with the "THELMA_" prefix and without.
 	EnvVars []string
 	// PromptEnabled (optional) if true, user will be prompted to manually enter a token value if one does not exist in credential store.
 	PromptEnabled bool

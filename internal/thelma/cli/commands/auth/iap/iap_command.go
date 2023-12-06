@@ -4,8 +4,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/vault"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -31,12 +29,7 @@ func (cmd *iapCommand) PreRun(app app.ThelmaApp, _ cli.RunContext) error {
 }
 
 func (cmd *iapCommand) Run(thelmaApp app.ThelmaApp, rc cli.RunContext) error {
-	vaultClient, err := vault.NewClient(thelmaApp.Config(), thelmaApp.Credentials())
-	if err != nil {
-		return err
-	}
-
-	tokenProvider, err := iap.TokenProvider(thelmaApp.Config(), thelmaApp.Credentials(), vaultClient, thelmaApp.ShellRunner())
+	tokenProvider, err := thelmaApp.Clients().IAP()
 	if err != nil {
 		return err
 	}

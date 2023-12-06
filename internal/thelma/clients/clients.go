@@ -22,7 +22,10 @@ import (
 
 // Clients convenience builders for client objects used in Thelma commands
 type Clients interface {
-	// IAPToken returns a valid dsp-tools-k8s IAP token (as a string), or an error
+	// IAP returns a credentials.TokenProvider for dsp-tools-k8s IAP tokens.
+	IAP() (credentials.TokenProvider, error)
+	// IAPToken returns a valid dsp-tools-k8s IAP token (as a string), or an error.
+	// This is a convenience method on top of IAP().
 	IAPToken() (string, error)
 	// Vault returns a Vault client for the DSP Vault instance
 	Vault() (*vaultapi.Client, error)
@@ -41,7 +44,7 @@ type Clients interface {
 	// Kubernetes returns a factory for Kubernetes clients
 	Kubernetes() kubernetes.Clients
 	// Sherlock returns a swagger API client for a sherlock server instance
-	Sherlock() (sherlock.Client, error)
+	Sherlock(options ...sherlock.Option) (sherlock.Client, error)
 	// Slack returns a wrapper around the official API client
 	Slack() (*slack.Slack, error)
 }
@@ -76,27 +79,18 @@ func (c *clients) GoogleUsingADC(allowNonBroad bool) google.Clients {
 	return google.NewUsingADC(c.thelmaConfig, c.thelmaRoot, c.runner, c, allowNonBroad)
 }
 
+func (c *clients) IAP() (credentials.TokenProvider, error) {
+	return iap.TokenProvider(c.thelmaConfig, c.creds, c.Vault, c.runner)
+}
+
 func (c *clients) IAPToken() (string, error) {
-	if outOfBandToken := iap.CheckEnvironmentShortCircuit(); outOfBandToken != "" {
-		return outOfBandToken, nil
-	}
-
-	vaultClient, err := c.Vault()
-	if err != nil {
+	if tokenProvider, err := c.IAP(); err != nil {
 		return "", err
-	}
-
-	tokenProvider, err := iap.TokenProvider(c.thelmaConfig, c.creds, vaultClient, c.runner)
-	if err != nil {
+	} else if token, err := tokenProvider.Get(); err != nil {
 		return "", err
+	} else {
+		return string(token), nil
 	}
-
-	token, err := tokenProvider.Get()
-	if err != nil {
-		return "", err
-	}
-
-	return string(token), nil
 }
 
 func (c *clients) Vault() (*vaultapi.Client, error) {
@@ -117,8 +111,8 @@ func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
 	return argocd.New(c.thelmaConfig, c.runner, iapToken, vaultClient)
 }
 
-func (c *clients) Sherlock() (sherlock.Client, error) {
-	iapToken, err := c.IAPToken()
+func (c *clients) Sherlock(options ...sherlock.Option) (sherlock.Client, error) {
+	iapProvider, err := c.IAP()
 	if err != nil {
 		return nil, err
 	}
@@ -126,10 +120,15 @@ func (c *clients) Sherlock() (sherlock.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return sherlock.NewClient(iapToken, func(options *sherlock.Options) {
-		options.ConfigSource = c.thelmaConfig
-		options.GhaOidcTokenProvider = ghaOidcProvider
-	})
+	opts := []sherlock.Option{
+		func(options *sherlock.Options) {
+			options.ConfigSource = c.thelmaConfig
+			options.IapTokenProvider = iapProvider
+			options.GhaOidcTokenProvider = ghaOidcProvider
+		},
+	}
+	opts = append(opts, options...)
+	return sherlock.NewClient(opts...)
 }
 
 func (c *clients) Kubernetes() kubernetes.Clients {
