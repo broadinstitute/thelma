@@ -75,9 +75,9 @@ func browserProvider(creds credentials.Credentials, cfg iapConfig, vaultClient *
 		}
 		options.IssueFn = func() (*oauth2.Token, error) {
 			if authorizationCode, err := useBrowserForAuthorizationCode(oauthConfig, runner, redirectPort); err != nil {
-				return nil, fmt.Errorf("unable to obtain authorization code via browser: %v", err)
+				return nil, errors.Errorf("unable to obtain authorization code via browser: %v", err)
 			} else if token, err := oauthConfig.Exchange(context.Background(), authorizationCode); err != nil {
-				return nil, fmt.Errorf("unable to exchange authorization code for token: %v", err)
+				return nil, errors.Errorf("unable to exchange authorization code for token: %v", err)
 			} else {
 				return token, err
 			}
