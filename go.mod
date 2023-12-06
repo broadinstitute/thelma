@@ -21,7 +21,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/knadh/koanf v1.5.0
 	github.com/leaanthony/go-ansi-parser v1.6.1
-	github.com/mattn/go-isatty v0.0.19
+	github.com/mattn/go-isatty v0.0.20
 	github.com/mcuadros/go-defaults v1.2.0
 	github.com/migueleliasweb/go-github-mock v0.0.20
 	github.com/mitchellh/mapstructure v1.5.0
