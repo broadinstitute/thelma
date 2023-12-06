@@ -15,13 +15,7 @@ import (
 
 // TokenOptions configuration options for a TokenProvider
 type TokenOptions struct {
-	// EnvVars (optional) environment variables to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "vault-token" -> "VAULT_TOKEN").
-	// Ideally only one environment variable should be used, but multiple are supported for backwards compatibility.
-	EnvVars []string
-	// PromptEnabled (optional) if true, user will be prompted to manually enter a token value if one does not exist in credential store.
-	PromptEnabled bool
-	// PromptMessage (optional) Override default prompt message ("Please enter VAULT_TOKEN: ")
-	PromptMessage string
+	BaseTokenOptions
 	// ValidateFn (optional) Optional function for validating a token. If supplied, stored credentials will be validated before being returned to caller.
 	// This function can be called quite frequently in Goroutine scenarios, so offline validation is ideal.
 	ValidateFn func([]byte) error
@@ -29,6 +23,21 @@ type TokenOptions struct {
 	RefreshFn func([]byte) ([]byte, error)
 	// IssueFn (optional) Optional function for issuing a new token. If supplied, prompt options are ignored.
 	IssueFn func() ([]byte, error)
+
+	// transformForReturn is an internal-use-only option used by GetTypedTokenProvider. This function is called when
+	// a token is returned to the caller of TokenProvider.Get. It does not affect the stored token, nor is it used
+	// when short-circuiting (e.g. when a token is found in the environment).
+	transformForReturn func([]byte) ([]byte, error)
+}
+
+type BaseTokenOptions struct {
+	// EnvVars (optional) environment variables to use for this token. Defaults to key (upper-cased with s/-/_/, eg. "vault-token" -> "VAULT_TOKEN").
+	// Ideally only one environment variable should be used, but multiple are supported for backwards compatibility.
+	EnvVars []string
+	// PromptEnabled (optional) if true, user will be prompted to manually enter a token value if one does not exist in credential store.
+	PromptEnabled bool
+	// PromptMessage (optional) Override default prompt message ("Please enter VAULT_TOKEN: ")
+	PromptMessage string
 	// CredentialStore (optional) Use a custom credential store instead of the default store (~/.thelma/credentials/$key)
 	CredentialStore stores.Store
 }
@@ -90,6 +99,10 @@ func (c credentials) GetTokenProvider(key string, options ...TokenOption) TokenP
 			opts.CredentialStore = c.defaultStore
 		}
 
+		if opts.transformForReturn == nil {
+			opts.transformForReturn = func(value []byte) ([]byte, error) { return value, nil }
+		}
+
 		TokenProviders[key] = withMasking(&tokenProvider{
 			key:     key,
 			options: opts,
@@ -133,9 +146,10 @@ func (t *tokenProvider) getViaReadOnly() ([]byte, error) {
 	if value, shortCircuited, err := t.tryGetTokenOnlyReading(); err != nil {
 		return nil, errors.Errorf("%T.tryGetTokenOnlyReading() error: %v", t, err)
 	} else if shortCircuited {
+		// When short-circuiting, we don't call transformForReturn
 		return value, nil
 	} else if len(value) > 0 && t.validateToken(value) == nil {
-		return value, nil
+		return t.options.transformForReturn(value)
 	} else {
 		return nil, nil
 	}
@@ -154,11 +168,11 @@ func (t *tokenProvider) getViaReadWrite() ([]byte, error) {
 		return value, nil
 	} else if len(value) > 0 {
 		if err = t.validateToken(value); err == nil {
-			return value, nil
+			return t.options.transformForReturn(value)
 		} else if value, err = t.tryGetAndWriteRefreshedToken(value); err != nil {
 			return nil, errors.Errorf("%T.tryGetAndWriteRefreshedToken() error: %v", t, err)
 		} else if len(value) > 0 {
-			return value, nil
+			return t.options.transformForReturn(value)
 		}
 	}
 
@@ -166,7 +180,7 @@ func (t *tokenProvider) getViaReadWrite() ([]byte, error) {
 	if value, err := t.mustGetAndWriteNewToken(); err != nil {
 		return nil, errors.Errorf("%T.mustGetAndWriteNewToken() error: %v", t, err)
 	} else if len(value) > 0 {
-		return value, nil
+		return t.options.transformForReturn(value)
 	} else {
 		return nil, errors.Errorf("%T.mustGetAndWriteNewToken() returned no error but no token either", t)
 	}

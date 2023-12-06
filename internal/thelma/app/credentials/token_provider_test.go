@@ -17,6 +17,7 @@ type mockStore struct {
 	errorOnRead   bool
 	bluffRead     string
 	errorOnWrite  bool
+	bluffWrite    bool
 	errorOnExists bool
 	bluffExists   bool
 	errorOnRemove bool
@@ -44,6 +45,8 @@ func (s mockStore) Exists(key string) (bool, error) {
 func (s mockStore) Write(key string, credential []byte) error {
 	if s.errorOnWrite {
 		return errors.Errorf("write error")
+	} else if s.bluffWrite {
+		return nil
 	}
 	return s.delegate.Write(key, credential)
 }
