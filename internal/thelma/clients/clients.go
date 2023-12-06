@@ -68,15 +68,15 @@ type clients struct {
 }
 
 func (c *clients) Google() google.Clients {
-	return google.New(c.thelmaConfig, c.thelmaRoot, c.runner, c)
+	return google.New(c.thelmaConfig, c)
 }
 
 func (c *clients) GoogleUsingVaultSA(vaultPath string, vaultKey string) google.Clients {
-	return google.NewUsingVaultSA(c.thelmaConfig, c.thelmaRoot, c.runner, c, vaultPath, vaultKey)
+	return google.NewUsingVaultSA(c.thelmaConfig, c, vaultPath, vaultKey)
 }
 
 func (c *clients) GoogleUsingADC(allowNonBroad bool) google.Clients {
-	return google.NewUsingADC(c.thelmaConfig, c.thelmaRoot, c.runner, c, allowNonBroad)
+	return google.NewUsingADC(c.thelmaConfig, c, allowNonBroad)
 }
 
 func (c *clients) IAP() (credentials.TokenProvider, error) {
