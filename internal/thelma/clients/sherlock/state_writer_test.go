@@ -49,7 +49,7 @@ func (suite *sherlockStateWriterClientSuite) TearDownSuite() {
 }
 
 func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
-	client, err := sherlock.NewClient("", func(options *sherlock.Options) {
+	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.conflictServer.URL
 	})
 	suite.Assert().NoError(err)
@@ -66,7 +66,7 @@ func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
 }
 
 func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
-	client, err := sherlock.NewClient("", func(options *sherlock.Options) {
+	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.errServer.URL
 	})
 	suite.Assert().NoError(err)
@@ -83,7 +83,7 @@ func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
 }
 
 func (suite *sherlockStateWriterClientSuite) TestSuccessfulStateExport() {
-	client, err := sherlock.NewClient("", func(options *sherlock.Options) {
+	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.successfulCreateServer.URL
 	})
 	suite.Assert().NoError(err)
@@ -103,7 +103,7 @@ func (suite *sherlockStateWriterClientSuite) TestSuccessfulDelete() {
 	mockEnv := mocks.NewEnvironment(suite.T())
 	mockEnv.On("Name").Return("deleted-env")
 	mockEnv.On("Releases").Return(nil)
-	client, err := sherlock.NewClient("", func(options *sherlock.Options) {
+	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.successfulDeleteServer.URL
 	})
 
@@ -116,7 +116,7 @@ func (suite *sherlockStateWriterClientSuite) TestErrorOnDelete() {
 	mockEnv := mocks.NewEnvironment(suite.T())
 	mockEnv.On("Name").Return("deleted-env")
 	mockEnv.On("Releases").Return(nil)
-	client, err := sherlock.NewClient("", func(options *sherlock.Options) {
+	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.errDeleteServer.URL
 	})
 

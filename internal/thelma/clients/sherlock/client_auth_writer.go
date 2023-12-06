@@ -1,6 +1,7 @@
 package sherlock
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -10,11 +11,13 @@ import (
 const sherlockGhaOidcHeader = "X-GHA-OIDC-JWT"
 
 func makeClientAuthWriter(
-	iapToken string,
+	iapTokenProvider credentials.TokenProvider,
 	ghaOidcTokenProvider credentials.TokenProvider,
 ) runtime.ClientAuthInfoWriter {
-	mechanisms := []runtime.ClientAuthInfoWriter{
-		httptransport.BearerToken(iapToken),
+	mechanisms := make([]runtime.ClientAuthInfoWriter, 0, 2)
+
+	if iapTokenProvider != nil {
+		mechanisms = append(mechanisms, &iapInfoWriter{tokenProvider: iapTokenProvider})
 	}
 
 	if ghaOidcTokenProvider != nil {
@@ -22,6 +25,20 @@ func makeClientAuthWriter(
 	}
 
 	return httptransport.Compose(mechanisms...)
+}
+
+type iapInfoWriter struct {
+	tokenProvider credentials.TokenProvider
+}
+
+func (i *iapInfoWriter) AuthenticateRequest(request runtime.ClientRequest, _ strfmt.Registry) error {
+	if token, err := i.tokenProvider.Get(); err != nil {
+		return err
+	} else if len(token) == 0 {
+		return nil
+	} else {
+		return request.SetHeaderParam("Authorization", fmt.Sprintf("Bearer %s", string(token)))
+	}
 }
 
 type ghaOidcInfoWriter struct {

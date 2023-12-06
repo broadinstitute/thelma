@@ -187,13 +187,9 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	// If we're dry-running, the updater will be empty so we don't mutate anything.
 	if !options.dryRun {
 		if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
-			iapIdToken, err := app.Clients().IAPToken()
-			if err != nil {
-				return nil, err
-			}
 			for _, sherlockURL := range options.sherlock {
 				if sherlockURL != "" {
-					client, err := sherlock.NewClient(iapIdToken, func(options *sherlock.Options) {
+					client, err := app.Clients().Sherlock(func(options *sherlock.Options) {
 						options.Addr = sherlockURL
 					})
 					if err != nil {
@@ -204,7 +200,7 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 			}
 			for _, sherlockURL := range options.softFailSherlock {
 				if sherlockURL != "" {
-					client, err := sherlock.NewClient(iapIdToken, func(options *sherlock.Options) {
+					client, err := app.Clients().Sherlock(func(options *sherlock.Options) {
 						options.Addr = sherlockURL
 					})
 					if err != nil {

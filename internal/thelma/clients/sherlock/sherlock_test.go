@@ -35,8 +35,9 @@ func Test_NewClient(t *testing.T) {
 		thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
 		require.NoError(t, err)
 
-		client, err := NewClient(testIapToken, func(options *Options) {
+		client, err := NewClient(func(options *Options) {
 			options.ConfigSource = thelmaConfig
+			options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
 			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 		})
 		require.NoError(t, err)
@@ -57,8 +58,9 @@ func Test_NewClient(t *testing.T) {
 		thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverride("sherlock.addr", mockSherlockServer.URL))
 		require.NoError(t, err)
 
-		client, err := NewClient(testIapToken, func(options *Options) {
+		client, err := NewClient(func(options *Options) {
 			options.ConfigSource = thelmaConfig
+			options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
 			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnString: testGhaToken}
 		})
 		require.NoError(t, err)
@@ -104,7 +106,7 @@ func (suite *sherlockClientSuite) TearDownSuite() {
 }
 
 func (suite *sherlockClientSuite) TestFetchEnvironments() {
-	client, err := NewClient("fake", func(options *Options) {
+	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.config
 	})
 	suite.Assert().NoError(err)
@@ -116,7 +118,7 @@ func (suite *sherlockClientSuite) TestFetchEnvironments() {
 }
 
 func (suite *sherlockClientSuite) TestFetchClusters() {
-	client, err := NewClient("fake", func(options *Options) {
+	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.config
 	})
 	suite.Assert().NoError(err)
@@ -128,7 +130,7 @@ func (suite *sherlockClientSuite) TestFetchClusters() {
 }
 
 func (suite *sherlockClientSuite) TestFetchReleases() {
-	client, err := NewClient("fake", func(options *Options) {
+	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.config
 	})
 	suite.Assert().NoError(err)
@@ -140,7 +142,7 @@ func (suite *sherlockClientSuite) TestFetchReleases() {
 }
 
 func (suite *sherlockClientSuite) TestFetchEnvironmentsError() {
-	client, err := NewClient("fake", func(options *Options) {
+	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.errConfig
 	})
 	suite.Assert().NoError(err)
@@ -149,7 +151,7 @@ func (suite *sherlockClientSuite) TestFetchEnvironmentsError() {
 }
 
 func (suite *sherlockClientSuite) TestFetchClustersError() {
-	client, err := NewClient("fake", func(options *Options) {
+	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.errConfig
 	})
 	suite.Assert().NoError(err)
@@ -158,7 +160,7 @@ func (suite *sherlockClientSuite) TestFetchClustersError() {
 }
 
 func (suite *sherlockClientSuite) TestFetchReleasesError() {
-	client, err := NewClient("fake", func(options *Options) {
+	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.errConfig
 	})
 	suite.Assert().NoError(err)

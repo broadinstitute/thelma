@@ -6,6 +6,11 @@ type TypedTokenOptions[T any] struct {
 	BaseTokenOptions
 
 	// UnmarshalFromStoreFn (required) parses T from the BaseTokenOptions.CredentialStore.
+	//
+	// If you're trying to change the stored representation of a token, it's safe to just error here.
+	// UnmarshalFromStoreFn and MarshalToStoreFn get baked into TokenOptions.ValidateFn and similar,
+	// so if they return an error it'll be seen as a validation error (and so will fall through to
+	// refreshing/issuing). In other words, you don't need to gracefully handle it.
 	UnmarshalFromStoreFn func([]byte) (T, error)
 	// MarshalToStoreFn (required) will be used to store T in the BaseTokenOptions.CredentialStore.
 	MarshalToStoreFn func(T) ([]byte, error)

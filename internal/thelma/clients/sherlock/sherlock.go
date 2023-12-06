@@ -27,6 +27,7 @@ type Client interface {
 type Options struct {
 	Addr                 string
 	ConfigSource         config.Config
+	IapTokenProvider     credentials.TokenProvider
 	GhaOidcTokenProvider credentials.TokenProvider
 }
 
@@ -36,7 +37,10 @@ type sherlockConfig struct {
 	Addr string `default:"https://sherlock.dsp-devops.broadinstitute.org"`
 }
 
-func NewClient(iapToken string, options ...Option) (Client, error) {
+// NewClient creates a Sherlock client, but you probably don't want to call it. You want to hit
+// clients.Clients.Sherlock() instead, which still accepts options but fills the all-important
+// authentication ones for you. Calling this directly is still useful for testing, though.
+func NewClient(options ...Option) (Client, error) {
 	opts := &Options{}
 	for _, option := range options {
 		option(opts)
@@ -60,7 +64,7 @@ func NewClient(iapToken string, options ...Option) (Client, error) {
 
 	// setup runtime for openapi client
 	transport := httptransport.New(hostname, "", []string{scheme})
-	transport.DefaultAuthentication = makeClientAuthWriter(iapToken, opts.GhaOidcTokenProvider)
+	transport.DefaultAuthentication = makeClientAuthWriter(opts.IapTokenProvider, opts.GhaOidcTokenProvider)
 
 	return &clientImpl{client: client.New(transport, strfmt.Default)}, nil
 }
