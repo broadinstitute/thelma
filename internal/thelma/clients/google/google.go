@@ -7,12 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
@@ -76,19 +74,15 @@ type googleConfig struct {
 	}
 }
 
-func New(thelmaConfig config.Config, thelmaRoot root.Root, shellRunner shell.Runner, vaultFactory api.VaultFactory) Clients {
+func New(thelmaConfig config.Config, vaultFactory api.VaultFactory) Clients {
 	return &google{
 		thelmaConfig: thelmaConfig,
-		thelmaRoot:   thelmaRoot,
-		shellRunner:  shellRunner,
 		vaultFactory: vaultFactory,
 	}
 }
 
 func NewUsingVaultSA(
 	thelmaConfig config.Config,
-	thelmaRoot root.Root,
-	shellRunner shell.Runner,
 	vaultFactory api.VaultFactory,
 	saVaultPath string,
 	saVaultKey string,
@@ -99,8 +93,6 @@ func NewUsingVaultSA(
 	customConfig.Auth.Vault.Key = saVaultKey
 	return &google{
 		thelmaConfig: thelmaConfig,
-		thelmaRoot:   thelmaRoot,
-		shellRunner:  shellRunner,
 		vaultFactory: vaultFactory,
 		customConfig: customConfig,
 	}
@@ -108,8 +100,6 @@ func NewUsingVaultSA(
 
 func NewUsingADC(
 	thelmaConfig config.Config,
-	thelmaRoot root.Root,
-	shellRunner shell.Runner,
 	vaultFactory api.VaultFactory,
 	allowNonBroad bool,
 ) Clients {
@@ -118,8 +108,6 @@ func NewUsingADC(
 	customConfig.Auth.ADC.VerifyBroadEmail = !allowNonBroad
 	return &google{
 		thelmaConfig: thelmaConfig,
-		thelmaRoot:   thelmaRoot,
-		shellRunner:  shellRunner,
 		vaultFactory: vaultFactory,
 		customConfig: customConfig,
 	}
@@ -127,8 +115,6 @@ func NewUsingADC(
 
 type google struct {
 	thelmaConfig config.Config
-	thelmaRoot   root.Root
-	shellRunner  shell.Runner
 	vaultFactory api.VaultFactory
 	customConfig *googleConfig
 	subject      string
