@@ -50,8 +50,8 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 
 			fakeOrchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requestCount++
-				if r.URL.Path != "/register/profile" {
-					t.Errorf("expected to request '/register/profile', got: %s", r.URL.Path)
+				if r.URL.Path != "/api/users/v1/registerWithProfile" {
+					t.Errorf("expected to request '/api/users/v1/registerWithProfile', got: %s", r.URL.Path)
 				}
 
 				var status int
@@ -90,7 +90,7 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 				appRelease: orchRelease,
 			}
 
-			_, _, err := client.RegisterProfile(
+			_, _, err := client.RegisterWithProfile(
 				"Jane", "Doe",
 				"Owner", "jdoe@broadinstitute.org",
 				"None", "None",
