@@ -6,8 +6,6 @@ import (
 	container "cloud.google.com/go/container/apiv1"
 	bucket "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 
-	google "github.com/broadinstitute/thelma/internal/thelma/clients/google"
-
 	mock "github.com/stretchr/testify/mock"
 
 	oauth2 "golang.org/x/oauth2"
@@ -204,50 +202,6 @@ func (_c *Clients_PubSub_Call) Return(_a0 *pubsub.Client, _a1 error) *Clients_Pu
 }
 
 func (_c *Clients_PubSub_Call) RunAndReturn(run func(string) (*pubsub.Client, error)) *Clients_PubSub_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SetSubject provides a mock function with given fields: subject
-func (_m *Clients) SetSubject(subject string) google.Clients {
-	ret := _m.Called(subject)
-
-	var r0 google.Clients
-	if rf, ok := ret.Get(0).(func(string) google.Clients); ok {
-		r0 = rf(subject)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(google.Clients)
-		}
-	}
-
-	return r0
-}
-
-// Clients_SetSubject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSubject'
-type Clients_SetSubject_Call struct {
-	*mock.Call
-}
-
-// SetSubject is a helper method to define mock.On call
-//   - subject string
-func (_e *Clients_Expecter) SetSubject(subject interface{}) *Clients_SetSubject_Call {
-	return &Clients_SetSubject_Call{Call: _e.mock.On("SetSubject", subject)}
-}
-
-func (_c *Clients_SetSubject_Call) Run(run func(subject string)) *Clients_SetSubject_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *Clients_SetSubject_Call) Return(_a0 google.Clients) *Clients_SetSubject_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Clients_SetSubject_Call) RunAndReturn(run func(string) google.Clients) *Clients_SetSubject_Call {
 	_c.Call.Return(run)
 	return _c
 }

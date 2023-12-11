@@ -34,13 +34,7 @@ type Clients interface {
 	// Github returns a wrapper around a github api client instance
 	Github() (*github.Client, error)
 	// Google returns a client factory for GCP clients, using Thelma's default configuration
-	Google() google.Clients
-	// GoogleUsingVaultSA is like Google but allows a vault path/key for the service account key file
-	// to be specified directly at runtime
-	GoogleUsingVaultSA(string, string) google.Clients
-	// GoogleUsingADC is like Google but forces usage of the environment's Application Default Credentials,
-	// optionally allowing non-Broad email addresses
-	GoogleUsingADC(bool) google.Clients
+	Google(options ...google.Option) google.Clients
 	// Kubernetes returns a factory for Kubernetes clients
 	Kubernetes() kubernetes.Clients
 	// Sherlock returns a swagger API client for a sherlock server instance
@@ -67,16 +61,14 @@ type clients struct {
 	kubernetes   kubernetes.Clients
 }
 
-func (c *clients) Google() google.Clients {
-	return google.New(c.thelmaConfig, c)
-}
-
-func (c *clients) GoogleUsingVaultSA(vaultPath string, vaultKey string) google.Clients {
-	return google.NewUsingVaultSA(c.thelmaConfig, c, vaultPath, vaultKey)
-}
-
-func (c *clients) GoogleUsingADC(allowNonBroad bool) google.Clients {
-	return google.NewUsingADC(c.thelmaConfig, c, allowNonBroad)
+func (c *clients) Google(options ...google.Option) google.Clients {
+	opts := append([]google.Option{
+		func(o *google.Options) {
+			o.ConfigSource = c.thelmaConfig
+			o.VaultFactory = c.Vault
+		},
+	}, options...)
+	return google.New(opts...)
 }
 
 func (c *clients) IAP() (credentials.TokenProvider, error) {
