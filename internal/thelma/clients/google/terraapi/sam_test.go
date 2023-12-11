@@ -83,7 +83,7 @@ func Test_SamClientRetriesFailedRequests(t *testing.T) {
 			client := &samClient{
 				terraClient: &terraClient{
 					tokenSource: testutils.NewFakeTokenSource("fake-token"),
-					userInfo:    googleoauth.Userinfo{},
+					userInfo:    &googleoauth.Userinfo{},
 					httpClient:  *fakeSamServer.Client(),
 					retryDelay:  5 * time.Millisecond,
 				},

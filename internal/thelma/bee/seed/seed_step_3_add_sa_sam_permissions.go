@@ -21,7 +21,7 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
-			emails = append(emails, terraClient.GoogleUserInfo().Email)
+			emails = append(emails, terraClient.GoogleUserinfo().Email)
 		} else {
 			log.Info().Msg("Rawls not present in environment, skipping")
 		}
@@ -36,7 +36,7 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
-			emails = append(emails, terraClient.GoogleUserInfo().Email)
+			emails = append(emails, terraClient.GoogleUserinfo().Email)
 		} else {
 			log.Info().Msg("Leo not present in environment, skipping")
 		}
@@ -51,7 +51,7 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
-			emails = append(emails, terraClient.GoogleUserInfo().Email)
+			emails = append(emails, terraClient.GoogleUserinfo().Email)
 		} else {
 			log.Info().Msg("Import Service not present in environment, skipping")
 		}
@@ -66,7 +66,7 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 			if err := opts.handleErrorWithForce(err); err != nil {
 				return err
 			}
-			emails = append(emails, terraClient.GoogleUserInfo().Email)
+			emails = append(emails, terraClient.GoogleUserinfo().Email)
 		} else {
 			log.Info().Msg("Workspace Manager not present in environment, skipping")
 		}
@@ -79,7 +79,7 @@ func (s *seeder) seedStep3AddSaSamPermissions(appReleases map[string]terra.AppRe
 		if err := opts.handleErrorWithForce(err); err != nil {
 			return err
 		}
-		emails = append(emails, terraClient.GoogleUserInfo().Email)
+		emails = append(emails, terraClient.GoogleUserinfo().Email)
 		_, _, err = terraClient.Sam(sam).FcServiceAccounts(emails, "google", terraapi.GetPetPrivateKeyAction)
 		if err != nil {
 			return err

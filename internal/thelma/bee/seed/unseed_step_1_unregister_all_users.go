@@ -100,7 +100,7 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 				return errors.Errorf("error authenticating to Google: %v", err)
 			}
 
-			samEmail := terraClient.GoogleUserInfo().Email
+			samEmail := terraClient.GoogleUserinfo().Email
 			if _, exists := userEmailToID[samEmail]; !exists {
 				if err := opts.handleErrorWithForce(errors.Errorf("%s (Sam's SA) is not a Sam user and cannot unregister users", samEmail)); err != nil {
 					return err
