@@ -190,7 +190,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	_mocks.expectCmd("app", "sync", "leonardo-configs-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
 
-	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--timeout", "600", "--health")
+	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--timeout", "900", "--health")
 
 	// sync primary app
 	_mocks.expectCmd("app", "set", "leonardo-dev", "--revision", "HEAD", "--validate=false")
@@ -201,14 +201,14 @@ func Test_SyncRelease(t *testing.T) {
 
 	_mocks.expectCmd("app", "sync", "leonardo-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
 
-	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "600", "--health")
+	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "900", "--health")
 
 	// restart deployments
 	_mocks.expectCmd("app", "actions", "list", "--kind=Deployment", "leonardo-dev")
 
 	_mocks.expectCmd("app", "actions", "run", "--kind=Deployment", "leonardo-dev", "restart", "--all")
 
-	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "600", "--health")
+	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "900", "--health")
 
 	require.NoError(t, _argocd.SyncRelease(leonardoDev))
 }
