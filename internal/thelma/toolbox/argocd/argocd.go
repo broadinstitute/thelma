@@ -137,7 +137,7 @@ type argocdConfig struct {
 	SyncRetries int `default:"4"`
 
 	// WaitHealthyTimeoutSeconds how long to wait for an application to become healthy after syncing
-	WaitHealthyTimeoutSeconds int `default:"600"`
+	WaitHealthyTimeoutSeconds int `default:"900"`
 
 	WaitExistOptions
 }
