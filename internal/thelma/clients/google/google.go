@@ -311,6 +311,7 @@ func (c *clientsImpl) SqlAdmin() (sqladmin.Client, error) {
 // See https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateIdToken
 func (c *clientsImpl) IdTokenGenerator(audience string, serviceAccountChain ...string) (func() ([]byte, error), error) {
 	if len(serviceAccountChain) == 0 {
+		log.Trace().Msg("IdTokenGenerator called with no service account chain; using authenticated identity")
 		userinfo, err := c.GoogleUserinfo()
 		if err != nil {
 			return nil, err
@@ -340,6 +341,12 @@ func (c *clientsImpl) IdTokenGenerator(audience string, serviceAccountChain ...s
 		Audience:     audience,
 		IncludeEmail: true,
 		Delegates:    serviceAccountChain[1:],
+	}
+	requestJson, err := idTokenRequest.MarshalJSON()
+	if err != nil {
+		log.Warn().Err(err).Msg("error marshaling ID token request to JSON")
+	} else {
+		log.Trace().RawJSON("request", requestJson).Str("name", serviceAccountChain[0]).Msg("performing ID token request")
 	}
 
 	return func() ([]byte, error) {
