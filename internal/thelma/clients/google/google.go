@@ -318,7 +318,7 @@ func (c *clientsImpl) IdTokenGenerator(audience string, serviceAccountChain ...s
 		}
 		serviceAccountChain = []string{userinfo.Email}
 	}
-	for i := 0; i < len(serviceAccountChain)-1; i++ {
+	for i := 0; i < len(serviceAccountChain); i++ {
 		if !strings.HasSuffix(serviceAccountChain[i], serviceAccountEmailSuffix) {
 			return nil, errors.Errorf("IdTokenGenerator called with non-service-account email %q", serviceAccountChain[i])
 		} else if !strings.HasPrefix(serviceAccountChain[i], serviceAccountResourceNamePrefix) {
