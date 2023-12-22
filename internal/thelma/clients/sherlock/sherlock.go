@@ -21,6 +21,7 @@ type Client interface {
 	StateLoader
 	StateWriter
 	ChartVersionUpdater
+	ChartReleaseStatusUpdater
 	GetStatus() error
 }
 
