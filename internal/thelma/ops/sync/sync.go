@@ -86,10 +86,10 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 	_pool := pool.New(jobs, func(options *pool.Options) {
 		options.NumWorkers = maxParallel
 		options.StopProcessingOnError = false
-		options.Summarizer.WorkDescription = "services synced"
+		options.LogSummarizer.WorkDescription = "services synced"
 
 		if hasSingleDestination {
-			options.Summarizer.Footer = fmt.Sprintf("Check status in ArgoCD at %s", s.argocd.DestinationURL(destination))
+			options.LogSummarizer.Footer = fmt.Sprintf("Check status in ArgoCD at %s", s.argocd.DestinationURL(destination))
 		}
 
 		options.Metrics.Enabled = true

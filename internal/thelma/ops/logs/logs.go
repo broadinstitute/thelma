@@ -168,8 +168,8 @@ func (l *logs) Export(releases []terra.Release, opts ...ExportOption) (map[terra
 
 	err = pool.New(jobs, func(opts *pool.Options) {
 		opts.NumWorkers = options.ParallelWorkers
-		opts.Summarizer.WorkDescription = "container logs exported"
-		opts.Summarizer.Interval = 10 * time.Second
+		opts.LogSummarizer.WorkDescription = "container logs exported"
+		opts.LogSummarizer.Interval = 10 * time.Second
 	}).Execute()
 
 	locations := make(map[terra.Release]artifacts.Location)
