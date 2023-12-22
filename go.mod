@@ -8,12 +8,12 @@ require (
 	cloud.google.com/go/storage v1.33.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/broadinstitute/sherlock/sherlock-go-client v0.2.13
+	github.com/broadinstitute/sherlock/sherlock-go-client v0.2.54
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.15.0
 	github.com/go-openapi/runtime v0.26.0
-	github.com/go-openapi/strfmt v0.21.7
+	github.com/go-openapi/strfmt v0.21.8
 	github.com/go-playground/validator/v10 v10.15.5
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-github v17.0.0+incompatible
