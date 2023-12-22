@@ -4,6 +4,7 @@ package pool
 import (
 	"context"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/repeater"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -21,8 +22,8 @@ type Options struct {
 	NumWorkers int
 	// StopProcessingOnError whether to stop processing work items in the event a job returns an error
 	StopProcessingOnError bool
-	// Summarizer options for printing periodic processing summaries to the log
-	Summarizer SummarizerOptions
+	// LogSummarizer options for printing periodic processing summaries to the log
+	LogSummarizer LogSummarizerOptions
 	// Metrics options for recording metrics
 	Metrics MetricsOptions
 }
@@ -36,7 +37,7 @@ type MetricsOptions struct {
 
 // Job a unit of work that can be executed by a Pool
 type Job struct {
-	// Name short text description for this job to use in log messages
+	// Name is a short text description for this job to use in log messages
 	Name string
 	// Run function that performs work
 	Run func(StatusReporter) error
@@ -56,7 +57,7 @@ func New(jobs []Job, options ...Option) Pool {
 	opts := Options{
 		NumWorkers:            runtime.NumCPU(),
 		StopProcessingOnError: true,
-		Summarizer: SummarizerOptions{
+		LogSummarizer: LogSummarizerOptions{
 			Enabled:         true,
 			Interval:        30 * time.Second,
 			LogLevel:        zerolog.InfoLevel,
@@ -82,31 +83,31 @@ func New(jobs []Job, options ...Option) Pool {
 	cancelCtx, cancelFn := context.WithCancel(context.Background())
 
 	return &pool{
-		items:      items,
-		options:    opts,
-		waitGroup:  sync.WaitGroup{},
-		queue:      make(chan workItem, len(items)),
-		cancelCtx:  cancelCtx,
-		cancelFn:   cancelFn,
-		summarizer: newSummarizer(items, opts.Summarizer),
+		items:                  items,
+		options:                opts,
+		waitGroup:              sync.WaitGroup{},
+		queue:                  make(chan workItem, len(items)),
+		cancelCtx:              cancelCtx,
+		cancelFn:               cancelFn,
+		logSummarizer:          newLogSummarizer(items, opts.LogSummarizer),
 	}
 }
 
 type pool struct {
-	options    Options
-	items      []workItem
-	waitGroup  sync.WaitGroup
-	queue      chan workItem
-	cancelCtx  context.Context
-	cancelFn   context.CancelFunc
-	summarizer *summarizer
+	options                Options
+	items                  []workItem
+	waitGroup              sync.WaitGroup
+	queue                  chan workItem
+	cancelCtx              context.Context
+	cancelFn               context.CancelFunc
+	logSummarizer          repeater.Repeater
 }
 
 func (p *pool) Execute() error {
 	log.Debug().Msgf("executing %d job(s) with %d worker(s)", len(p.items), p.NumWorkers())
 
 	p.addJobsToQueue()
-	p.summarizer.start()
+	p.logSummarizer.Start()
 
 	for i := 0; i < p.NumWorkers(); i++ {
 		p.spawnWorker(i)
@@ -114,7 +115,7 @@ func (p *pool) Execute() error {
 
 	// wait for execution to finish
 	p.waitGroup.Wait()
-	p.summarizer.stop()
+	p.logSummarizer.Stop()
 
 	return p.aggregateErrors()
 }

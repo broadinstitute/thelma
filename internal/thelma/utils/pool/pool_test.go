@@ -45,8 +45,8 @@ func Test_SingleJobWithCustomStatusReporter(t *testing.T) {
 	}
 
 	require.NoError(t, New([]Job{job}, func(options *Options) {
-		options.Summarizer.Enabled = true
-		options.Summarizer.Interval = 5 * time.Millisecond
+		options.LogSummarizer.Enabled = true
+		options.LogSummarizer.Interval = 5 * time.Millisecond
 	}).Execute())
 }
 

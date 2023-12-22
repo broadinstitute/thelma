@@ -77,7 +77,7 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 
 			err = pool.New(jobs, func(o *pool.Options) {
 				o.NumWorkers = opts.RegistrationParallelism
-				o.Summarizer.Enabled = true
+				o.LogSummarizer.Enabled = true
 				o.Metrics.Enabled = false
 				o.StopProcessingOnError = !opts.Force
 			}).Execute()
