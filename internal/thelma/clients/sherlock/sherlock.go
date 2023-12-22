@@ -66,12 +66,20 @@ func NewClient(options ...Option) (Client, error) {
 	transport := httptransport.New(hostname, "", []string{scheme})
 	transport.DefaultAuthentication = makeClientAuthWriter(opts.IapTokenProvider, opts.GhaOidcTokenProvider)
 
-	return &clientImpl{client: client.New(transport, strfmt.Default)}, nil
+	return &clientImpl{
+		client:                      client.New(transport, strfmt.Default),
+		ghaOidcTokenProviderIsHappy: credentials.IsTokenProviderHappy(opts.GhaOidcTokenProvider),
+	}, nil
 }
 
 // clientImpl contains an API client for a remote sherlock server. It implements Client.
 type clientImpl struct {
 	client *client.Sherlock
+	// ghaOidcTokenProviderIsHappy helps control whether GHA-only behavior should short-circuit
+	// (currently ChartReleaseStatusUpdater) should short-circuit or not. We store this as state
+	// on the clientImpl so the same Client will be consistent about whether it short-circuits or
+	// not.
+	ghaOidcTokenProviderIsHappy bool
 }
 
 // sherlock client lib expects host and scheme as separate input values but
