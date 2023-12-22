@@ -3,6 +3,7 @@ package sync
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
@@ -22,16 +23,18 @@ type Sync interface {
 	Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
 }
 
-func New(argocd argocd.ArgoCD, status status.Reporter) Sync {
+func New(argocd argocd.ArgoCD, status status.Reporter, sherlockUpdater sherlock.ChartReleaseStatusUpdater) Sync {
 	return &syncer{
-		argocd: argocd,
-		status: status,
+		argocd:          argocd,
+		status:          status,
+		sherlockUpdater: sherlockUpdater,
 	}
 }
 
 type syncer struct {
-	argocd argocd.ArgoCD
-	status status.Reporter
+	argocd          argocd.ArgoCD
+	status          status.Reporter
+	sherlockUpdater sherlock.ChartReleaseStatusUpdater
 }
 
 // Sync a set of releases and return a status report indicating whether the release is healthy.
@@ -58,7 +61,8 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 		}
 
 		jobs = append(jobs, pool.Job{
-			Name: jobName,
+			Name:             jobName,
+			ChartReleaseName: release.FullName(),
 			Run: func(statusReporter pool.StatusReporter) error {
 				opts := withOption(optionsNoWaitHealthy, func(options *argocd.SyncOptions) {
 					options.StatusReporter = statusReporter
@@ -91,6 +95,12 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 		if hasSingleDestination {
 			options.LogSummarizer.Footer = fmt.Sprintf("Check status in ArgoCD at %s", s.argocd.DestinationURL(destination))
 		}
+
+		// This is safe to always enable because the Sherlock package will no-op the
+		// call if we aren't running in GitHub Actions (and thus won't have a CiRun for
+		// Sherlock to record our info in).
+		options.ChartReleaseSummarizer.Enabled = true
+		options.ChartReleaseSummarizer.Do = s.sherlockUpdater.UpdateChartReleaseStatuses
 
 		options.Metrics.Enabled = true
 		options.Metrics.PoolName = "ops_sync"

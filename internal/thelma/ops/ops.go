@@ -53,5 +53,10 @@ func (o *ops) Sync() (sync.Sync, error) {
 	if err != nil {
 		return nil, err
 	}
-	return sync.New(argocd, statusReporter), nil
+
+	sherlock, err := o.clients.Sherlock()
+	if err != nil {
+		return nil, err
+	}
+	return sync.New(argocd, statusReporter, sherlock), nil
 }
