@@ -23,15 +23,12 @@ func (c *clientImpl) UpdateChartReleaseStatuses(chartReleaseStatuses map[string]
 	); err != nil {
 		log.Warn().Err(err).Msg("failed to report chart release statuses to Sherlock; this will manifest as incomplete/misleading info in Slack and Beehive")
 		return err
-	} else if created == nil {
+	} else if created == nil || created.Payload == nil {
 		log.Warn().Msg("Sherlock didn't return an error receiving chart release statuses but the response was nil; this is perhaps an issue with the client library")
-		return nil
-	} else if payload := created.Payload; payload == nil {
-		log.Warn().Msg("Sherlock didn't return an error receiving chart release statuses but the response payload was nil; this is perhaps an issue with the client library")
 		return nil
 	} else {
 		var chartReleasesWithStatuses, changesetsWithStatuses int
-		for _, relatedResource := range payload.RelatedResources {
+		for _, relatedResource := range created.Payload.RelatedResources {
 			if relatedResource != nil && relatedResource.ResourceStatus != "" {
 				switch relatedResource.ResourceType {
 				case "chart-release":
@@ -41,7 +38,7 @@ func (c *clientImpl) UpdateChartReleaseStatuses(chartReleaseStatuses map[string]
 				}
 			}
 		}
-		log.Debug().Msgf("Sherlock CiRun %d updated; now providing custom statuses for %d chart releases and %d changesets", payload.ID, chartReleasesWithStatuses, changesetsWithStatuses)
+		log.Debug().Msgf("Sherlock CiRun %d updated; now providing custom statuses for %d chart releases and %d changesets", created.Payload.ID, chartReleasesWithStatuses, changesetsWithStatuses)
 		return nil
 	}
 }
