@@ -6,7 +6,9 @@ import (
 	syncmocks "github.com/broadinstitute/thelma/internal/thelma/ops/sync/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
+	"github.com/stretchr/testify/mock"
 	"os"
+	"sort"
 
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
@@ -134,11 +136,16 @@ sherlock:
 	publisher.EXPECT().Publish().Return(6, nil)
 
 	syncer.EXPECT().Sync(
-		[]terra.Release{
-			statefixture.Release("agora", "dev"),
-			statefixture.Release("sam", "dev"),
-			statefixture.Release("yale", "terra-dev"),
-		}, 30).
+		mock.MatchedBy(func(releases []terra.Release) bool {
+			var names []string
+			for _, r := range releases {
+				names = append(names, r.FullName())
+			}
+			sort.Strings(names)
+			assert.Equal(t, []string{"agora-dev", "sam-dev", "yale-terra-dev"}, names)
+			return true
+		}),
+		30).
 		Return(nil, nil) // return nil status map since releaser does not care about sync status
 
 	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"}, "my change description")
