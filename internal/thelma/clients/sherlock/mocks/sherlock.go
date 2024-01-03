@@ -585,6 +585,48 @@ func (_c *Client_SetTerraHelmfileRefForEntireEnvironment_Call) RunAndReturn(run 
 	return _c
 }
 
+// UpdateChartReleaseStatuses provides a mock function with given fields: chartReleaseStatuses
+func (_m *Client) UpdateChartReleaseStatuses(chartReleaseStatuses map[string]string) error {
+	ret := _m.Called(chartReleaseStatuses)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(map[string]string) error); ok {
+		r0 = rf(chartReleaseStatuses)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Client_UpdateChartReleaseStatuses_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateChartReleaseStatuses'
+type Client_UpdateChartReleaseStatuses_Call struct {
+	*mock.Call
+}
+
+// UpdateChartReleaseStatuses is a helper method to define mock.On call
+//   - chartReleaseStatuses map[string]string
+func (_e *Client_Expecter) UpdateChartReleaseStatuses(chartReleaseStatuses interface{}) *Client_UpdateChartReleaseStatuses_Call {
+	return &Client_UpdateChartReleaseStatuses_Call{Call: _e.mock.On("UpdateChartReleaseStatuses", chartReleaseStatuses)}
+}
+
+func (_c *Client_UpdateChartReleaseStatuses_Call) Run(run func(chartReleaseStatuses map[string]string)) *Client_UpdateChartReleaseStatuses_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(map[string]string))
+	})
+	return _c
+}
+
+func (_c *Client_UpdateChartReleaseStatuses_Call) Return(_a0 error) *Client_UpdateChartReleaseStatuses_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Client_UpdateChartReleaseStatuses_Call) RunAndReturn(run func(map[string]string) error) *Client_UpdateChartReleaseStatuses_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateForNewChartVersion provides a mock function with given fields: chartSelector, newVersion, lastVersion, description, chartReleaseSelectors
 func (_m *Client) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error {
 	_va := make([]interface{}, len(chartReleaseSelectors))

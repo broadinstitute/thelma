@@ -201,6 +201,7 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/clients/kubernetes/testing/aliases --name StatefulSets --output=./internal/thelma/clients/kubernetes/testing/mocks --outpkg mocks --filename statefulsets.go
 	mockery --dir ./internal/thelma/clients/kubernetes/testing/aliases --name Watch --output=./internal/thelma/clients/kubernetes/testing/mocks --outpkg mocks --filename watch.go
 	mockery --dir ./internal/thelma/clients/sherlock --name ChartVersionUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_version_updater.go
+	mockery --dir ./internal/thelma/clients/sherlock --name ChartReleaseStatusUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_release_status_updater.go
 	mockery --dir ./internal/thelma/clients/sherlock --name Client --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename sherlock.go
 	mockery --dir ./internal/thelma/ops/sql/dbms --name DBMS --output=./internal/thelma/ops/sql/dbms/mocks --outpkg mocks --filename dbms.go
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Pod --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename pod.go
