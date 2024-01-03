@@ -6,26 +6,11 @@ clusters:
     project: fake-project
     location: us-central1-a
     requiresuitable: false
-  - name: terra-qa-bees
-    base: terra
-    address: https://ignored
-    project: fake-project
-    location: us-central1-a
-    requiresuitable: false
 environments:
   - name: dev
     base: live
-    template: ""
     lifecycle: static
-    uniqueresourceprefix: ""
     defaultcluster: terra-dev
-  - name: my-bee
-    base: bee
-    template: swatomation
-    lifecycle: dynamic
-    uniqueresourceprefix: abcd
-    defaultcluster: terra-qa-bees
-    requiresuitable: false
 releases:
   - fullname: agora-dev
     chart: agora
@@ -41,50 +26,3 @@ releases:
     chart: yale
     cluster: terra-dev
     namespace: yale
-#    environment: dev
-#  - fullname: sam-dev
-#    repo: terra-helm
-#    chart: sam
-#    cluster: terra-dev
-#    namespace: terra-dev
-#    environment: dev
-#    appversion: some-sha
-#    chartversion: 4.5.6
-#    subdomain: sam
-#    protocol: https
-#    port: 443
-#  - fullname: cromwell-my-bee
-#    repo: terra-helm
-#    chart: cromwell
-#    cluster: terra-qa-bees
-#    namespace: terra-my-bee
-#    environment: my-bee
-#    appversion: some-sha
-#    chartversion: 1.2.3
-#    subdomain: cromwell
-#    protocol: https
-#    port: 443
-#  - fullname: yale-terra-dev
-#    repo: terra-helm
-#    chart: yale
-#    cluster: terra-dev
-#    namespace: yale
-#    environment:
-#    appversion: some-sha
-#    chartversion: 10.11.12
-#  - fullname: yale-terra-staging
-#    repo: terra-helm
-#    chart: yale
-#    cluster: terra-staging
-#    namespace: yale
-#    environment:
-#    appversion:
-#    chartversion: 10.11.12
-#  - fullname: secrets-manager-terra-dev
-#    repo: terra-helm
-#    chart: secrets-manager
-#    cluster: terra-dev
-#    namespace: default
-#    environment:
-#    appversion:
-#    chartversion: 1.2.3
