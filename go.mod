@@ -14,7 +14,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/go-openapi/runtime v0.26.0
 	github.com/go-openapi/strfmt v0.21.8
-	github.com/go-playground/validator/v10 v10.15.5
+	github.com/go-playground/validator/v10 v10.16.0
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/hashicorp/vault/api v1.10.0
