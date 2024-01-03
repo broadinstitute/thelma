@@ -69,7 +69,7 @@ func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]*Status
 
 	_pool := pool.New(jobs, func(options *pool.Options) {
 		options.NumWorkers = 10
-		options.Summarizer.WorkDescription = "services checked"
+		options.LogSummarizer.WorkDescription = "services checked"
 	})
 	err := _pool.Execute()
 	if err != nil {

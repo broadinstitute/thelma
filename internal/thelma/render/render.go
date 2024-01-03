@@ -129,7 +129,7 @@ func (r *multiRender) renderAll(helmfileArgs *helmfile.Args) error {
 	}
 
 	_pool := pool.New(jobs, func(options *pool.Options) {
-		options.Summarizer.Enabled = false
+		options.LogSummarizer.Enabled = false
 
 		if r.options.ParallelWorkers >= 1 {
 			options.NumWorkers = r.options.ParallelWorkers

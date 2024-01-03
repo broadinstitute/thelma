@@ -124,7 +124,7 @@ func (s *seeder) seedStep2RegisterSaProfiles(appReleases map[string]terra.AppRel
 
 		err := pool.New(jobs, func(o *pool.Options) {
 			o.NumWorkers = opts.RegistrationParallelism
-			o.Summarizer.Enabled = true
+			o.LogSummarizer.Enabled = true
 			o.Metrics.Enabled = false
 			o.StopProcessingOnError = !opts.Force
 		}).Execute()
