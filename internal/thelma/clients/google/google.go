@@ -352,7 +352,11 @@ func (c *clientsImpl) IdTokenGenerator(audience string, serviceAccountChain ...s
 	return func() ([]byte, error) {
 		resp, err := serviceAccountService.GenerateIdToken(serviceAccountChain[0], idTokenRequest).Do()
 		if err != nil {
-			return nil, errors.Errorf("error generating ID token: %v", err)
+			if userinfo, err2 := c.GoogleUserinfo(); err2 != nil {
+				return nil, errors.Errorf("error generating ID token for %s, and couldn't identify caller (GoogleUserinfo() = %v): %v", serviceAccountChain[0], err2, err)
+			} else {
+				return nil, errors.Errorf("error generating ID token for %s (called by %s): %v", serviceAccountChain[0], userinfo.Email, err)
+			}
 		}
 		return []byte(resp.Token), nil
 	}, nil
