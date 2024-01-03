@@ -72,7 +72,7 @@ func (c *clients) Google(options ...google.Option) google.Clients {
 }
 
 func (c *clients) IAP() (credentials.TokenProvider, error) {
-	return iap.TokenProvider(c.thelmaConfig, c.creds, c.Vault, c.runner)
+	return iap.TokenProvider(c.thelmaConfig, c.creds, c.Vault, c.Google, c.runner)
 }
 
 func (c *clients) IAPToken() (string, error) {

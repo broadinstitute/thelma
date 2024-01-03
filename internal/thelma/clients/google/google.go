@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	oauth2google "golang.org/x/oauth2/google"
+	"google.golang.org/api/iamcredentials/v1"
 	googleoauth "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
 	googlesqladmin "google.golang.org/api/sqladmin/v1"
@@ -34,6 +35,8 @@ type Clients interface {
 	SqlAdmin() (sqladmin.Client, error)
 	// TokenSource returns an oauth TokenSource for this client factory's configured identity
 	TokenSource() (oauth2.TokenSource, error)
+	// IdTokenGenerator returns a function suitable to be an issueFn for credentials.TokenProvider
+	IdTokenGenerator(audience string, serviceAccountChain ...string) (func() ([]byte, error), error)
 }
 
 type Options struct {
@@ -53,6 +56,8 @@ type Option func(*Options)
 const configKey = "google"
 
 const broadEmailSuffix = "@broadinstitute.org"
+const serviceAccountEmailSuffix = ".iam.gserviceaccount.com"
+const serviceAccountResourceNamePrefix = "projects/-/serviceAccounts/"
 
 var tokenScopes = []string{
 	"https://www.googleapis.com/auth/cloud-platform",
@@ -293,4 +298,66 @@ func (c *clientsImpl) SqlAdmin() (sqladmin.Client, error) {
 		return nil, err
 	}
 	return sqladmin.New(client), nil
+}
+
+// IdTokenGenerator returns a function to generate ID tokens of a service account for a
+// given audience.
+//
+// When no serviceAccountChain is provided, the authenticated identity will be used
+// (an error will be returned if the identity is not a service account).
+// When a serviceAccountChain is provided, the last entry will be the name passed
+// in the request, with each one before that in order being given as the delegate
+// chain.
+// See https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateIdToken
+func (c *clientsImpl) IdTokenGenerator(audience string, serviceAccountChain ...string) (func() ([]byte, error), error) {
+	if len(serviceAccountChain) == 0 {
+		log.Trace().Msg("IdTokenGenerator called with no service account chain; using authenticated identity")
+		userinfo, err := c.GoogleUserinfo()
+		if err != nil {
+			return nil, err
+		}
+		serviceAccountChain = []string{userinfo.Email}
+	}
+	for i := 0; i < len(serviceAccountChain); i++ {
+		if !strings.HasSuffix(serviceAccountChain[i], serviceAccountEmailSuffix) {
+			return nil, errors.Errorf("IdTokenGenerator called with non-service-account email %q", serviceAccountChain[i])
+		} else if !strings.HasPrefix(serviceAccountChain[i], serviceAccountResourceNamePrefix) {
+			// Both the name and the delegates need to be in "resource name" format,
+			// so we add that prefix if it is missing
+			serviceAccountChain[i] = serviceAccountResourceNamePrefix + serviceAccountChain[i]
+		}
+	}
+
+	clientOptions, err := c.googleClientOptions(false)
+	if err != nil {
+		return nil, err
+	}
+	iamcredentialsService, err := iamcredentials.NewService(context.Background(), clientOptions...)
+	if err != nil {
+		return nil, errors.Errorf("error initializing iamcredentials service: %v", err)
+	}
+	serviceAccountService := iamcredentials.NewProjectsServiceAccountsService(iamcredentialsService)
+	idTokenRequest := &iamcredentials.GenerateIdTokenRequest{
+		Audience:     audience,
+		IncludeEmail: true,
+		Delegates:    serviceAccountChain[1:],
+	}
+	requestJson, err := idTokenRequest.MarshalJSON()
+	if err != nil {
+		log.Warn().Err(err).Msg("error marshaling ID token request to JSON")
+	} else {
+		log.Trace().RawJSON("request", requestJson).Str("name", serviceAccountChain[0]).Msg("performing ID token request")
+	}
+
+	return func() ([]byte, error) {
+		resp, err := serviceAccountService.GenerateIdToken(serviceAccountChain[0], idTokenRequest).Do()
+		if err != nil {
+			if userinfo, err2 := c.GoogleUserinfo(); err2 != nil {
+				return nil, errors.Errorf("error generating ID token for %s, and couldn't identify caller (GoogleUserinfo() = %v): %v", serviceAccountChain[0], err2, err)
+			} else {
+				return nil, errors.Errorf("error generating ID token for %s (called by %s): %v", serviceAccountChain[0], userinfo.Email, err)
+			}
+		}
+		return []byte(resp.Token), nil
+	}, nil
 }
