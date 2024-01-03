@@ -13,7 +13,6 @@ func TestChartReleaseUpdater(t *testing.T) {
 	t.Run("gha oidc unhappy", func(t *testing.T) {
 		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.Fail()
-			return
 		}))
 		defer mockSherlockServer.Close()
 		client, err := NewClient(func(options *Options) {
