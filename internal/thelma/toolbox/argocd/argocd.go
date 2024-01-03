@@ -3,6 +3,12 @@ package argocd
 import (
 	"bytes"
 	"fmt"
+	"net/url"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -15,11 +21,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"net/url"
-	"regexp"
-	"sort"
-	"strings"
-	"time"
 )
 
 const prog = `argocd`
@@ -446,6 +447,14 @@ func (a *argocd) DestinationURL(d terra.Destination) string {
 	u.Path = "/applications"
 
 	labels := make(map[string]string)
+
+	// We have seen a few transient cases where the terra.Destination parameter is nil, resulting in a SIGSEGV.
+	// This is a defensive check to prevent a panic in that case.
+	// This function is only used for logging, so it's not a big deal if we return an empty URL.
+	if d == nil {
+		log.Warn().Msgf("Destination is nil when generating argocd url, returning empty URL")
+		return ""
+	}
 
 	if d.IsEnvironment() {
 		labels["env"] = d.Name()
