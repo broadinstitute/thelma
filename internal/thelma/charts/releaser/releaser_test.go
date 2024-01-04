@@ -3,6 +3,12 @@ package releaser
 import (
 	publishmocks "github.com/broadinstitute/thelma/internal/thelma/charts/publish/mocks"
 	indexmocks "github.com/broadinstitute/thelma/internal/thelma/charts/repo/index/mocks"
+	syncmocks "github.com/broadinstitute/thelma/internal/thelma/ops/sync/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
+	"github.com/stretchr/testify/mock"
+	"os"
+	"sort"
 
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
@@ -20,7 +26,14 @@ func Test_ChartReleaser(t *testing.T) {
 	publisher.EXPECT().Index().Return(index)
 	publisher.EXPECT().ChartDir().Return(dir)
 	updater := &DeployedVersionUpdater{}
-	releaser := NewChartReleaser(chartsDir, publisher, updater)
+	statefixture, err := statefixtures.LoadFixtureFromFile("testdata/statefixture.yaml")
+	require.NoError(t, err)
+	syncer := syncmocks.NewSync(t)
+
+	require.NoError(t, err)
+	releaser := NewChartReleaser(chartsDir, publisher, updater, syncer, statefixture.Mocks().State)
+
+	fakeHome := t.TempDir()
 
 	chartsDir.EXPECT().Exists("mysql").Return(true)
 	chartsDir.EXPECT().Exists("foundation").Return(true)
@@ -28,7 +41,7 @@ func Test_ChartReleaser(t *testing.T) {
 
 	mysql := sourcemocks.NewChart(t)
 	mysql.EXPECT().Name().Return("mysql")
-	mysql.EXPECT().Path().Return("charts/mysql")
+	mysql.EXPECT().Path().Return(fakeHome + "/charts/mysql")
 	chartsDir.EXPECT().GetChart("mysql").Return(mysql, nil)
 	index.EXPECT().MostRecentVersion("mysql").Return("1.2.3")
 	mysql.EXPECT().BumpChartVersion("1.2.3").Return("1.3.0", nil)
@@ -38,7 +51,7 @@ func Test_ChartReleaser(t *testing.T) {
 
 	yale := sourcemocks.NewChart(t)
 	yale.EXPECT().Name().Return("yale")
-	yale.EXPECT().Path().Return("charts/yale")
+	yale.EXPECT().Path().Return(fakeHome + "charts/yale")
 	chartsDir.EXPECT().GetChart("yale").Return(yale, nil)
 	index.EXPECT().MostRecentVersion("yale").Return("0.23.4")
 	yale.EXPECT().BumpChartVersion("0.23.4").Return("0.24.0", nil)
@@ -46,9 +59,17 @@ func Test_ChartReleaser(t *testing.T) {
 	yale.EXPECT().GenerateDocs().Return(nil)
 	yale.EXPECT().PackageChart(dir).Return(nil)
 
+	// write a custom autorelease config for Yale
+	require.NoError(t, os.MkdirAll(fakeHome+"charts/yale", 0755))
+	require.NoError(t, os.WriteFile(fakeHome+"charts/yale/.autorelease.yaml", []byte(`
+sherlock:
+  chartReleasesToUseLatest:
+    - yale-terra-dev
+`), 0644))
+
 	foundation := sourcemocks.NewChart(t)
 	foundation.EXPECT().Name().Return("foundation")
-	foundation.EXPECT().Path().Return("charts/foundation")
+	foundation.EXPECT().Path().Return(fakeHome + "charts/foundation")
 	chartsDir.EXPECT().GetChart("foundation").Return(foundation, nil)
 	index.EXPECT().MostRecentVersion("foundation").Return("1.30.5")
 	foundation.EXPECT().BumpChartVersion("1.30.5").Return("1.31.0", nil)
@@ -58,7 +79,7 @@ func Test_ChartReleaser(t *testing.T) {
 
 	agora := sourcemocks.NewChart(t)
 	agora.EXPECT().Name().Return("agora")
-	agora.EXPECT().Path().Return("charts/agora")
+	agora.EXPECT().Path().Return(fakeHome + "charts/agora")
 	chartsDir.EXPECT().GetChart("agora").Return(agora, nil)
 	index.EXPECT().MostRecentVersion("agora").Return("11.12.13")
 	agora.EXPECT().BumpChartVersion("11.12.13").Return("11.13.0", nil)
@@ -68,7 +89,7 @@ func Test_ChartReleaser(t *testing.T) {
 
 	sam := sourcemocks.NewChart(t)
 	sam.EXPECT().Name().Return("sam")
-	sam.EXPECT().Path().Return("charts/sam")
+	sam.EXPECT().Path().Return(fakeHome + "charts/sam")
 	chartsDir.EXPECT().GetChart("sam").Return(sam, nil)
 	index.EXPECT().MostRecentVersion("sam").Return("1.0.0")
 	sam.EXPECT().BumpChartVersion("1.0.0").Return("1.1.0", nil)
@@ -78,7 +99,7 @@ func Test_ChartReleaser(t *testing.T) {
 
 	bpm := sourcemocks.NewChart(t)
 	bpm.EXPECT().Name().Return("bpm")
-	bpm.EXPECT().Path().Return("charts/bpm")
+	bpm.EXPECT().Path().Return(fakeHome + "charts/bpm")
 	chartsDir.EXPECT().GetChart("bpm").Return(bpm, nil)
 	index.EXPECT().MostRecentVersion("bpm").Return("2.13.0")
 	bpm.EXPECT().BumpChartVersion("2.13.0").Return("2.14.0", nil)
@@ -113,6 +134,19 @@ func Test_ChartReleaser(t *testing.T) {
 	chartsDir.EXPECT().RecursivelyUpdateDependencies(mysql, foundation, yale, agora, sam, bpm).Return(nil)
 
 	publisher.EXPECT().Publish().Return(6, nil)
+
+	syncer.EXPECT().Sync(
+		mock.MatchedBy(func(releases []terra.Release) bool {
+			var names []string
+			for _, r := range releases {
+				names = append(names, r.FullName())
+			}
+			sort.Strings(names)
+			assert.Equal(t, []string{"agora-dev", "sam-dev", "yale-terra-dev"}, names)
+			return true
+		}),
+		30).
+		Return(nil, nil) // return nil status map since releaser does not care about sync status
 
 	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"}, "my change description")
 	require.NoError(t, err)
