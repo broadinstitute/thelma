@@ -207,7 +207,6 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Pod --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename pod.go
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Runner --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename runner.go
 	mockery --dir ./internal/thelma/ops/sql/provider --name Provider --output=./internal/thelma/ops/sql/provider/mocks --outpkg mocks --filename provider.go
-	mockery --dir ./internal/thelma/ops/sync --name Sync --output=./internal/thelma/ops/sync/mocks --outpkg mocks --filename sync.go
 	mockery --dir ./internal/thelma/state/api/terra --name AppRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename app_release.go
 	mockery --dir ./internal/thelma/state/api/terra --name AutoDelete --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename auto_delete.go
 	mockery --dir ./internal/thelma/state/api/terra --name Cluster --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster.go

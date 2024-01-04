@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -32,7 +33,8 @@ type config struct {
 	// Release is "legacy" config for chart version autoreleases. It is all that gitops versioning can pay attention
 	// to, and sherlock versioning will pay attention to it if its own Sherlock config isn't provided.
 	Release struct {
-		Name string `yaml:"name"` // name of the "release", defaults to chart name
+		Name string            `yaml:"name"` // name of the "release", defaults to chart name
+		Type terra.ReleaseType `yaml:"type"` // either "app" or "cluster", defaults to app
 	} `yaml:"release"`
 
 	// Sherlock is config for chart version autoreleases using the sherlock versioning system.
@@ -40,23 +42,22 @@ type config struct {
 	// The older Release configuration will still be used to configure the chart name. If this Sherlock config isn't
 	// provided at all, there is soft-fail default behavior to try to update the dev instance of the chart.
 	Sherlock struct {
-		// ChartReleasesToUseLatest is a list of chart release names, like "agora-dev" or "yale-terra-prod".
-		//
+		// ChartReleasesToUseLatest is a list of chart release selectors that will be resolved directly by sherlock.
 		// If this chart has a new version autoreleased and that new version was successfully reported to sherlock,
 		// all chart releases in this list will be set to use sherlock's current latest chart version (which should
 		// be the new version, barring reruns or other double-send issues that sherlock will resolve).
 		//
 		// If this isn't provided, the default behavior takes effect. This field implicitly gets a value of
-		// "<chart>-dev" in soft-fail mode, which means "if an instance of this chart exists in the dev environment,
+		// "dev/<chart>" in soft-fail mode, which means "if an instance of this chart exists in the dev environment,
 		// set it to use latest."
 		ChartReleasesToUseLatest []string `yaml:"chartReleasesToUseLatest"`
 	} `yaml:"sherlock"`
 }
 
-func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVersion string, lastVersion string, description string) ([]string, error) {
+func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVersion string, lastVersion string, description string) error {
 	cfg := loadConfig(chart)
 	if !cfg.Enabled {
-		return nil, nil
+		return nil
 	}
 
 	var sherlockTargetChartReleases []string
@@ -65,7 +66,7 @@ func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVer
 		sherlockTargetChartReleases = cfg.Sherlock.ChartReleasesToUseLatest
 		sherlockCanAlwaysSoftFail = false
 	} else {
-		sherlockTargetChartReleases = []string{fmt.Sprintf("%s-%s", cfg.Release.Name, targetEnvironment)}
+		sherlockTargetChartReleases = []string{fmt.Sprintf("%s/%s", targetEnvironment, cfg.Release.Name)}
 		sherlockCanAlwaysSoftFail = true
 	}
 	for index, sherlockUpdater := range a.SherlockUpdaters {
@@ -75,7 +76,7 @@ func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVer
 			if sherlockCanAlwaysSoftFail {
 				log.Warn().Err(err).Msgf("autorelease error on sherlock updater %d: %v", index, err)
 			} else {
-				return nil, errors.Errorf("autorelease error on sherlock updater %d: %v", index, err)
+				return errors.Errorf("autorelease error on sherlock updater %d: %v", index, err)
 			}
 		}
 	}
@@ -87,7 +88,7 @@ func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVer
 		}
 	}
 
-	return sherlockTargetChartReleases, nil
+	return nil
 }
 
 // load .autorelease.yaml config file from chart source directory if it exists
@@ -97,6 +98,7 @@ func loadConfig(chart source.Chart) config {
 	// Set defaults
 	cfg.Enabled = true
 	cfg.Release.Name = chart.Name()
+	cfg.Release.Type = terra.AppReleaseType
 
 	file := path.Join(chart.Path(), configFile)
 	_, err := os.Stat(file)

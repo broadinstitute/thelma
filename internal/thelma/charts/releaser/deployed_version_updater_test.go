@@ -23,20 +23,18 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name               string
-		newVersion         string
-		configContent      string
-		setupMocks         func(mocks)
-		expectReleaseNames []string
-		matchErr           string
+		name          string
+		newVersion    string
+		configContent string
+		setupMocks    func(mocks)
+		matchErr      string
 	}{
 		{
 			name: "No config file should default to enabled + app release type",
 			setupMocks: func(m mocks) {
 				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
-					fmt.Sprintf("%s-%s", chartName, targetEnvironment)).Return(nil)
+					fmt.Sprintf("%s/%s", targetEnvironment, chartName)).Return(nil)
 			},
-			expectReleaseNames: []string{fmt.Sprintf("%s-%s", chartName, targetEnvironment)},
 		},
 		{
 			name:          "Should not update release version if disabled in config file",
@@ -47,18 +45,16 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			configContent: `release: {name: foo}`,
 			setupMocks: func(m mocks) {
 				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
-					fmt.Sprintf("%s-%s", "foo", targetEnvironment)).Return(nil)
+					fmt.Sprintf("%s/%s", targetEnvironment, "foo")).Return(nil)
 			},
-			expectReleaseNames: []string{fmt.Sprintf("%s-%s", "foo", targetEnvironment)},
 		},
 		{
 			name:          "Should support release type overriding",
 			configContent: `release: {type: cluster}`,
 			setupMocks: func(m mocks) {
 				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
-					fmt.Sprintf("%s-%s", chartName, targetEnvironment)).Return(nil)
+					fmt.Sprintf("%s/%s", targetEnvironment, chartName)).Return(nil)
 			},
-			expectReleaseNames: []string{fmt.Sprintf("%s-%s", chartName, targetEnvironment)},
 		},
 		{
 			name: "Should support new Sherlock configuration",
@@ -67,14 +63,13 @@ release:
   name: foo
 sherlock:
   chartReleasesToUseLatest:
-    - bar-dev
-    - baz-terra-dev
+    - dev/bar
+    - terra-dev/default/baz
 `,
 			setupMocks: func(m mocks) {
 				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
-					"bar-dev", "baz-terra-dev").Return(nil)
+					"dev/bar", "terra-dev/default/baz").Return(nil)
 			},
-			expectReleaseNames: []string{"bar-dev", "baz-terra-dev"},
 		},
 	}
 	for _, tc := range testCases {
@@ -100,18 +95,17 @@ sherlock:
 			updater := &DeployedVersionUpdater{SherlockUpdaters: []sherlock.ChartVersionUpdater{m.sherlockUpdater}}
 			// lastVersion and description are arguments handled solely on Sherlock's end, Thelma doesn't need to even
 			// validate them
-			updatedReleaseNames, err := updater.UpdateReleaseVersion(chart, newVersion, lastVersion, description)
+			err := updater.UpdateReleaseVersion(chart, newVersion, lastVersion, description)
 
 			m.sherlockUpdater.AssertExpectations(t)
 
-			if len(tc.matchErr) > 0 {
-				assert.Error(t, err)
-				assert.Regexp(t, tc.matchErr, err)
+			if len(tc.matchErr) == 0 {
+				assert.NoError(t, err)
 				return
 			}
 
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expectReleaseNames, updatedReleaseNames)
+			assert.Error(t, err)
+			assert.Regexp(t, tc.matchErr, err)
 		})
 	}
 }
