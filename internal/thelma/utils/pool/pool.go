@@ -24,6 +24,10 @@ type Options struct {
 	StopProcessingOnError bool
 	// LogSummarizer options for printing periodic processing summaries to the log
 	LogSummarizer LogSummarizerOptions
+	// ChartReleaseSummarizer can be optionally set to if the jobs statuses are chart release
+	// statuses that should be further summarized/reported. Note that only Jobs with a
+	// ChartReleaseName set will be summarized in this way.
+	ChartReleaseSummarizer ChartReleaseSummarizerOptions
 	// Metrics options for recording metrics
 	Metrics MetricsOptions
 }
@@ -39,6 +43,11 @@ type MetricsOptions struct {
 type Job struct {
 	// Name is a short text description for this job to use in log messages
 	Name string
+	// ChartReleaseName is an optional full name of the chart release as understood
+	// by Sherlock (in other words, the canonical globally-unique name for the
+	// chart release, like "leonardo-dev"). This must be set for the job to be
+	// summarized by a configured ChartReleaseSummarizer.
+	ChartReleaseName string
 	// Run function that performs work
 	Run func(StatusReporter) error
 	// Labels optional set of metric labels to add to job metrics
@@ -65,6 +74,10 @@ func New(jobs []Job, options ...Option) Pool {
 			Footer:          "",
 			MaxLineItems:    50,
 		},
+		ChartReleaseSummarizer: ChartReleaseSummarizerOptions{
+			Enabled:  false,
+			Interval: 30 * time.Second,
+		},
 		Metrics: MetricsOptions{
 			Enabled:  false,
 			PoolName: "unknown",
@@ -90,6 +103,7 @@ func New(jobs []Job, options ...Option) Pool {
 		cancelCtx:              cancelCtx,
 		cancelFn:               cancelFn,
 		logSummarizer:          newLogSummarizer(items, opts.LogSummarizer),
+		chartReleaseSummarizer: newChartReleaseSummarizer(items, opts.ChartReleaseSummarizer),
 	}
 }
 
@@ -101,6 +115,7 @@ type pool struct {
 	cancelCtx              context.Context
 	cancelFn               context.CancelFunc
 	logSummarizer          repeater.Repeater
+	chartReleaseSummarizer repeater.Repeater
 }
 
 func (p *pool) Execute() error {
@@ -108,6 +123,7 @@ func (p *pool) Execute() error {
 
 	p.addJobsToQueue()
 	p.logSummarizer.Start()
+	p.chartReleaseSummarizer.Start()
 
 	for i := 0; i < p.NumWorkers(); i++ {
 		p.spawnWorker(i)
@@ -116,6 +132,7 @@ func (p *pool) Execute() error {
 	// wait for execution to finish
 	p.waitGroup.Wait()
 	p.logSummarizer.Stop()
+	p.chartReleaseSummarizer.Stop()
 
 	return p.aggregateErrors()
 }

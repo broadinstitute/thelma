@@ -29,7 +29,7 @@ func (cmd *statusCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cmd.selector.AddFlags(cobraCommand)
 }
 
-func (cmd *statusCommand) PreRun(app app.ThelmaApp, _ cli.RunContext) error {
+func (cmd *statusCommand) PreRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	return nil
 }
 
@@ -44,11 +44,11 @@ func (cmd *statusCommand) Run(app app.ThelmaApp, rc cli.RunContext) error {
 		return err
 	}
 
-	reporter, err := app.Ops().Status()
+	statusReader, err := app.Ops().Status()
 	if err != nil {
 		return err
 	}
-	statuses, err := reporter.Statuses(releases)
+	statuses, err := statusReader.Statuses(releases)
 	if err != nil {
 		return err
 	}
