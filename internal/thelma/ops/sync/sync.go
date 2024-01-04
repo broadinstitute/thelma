@@ -23,17 +23,17 @@ type Sync interface {
 	Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
 }
 
-func New(argocd argocd.ArgoCD, status status.Reporter, sherlockUpdater sherlock.ChartReleaseStatusUpdater) Sync {
+func New(argocd argocd.ArgoCD, statusReader status.Reader, sherlockUpdater sherlock.ChartReleaseStatusUpdater) Sync {
 	return &syncer{
 		argocd:          argocd,
-		status:          status,
+		statusReader:    statusReader,
 		sherlockUpdater: sherlockUpdater,
 	}
 }
 
 type syncer struct {
 	argocd          argocd.ArgoCD
-	status          status.Reporter
+	statusReader    status.Reader
 	sherlockUpdater sherlock.ChartReleaseStatusUpdater
 }
 
@@ -119,7 +119,7 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 // the application does not become healthy within the timeout:
 // .     we return the status report + a timeout error
 func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statusReporter pool.StatusReporter) (*status.Status, error) {
-	lastStatus, err := s.status.Status(release)
+	lastStatus, err := s.statusReader.Status(release)
 	if err != nil {
 		// we failed to retrieve status, so return an error
 		return nil, err
@@ -143,7 +143,7 @@ func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statu
 			case <-timeout:
 				return lastStatus, errors.Errorf("timed out waiting for healthy (%s)", lastStatus.Headline())
 			case <-ticker.C:
-				lastStatus, err = s.status.Status(release)
+				lastStatus, err = s.statusReader.Status(release)
 				if err != nil {
 					return nil, err
 				}

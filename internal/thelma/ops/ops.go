@@ -13,7 +13,7 @@ import (
 type Ops interface {
 	Logs() logs.Logs
 	Sql() sql.Sql
-	Status() (status.Reporter, error)
+	Status() (status.Reader, error)
 	Sync() (sync.Sync, error)
 }
 
@@ -35,7 +35,7 @@ func (o *ops) Sql() sql.Sql {
 	return sql.New(o.clients)
 }
 
-func (o *ops) Status() (status.Reporter, error) {
+func (o *ops) Status() (status.Reader, error) {
 	argocd, err := o.clients.ArgoCD()
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (o *ops) Sync() (sync.Sync, error) {
 		return nil, err
 	}
 
-	statusReporter, err := o.Status()
+	statusReader, err := o.Status()
 	if err != nil {
 		return nil, err
 	}
@@ -58,5 +58,5 @@ func (o *ops) Sync() (sync.Sync, error) {
 	if err != nil {
 		return nil, err
 	}
-	return sync.New(argocd, statusReporter, sherlock), nil
+	return sync.New(argocd, statusReader, sherlock), nil
 }
