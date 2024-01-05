@@ -189,12 +189,12 @@ func BrowserLogin(thelmaConfig config.Config, shellRunner shell.Runner, iapToken
 }
 
 // New return a new ArgoCD client
-func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (ArgoCD, error) {
-	return newArgocd(thelmaConfig, shellRunner, iapToken, vaultClient)
+func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (ArgoCD, error) {
+	return newArgocd(thelmaConfig, shellRunner, iapToken, vaultClientFactory)
 }
 
 // private constructor used in tests
-func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (*argocd, error) {
+func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (*argocd, error) {
 	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
 	if err != nil {
 		return nil, err
@@ -203,6 +203,10 @@ func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken st
 	if os.Getenv(envVars.token) != "" {
 		log.Info().Msgf("Env var %s is set; will be used to to authenticate ArgoCD CLI commands", envVars.token)
 	} else if a.cfg.Vault.Enabled {
+		vaultClient, err := vaultClientFactory()
+		if err != nil {
+			return nil, errors.Errorf("argocd: failed to instantiate Vault client: %v", err)
+		}
 		token, err := readTokenFromVault(a.cfg, vaultClient)
 		if err != nil {
 			return nil, err
