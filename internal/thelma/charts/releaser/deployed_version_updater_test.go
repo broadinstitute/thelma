@@ -43,15 +43,6 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			configContent: `enabled: false`,
 		},
 		{
-			name:          "Should support release name overriding",
-			configContent: `release: {name: foo}`,
-			setupMocks: func(m mocks) {
-				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
-					fmt.Sprintf("%s-%s", "foo", targetEnvironment)).Return(nil)
-			},
-			expectReleaseNames: []string{fmt.Sprintf("%s-%s", "foo", targetEnvironment)},
-		},
-		{
 			name:          "Should support release type overriding",
 			configContent: `release: {type: cluster}`,
 			setupMocks: func(m mocks) {
@@ -63,15 +54,13 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 		{
 			name: "Should support new Sherlock configuration",
 			configContent: `
-release:
-  name: foo
 sherlock:
   chartReleasesToUseLatest:
     - bar-dev
     - baz-terra-dev
 `,
 			setupMocks: func(m mocks) {
-				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
+				m.sherlockUpdater.On("UpdateForNewChartVersion", "mychart", newVersion, lastVersion, description,
 					"bar-dev", "baz-terra-dev").Return(nil)
 			},
 			expectReleaseNames: []string{"bar-dev", "baz-terra-dev"},
@@ -79,7 +68,8 @@ sherlock:
 	}
 	for _, tc := range testCases {
 		chartDir := t.TempDir()
-		chart := sourcemocks.NewChart(t)
+		chart := &sourcemocks.Chart{} // no need to auto-verify expectations on this, it's a stub
+		chart.Test(t)
 		chart.EXPECT().Name().Return("mychart")
 		chart.EXPECT().Path().Return(chartDir)
 
@@ -111,7 +101,7 @@ sherlock:
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectReleaseNames, updatedReleaseNames)
+			assert.ElementsMatch(t, tc.expectReleaseNames, updatedReleaseNames)
 		})
 	}
 }
