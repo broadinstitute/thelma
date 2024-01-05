@@ -27,18 +27,14 @@ type DeployedVersionUpdater struct {
 
 // Struct for parsing an autorelease.yaml config file
 type config struct {
-	Enabled bool `yaml:"enabled"` // whether updates to this chart should be added to release train. defaults to true
-
-	// Release is "legacy" config for chart version autoreleases. It is all that gitops versioning can pay attention
-	// to, and sherlock versioning will pay attention to it if its own Sherlock config isn't provided.
-	Release struct {
-		Name string `yaml:"name"` // name of the "release", defaults to chart name
-	} `yaml:"release"`
+	// Enabled defaults to true; set explicitly to false to disable autoreleases, i.e
+	// don't automatically update any chart releases for this chart when a new version is published
+	Enabled bool `yaml:"enabled"`
 
 	// Sherlock is config for chart version autoreleases using the sherlock versioning system.
 	//
-	// The older Release configuration will still be used to configure the chart name. If this Sherlock config isn't
-	// provided at all, there is soft-fail default behavior to try to update the dev instance of the chart.
+	// If this Sherlock config isn't provided at all, there is soft-fail default behavior to try to update the
+	// dev instance of the chart.
 	Sherlock struct {
 		// ChartReleasesToUseLatest is a list of chart release names, like "agora-dev" or "yale-terra-prod".
 		//
@@ -65,12 +61,12 @@ func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVer
 		sherlockTargetChartReleases = cfg.Sherlock.ChartReleasesToUseLatest
 		sherlockCanAlwaysSoftFail = false
 	} else {
-		sherlockTargetChartReleases = []string{fmt.Sprintf("%s-%s", cfg.Release.Name, targetEnvironment)}
+		sherlockTargetChartReleases = []string{fmt.Sprintf("%s-%s", chart.Name(), targetEnvironment)}
 		sherlockCanAlwaysSoftFail = true
 	}
 	for index, sherlockUpdater := range a.SherlockUpdaters {
 		err := sherlockUpdater.
-			UpdateForNewChartVersion(cfg.Release.Name, newVersion, lastVersion, description, sherlockTargetChartReleases...)
+			UpdateForNewChartVersion(chart.Name(), newVersion, lastVersion, description, sherlockTargetChartReleases...)
 		if err != nil {
 			if sherlockCanAlwaysSoftFail {
 				log.Warn().Err(err).Msgf("autorelease error on sherlock updater %d: %v", index, err)
@@ -81,7 +77,7 @@ func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVer
 	}
 	for index, sherlockUpdater := range a.SoftFailSherlockUpdaters {
 		err := sherlockUpdater.
-			UpdateForNewChartVersion(cfg.Release.Name, newVersion, lastVersion, description, sherlockTargetChartReleases...)
+			UpdateForNewChartVersion(chart.Name(), newVersion, lastVersion, description, sherlockTargetChartReleases...)
 		if err != nil {
 			log.Debug().Err(err).Msgf("autorelease error on sherlock soft-fail updater %d: %v", index, err)
 		}
@@ -96,7 +92,6 @@ func loadConfig(chart source.Chart) config {
 
 	// Set defaults
 	cfg.Enabled = true
-	cfg.Release.Name = chart.Name()
 
 	file := path.Join(chart.Path(), configFile)
 	_, err := os.Stat(file)
