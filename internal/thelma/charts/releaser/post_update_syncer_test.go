@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -32,41 +33,56 @@ func (suite *PostUpdateSyncerSuite) SetupTest() {
 }
 
 func (suite *PostUpdateSyncerSuite) TestDoesNotSyncIfDryRun() {
-	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, true)
+	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, Options{DryRun: true, IgnoreSyncFailure: false})
 	err := syncer.Sync([]string{"agora-dev", "sam-dev"})
 	require.NoError(suite.T(), err)
 }
 
 func (suite *PostUpdateSyncerSuite) TestDoesNotSyncIfNoReleases() {
-	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, false)
+	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, Options{DryRun: true, IgnoreSyncFailure: false})
 	err := syncer.Sync([]string{})
 	require.NoError(suite.T(), err)
 }
 
 func (suite *PostUpdateSyncerSuite) TestIgnoresReleasesMissingFromState() {
-	suite.assertSyncCalledForReleases("agora-dev", "sam-dev", "yale-terra-dev")
-	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, false)
+	suite.expectSyncFor("agora-dev", "sam-dev", "yale-terra-dev").Return(nil, nil)
+	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, Options{DryRun: false, IgnoreSyncFailure: false})
 	err := syncer.Sync([]string{"agora-dev", "sam-dev", "this-release-does-not-exist-in-state", "yale-terra-dev"})
 	require.NoError(suite.T(), err)
 }
 
 func (suite *PostUpdateSyncerSuite) TestNoSyncCallIfNoMatchingReleasesFound() {
-	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, false)
+	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, Options{DryRun: false, IgnoreSyncFailure: false})
 	err := syncer.Sync([]string{"not-in-state-1", "not-in-state-2"})
 	require.NoError(suite.T(), err)
 }
 
 func (suite *PostUpdateSyncerSuite) TestSyncsAllReleases() {
-	suite.assertSyncCalledForReleases("agora-dev", "sam-dev", "yale-terra-dev")
-	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, false)
+	suite.expectSyncFor("agora-dev", "sam-dev", "yale-terra-dev").Return(nil, nil)
+	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, Options{DryRun: false, IgnoreSyncFailure: false})
 	err := syncer.Sync([]string{"agora-dev", "sam-dev", "yale-terra-dev"})
 	require.NoError(suite.T(), err)
 }
 
-func (suite *PostUpdateSyncerSuite) assertSyncCalledForReleases(chartReleaseNames ...string) {
+func (suite *PostUpdateSyncerSuite) TestReturnsErrorIfSyncFailsAndIgnoreSyncFailureIsFalse() {
+	suite.expectSyncFor("agora-dev", "sam-dev", "yale-terra-dev").Return(nil, errors.Errorf("sync failed!"))
+	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, Options{DryRun: false, IgnoreSyncFailure: false})
+	err := syncer.Sync([]string{"agora-dev", "sam-dev", "yale-terra-dev"})
+	assert.Error(suite.T(), err)
+	assert.ErrorContains(suite.T(), err, "sync failed!")
+}
+
+func (suite *PostUpdateSyncerSuite) TestDoesNotReturnErrorIfSyncFailsAndIgnoreSyncFailureIsFalse() {
+	suite.expectSyncFor("agora-dev", "sam-dev", "yale-terra-dev").Return(nil, errors.Errorf("sync failed!"))
+	syncer := NewPostUpdateSyncer(suite.syncFactory, suite.state, Options{DryRun: false, IgnoreSyncFailure: true})
+	err := syncer.Sync([]string{"agora-dev", "sam-dev", "yale-terra-dev"})
+	require.NoError(suite.T(), err)
+}
+
+func (suite *PostUpdateSyncerSuite) expectSyncFor(chartReleaseNames ...string) *syncmocks.Sync_Sync_Call {
 	// this is annoyingly complicated because mock state does not return releases in any particular order...
 	// so we write a mock interceptor to pull the names off the releases that are passed in and then compare them
-	suite.mockSync.EXPECT().Sync(
+	return suite.mockSync.EXPECT().Sync(
 		mock.MatchedBy(func(releases []terra.Release) bool {
 			var names []string
 			for _, r := range releases {
@@ -76,7 +92,7 @@ func (suite *PostUpdateSyncerSuite) assertSyncCalledForReleases(chartReleaseName
 			return true
 		}),
 		maxParallelSync,
-	).Return(nil, nil) // we don't bother returning a fake status map because it is ignored
+	)
 }
 
 func TestPostUpdateSyncerSuite(t *testing.T) {

@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+type Options struct {
+	DryRun            bool // DryRun if true, don't actually sync
+	IgnoreSyncFailure bool // IgnoreSyncFailure if true, warn about sync failures instead of returning an error
+}
+
 // PostUpdateSyncer is a helper interface for syncing chart releases after their chart versions have been updated
 type PostUpdateSyncer interface {
 	// Sync given a list of chart release full names (eg. ["agora-dev", "yale-terra-dev"]),
@@ -15,22 +20,22 @@ type PostUpdateSyncer interface {
 	Sync(chartReleaseNames []string) error
 }
 
-func NewPostUpdateSyncer(syncFactory func() (sync.Sync, error), state terra.State, dryRun bool) PostUpdateSyncer {
+func NewPostUpdateSyncer(syncFactory func() (sync.Sync, error), state terra.State, options Options) PostUpdateSyncer {
 	return &postUpdateSyncer{
-		dryRun:      dryRun,
+		options:     options,
 		syncFactory: syncFactory,
 		state:       state,
 	}
 }
 
 type postUpdateSyncer struct {
-	dryRun      bool
+	options     Options
 	syncFactory func() (sync.Sync, error)
 	state       terra.State
 }
 
 func (p *postUpdateSyncer) Sync(chartReleaseNames []string) error {
-	if p.dryRun {
+	if p.options.DryRun {
 		log.Info().Msgf("%d chart releases to sync; skipping since this is a dry run", len(chartReleaseNames))
 		return nil
 	}
@@ -52,6 +57,10 @@ func (p *postUpdateSyncer) Sync(chartReleaseNames []string) error {
 	}
 
 	_, err = syncer.Sync(releases, maxParallelSync)
+	if err != nil && p.options.IgnoreSyncFailure {
+		log.Warn().Err(err).Msg("Sync failed; ignoring")
+		return nil
+	}
 	return err
 }
 

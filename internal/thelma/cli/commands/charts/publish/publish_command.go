@@ -50,32 +50,35 @@ const sherlockProdURL = "https://sherlock.dsp-devops.broadinstitute.org"
 const sherlockDevURL = "https://sherlock-dev.dsp-devops.broadinstitute.org"
 
 type options struct {
-	chartDir         string
-	bucketName       string
-	dryRun           bool
-	charts           []string
-	sherlock         []string
-	softFailSherlock []string
-	description      string
-	changedFilesList string
+	chartDir          string
+	bucketName        string
+	dryRun            bool
+	charts            []string
+	sherlock          []string
+	softFailSherlock  []string
+	description       string
+	changedFilesList  string
+	ignoreSyncFailure bool
 }
 
 var flagNames = struct {
-	chartDir         string
-	bucketName       string
-	dryRun           string
-	sherlock         string
-	softFailSherlock string
-	description      string
-	fileTrigger      string
+	chartDir          string
+	bucketName        string
+	dryRun            string
+	sherlock          string
+	softFailSherlock  string
+	description       string
+	changedFilesList  string
+	ignoreSyncFailure string
 }{
-	chartDir:         "chart-dir",
-	bucketName:       "bucket",
-	dryRun:           "dry-run",
-	sherlock:         "sherlock",
-	softFailSherlock: "soft-fail-sherlock",
-	description:      "description",
-	fileTrigger:      changedfiles.FlagName,
+	chartDir:          "chart-dir",
+	bucketName:        "bucket",
+	dryRun:            "dry-run",
+	sherlock:          "sherlock",
+	softFailSherlock:  "soft-fail-sherlock",
+	description:       "description",
+	changedFilesList:  changedfiles.FlagName,
+	ignoreSyncFailure: "ignore-sync-failure",
 }
 
 type publishCommand struct {
@@ -99,7 +102,8 @@ func (cmd *publishCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringSliceVar(&cmd.options.sherlock, flagNames.sherlock, []string{sherlockProdURL}, "Sherlock servers to use as versioning systems to release to")
 	cobraCommand.Flags().StringSliceVar(&cmd.options.softFailSherlock, flagNames.softFailSherlock, []string{sherlockDevURL}, "Sherlock server to use as versioning systems to release to, always using soft-fail behavior")
 	cobraCommand.Flags().StringVarP(&cmd.options.description, flagNames.description, "d", "", "The description to use for these version bumps on any Sherlock versioning systems")
-	cobraCommand.Flags().StringVarP(&cmd.options.changedFilesList, flagNames.fileTrigger, "f", "", "Path to a file trigger (see --help for more info)")
+	cobraCommand.Flags().StringVarP(&cmd.options.changedFilesList, flagNames.changedFilesList, "f", "", "Path to a file trigger (see --help for more info)")
+	cobraCommand.Flags().BoolVar(&cmd.options.ignoreSyncFailure, flagNames.ignoreSyncFailure, true, "Ignore sync failure when publishing to Sherlock")
 }
 
 func (cmd *publishCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
@@ -221,7 +225,10 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	if err != nil {
 		return nil, err
 	}
-	syncer := releaser.NewPostUpdateSyncer(app.Ops().Sync, state, options.dryRun)
+	syncer := releaser.NewPostUpdateSyncer(app.Ops().Sync, state, releaser.Options{
+		DryRun:            options.dryRun,
+		IgnoreSyncFailure: options.ignoreSyncFailure,
+	})
 
 	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher, updater, syncer)
 
