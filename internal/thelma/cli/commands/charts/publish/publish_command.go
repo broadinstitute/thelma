@@ -221,8 +221,9 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	if err != nil {
 		return nil, err
 	}
+	syncer := releaser.NewPostUpdateSyncer(app.Ops().Sync, state, options.dryRun)
 
-	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher, updater, app.Ops().Sync, state)
+	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher, updater, syncer)
 
 	chartVersions, err := chartReleaser.Release(options.charts, options.description)
 	if err != nil {

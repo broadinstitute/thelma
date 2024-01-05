@@ -5,9 +5,6 @@ package releaser
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
-	"github.com/broadinstitute/thelma/internal/thelma/ops/sync"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra/filter"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"strings"
@@ -37,22 +34,22 @@ type ChartReleaser interface {
 	Release(chartsToPublish []string, changeDescription string) (publishedVersions map[string]string, err error)
 }
 
-func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher, updater *DeployedVersionUpdater, syncFactory func() (sync.Sync, error), state terra.State) ChartReleaser {
+func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher, updater *DeployedVersionUpdater, syncer PostUpdateSyncer) ChartReleaser {
 	return &chartReleaser{
-		chartsDir:   chartsDir,
-		publisher:   publisher,
-		updater:     updater,
-		syncFactory: syncFactory,
-		state:       state,
+		chartsDir: chartsDir,
+		publisher: publisher,
+		updater:   updater,
+		syncer:    syncer,
 	}
 }
 
+// okay so - maybe we want an abstraction here for syncing the releases.
+// post_deploy_syncer - accepts a dry run parameter and clients.
 type chartReleaser struct {
-	chartsDir   source.ChartsDir
-	publisher   publish.Publisher
-	updater     *DeployedVersionUpdater
-	syncFactory func() (sync.Sync, error)
-	state       terra.State
+	chartsDir source.ChartsDir
+	publisher publish.Publisher
+	updater   *DeployedVersionUpdater
+	syncer    PostUpdateSyncer
 }
 
 type versions struct {
@@ -110,7 +107,7 @@ func (r *chartReleaser) Release(chartNames []string, description string) (map[st
 	}
 
 	// sync updated chart releases
-	if err = r.syncUpdatedChartReleases(updatedChartReleaseNames); err != nil {
+	if err = r.syncer.Sync(updatedChartReleaseNames); err != nil {
 		return nil, err
 	}
 
@@ -146,33 +143,9 @@ func (r *chartReleaser) reportNewChartVersionsToSherlock(chartVersions map[strin
 		}
 	}
 
-	log.Info().Msgf("%d chart releases were updated: %s", len(updatedReleases), strings.Join(updatedReleases, ", "))
+	log.Info().Msgf("Attempted to update %d chart releases: %s", len(updatedReleases), strings.Join(updatedReleases, ", "))
 
 	return publishedVersions, updatedReleases, nil
-}
-
-// given a list of chart release names (eg. ["agora-dev", "yale-terra-dev"]), syncUpdatedChartReleases will
-// sync the chart releases in parallel.
-func (r *chartReleaser) syncUpdatedChartReleases(chartReleaseNames []string) error {
-	if len(chartReleaseNames) == 0 {
-		log.Info().Msg("No chart releases to sync")
-		return nil
-	}
-
-	log.Info().Msgf("Syncing %d chart releases...", len(chartReleaseNames))
-
-	releases, err := r.state.Releases().Filter(filter.Releases().HasFullName(chartReleaseNames...))
-	if err != nil {
-		return errors.Errorf("deployed version updater: error getting chart releases: %v", err)
-	}
-
-	syncer, err := r.syncFactory()
-	if err != nil {
-		return errors.Errorf("deployed version updater: error creating sync wrapper: %v", err)
-	}
-	_, err = syncer.Sync(releases, maxParallelSync)
-
-	return err
 }
 
 func (r *chartReleaser) publishCharts() error {

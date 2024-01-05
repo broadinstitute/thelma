@@ -175,6 +175,7 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/app/autoupdate/spawn --name Spawn --output=./internal/thelma/app/autoupdate/spawn/mocks --outpkg mocks --filename spawn.go
 	mockery --dir ./internal/thelma/app/scratch --name Scratch --output=./internal/thelma/app/scratch/mocks --outpkg mocks --filename scratch.go
 	mockery --dir ./internal/thelma/charts/publish --name Publisher --output=./internal/thelma/charts/publish/mocks --outpkg mocks --filename publisher.go
+	mockery --dir ./internal/thelma/charts/releaser --name PostUpdateSyncer --output=./internal/thelma/charts/releaser/mocks --outpkg mocks --filename post_update_syncer.go
 	mockery --dir ./internal/thelma/charts/repo --name Repo --output=./internal/thelma/charts/repo/mocks --outpkg mocks --filename repo.go
 	mockery --dir ./internal/thelma/charts/repo/index --name Index --output=./internal/thelma/charts/repo/index/mocks --outpkg mocks --filename index.go
 	mockery --dir ./internal/thelma/charts/source --name Chart --output=./internal/thelma/charts/source/mocks --outpkg mocks --filename chart.go

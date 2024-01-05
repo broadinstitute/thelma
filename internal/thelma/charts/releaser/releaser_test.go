@@ -2,19 +2,14 @@ package releaser
 
 import (
 	publishmocks "github.com/broadinstitute/thelma/internal/thelma/charts/publish/mocks"
+	releasermocks "github.com/broadinstitute/thelma/internal/thelma/charts/releaser/mocks"
 	indexmocks "github.com/broadinstitute/thelma/internal/thelma/charts/repo/index/mocks"
-	"github.com/broadinstitute/thelma/internal/thelma/ops/sync"
-	syncmocks "github.com/broadinstitute/thelma/internal/thelma/ops/sync/mocks"
-	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
-	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
-	"github.com/stretchr/testify/mock"
-	"os"
-	"sort"
-
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"os"
 
 	"testing"
 )
@@ -33,18 +28,11 @@ func Test_ChartReleaser(t *testing.T) {
 
 	updater := &DeployedVersionUpdater{}
 
-	statefixture, err := statefixtures.LoadFixtureFromFile("testdata/statefixture.yaml")
-	require.NoError(t, err)
-
-	syncer := syncmocks.NewSync(t)
-	syncFactory := func() (sync.Sync, error) {
-		return syncer, nil
-	}
+	syncer := releasermocks.NewPostUpdateSyncer(t)
 
 	fakeHome := t.TempDir()
 
-	// make new chart releaser, passing in depdencies
-	releaser := NewChartReleaser(chartsDir, publisher, updater, syncFactory, statefixture.Mocks().State)
+	releaser := NewChartReleaser(chartsDir, publisher, updater, syncer)
 
 	// set additional mocks mocks
 	chartsDir.EXPECT().Exists("mysql").Return(true)
@@ -149,17 +137,14 @@ sherlock:
 	publisher.EXPECT().Publish().Return(6, nil)
 
 	syncer.EXPECT().Sync(
-		mock.MatchedBy(func(releases []terra.Release) bool {
-			var names []string
-			for _, r := range releases {
-				names = append(names, r.FullName())
-			}
-			sort.Strings(names)
-			assert.Equal(t, []string{"agora-dev", "sam-dev", "yale-terra-dev"}, names)
-			return true
+		mock.MatchedBy(func(chartReleaseNames []string) bool {
+			return assert.ElementsMatch(
+				t,
+				chartReleaseNames,
+				[]string{"mysql-dev", "foundation-dev", "yale-terra-dev", "agora-dev", "sam-dev", "bpm-dev"},
+			)
 		}),
-		maxParallelSync).
-		Return(nil, nil) // return nil status map since releaser does not care about sync status
+	).Return(nil)
 
 	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"}, "my change description")
 	require.NoError(t, err)
