@@ -3,6 +3,7 @@ package releaser
 import (
 	publishmocks "github.com/broadinstitute/thelma/internal/thelma/charts/publish/mocks"
 	indexmocks "github.com/broadinstitute/thelma/internal/thelma/charts/repo/index/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/ops/sync"
 	syncmocks "github.com/broadinstitute/thelma/internal/thelma/ops/sync/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
@@ -19,22 +20,33 @@ import (
 )
 
 func Test_ChartReleaser(t *testing.T) {
+	// construct mocks/dependencies
 	chartsDir := sourcemocks.NewChartsDir(t)
+
 	index := indexmocks.NewIndex(t)
+
 	dir := t.TempDir()
+
 	publisher := publishmocks.NewPublisher(t)
 	publisher.EXPECT().Index().Return(index)
 	publisher.EXPECT().ChartDir().Return(dir)
+
 	updater := &DeployedVersionUpdater{}
+
 	statefixture, err := statefixtures.LoadFixtureFromFile("testdata/statefixture.yaml")
 	require.NoError(t, err)
-	syncer := syncmocks.NewSync(t)
 
-	require.NoError(t, err)
-	releaser := NewChartReleaser(chartsDir, publisher, updater, syncer, statefixture.Mocks().State)
+	syncer := syncmocks.NewSync(t)
+	syncFactory := func() (sync.Sync, error) {
+		return syncer, nil
+	}
 
 	fakeHome := t.TempDir()
 
+	// make new chart releaser, passing in depdencies
+	releaser := NewChartReleaser(chartsDir, publisher, updater, syncFactory, statefixture.Mocks().State)
+
+	// set additional mocks mocks
 	chartsDir.EXPECT().Exists("mysql").Return(true)
 	chartsDir.EXPECT().Exists("foundation").Return(true)
 	chartsDir.EXPECT().Exists("yale").Return(true)
@@ -59,7 +71,8 @@ func Test_ChartReleaser(t *testing.T) {
 	yale.EXPECT().GenerateDocs().Return(nil)
 	yale.EXPECT().PackageChart(dir).Return(nil)
 
-	// write a custom autorelease config for Yale
+	// write a custom autorelease config for Yale, so we can verify that the release is updated and synced even
+	// though it is not in the dev environment
 	require.NoError(t, os.MkdirAll(fakeHome+"charts/yale", 0755))
 	require.NoError(t, os.WriteFile(fakeHome+"charts/yale/.autorelease.yaml", []byte(`
 sherlock:
@@ -145,7 +158,7 @@ sherlock:
 			assert.Equal(t, []string{"agora-dev", "sam-dev", "yale-terra-dev"}, names)
 			return true
 		}),
-		30).
+		maxParallelSync).
 		Return(nil, nil) // return nil status map since releaser does not care about sync status
 
 	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"}, "my change description")

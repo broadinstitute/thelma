@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+const maxParallelSync = 30
+
 // ChartReleaser is the main orchestrator for releasing new charts.
 type ChartReleaser interface {
 	// Release calculates out downstream dependents of the given charts, increments versions, publishes new
@@ -35,22 +37,22 @@ type ChartReleaser interface {
 	Release(chartsToPublish []string, changeDescription string) (publishedVersions map[string]string, err error)
 }
 
-func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher, updater *DeployedVersionUpdater, syncer sync.Sync, state terra.State) ChartReleaser {
+func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher, updater *DeployedVersionUpdater, syncFactory func() (sync.Sync, error), state terra.State) ChartReleaser {
 	return &chartReleaser{
-		chartsDir: chartsDir,
-		publisher: publisher,
-		updater:   updater,
-		syncer:    syncer,
-		state:     state,
+		chartsDir:   chartsDir,
+		publisher:   publisher,
+		updater:     updater,
+		syncFactory: syncFactory,
+		state:       state,
 	}
 }
 
 type chartReleaser struct {
-	chartsDir source.ChartsDir
-	publisher publish.Publisher
-	updater   *DeployedVersionUpdater
-	syncer    sync.Sync
-	state     terra.State
+	chartsDir   source.ChartsDir
+	publisher   publish.Publisher
+	updater     *DeployedVersionUpdater
+	syncFactory func() (sync.Sync, error)
+	state       terra.State
 }
 
 type versions struct {
@@ -164,7 +166,11 @@ func (r *chartReleaser) syncUpdatedChartReleases(chartReleaseNames []string) err
 		return errors.Errorf("deployed version updater: error getting chart releases: %v", err)
 	}
 
-	_, err = r.syncer.Sync(releases, 30)
+	syncer, err := r.syncFactory()
+	if err != nil {
+		return errors.Errorf("deployed version updater: error creating sync wrapper: %v", err)
+	}
+	_, err = syncer.Sync(releases, maxParallelSync)
 
 	return err
 }
