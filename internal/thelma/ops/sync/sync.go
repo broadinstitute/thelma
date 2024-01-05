@@ -3,6 +3,7 @@ package sync
 import (
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/argocd"
@@ -22,16 +23,18 @@ type Sync interface {
 	Sync(releases []terra.Release, maxParallel int, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error)
 }
 
-func New(argocd argocd.ArgoCD, status status.Reporter) Sync {
+func New(argocd argocd.ArgoCD, statusReader status.Reader, sherlockUpdater sherlock.ChartReleaseStatusUpdater) Sync {
 	return &syncer{
-		argocd: argocd,
-		status: status,
+		argocd:          argocd,
+		statusReader:    statusReader,
+		sherlockUpdater: sherlockUpdater,
 	}
 }
 
 type syncer struct {
-	argocd argocd.ArgoCD
-	status status.Reporter
+	argocd          argocd.ArgoCD
+	statusReader    status.Reader
+	sherlockUpdater sherlock.ChartReleaseStatusUpdater
 }
 
 // Sync a set of releases and return a status report indicating whether the release is healthy.
@@ -58,7 +61,8 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 		}
 
 		jobs = append(jobs, pool.Job{
-			Name: jobName,
+			Name:             jobName,
+			ChartReleaseName: release.FullName(),
 			Run: func(statusReporter pool.StatusReporter) error {
 				opts := withOption(optionsNoWaitHealthy, func(options *argocd.SyncOptions) {
 					options.StatusReporter = statusReporter
@@ -92,6 +96,12 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 			options.LogSummarizer.Footer = fmt.Sprintf("Check status in ArgoCD at %s", s.argocd.DestinationURL(destination))
 		}
 
+		// This is safe to always enable because the Sherlock package will no-op the
+		// call if we aren't running in GitHub Actions (and thus won't have a CiRun for
+		// Sherlock to record our info in).
+		options.ChartReleaseSummarizer.Enabled = true
+		options.ChartReleaseSummarizer.Do = s.sherlockUpdater.UpdateChartReleaseStatuses
+
 		options.Metrics.Enabled = true
 		options.Metrics.PoolName = "ops_sync"
 	})
@@ -109,7 +119,7 @@ func (s *syncer) Sync(releases []terra.Release, maxParallel int, options ...argo
 // the application does not become healthy within the timeout:
 // .     we return the status report + a timeout error
 func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statusReporter pool.StatusReporter) (*status.Status, error) {
-	lastStatus, err := s.status.Status(release)
+	lastStatus, err := s.statusReader.Status(release)
 	if err != nil {
 		// we failed to retrieve status, so return an error
 		return nil, err
@@ -133,7 +143,7 @@ func (s *syncer) waitHealthy(release terra.Release, maxWait time.Duration, statu
 			case <-timeout:
 				return lastStatus, errors.Errorf("timed out waiting for healthy (%s)", lastStatus.Headline())
 			case <-ticker.C:
-				lastStatus, err = s.status.Status(release)
+				lastStatus, err = s.statusReader.Status(release)
 				if err != nil {
 					return nil, err
 				}
