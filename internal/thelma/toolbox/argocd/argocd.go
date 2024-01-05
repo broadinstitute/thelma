@@ -201,7 +201,7 @@ func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken st
 	}
 
 	if os.Getenv(envVars.token) != "" {
-		log.Info().Msgf("Env var %s is set; will be used to to authenticate ArgoCD CLI commands", envVars.token)
+		log.Debug().Msgf("Env var %s is set; will be used to to authenticate ArgoCD CLI commands", envVars.token)
 	} else if a.cfg.Vault.Enabled {
 		vaultClient, err := vaultClientFactory()
 		if err != nil {
