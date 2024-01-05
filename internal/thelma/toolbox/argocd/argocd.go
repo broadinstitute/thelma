@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -199,7 +200,9 @@ func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken st
 		return nil, err
 	}
 
-	if a.cfg.Vault.Enabled {
+	if os.Getenv(envVars.token) != "" {
+		log.Info().Msgf("Env var %s is set; will be used to to authenticate ArgoCD CLI commands", envVars.token)
+	} else if a.cfg.Vault.Enabled {
 		token, err := readTokenFromVault(a.cfg, vaultClient)
 		if err != nil {
 			return nil, err
