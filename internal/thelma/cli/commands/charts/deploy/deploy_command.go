@@ -231,7 +231,7 @@ func loadChartVersionsFromSourceDir(chartNames []string, sourceDir source.Charts
 
 // parseChartVersions parse chart versions from a versions file
 func parseChartVersions(versionsFile string) (map[string]releaser.VersionPair, error) {
-	var view []views.ChartRelease
+	view := make([]views.ChartRelease, 0)
 
 	content, err := os.ReadFile(versionsFile)
 	if err != nil {
