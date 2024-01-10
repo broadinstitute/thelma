@@ -231,13 +231,13 @@ func loadChartVersionsFromSourceDir(chartNames []string, sourceDir source.Charts
 
 // parseChartVersions parse chart versions from a versions file
 func parseChartVersions(versionsFile string) (map[string]releaser.VersionPair, error) {
-	view := make([]views.ChartRelease, 0)
+	var view []views.ChartRelease
 
 	content, err := os.ReadFile(versionsFile)
 	if err != nil {
 		return nil, errors.Errorf("error reading file %s: %v", versionsFile, err)
 	}
-	if err = yaml.Unmarshal(content, view); err != nil {
+	if err = yaml.Unmarshal(content, &view); err != nil {
 		return nil, errors.Errorf("error parsing versions file %s: %v", versionsFile, err)
 	}
 
