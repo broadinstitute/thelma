@@ -2,15 +2,11 @@ package releaser
 
 import (
 	publishmocks "github.com/broadinstitute/thelma/internal/thelma/charts/publish/mocks"
-	releasermocks "github.com/broadinstitute/thelma/internal/thelma/charts/releaser/mocks"
 	indexmocks "github.com/broadinstitute/thelma/internal/thelma/charts/repo/index/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"os"
-
 	"testing"
 )
 
@@ -26,13 +22,7 @@ func Test_ChartReleaser(t *testing.T) {
 	publisher.EXPECT().Index().Return(index)
 	publisher.EXPECT().ChartDir().Return(dir)
 
-	updater := &DeployedVersionUpdater{}
-
-	syncer := releasermocks.NewPostUpdateSyncer(t)
-
-	fakeHome := t.TempDir()
-
-	releaser := NewChartReleaser(chartsDir, publisher, updater, syncer)
+	releaser := NewChartReleaser(chartsDir, publisher)
 
 	// set additional mocks mocks
 	chartsDir.EXPECT().Exists("mysql").Return(true)
@@ -41,7 +31,6 @@ func Test_ChartReleaser(t *testing.T) {
 
 	mysql := sourcemocks.NewChart(t)
 	mysql.EXPECT().Name().Return("mysql")
-	mysql.EXPECT().Path().Return(fakeHome + "/charts/mysql")
 	chartsDir.EXPECT().GetChart("mysql").Return(mysql, nil)
 	index.EXPECT().MostRecentVersion("mysql").Return("1.2.3")
 	mysql.EXPECT().BumpChartVersion("1.2.3").Return("1.3.0", nil)
@@ -51,7 +40,6 @@ func Test_ChartReleaser(t *testing.T) {
 
 	yale := sourcemocks.NewChart(t)
 	yale.EXPECT().Name().Return("yale")
-	yale.EXPECT().Path().Return(fakeHome + "charts/yale")
 	chartsDir.EXPECT().GetChart("yale").Return(yale, nil)
 	index.EXPECT().MostRecentVersion("yale").Return("0.23.4")
 	yale.EXPECT().BumpChartVersion("0.23.4").Return("0.24.0", nil)
@@ -59,18 +47,8 @@ func Test_ChartReleaser(t *testing.T) {
 	yale.EXPECT().GenerateDocs().Return(nil)
 	yale.EXPECT().PackageChart(dir).Return(nil)
 
-	// write a custom autorelease config for Yale, so we can verify that the release is updated and synced even
-	// though it is not in the dev environment
-	require.NoError(t, os.MkdirAll(fakeHome+"charts/yale", 0755))
-	require.NoError(t, os.WriteFile(fakeHome+"charts/yale/.autorelease.yaml", []byte(`
-sherlock:
-  chartReleasesToUseLatest:
-    - yale-terra-dev
-`), 0644))
-
 	foundation := sourcemocks.NewChart(t)
 	foundation.EXPECT().Name().Return("foundation")
-	foundation.EXPECT().Path().Return(fakeHome + "charts/foundation")
 	chartsDir.EXPECT().GetChart("foundation").Return(foundation, nil)
 	index.EXPECT().MostRecentVersion("foundation").Return("1.30.5")
 	foundation.EXPECT().BumpChartVersion("1.30.5").Return("1.31.0", nil)
@@ -80,7 +58,6 @@ sherlock:
 
 	agora := sourcemocks.NewChart(t)
 	agora.EXPECT().Name().Return("agora")
-	agora.EXPECT().Path().Return(fakeHome + "charts/agora")
 	chartsDir.EXPECT().GetChart("agora").Return(agora, nil)
 	index.EXPECT().MostRecentVersion("agora").Return("11.12.13")
 	agora.EXPECT().BumpChartVersion("11.12.13").Return("11.13.0", nil)
@@ -90,7 +67,6 @@ sherlock:
 
 	sam := sourcemocks.NewChart(t)
 	sam.EXPECT().Name().Return("sam")
-	sam.EXPECT().Path().Return(fakeHome + "charts/sam")
 	chartsDir.EXPECT().GetChart("sam").Return(sam, nil)
 	index.EXPECT().MostRecentVersion("sam").Return("1.0.0")
 	sam.EXPECT().BumpChartVersion("1.0.0").Return("1.1.0", nil)
@@ -100,7 +76,6 @@ sherlock:
 
 	bpm := sourcemocks.NewChart(t)
 	bpm.EXPECT().Name().Return("bpm")
-	bpm.EXPECT().Path().Return(fakeHome + "charts/bpm")
 	chartsDir.EXPECT().GetChart("bpm").Return(bpm, nil)
 	index.EXPECT().MostRecentVersion("bpm").Return("2.13.0")
 	bpm.EXPECT().BumpChartVersion("2.13.0").Return("2.14.0", nil)
@@ -136,25 +111,15 @@ sherlock:
 
 	publisher.EXPECT().Publish().Return(6, nil)
 
-	syncer.EXPECT().Sync(
-		mock.MatchedBy(func(chartReleaseNames []string) bool {
-			return assert.ElementsMatch(
-				t,
-				chartReleaseNames,
-				[]string{"mysql-dev", "foundation-dev", "yale-terra-dev", "agora-dev", "sam-dev", "bpm-dev"},
-			)
-		}),
-	).Return(nil)
-
-	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"}, "my change description")
+	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"})
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]string{
-		"agora":      "11.13.0",
-		"bpm":        "2.14.0",
-		"foundation": "1.31.0",
-		"mysql":      "1.3.0",
-		"sam":        "1.1.0",
-		"yale":       "0.24.0",
+	assert.Equal(t, map[string]VersionPair{
+		"agora":      {PriorVersion: "11.12.13", NewVersion: "11.13.0"},
+		"bpm":        {PriorVersion: "2.13.0", NewVersion: "2.14.0"},
+		"foundation": {PriorVersion: "1.30.5", NewVersion: "1.31.0"},
+		"mysql":      {PriorVersion: "1.2.3", NewVersion: "1.3.0"},
+		"sam":        {PriorVersion: "1.0.0", NewVersion: "1.1.0"},
+		"yale":       {PriorVersion: "0.23.4", NewVersion: "0.24.0"},
 	}, versionMap)
 }

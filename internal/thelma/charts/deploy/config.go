@@ -1,9 +1,8 @@
-package releaser
+package deploy
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -13,16 +12,10 @@ import (
 
 const configFile = ".autorelease.yaml"
 
-const targetEnvironment = "dev"
+const defaultTargetEnvironment = "dev"
 
-// DeployedVersionUpdater offers a UpdateReleaseVersion to take a newly published chart and update development instances to use
-// it.
-// It stores lists of different update mechanisms so they can be easily enabled/disabled by the caller.
-// This is a literal struct, not an interface, so the callers can configure it out without needing to pass multiple
-// parameters around.
-type DeployedVersionUpdater struct {
-	SherlockUpdaters         []sherlock.ChartVersionUpdater
-	SoftFailSherlockUpdaters []sherlock.ChartVersionUpdater
+type ConfigLoader interface {
+	FindReleasesToUpdate(chartName string) ([]terra.Release, error)
 }
 
 // Struct for parsing an autorelease.yaml config file
@@ -49,41 +42,62 @@ type config struct {
 	} `yaml:"sherlock"`
 }
 
-func (a *DeployedVersionUpdater) UpdateReleaseVersion(chart source.Chart, newVersion string, lastVersion string, description string) ([]string, error) {
+func newConfigLoader(chartsDir source.ChartsDir, state terra.State) (ConfigLoader, error) {
+	m := make(map[string]terra.Release)
+
+	releases, err := state.Releases().All()
+	if err != nil {
+		return nil, err
+	}
+	for _, release := range releases {
+		m[release.FullName()] = release
+	}
+
+	return &configLoaderImpl{
+		chartsDir: chartsDir,
+		releases:  m,
+	}, nil
+}
+
+type configLoaderImpl struct {
+	releases  map[string]terra.Release
+	chartsDir source.ChartsDir
+}
+
+func (m *configLoaderImpl) FindReleasesToUpdate(chartName string) ([]terra.Release, error) {
+	chart, err := m.chartsDir.GetChart(chartName)
+	if err != nil {
+		return nil, errors.Errorf("error loading chart %s from %s: %v", chartName, m.chartsDir.Path(), err)
+	}
+
 	cfg := loadConfig(chart)
 	if !cfg.Enabled {
+		log.Warn().Msgf("autorelease disabled for chart %s, won't attempt a dev deploy", chart.Name())
 		return nil, nil
 	}
 
-	var sherlockTargetChartReleases []string
-	var sherlockCanAlwaysSoftFail bool
+	var releaseNames []string
 	if len(cfg.Sherlock.ChartReleasesToUseLatest) > 0 {
-		sherlockTargetChartReleases = cfg.Sherlock.ChartReleasesToUseLatest
-		sherlockCanAlwaysSoftFail = false
+		releaseNames = cfg.Sherlock.ChartReleasesToUseLatest
 	} else {
-		sherlockTargetChartReleases = []string{fmt.Sprintf("%s-%s", chart.Name(), targetEnvironment)}
-		sherlockCanAlwaysSoftFail = true
-	}
-	for index, sherlockUpdater := range a.SherlockUpdaters {
-		err := sherlockUpdater.
-			UpdateForNewChartVersion(chart.Name(), newVersion, lastVersion, description, sherlockTargetChartReleases...)
-		if err != nil {
-			if sherlockCanAlwaysSoftFail {
-				log.Warn().Err(err).Msgf("autorelease error on sherlock updater %d: %v", index, err)
-			} else {
-				return nil, errors.Errorf("autorelease error on sherlock updater %d: %v", index, err)
-			}
-		}
-	}
-	for index, sherlockUpdater := range a.SoftFailSherlockUpdaters {
-		err := sherlockUpdater.
-			UpdateForNewChartVersion(chart.Name(), newVersion, lastVersion, description, sherlockTargetChartReleases...)
-		if err != nil {
-			log.Debug().Err(err).Msgf("autorelease error on sherlock soft-fail updater %d: %v", index, err)
-		}
+		releaseNames = []string{chartName + "-" + defaultTargetEnvironment}
 	}
 
-	return sherlockTargetChartReleases, nil
+	var releases []terra.Release
+	for _, name := range releaseNames {
+		release, exists := m.releases[name]
+		if !exists {
+			if len(cfg.Sherlock.ChartReleasesToUseLatest) > 0 {
+				log.Warn().Msgf("chart release %s not found in terra state, won't try to update", name)
+			} else {
+				log.Debug().Msgf("chart release %s not found in terra state, won't try to update", name)
+			}
+			continue
+		}
+		releases = append(releases, release)
+	}
+
+	return releases, nil
 }
 
 // load .autorelease.yaml config file from chart source directory if it exists
