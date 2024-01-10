@@ -77,7 +77,6 @@ type options struct {
 	versionsFile      string
 	chartDir          string
 	dryRun            bool
-	charts            []string
 	sherlock          []string
 	softFailSherlock  []string
 	description       string

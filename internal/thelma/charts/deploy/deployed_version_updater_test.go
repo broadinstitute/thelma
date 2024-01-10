@@ -25,11 +25,6 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 		return u
 	}
 
-	type mocks struct {
-		updater  *sherlockmocks.ChartVersionUpdater
-		softFail *sherlockmocks.ChartVersionUpdater
-	}
-
 	testCases := []struct {
 		name       string
 		setupMocks func(t *testing.T, updater *DeployedVersionUpdater)
