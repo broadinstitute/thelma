@@ -20,13 +20,15 @@ import (
 
 type DeployerSuite struct {
 	suite.Suite
-	mockLoader   *deploymocks.ConfigLoader
-	mockSherlock *sherlockmocks.ChartVersionUpdater
-	mockSync     *syncmocks.Sync
+	mockConfigLoader *deploymocks.ConfigLoader
+	mockStateLoader  *statemocks.StateLoader
+	mockSherlock     *sherlockmocks.ChartVersionUpdater
+	mockSync         *syncmocks.Sync
 }
 
 func (suite *DeployerSuite) SetupTest() {
-	suite.mockLoader = deploymocks.NewConfigLoader(suite.T())
+	suite.mockConfigLoader = deploymocks.NewConfigLoader(suite.T())
+	suite.mockStateLoader = statemocks.NewStateLoader(suite.T())
 	suite.mockSherlock = sherlockmocks.NewChartVersionUpdater(suite.T())
 	suite.mockSync = syncmocks.NewSync(suite.T())
 }
@@ -34,7 +36,7 @@ func (suite *DeployerSuite) SetupTest() {
 func (suite *DeployerSuite) TestUpdatesAndSyncOneChartRelease() {
 	releases := mockReleases([]string{"agora-dev"})
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("agora").
 		Return(releases, nil)
 
@@ -46,6 +48,8 @@ func (suite *DeployerSuite) TestUpdatesAndSyncOneChartRelease() {
 			"a change description",
 			[]string{"agora-dev"},
 		).Return(nil)
+
+	suite.expectStateReloadAndReturnReleases(releases)
 
 	suite.mockSync.EXPECT().
 		Sync(releases, maxParallelSync).
@@ -72,19 +76,19 @@ func (suite *DeployerSuite) TestUpdatesAndSyncMultipleChartsAndReleases() {
 	yaleDev := mockRelease("yale-terra-dev")
 	yaleBees := mockRelease("yale-terra-qa-bees")
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("agora").
 		Return([]terra.Release{agoraDev}, nil)
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("sam").
 		Return([]terra.Release{samStaging}, nil)
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("yale").
 		Return([]terra.Release{yaleDev, yaleBees}, nil)
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("httpd-proxy").
 		Return([]terra.Release{}, nil)
 
@@ -114,6 +118,14 @@ func (suite *DeployerSuite) TestUpdatesAndSyncMultipleChartsAndReleases() {
 			"my multi-chart change",
 			[]string{"yale-terra-dev", "yale-terra-qa-bees"},
 		).Return(nil)
+
+	suite.expectStateReloadAndReturnReleases([]terra.Release{
+		agoraDev,
+		samStaging,
+		yaleDev,
+		yaleBees,
+		mockRelease("agora-prod"), // throw in an extra just to verify it's ignored
+	})
 
 	suite.mockSync.EXPECT().
 		Sync(mock.Anything, maxParallelSync).
@@ -158,7 +170,7 @@ func (suite *DeployerSuite) TestUpdatesAndSyncMultipleChartsAndReleases() {
 func (suite *DeployerSuite) TestDryRunDoesNotUpdateOrSync() {
 	releases := mockReleases([]string{"agora-dev"})
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("agora").
 		Return(releases, nil)
 
@@ -168,6 +180,8 @@ func (suite *DeployerSuite) TestDryRunDoesNotUpdateOrSync() {
 		DryRun:            true,
 		IgnoreSyncFailure: false,
 	})
+
+	suite.expectStateReloadAndReturnReleases(releases)
 
 	err := _deployer.Deploy(map[string]releaser.VersionPair{
 		"agora": {
@@ -182,7 +196,7 @@ func (suite *DeployerSuite) TestDryRunDoesNotUpdateOrSync() {
 func (suite *DeployerSuite) TestSyncFailuresAreReportedIfIgnoreIsFalse() {
 	releases := mockReleases([]string{"agora-dev"})
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("agora").
 		Return(releases, nil)
 
@@ -194,6 +208,8 @@ func (suite *DeployerSuite) TestSyncFailuresAreReportedIfIgnoreIsFalse() {
 			"a change description",
 			[]string{"agora-dev"},
 		).Return(nil)
+
+	suite.expectStateReloadAndReturnReleases(releases)
 
 	suite.mockSync.EXPECT().
 		Sync(releases, maxParallelSync).
@@ -218,7 +234,7 @@ func (suite *DeployerSuite) TestSyncFailuresAreReportedIfIgnoreIsFalse() {
 func (suite *DeployerSuite) TestSyncFailuresAreSuppredIfIgnoreIsTrue() {
 	releases := mockReleases([]string{"agora-dev"})
 
-	suite.mockLoader.EXPECT().
+	suite.mockConfigLoader.EXPECT().
 		FindReleasesToUpdate("agora").
 		Return(releases, nil)
 
@@ -230,6 +246,8 @@ func (suite *DeployerSuite) TestSyncFailuresAreSuppredIfIgnoreIsTrue() {
 			"a change description",
 			[]string{"agora-dev"},
 		).Return(nil)
+
+	suite.expectStateReloadAndReturnReleases(releases)
 
 	suite.mockSync.EXPECT().
 		Sync(releases, maxParallelSync).
@@ -263,7 +281,16 @@ func (suite *DeployerSuite) newDeployer(opts Options) Deployer {
 		return suite.mockSync, nil
 	}
 
-	return newForTesting(suite.mockLoader, updater, syncFactory, opts)
+	return newForTesting(suite.mockConfigLoader, updater, suite.mockStateLoader, syncFactory, opts)
+}
+
+func (suite *DeployerSuite) expectStateReloadAndReturnReleases(releases []terra.Release) {
+	state := &statemocks.State{}
+	releaseInterface := &statemocks.Releases{}
+
+	state.EXPECT().Releases().Return(releaseInterface)
+	releaseInterface.EXPECT().All().Return(releases, nil)
+	suite.mockStateLoader.EXPECT().Reload().Return(state, nil)
 }
 
 func mockReleases(fullNames []string) []terra.Release {

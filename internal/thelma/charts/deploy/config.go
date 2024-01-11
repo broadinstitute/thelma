@@ -43,19 +43,14 @@ type config struct {
 }
 
 func newConfigLoader(chartsDir source.ChartsDir, state terra.State) (ConfigLoader, error) {
-	m := make(map[string]terra.Release)
-
 	releases, err := state.Releases().All()
 	if err != nil {
 		return nil, err
 	}
-	for _, release := range releases {
-		m[release.FullName()] = release
-	}
 
 	return &configLoaderImpl{
 		chartsDir: chartsDir,
-		releases:  m,
+		releases:  buildReleaseMap(releases),
 	}, nil
 }
 

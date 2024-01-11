@@ -176,17 +176,17 @@ func (cmd *deployCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return nil
 	}
 
-	state, err := app.State()
-	if err != nil {
-		return err
-	}
-
 	updater, err := cmd.buildUpdater(app)
 	if err != nil {
 		return err
 	}
 
-	deployer, err := deploy.New(chartsDir, updater, app.Ops().Sync, state, deploy.Options{
+	stateLoader, err := app.StateLoader()
+	if err != nil {
+		return err
+	}
+
+	deployer, err := deploy.New(chartsDir, updater, stateLoader, app.Ops().Sync, deploy.Options{
 		DryRun:            cmd.options.dryRun,
 		IgnoreSyncFailure: cmd.options.ignoreSyncFailure,
 	})

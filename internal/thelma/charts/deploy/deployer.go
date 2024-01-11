@@ -21,20 +21,26 @@ type Deployer interface {
 	Deploy(chartVersionsToDeploy map[string]releaser.VersionPair, changeDescription string) error
 }
 
-func New(chartsDir source.ChartsDir, updater DeployedVersionUpdater, syncFactory func() (sync.Sync, error), state terra.State, opts Options) (Deployer, error) {
+func New(chartsDir source.ChartsDir, updater DeployedVersionUpdater, stateLoader terra.StateLoader, syncFactory func() (sync.Sync, error), opts Options) (Deployer, error) {
+	state, err := stateLoader.Load()
+	if err != nil {
+		return nil, err
+	}
+
 	cfgLoader, err := newConfigLoader(chartsDir, state)
 	if err != nil {
 		return nil, err
 	}
 
-	return newForTesting(cfgLoader, updater, syncFactory, opts), nil
+	return newForTesting(cfgLoader, updater, stateLoader, syncFactory, opts), nil
 }
 
 // package-private constructor for testing
-func newForTesting(cfgLoader ConfigLoader, updater DeployedVersionUpdater, syncFactory func() (sync.Sync, error), opts Options) Deployer {
+func newForTesting(cfgLoader ConfigLoader, updater DeployedVersionUpdater, stateLoader terra.StateLoader, syncFactory func() (sync.Sync, error), opts Options) Deployer {
 	return &deployer{
 		options:      opts,
 		updater:      updater,
+		stateLoader:  stateLoader,
 		syncFactory:  lazy.NewLazyE[sync.Sync](syncFactory),
 		configLoader: cfgLoader,
 	}
@@ -43,12 +49,18 @@ func newForTesting(cfgLoader ConfigLoader, updater DeployedVersionUpdater, syncF
 type deployer struct {
 	options      Options
 	updater      DeployedVersionUpdater
+	stateLoader  terra.StateLoader
 	syncFactory  lazy.LazyE[sync.Sync]
 	configLoader ConfigLoader
 }
 
 func (d *deployer) Deploy(chartVersionsToDeploy map[string]releaser.VersionPair, changeDescription string) error {
 	syncTargets, err := d.updateSherlock(chartVersionsToDeploy, changeDescription)
+	if err != nil {
+		return err
+	}
+
+	syncTargets, err = d.reloadChartReleases(syncTargets)
 	if err != nil {
 		return err
 	}
@@ -86,6 +98,31 @@ func (d *deployer) updateSherlock(chartVersionsToDeploy map[string]releaser.Vers
 	return syncTargets, nil
 }
 
+func (d *deployer) reloadChartReleases(chartReleases []terra.Release) ([]terra.Release, error) {
+	state, err := d.stateLoader.Reload()
+	if err != nil {
+		return nil, err
+	}
+
+	allReleases, err := state.Releases().All()
+	if err != nil {
+		return nil, err
+	}
+
+	m := buildReleaseMap(allReleases)
+
+	var reloadedReleases []terra.Release
+	for _, r := range chartReleases {
+		reloaded, exists := m[r.FullName()]
+		if !exists {
+			log.Warn().Msgf("updated release %s not found in state, skipping sync", r.FullName())
+		}
+		reloadedReleases = append(reloadedReleases, reloaded)
+	}
+
+	return reloadedReleases, nil
+}
+
 func (d *deployer) syncArgo(syncTargets []terra.Release) error {
 	syncer, err := d.syncFactory.Get()
 	if err != nil {
@@ -112,10 +149,20 @@ func (d *deployer) syncArgo(syncTargets []terra.Release) error {
 	return nil
 }
 
+// return the full names of a slice of releases
 func releaseFullNames(releases []terra.Release) []string {
 	var names []string
 	for _, r := range releases {
 		names = append(names, r.FullName())
 	}
 	return names
+}
+
+// build a map of releases keyed by full names
+func buildReleaseMap(releases []terra.Release) map[string]terra.Release {
+	m := make(map[string]terra.Release)
+	for _, release := range releases {
+		m[release.FullName()] = release
+	}
+	return m
 }
