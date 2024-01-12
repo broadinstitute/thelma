@@ -12,8 +12,8 @@ import (
 
 // ChartReleaser is the main orchestrator for releasing new charts.
 type ChartReleaser interface {
-	// Release calculates out downstream dependents of the given charts, increments versions, publishes new
-	// chart packages to the Helm repo, and releases those new versions into Sherlock.
+	// Release calculates out downstream dependents of the given charts, increments versions,
+	// and publishes new chart packages to the Helm repo.
 	//
 	// Note that Release will release downstream dependents of the charts it is given. In other words, if chart `bar`
 	// depends on chart `foo`, just including `foo` in the chartNames will also publish and release `bar`.
@@ -29,31 +29,29 @@ type ChartReleaser interface {
 	//   "bar": "0.2.0",
 	// }
 	//
-	Release(chartsToPublish []string, changeDescription string) (publishedVersions map[string]string, err error)
+	Release(chartsToPublish []string) (publishedVersions map[string]VersionPair, err error)
 }
 
-func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher, updater *DeployedVersionUpdater) ChartReleaser {
+func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher) ChartReleaser {
 	return &chartReleaser{
 		chartsDir: chartsDir,
 		publisher: publisher,
-		updater:   updater,
 	}
 }
 
 type chartReleaser struct {
 	chartsDir source.ChartsDir
 	publisher publish.Publisher
-	updater   *DeployedVersionUpdater
 }
 
-type versions struct {
-	// previous version of the chart
-	lastVersion string
-	// new version of the chart that will be published
-	newVersion string
+type VersionPair struct {
+	// version of the chart directly preceding NewVersion
+	PriorVersion string
+	// the new version of the chart that will be published
+	NewVersion string
 }
 
-func (r *chartReleaser) Release(chartNames []string, description string) (map[string]string, error) {
+func (r *chartReleaser) Release(chartNames []string) (map[string]VersionPair, error) {
 	// make sure all charts exist in source dir
 	chartsToPublish := chartNames
 	for _, chartName := range chartsToPublish {
@@ -93,38 +91,7 @@ func (r *chartReleaser) Release(chartNames []string, description string) (map[st
 		return nil, err
 	}
 
-	// We run the updater after publishing the charts to avoid an instance where a chart release points at a chart
-	// version that hasn't been published quite yet
-	return r.reportNewChartVersionsToSherlock(chartVersions, description)
-}
-
-// given a map of chart version info, reportNewChartVersionsToSherlock will report the new versions to Sherlock.
-//
-// Return:
-// a map representing the names and versions of charts that were published and released. Eg.
-//
-//	{
-//	  "foo": "1.2.3",
-//	  "bar": "0.2.0",
-//	}
-func (r *chartReleaser) reportNewChartVersionsToSherlock(chartVersions map[string]versions, description string) (map[string]string, error) {
-	publishedVersions := make(map[string]string, len(chartVersions))
-
-	if r.updater != nil {
-		for chartName, versions := range chartVersions {
-			chart, err := r.chartsDir.GetChart(chartName)
-			if err != nil {
-				return nil, err
-			}
-			err = r.updater.UpdateReleaseVersion(chart, versions.newVersion, versions.lastVersion, description)
-			if err != nil {
-				return publishedVersions, err
-			}
-			publishedVersions[chartName] = versions.newVersion
-		}
-	}
-
-	return publishedVersions, nil
+	return chartVersions, nil
 }
 
 func (r *chartReleaser) publishCharts() error {
@@ -163,8 +130,8 @@ func (r *chartReleaser) updateAllDependencies(chartNames []string) error {
 	return r.chartsDir.RecursivelyUpdateDependencies(charts...)
 }
 
-func (r *chartReleaser) bumpChartVersions(chartNames []string) (map[string]versions, error) {
-	chartVersions := make(map[string]versions, len(chartNames))
+func (r *chartReleaser) bumpChartVersions(chartNames []string) (map[string]VersionPair, error) {
+	chartVersions := make(map[string]VersionPair, len(chartNames))
 	for _, chartName := range chartNames {
 		releaseInfo, err := r.bumpChartVersion(chartName)
 		if err != nil {
@@ -175,7 +142,7 @@ func (r *chartReleaser) bumpChartVersions(chartNames []string) (map[string]versi
 	return chartVersions, nil
 }
 
-func (r *chartReleaser) bumpChartVersion(chartName string) (*versions, error) {
+func (r *chartReleaser) bumpChartVersion(chartName string) (*VersionPair, error) {
 	_chart, err := r.chartsDir.GetChart(chartName)
 	if err != nil {
 		return nil, err
@@ -199,9 +166,9 @@ func (r *chartReleaser) bumpChartVersion(chartName string) (*versions, error) {
 		return nil, err
 	}
 
-	return &versions{
-		lastVersion: lastVersion,
-		newVersion:  newVersion,
+	return &VersionPair{
+		PriorVersion: lastVersion,
+		NewVersion:   newVersion,
 	}, nil
 }
 

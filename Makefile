@@ -174,6 +174,7 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/app/autoupdate/releases --name Dir --output=./internal/thelma/app/autoupdate/releases/mocks --outpkg mocks --filename dir.go
 	mockery --dir ./internal/thelma/app/autoupdate/spawn --name Spawn --output=./internal/thelma/app/autoupdate/spawn/mocks --outpkg mocks --filename spawn.go
 	mockery --dir ./internal/thelma/app/scratch --name Scratch --output=./internal/thelma/app/scratch/mocks --outpkg mocks --filename scratch.go
+	mockery --dir ./internal/thelma/charts/deploy --name ConfigLoader --output=./internal/thelma/charts/deploy/mocks --outpkg mocks --filename config.go
 	mockery --dir ./internal/thelma/charts/publish --name Publisher --output=./internal/thelma/charts/publish/mocks --outpkg mocks --filename publisher.go
 	mockery --dir ./internal/thelma/charts/repo --name Repo --output=./internal/thelma/charts/repo/mocks --outpkg mocks --filename repo.go
 	mockery --dir ./internal/thelma/charts/repo/index --name Index --output=./internal/thelma/charts/repo/index/mocks --outpkg mocks --filename index.go
@@ -207,6 +208,7 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Pod --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename pod.go
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Runner --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename runner.go
 	mockery --dir ./internal/thelma/ops/sql/provider --name Provider --output=./internal/thelma/ops/sql/provider/mocks --outpkg mocks --filename provider.go
+	mockery --dir ./internal/thelma/ops/sync --name Sync --output=./internal/thelma/ops/sync/mocks --outpkg mocks --filename sync.go
 	mockery --dir ./internal/thelma/state/api/terra --name AppRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename app_release.go
 	mockery --dir ./internal/thelma/state/api/terra --name AutoDelete --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename auto_delete.go
 	mockery --dir ./internal/thelma/state/api/terra --name Cluster --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster.go

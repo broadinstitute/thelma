@@ -20,7 +20,7 @@ type ChartVersionUpdater interface {
 	// 3. Refresh **template** chart releases that either:
 	//    - already follow latest chart version (so step 1 means they'd have an update if we didn't catch them in step 2)
 	//    - follow a chart release we just updated in step 2 (so step 2 means they'd have an update)
-	UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error
+	UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors []string) error
 }
 
 // Step 1 of UpdateForNewChartVersion
@@ -135,15 +135,16 @@ func (c *clientImpl) refreshDownstreamTemplateChartReleases(chartSelector string
 	return chartReleasesToRefresh, nil
 }
 
-func (c *clientImpl) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors ...string) error {
+func (c *clientImpl) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors []string) error {
 	if err := c.reportNewChartVersion(chartSelector, newVersion, lastVersion, description); err != nil {
 		return errors.Errorf("error reporting chart version %s/%s: %v", chartSelector, newVersion, err)
 	}
+	log.Info().Msgf("reported new chart version %s/%s to Sherlock", chartSelector, newVersion)
 
 	if err := c.setChartReleasesToLatestChartVersion(chartReleaseSelectors...); err != nil {
-		return errors.Errorf("error setting chart releases to latest chart version (%s/%s): %v", chartSelector, newVersion, err)
+		return errors.Errorf("error setting chart releases to latest version of chart %s (%v): %v", chartSelector, chartReleaseSelectors, err)
 	} else {
-		log.Info().Msgf("updated chart releases in Sherlock to new version %s/%s: %v", chartSelector, newVersion, chartReleaseSelectors)
+		log.Info().Msgf("updated chart releases in Sherlock to latest version of chart %s: %v", chartSelector, chartReleaseSelectors)
 	}
 
 	if refreshedChartReleases, err := c.refreshDownstreamTemplateChartReleases(chartSelector, chartReleaseSelectors...); err != nil {

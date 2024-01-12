@@ -1,0 +1,55 @@
+---
+clusters:
+  - name: terra-dev
+    base: terra
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+  - name: terra-staging
+    base: terra
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+  - name: terra-qa-bees
+    base: terra
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+environments:
+  - name: dev
+    base: live
+    lifecycle: static
+    defaultcluster: terra-dev
+  - name: staging
+    base: live
+    lifecycle: static
+    defaultcluster: terra-staging
+releases:
+  - fullname: agora-dev
+    chart: agora
+    cluster: terra-dev
+    namespace: terra-dev
+    environment: dev
+  - fullname: agora-staging
+    chart: agora
+    cluster: terra-staging
+    namespace: terra-staging
+    environment: staging
+  - fullname: sam-dev
+    chart: sam
+    cluster: terra-dev
+    namespace: terra-dev
+    environment: dev
+  - fullname: workspacemanager-dev
+    chart: workspacemanager
+    cluster: terra-dev
+    namespace: terra-dev
+    environment: dev
+  - fullname: yale-terra-dev
+    chart: yale
+    cluster: terra-dev
+    namespace: yale
+  - fullname: yale-terra-qa-bees
+    chart: yale
+    cluster: terra-qa-bees
+    namespace: yale

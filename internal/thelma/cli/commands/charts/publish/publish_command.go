@@ -8,7 +8,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/views"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/pkg/errors"
@@ -46,17 +45,12 @@ Publish a list of charts from a file trigger:
     helmfile.yaml
 `
 const defaultBucketName = "terra-helm"
-const sherlockProdURL = "https://sherlock.dsp-devops.broadinstitute.org"
-const sherlockDevURL = "https://sherlock-dev.dsp-devops.broadinstitute.org"
 
 type options struct {
 	chartDir         string
 	bucketName       string
 	dryRun           bool
 	charts           []string
-	sherlock         []string
-	softFailSherlock []string
-	description      string
 	changedFilesList string
 }
 
@@ -64,18 +58,12 @@ var flagNames = struct {
 	chartDir         string
 	bucketName       string
 	dryRun           string
-	sherlock         string
-	softFailSherlock string
-	description      string
-	fileTrigger      string
+	changedFilesList string
 }{
 	chartDir:         "chart-dir",
 	bucketName:       "bucket",
 	dryRun:           "dry-run",
-	sherlock:         "sherlock",
-	softFailSherlock: "soft-fail-sherlock",
-	description:      "description",
-	fileTrigger:      changedfiles.FlagName,
+	changedFilesList: changedfiles.FlagName,
 }
 
 type publishCommand struct {
@@ -96,10 +84,7 @@ func (cmd *publishCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.chartDir, flagNames.chartDir, "path/to/charts", "Publish charts from custom directory")
 	cobraCommand.Flags().StringVar(&cmd.options.bucketName, flagNames.bucketName, defaultBucketName, "Publish charts to custom GCS bucket")
 	cobraCommand.Flags().BoolVarP(&cmd.options.dryRun, flagNames.dryRun, "n", false, "Dry run (don't actually update Helm repo or release to any versioning systems)")
-	cobraCommand.Flags().StringSliceVar(&cmd.options.sherlock, flagNames.sherlock, []string{sherlockProdURL}, "Sherlock servers to use as versioning systems to release to")
-	cobraCommand.Flags().StringSliceVar(&cmd.options.softFailSherlock, flagNames.softFailSherlock, []string{sherlockDevURL}, "Sherlock server to use as versioning systems to release to, always using soft-fail behavior")
-	cobraCommand.Flags().StringVarP(&cmd.options.description, flagNames.description, "d", "", "The description to use for these version bumps on any Sherlock versioning systems")
-	cobraCommand.Flags().StringVarP(&cmd.options.changedFilesList, flagNames.fileTrigger, "f", "", "Path to a file trigger (see --help for more info)")
+	cobraCommand.Flags().StringVarP(&cmd.options.changedFilesList, flagNames.changedFilesList, "f", "", "Path to a file trigger (see --help for more info)")
 }
 
 func (cmd *publishCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
@@ -183,54 +168,26 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 	defer pb.CloseWarn()
 	publisher := pb.Publisher()
 
-	updater := &releaser.DeployedVersionUpdater{}
-	// If we're dry-running, the updater will be empty so we don't mutate anything.
-	if !options.dryRun {
-		if len(options.sherlock) > 0 || len(options.softFailSherlock) > 0 {
-			for _, sherlockURL := range options.sherlock {
-				if sherlockURL != "" {
-					client, err := app.Clients().Sherlock(func(options *sherlock.Options) {
-						options.Addr = sherlockURL
-					})
-					if err != nil {
-						return nil, err
-					}
-					updater.SherlockUpdaters = append(updater.SherlockUpdaters, client)
-				}
-			}
-			for _, sherlockURL := range options.softFailSherlock {
-				if sherlockURL != "" {
-					client, err := app.Clients().Sherlock(func(options *sherlock.Options) {
-						options.Addr = sherlockURL
-					})
-					if err != nil {
-						return nil, err
-					}
-					updater.SoftFailSherlockUpdaters = append(updater.SoftFailSherlockUpdaters, client)
-				}
-			}
-		}
-	}
-
 	chartsDir, err := source.NewChartsDir(options.chartDir, app.ShellRunner())
 	if err != nil {
 		return nil, err
 	}
 
-	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher, updater)
+	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher)
 
-	chartVersions, err := chartReleaser.Release(options.charts, options.description)
+	chartVersions, err := chartReleaser.Release(options.charts)
 	if err != nil {
 		return nil, err
 	}
 
 	// Collate version map into a slice of chart releases
 	var view []views.ChartRelease
-	for chartName, chartVersion := range chartVersions {
+	for chartName, pair := range chartVersions {
 		view = append(view, views.ChartRelease{
-			Name:    chartName,
-			Version: chartVersion,
-			Repo:    options.bucketName,
+			Name:         chartName,
+			Version:      pair.NewVersion,
+			PriorVersion: pair.PriorVersion,
+			Repo:         options.bucketName,
 		})
 	}
 	views.SortChartReleases(view)

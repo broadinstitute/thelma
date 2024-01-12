@@ -95,12 +95,7 @@ func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
 		return nil, err
 	}
 
-	vaultClient, err := c.Vault()
-	if err != nil {
-		return nil, err
-	}
-
-	return argocd.New(c.thelmaConfig, c.runner, iapToken, vaultClient)
+	return argocd.New(c.thelmaConfig, c.runner, iapToken, c.Vault)
 }
 
 func (c *clients) Sherlock(options ...sherlock.Option) (sherlock.Client, error) {

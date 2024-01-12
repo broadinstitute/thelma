@@ -33,6 +33,10 @@ func (suite *ChartsDirTestSuite) SetupTest() {
 	suite.chartsDir = chartsDir
 }
 
+func (suite *ChartsDirTestSuite) TestPath() {
+	assert.Equal(suite.T(), suite.dir, suite.chartsDir.Path())
+}
+
 func (suite *ChartsDirTestSuite) TestExists() {
 	assert.True(suite.T(), suite.chartsDir.Exists("agora"))
 	assert.True(suite.T(), suite.chartsDir.Exists("foundation"))
