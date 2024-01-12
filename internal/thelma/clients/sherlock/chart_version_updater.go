@@ -139,11 +139,12 @@ func (c *clientImpl) UpdateForNewChartVersion(chartSelector string, newVersion s
 	if err := c.reportNewChartVersion(chartSelector, newVersion, lastVersion, description); err != nil {
 		return errors.Errorf("error reporting chart version %s/%s: %v", chartSelector, newVersion, err)
 	}
+	log.Info().Msgf("reported new chart version %s/%s to Sherlock", chartSelector, newVersion)
 
 	if err := c.setChartReleasesToLatestChartVersion(chartReleaseSelectors...); err != nil {
-		return errors.Errorf("error setting chart releases to latest chart version (%s/%s): %v", chartSelector, newVersion, err)
+		return errors.Errorf("error setting chart releases to latest version of chart %s (%v): %v", chartSelector, chartReleaseSelectors, err)
 	} else {
-		log.Info().Msgf("updated chart releases in Sherlock to new version %s/%s: %v", chartSelector, newVersion, chartReleaseSelectors)
+		log.Info().Msgf("updated chart releases in Sherlock to latest version of chart %s: %v", chartSelector, chartReleaseSelectors)
 	}
 
 	if refreshedChartReleases, err := c.refreshDownstreamTemplateChartReleases(chartSelector, chartReleaseSelectors...); err != nil {
