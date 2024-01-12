@@ -124,16 +124,16 @@ func (d *deployer) reloadChartReleases(chartReleases []terra.Release) ([]terra.R
 }
 
 func (d *deployer) syncArgo(syncTargets []terra.Release) error {
-	syncer, err := d.syncFactory.Get()
-	if err != nil {
-		return errors.Errorf("error creating sync wrapper: %v", err)
-	}
-
 	log.Info().Msgf("Syncing %d releases...", len(syncTargets))
 
 	if d.options.DryRun {
 		log.Info().Msgf("(skipping sync since this is a dry run)")
 		return nil
+	}
+
+	syncer, err := d.syncFactory.Get()
+	if err != nil {
+		return errors.Errorf("error creating sync wrapper: %v", err)
 	}
 
 	if _, err = syncer.Sync(syncTargets, maxParallelSync); err != nil {
