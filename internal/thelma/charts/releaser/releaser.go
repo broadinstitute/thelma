@@ -107,6 +107,7 @@ func (r *chartReleaser) reportNewVersionsToSherlock(chartVersions map[string]Ver
 			return err
 		}
 	}
+	log.Info().Msgf("%d new chart versions were reported to Sherlock", len(chartVersions))
 	return nil
 }
 
