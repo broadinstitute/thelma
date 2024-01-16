@@ -6,6 +6,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/sync"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/stateutils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -21,7 +22,7 @@ type Deployer interface {
 	Deploy(chartVersionsToDeploy map[string]releaser.VersionPair, changeDescription string) error
 }
 
-func New(chartsDir source.ChartsDir, updater DeployedVersionUpdater, stateLoader terra.StateLoader, syncFactory func() (sync.Sync, error), opts Options) (Deployer, error) {
+func New(chartsDir source.ChartsDir, updater *releaser.DeployedVersionUpdater, stateLoader terra.StateLoader, syncFactory func() (sync.Sync, error), opts Options) (Deployer, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -36,7 +37,7 @@ func New(chartsDir source.ChartsDir, updater DeployedVersionUpdater, stateLoader
 }
 
 // package-private constructor for testing
-func newForTesting(cfgLoader ConfigLoader, updater DeployedVersionUpdater, stateLoader terra.StateLoader, syncFactory func() (sync.Sync, error), opts Options) Deployer {
+func newForTesting(cfgLoader ConfigLoader, updater *releaser.DeployedVersionUpdater, stateLoader terra.StateLoader, syncFactory func() (sync.Sync, error), opts Options) Deployer {
 	return &deployer{
 		options:      opts,
 		updater:      updater,
@@ -48,7 +49,7 @@ func newForTesting(cfgLoader ConfigLoader, updater DeployedVersionUpdater, state
 
 type deployer struct {
 	options      Options
-	updater      DeployedVersionUpdater
+	updater      *releaser.DeployedVersionUpdater
 	stateLoader  terra.StateLoader
 	syncFactory  lazy.LazyE[sync.Sync]
 	configLoader ConfigLoader
@@ -84,7 +85,7 @@ func (d *deployer) updateSherlock(chartVersionsToDeploy map[string]releaser.Vers
 
 		syncTargets = append(syncTargets, releases...)
 
-		log.Info().Msgf("Updating %d releases in Sherlock for chart %s to version %s: %s", len(releases), chartName, versions.NewVersion, releaseFullNames(releases))
+		log.Info().Msgf("Updating %d releases in Sherlock for chart %s to version %s: %s", len(releases), chartName, versions.NewVersion, stateutils.ReleaseFullNames(releases))
 		if d.options.DryRun {
 			log.Info().Msg("(skipping update since this is a dry run)")
 			continue
@@ -109,7 +110,7 @@ func (d *deployer) reloadChartReleases(chartReleases []terra.Release) ([]terra.R
 		return nil, err
 	}
 
-	m := buildReleaseMap(allReleases)
+	m := stateutils.BuildReleaseMap(allReleases)
 
 	var reloadedReleases []terra.Release
 	for _, r := range chartReleases {
@@ -147,22 +148,4 @@ func (d *deployer) syncArgo(syncTargets []terra.Release) error {
 	log.Info().Msgf("Synced %d releases", len(syncTargets))
 
 	return nil
-}
-
-// return the full names of a slice of releases
-func releaseFullNames(releases []terra.Release) []string {
-	var names []string
-	for _, r := range releases {
-		names = append(names, r.FullName())
-	}
-	return names
-}
-
-// build a map of releases keyed by full names
-func buildReleaseMap(releases []terra.Release) map[string]terra.Release {
-	m := make(map[string]terra.Release)
-	for _, release := range releases {
-		m[release.FullName()] = release
-	}
-	return m
 }
