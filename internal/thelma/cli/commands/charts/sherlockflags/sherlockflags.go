@@ -62,7 +62,6 @@ func (f *sherlockUpdaterFlags) GetDeployedVersionUpdater(app app.ThelmaApp, dryR
 	if dryRun {
 		return &updater, nil
 	}
-
 	if len(f.flagVals.sherlock) > 0 || len(f.flagVals.softFailSherlock) > 0 {
 		for _, sherlockURL := range f.flagVals.sherlock {
 			if sherlockURL != "" {

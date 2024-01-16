@@ -273,7 +273,7 @@ func TestDeployerSuite(t *testing.T) {
 }
 
 func (suite *DeployerSuite) newDeployer(opts Options) Deployer {
-	updater := releaser.DeployedVersionUpdater{
+	updater := &releaser.DeployedVersionUpdater{
 		SherlockUpdaters: []sherlock.ChartVersionUpdater{suite.mockSherlock},
 	}
 
