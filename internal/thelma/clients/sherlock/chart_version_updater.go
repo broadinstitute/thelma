@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/changesets"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/chart_releases"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/chart_versions"
+	"github.com/broadinstitute/sherlock/sherlock-go-client/client/charts"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/environments"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
 	"github.com/pkg/errors"
@@ -28,6 +29,13 @@ type ChartVersionUpdater interface {
 
 // Step 1 of UpdateForNewChartVersion
 func (c *clientImpl) ReportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
+	params := &charts.GetAPIChartsV3SelectorParams{Selector: chartSelector}
+	_, err := c.client.Charts.GetAPIChartsV3Selector(params)
+	if err != nil {
+		log.Warn().Msgf("error looking up chart %s in Sherlock, won't report new version: %v", chartSelector, err)
+		return nil
+	}
+
 	chartVersion := &models.SherlockChartVersionV3Create{
 		Chart:        chartSelector,
 		ChartVersion: newVersion,
@@ -36,7 +44,7 @@ func (c *clientImpl) ReportNewChartVersion(chartSelector string, newVersion stri
 	if lastVersion != "" {
 		chartVersion.ParentChartVersion = fmt.Sprintf("%s/%s", chartSelector, lastVersion)
 	}
-	_, err := c.client.ChartVersions.PutAPIChartVersionsV3(
+	_, err = c.client.ChartVersions.PutAPIChartVersionsV3(
 		chart_versions.NewPutAPIChartVersionsV3Params().WithChartVersion(chartVersion))
 	if err != nil {
 		return errors.Errorf("error from Sherlock: %v", err)
