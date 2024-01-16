@@ -1,9 +1,10 @@
-package deploy
+package releaser
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/charts/releaser"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	sherlockmocks "github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
@@ -89,7 +90,7 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			err := updater.UpdateChartReleaseVersions(
 				chartName,
 				releases,
-				releaser.VersionPair{
+				VersionPair{
 					PriorVersion: lastVersion,
 					NewVersion:   newVersion,
 				},
@@ -105,4 +106,18 @@ func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func mockReleases(fullNames []string) []terra.Release {
+	var releases []terra.Release
+	for _, n := range fullNames {
+		releases = append(releases, mockRelease(n))
+	}
+	return releases
+}
+
+func mockRelease(fullName string) terra.Release {
+	r := &statemocks.Release{}
+	r.EXPECT().FullName().Return(fullName)
+	return r
 }

@@ -6,8 +6,8 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/releaser"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/sherlockflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/views"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -70,16 +70,10 @@ files in the THELMA_HOME / --chart-dir directory:
 
 `
 
-const sherlockProdURL = "https://sherlock.dsp-devops.broadinstitute.org"
-const sherlockDevURL = "https://sherlock-dev.dsp-devops.broadinstitute.org"
-
 type options struct {
 	versionsFile      string
 	chartDir          string
 	dryRun            bool
-	sherlock          []string
-	softFailSherlock  []string
-	description       string
 	ignoreSyncFailure bool
 }
 
@@ -87,27 +81,23 @@ var flagNames = struct {
 	versionsFile      string
 	chartDir          string
 	dryRun            string
-	sherlock          string
-	softFailSherlock  string
-	description       string
 	ignoreSyncFailure string
 }{
 	versionsFile:      "versions-file",
 	chartDir:          "chart-dir",
 	dryRun:            "dry-run",
-	sherlock:          "sherlock",
-	softFailSherlock:  "soft-fail-sherlock",
-	description:       "description",
 	ignoreSyncFailure: "ignore-sync-failure",
 }
 
 type deployCommand struct {
-	options *options
+	options              *options
+	sherlockUpdaterFlags sherlockflags.SherlockUpdaterFlags
 }
 
 func NewChartsDeployCommand() cli.ThelmaCommand {
 	return &deployCommand{
-		options: &options{},
+		options:              &options{},
+		sherlockUpdaterFlags: sherlockflags.NewSherlockUpdaterFlags(),
 	}
 }
 
@@ -119,10 +109,8 @@ func (cmd *deployCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVarP(&cmd.options.versionsFile, flagNames.versionsFile, "f", "", "Path to YAML-formated versions file produced by `thelma charts publish`")
 	cobraCommand.Flags().StringVar(&cmd.options.chartDir, flagNames.chartDir, "path/to/charts", "Publish charts from custom directory")
 	cobraCommand.Flags().BoolVarP(&cmd.options.dryRun, flagNames.dryRun, "n", false, "Dry run (don't actually update Helm repo or release to any versioning systems)")
-	cobraCommand.Flags().StringSliceVar(&cmd.options.sherlock, flagNames.sherlock, []string{sherlockProdURL}, "Sherlock servers to use as versioning systems to release to")
-	cobraCommand.Flags().StringSliceVar(&cmd.options.softFailSherlock, flagNames.softFailSherlock, []string{sherlockDevURL}, "Sherlock server to use as versioning systems to release to, always using soft-fail behavior")
-	cobraCommand.Flags().StringVarP(&cmd.options.description, flagNames.description, "d", "", "The description to use for these version bumps on any Sherlock versioning systems")
 	cobraCommand.Flags().BoolVar(&cmd.options.ignoreSyncFailure, flagNames.ignoreSyncFailure, true, "Ignore ArgoCD sync failures")
+	cmd.sherlockUpdaterFlags.AddFlags(cobraCommand)
 }
 
 func (cmd *deployCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
@@ -176,7 +164,7 @@ func (cmd *deployCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return nil
 	}
 
-	updater, err := cmd.buildUpdater(app)
+	updater, err := cmd.sherlockUpdaterFlags.GetDeployedVersionUpdater(app, cmd.options.dryRun)
 	if err != nil {
 		return err
 	}
@@ -194,7 +182,7 @@ func (cmd *deployCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		return err
 	}
 
-	return deployer.Deploy(chartVersions, cmd.options.description)
+	return deployer.Deploy(chartVersions, cmd.sherlockUpdaterFlags.Description())
 }
 
 func (cmd *deployCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
@@ -250,42 +238,4 @@ func parseChartVersions(versionsFile string) (map[string]releaser.VersionPair, e
 	}
 
 	return versions, nil
-}
-
-func (cmd *deployCommand) buildUpdater(app app.ThelmaApp) (deploy.DeployedVersionUpdater, error) {
-	opts := cmd.options
-
-	var updater deploy.DeployedVersionUpdater
-
-	// If we're dry-running, the updater will be empty so we don't mutate anything.
-	if opts.dryRun {
-		return updater, nil
-	}
-
-	if len(opts.sherlock) > 0 || len(opts.softFailSherlock) > 0 {
-		for _, sherlockURL := range opts.sherlock {
-			if sherlockURL != "" {
-				client, err := app.Clients().Sherlock(func(options *sherlock.Options) {
-					options.Addr = sherlockURL
-				})
-				if err != nil {
-					return updater, err
-				}
-				updater.SherlockUpdaters = append(updater.SherlockUpdaters, client)
-			}
-		}
-		for _, sherlockURL := range opts.softFailSherlock {
-			if sherlockURL != "" {
-				client, err := app.Clients().Sherlock(func(options *sherlock.Options) {
-					options.Addr = sherlockURL
-				})
-				if err != nil {
-					return updater, err
-				}
-				updater.SoftFailSherlockUpdaters = append(updater.SoftFailSherlockUpdaters, client)
-			}
-		}
-	}
-
-	return updater, nil
 }

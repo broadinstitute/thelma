@@ -12,6 +12,9 @@ import (
 )
 
 type ChartVersionUpdater interface {
+	// ReportNewChartVersion reports a new chart version to Sherlock
+	ReportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error
+
 	// UpdateForNewChartVersion does three things in sequence, all directly with Sherlock's API.
 	//
 	// 1. Report new chart version to Sherlock (meaning there's a new latest chart version)
@@ -24,7 +27,7 @@ type ChartVersionUpdater interface {
 }
 
 // Step 1 of UpdateForNewChartVersion
-func (c *clientImpl) reportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
+func (c *clientImpl) ReportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
 	chartVersion := &models.SherlockChartVersionV3Create{
 		Chart:        chartSelector,
 		ChartVersion: newVersion,
@@ -136,7 +139,7 @@ func (c *clientImpl) refreshDownstreamTemplateChartReleases(chartSelector string
 }
 
 func (c *clientImpl) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors []string) error {
-	if err := c.reportNewChartVersion(chartSelector, newVersion, lastVersion, description); err != nil {
+	if err := c.ReportNewChartVersion(chartSelector, newVersion, lastVersion, description); err != nil {
 		return errors.Errorf("error reporting chart version %s/%s: %v", chartSelector, newVersion, err)
 	}
 	log.Info().Msgf("reported new chart version %s/%s to Sherlock", chartSelector, newVersion)

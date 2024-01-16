@@ -4,6 +4,7 @@ import (
 	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/stateutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -116,7 +117,7 @@ sherlock:
 
 			releases, err := suite.configLoader.FindReleasesToUpdate(tc.chartName)
 			require.NoError(suite.T(), err)
-			assert.ElementsMatch(suite.T(), tc.expectReleases, releaseFullNames(releases))
+			assert.ElementsMatch(suite.T(), tc.expectReleases, stateutils.ReleaseFullNames(releases))
 		})
 	}
 }
