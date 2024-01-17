@@ -1,7 +1,6 @@
 package sherlock
 
 import (
-	"context"
 	"fmt"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/changesets"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/chart_releases"
@@ -9,10 +8,8 @@ import (
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/charts"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/environments"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
-	"github.com/go-openapi/runtime"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"time"
 )
 
 type ChartVersionUpdater interface {
@@ -32,13 +29,7 @@ type ChartVersionUpdater interface {
 
 // Step 1 of UpdateForNewChartVersion
 func (c *clientImpl) ReportNewChartVersion(chartName string, newVersion string, lastVersion string, description string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	resp, err := c.client.Charts.GetAPIChartsV3(&charts.GetAPIChartsV3Params{
-		Name: &chartName,
-	}, func(operation *runtime.ClientOperation) {
-		operation.Context = ctx
-	})
-	cancel()
+	resp, err := c.client.Charts.GetAPIChartsV3(charts.NewGetAPIChartsV3Params().WithName(&chartName))
 	if err != nil {
 		return errors.Errorf("error from Sherlock: %v", err)
 	}
