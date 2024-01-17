@@ -56,6 +56,16 @@ func (suite *ConfigSuite) Test_findReleases() {
 			expectReleases: []string{"agora-dev"},
 		},
 		{
+			name:      "chart with release in .autorelease.yaml that does not exist",
+			chartName: "agora",
+			configFile: `
+sherlock:
+  chartReleasesToUseLatest:
+    - agora-doesnotexist
+`,
+			expectReleases: []string{},
+		},
+		{
 			name:      "chart should use releases in .autorelease.yaml if specified",
 			chartName: "agora",
 			configFile: `

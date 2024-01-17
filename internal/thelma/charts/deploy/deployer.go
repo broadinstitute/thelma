@@ -79,7 +79,7 @@ func (d *deployer) updateSherlock(chartVersionsToDeploy map[string]releaser.Vers
 		}
 
 		if len(releases) == 0 {
-			log.Info().Msgf("No releases found in Sherlock for chart %s, skipping", chartName)
+			log.Info().Msgf("No auto-release chart releases found in Sherlock for %s, skipping", chartName)
 			continue
 		}
 
