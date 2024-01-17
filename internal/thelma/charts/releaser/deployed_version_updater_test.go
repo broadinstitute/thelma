@@ -11,6 +11,99 @@ import (
 	"testing"
 )
 
+func TestAutoReleaser_ReportNewChartVersion(t *testing.T) {
+	chartName := "blah"
+	newVersion := "1.2.3"
+	lastVersion := "1.2.2"
+	description := "new chart version"
+
+	newUpdater := func(t *testing.T, expectCall bool, err error) *sherlockmocks.ChartVersionUpdater {
+		u := sherlockmocks.NewChartVersionUpdater(t)
+		if expectCall {
+			u.EXPECT().ReportNewChartVersion(chartName, newVersion, lastVersion, description).Return(err)
+		}
+		return u
+	}
+
+	testCases := []struct {
+		name       string
+		setupMocks func(t *testing.T, updater *DeployedVersionUpdater)
+		matchErr   string
+	}{
+		{
+			name: "No error if no updaters are configured",
+		},
+		{
+			name: "Call report new version with all configured updaters",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+			},
+		},
+		{
+			name: "Soft-fail update errors should not propagate",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, errors.Errorf("this should be ignored")),
+					newUpdater(t, true, nil),
+				}
+			},
+		},
+		{
+			name: "Updater errors should propagate",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, errors.Errorf("chart version update failed")),
+					newUpdater(t, false, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, false, nil),
+					newUpdater(t, false, nil),
+				}
+			},
+			matchErr: "chart version update failed",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updater := &DeployedVersionUpdater{}
+
+			if tc.setupMocks != nil {
+				tc.setupMocks(t, updater)
+			}
+
+			err := updater.ReportNewChartVersion(
+				chartName,
+				VersionPair{
+					PriorVersion: lastVersion,
+					NewVersion:   newVersion,
+				},
+				description,
+			)
+
+			if len(tc.matchErr) > 0 {
+				assert.Error(t, err)
+				assert.Regexp(t, tc.matchErr, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 	chartName := "mychart"
 	newVersion := "5.6.7"
