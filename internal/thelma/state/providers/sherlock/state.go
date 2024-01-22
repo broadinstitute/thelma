@@ -7,7 +7,7 @@ import (
 
 // state is an implementer of terra.State, the overall provider interface for Thelma
 type state struct {
-	sherlock     sherlock.StateReadWriter
+	sherlock     sherlock.Client
 	environments map[string]*environment
 	clusters     map[string]*cluster
 }

@@ -46,9 +46,11 @@ func (s *seeder) seedStep6ExtraUser(appReleases map[string]terra.AppRelease, opt
 
 				var googleClient google.Clients
 				if strings.ToLower(extraUser) == "use-adc" || strings.ToLower(extraUser) == "set-adc" {
-					googleClient = s.clientFactory.GoogleUsingADC(true)
+					googleClient = s.clientFactory.Google(google.OptionForceADC(true))
 				} else {
-					g, err := s.googleAuthAs(orch)
+					g, err := s.googleAuthAs(orch, func(options *google.Options) {
+						options.Subject = extraUser
+					})
 					if err != nil {
 						if err = opts.handleErrorWithForce(err); err != nil {
 							return err
@@ -56,7 +58,6 @@ func (s *seeder) seedStep6ExtraUser(appReleases map[string]terra.AppRelease, opt
 						continue
 					}
 					googleClient = g
-					googleClient.SetSubject(extraUser)
 				}
 
 				terraClient, err := googleClient.Terra()
@@ -67,10 +68,10 @@ func (s *seeder) seedStep6ExtraUser(appReleases map[string]terra.AppRelease, opt
 					continue
 				}
 
-				firstName := terraClient.GoogleUserInfo().GivenName
-				lastName := terraClient.GoogleUserInfo().FamilyName
+				firstName := terraClient.GoogleUserinfo().GivenName
+				lastName := terraClient.GoogleUserinfo().FamilyName
 				if firstName == "" || lastName == "" {
-					log.Warn().Msg("Name missing from GoogleUserInfo with current credentials (probably ADC with default scopes)")
+					log.Warn().Msg("Name missing from GoogleUserinfo with current credentials (probably ADC with default scopes)")
 					var buffer bytes.Buffer
 					err = s.shellRunner.Run(
 						shell.Command{
@@ -90,7 +91,7 @@ func (s *seeder) seedStep6ExtraUser(appReleases map[string]terra.AppRelease, opt
 							lastName = nameParts[1]
 						}
 					}
-					emailHandle := strings.Split(terraClient.GoogleUserInfo().Email, "@")[0]
+					emailHandle := strings.Split(terraClient.GoogleUserinfo().Email, "@")[0]
 					if firstName == "" {
 						log.Info().Msgf("Using %s as the first name", emailHandle)
 						firstName = emailHandle
@@ -103,7 +104,7 @@ func (s *seeder) seedStep6ExtraUser(appReleases map[string]terra.AppRelease, opt
 
 				_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile(
 					firstName, lastName,
-					"Owner", terraClient.GoogleUserInfo().Email,
+					"Owner", terraClient.GoogleUserinfo().Email,
 					"None", "None",
 					"None", "None", "None",
 					"None", "None")

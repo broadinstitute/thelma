@@ -1,111 +1,216 @@
 package releaser
 
 import (
-	"fmt"
-	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	sherlockmocks "github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
+	"github.com/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
-	"os"
-	"path"
 	"testing"
 )
+
+func TestAutoReleaser_ReportNewChartVersion(t *testing.T) {
+	chartName := "blah"
+	newVersion := "1.2.3"
+	lastVersion := "1.2.2"
+	description := "new chart version"
+
+	newUpdater := func(t *testing.T, expectCall bool, err error) *sherlockmocks.ChartVersionUpdater {
+		u := sherlockmocks.NewChartVersionUpdater(t)
+		if expectCall {
+			u.EXPECT().ReportNewChartVersion(chartName, newVersion, lastVersion, description).Return(err)
+		}
+		return u
+	}
+
+	testCases := []struct {
+		name       string
+		setupMocks func(t *testing.T, updater *DeployedVersionUpdater)
+		matchErr   string
+	}{
+		{
+			name: "No error if no updaters are configured",
+		},
+		{
+			name: "Call report new version with all configured updaters",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+			},
+		},
+		{
+			name: "Soft-fail update errors should not propagate",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, errors.Errorf("this should be ignored")),
+					newUpdater(t, true, nil),
+				}
+			},
+		},
+		{
+			name: "Updater errors should propagate",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, errors.Errorf("chart version update failed")),
+					newUpdater(t, false, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, false, nil),
+					newUpdater(t, false, nil),
+				}
+			},
+			matchErr: "chart version update failed",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updater := &DeployedVersionUpdater{}
+
+			if tc.setupMocks != nil {
+				tc.setupMocks(t, updater)
+			}
+
+			err := updater.ReportNewChartVersion(
+				chartName,
+				VersionPair{
+					PriorVersion: lastVersion,
+					NewVersion:   newVersion,
+				},
+				description,
+			)
+
+			if len(tc.matchErr) > 0 {
+				assert.Error(t, err)
+				assert.Regexp(t, tc.matchErr, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
 
 func TestAutoReleaser_UpdateVersionsFile(t *testing.T) {
 	chartName := "mychart"
 	newVersion := "5.6.7"
 	lastVersion := "5.6.6"
 	description := "my new description"
+	releaseNames := []string{"mychart-e1", "mychart-dev", "mychart-e2"}
 
-	type mocks struct {
-		sherlockUpdater *sherlockmocks.ChartVersionUpdater
+	newUpdater := func(t *testing.T, expectCall bool, err error) *sherlockmocks.ChartVersionUpdater {
+		u := sherlockmocks.NewChartVersionUpdater(t)
+		if expectCall {
+			u.EXPECT().UpdateForNewChartVersion(chartName, newVersion, lastVersion, description, releaseNames).Return(err)
+		}
+		return u
 	}
 
 	testCases := []struct {
-		name          string
-		newVersion    string
-		configContent string
-		setupMocks    func(mocks)
-		matchErr      string
+		name       string
+		setupMocks func(t *testing.T, updater *DeployedVersionUpdater)
+		matchErr   string
 	}{
 		{
-			name: "No config file should default to enabled + app release type",
-			setupMocks: func(m mocks) {
-				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
-					fmt.Sprintf("%s/%s", targetEnvironment, chartName)).Return(nil)
+			name: "No error if no updaters are configured",
+		},
+		{
+			name: "Call update with all configured updaters",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
 			},
 		},
 		{
-			name:          "Should not update release version if disabled in config file",
-			configContent: `enabled: false`,
-		},
-		{
-			name:          "Should support release name overriding",
-			configContent: `release: {name: foo}`,
-			setupMocks: func(m mocks) {
-				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
-					fmt.Sprintf("%s/%s", targetEnvironment, "foo")).Return(nil)
+			name: "Soft-fail update errors should not propagate",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, errors.Errorf("this should be ignored")),
+					newUpdater(t, true, nil),
+				}
 			},
 		},
 		{
-			name:          "Should support release type overriding",
-			configContent: `release: {type: cluster}`,
-			setupMocks: func(m mocks) {
-				m.sherlockUpdater.On("UpdateForNewChartVersion", chartName, newVersion, lastVersion, description,
-					fmt.Sprintf("%s/%s", targetEnvironment, chartName)).Return(nil)
+			name: "Updater errors should propagate",
+			setupMocks: func(t *testing.T, updater *DeployedVersionUpdater) {
+				updater.SherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, true, nil),
+					newUpdater(t, true, errors.Errorf("whoops")),
+					newUpdater(t, false, nil),
+				}
+				updater.SoftFailSherlockUpdaters = []sherlock.ChartVersionUpdater{
+					newUpdater(t, false, nil),
+					newUpdater(t, false, nil),
+				}
 			},
-		},
-		{
-			name: "Should support new Sherlock configuration",
-			configContent: `
-release:
-  name: foo
-sherlock:
-  chartReleasesToUseLatest:
-    - dev/bar
-    - terra-dev/default/baz
-`,
-			setupMocks: func(m mocks) {
-				m.sherlockUpdater.On("UpdateForNewChartVersion", "foo", newVersion, lastVersion, description,
-					"dev/bar", "terra-dev/default/baz").Return(nil)
-			},
+			matchErr: "whoops",
 		},
 	}
 	for _, tc := range testCases {
-		chartDir := t.TempDir()
-		chart := sourcemocks.NewChart(t)
-		chart.EXPECT().Name().Return("mychart")
-		chart.EXPECT().Path().Return(chartDir)
-
 		t.Run(tc.name, func(t *testing.T) {
-			m := mocks{
-				sherlockUpdater: sherlockmocks.NewChartVersionUpdater(t),
-			}
+			releases := mockReleases(releaseNames)
+
+			updater := &DeployedVersionUpdater{}
+
 			if tc.setupMocks != nil {
-				tc.setupMocks(m)
+				tc.setupMocks(t, updater)
 			}
 
-			if len(tc.configContent) > 0 {
-				if err := os.WriteFile(path.Join(chartDir, configFile), []byte(tc.configContent), 0644); err != nil {
-					t.Fatal(err)
-				}
-			}
+			err := updater.UpdateChartReleaseVersions(
+				chartName,
+				releases,
+				VersionPair{
+					PriorVersion: lastVersion,
+					NewVersion:   newVersion,
+				},
+				description,
+			)
 
-			updater := &DeployedVersionUpdater{SherlockUpdaters: []sherlock.ChartVersionUpdater{m.sherlockUpdater}}
-			// lastVersion and description are arguments handled solely on Sherlock's end, Thelma doesn't need to even
-			// validate them
-			err := updater.UpdateReleaseVersion(chart, newVersion, lastVersion, description)
-
-			m.sherlockUpdater.AssertExpectations(t)
-
-			if len(tc.matchErr) == 0 {
-				assert.NoError(t, err)
+			if len(tc.matchErr) > 0 {
+				assert.Error(t, err)
+				assert.Regexp(t, tc.matchErr, err)
 				return
 			}
 
-			assert.Error(t, err)
-			assert.Regexp(t, tc.matchErr, err)
+			assert.NoError(t, err)
 		})
 	}
+}
+
+func mockReleases(fullNames []string) []terra.Release {
+	var releases []terra.Release
+	for _, n := range fullNames {
+		releases = append(releases, mockRelease(n))
+	}
+	return releases
+}
+
+func mockRelease(fullName string) terra.Release {
+	r := &statemocks.Release{}
+	r.EXPECT().FullName().Return(fullName)
+	return r
 }

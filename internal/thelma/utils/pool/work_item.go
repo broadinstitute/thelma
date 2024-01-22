@@ -9,23 +9,25 @@ import (
 
 func newWorkItem(job Job, id int, metrics MetricsOptions) workItem {
 	// set a default name "job-<id>" if one is not supplied by user
-	description := job.Name
-	if description == "" {
-		description = fmt.Sprintf("job-%d", id)
+	name := job.Name
+	if name == "" {
+		name = fmt.Sprintf("job-%d", id)
 	}
 
 	return &workItemImpl{
-		id:             id,
-		name:           description,
-		job:            job,
-		phase:          Queued,
-		statusReporter: newStatusReporter(),
-		metrics:        metrics,
+		id:               id,
+		name:             name,
+		chartReleaseName: job.ChartReleaseName,
+		job:              job,
+		phase:            Queued,
+		statusReporter:   newStatusReporter(),
+		metrics:          metrics,
 	}
 }
 
 type workItem interface {
 	getName() string
+	getChartReleaseName() string
 	getId() int
 	getPhase() Phase
 	getErr() error
@@ -37,20 +39,25 @@ type workItem interface {
 
 // workItemImpl internal wrapper for Job that includes id & other metadata
 type workItemImpl struct {
-	job            Job
-	name           string
-	id             int
-	statusReporter *statusReporter
-	metrics        MetricsOptions
-	phase          Phase
-	startTime      time.Time
-	endTime        time.Time
-	err            error
-	mutex          sync.Mutex
+	job              Job
+	name             string
+	chartReleaseName string
+	id               int
+	statusReporter   *statusReporter
+	metrics          MetricsOptions
+	phase            Phase
+	startTime        time.Time
+	endTime          time.Time
+	err              error
+	mutex            sync.Mutex
 }
 
 func (w *workItemImpl) getName() string {
 	return w.name
+}
+
+func (w *workItemImpl) getChartReleaseName() string {
+	return w.chartReleaseName
 }
 
 func (w *workItemImpl) getId() int {

@@ -17,9 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up GCP auth
+      if: ${{ github.actor != 'dependabot[bot]' }}
       id: setup-gcp-auth
       run: |
         GCP_CREDS_PATH=$(pwd)/service_account.json
@@ -27,16 +28,23 @@ jobs:
         echo gcp-creds-path=${GCP_CREDS_PATH} >> $GITHUB_OUTPUT
 
     - name: Run tests
+      if: ${{ github.actor != 'dependabot[bot]' }}
       uses: ./.github/actions/make
       with:
         target: "smoke"
       env:
-        # full path is needed because go tests switch into package directories,
-        # and some smoke tests use GCP credentials
+        # Some smoke tests use GCP credentials
         GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.setup-gcp-auth.outputs.gcp-creds-path }}
 
+    - name: Run tests (dependabot)
+      if: ${{ github.actor == 'dependabot[bot]' }}
+      uses: ./.github/actions/make
+      with:
+        # Dependabot can't run smoke tests but unit tests are better than nothing
+        target: "test"
+
     - name: Upload Coverage Report
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         files: ./output/coverage
         flags: unittests

@@ -37,12 +37,14 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 							Message: "Authenticating",
 						})
 						var googleClient google.Clients
-						googleClient, err = s.googleAuthAs(orch)
+						googleClient, err = s.googleAuthAs(orch, func(options *google.Options) {
+							options.Subject = user.Email
+						})
 						if err = opts.handleErrorWithForce(err); err != nil {
 							return err
 						}
 						var terraClient terraapi.TerraClient
-						terraClient, err = googleClient.SetSubject(user.Email).Terra()
+						terraClient, err = googleClient.Terra()
 						if err = opts.handleErrorWithForce(err); err != nil {
 							return err
 						}
@@ -75,7 +77,7 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 
 			err = pool.New(jobs, func(o *pool.Options) {
 				o.NumWorkers = opts.RegistrationParallelism
-				o.Summarizer.Enabled = true
+				o.LogSummarizer.Enabled = true
 				o.Metrics.Enabled = false
 				o.StopProcessingOnError = !opts.Force
 			}).Execute()

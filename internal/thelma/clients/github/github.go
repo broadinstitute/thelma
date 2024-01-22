@@ -30,7 +30,7 @@ type Client struct {
 
 // githubConfig contains configuration for initializing a github api client
 type githubConfig struct {
-	// AccessToken is used to reader a github Personal Access Token out of an environment variable,
+	// AccessToken is used to reader a github Personal Access ReturnString out of an environment variable,
 	// otherwise one will be pulled from vault
 	Auth struct {
 		Type  string `default:"local"`
@@ -99,19 +99,19 @@ func WithDefaults(config config.Config, creds credentials.Credentials, vaultClie
 }
 
 func buildLocalGithubTokenProvider(creds credentials.Credentials) credentials.TokenProvider {
-	return creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
 		options.PromptEnabled = true
 
 		options.PromptMessage = `
-A Github Personal Access Token is required in order to interact with the Github API.
+A Github Personal Access ReturnString is required in order to interact with the Github API.
 You can generate a new PAT at https://github.com/settings/tokens (select ONLY the read:org scope).
-Enter Personal Access Token: `
+Enter Personal Access ReturnString: `
 
 	})
 }
 
 func buildVaultGithubTokenProvider(creds credentials.Credentials, vault *vault.Client, path, key string) credentials.TokenProvider {
-	return creds.NewTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(credentialsKey, func(options *credentials.TokenOptions) {
 		options.IssueFn = func() ([]byte, error) {
 			accessTokenSecret, err := vault.Logical().Read(path)
 			if err != nil {

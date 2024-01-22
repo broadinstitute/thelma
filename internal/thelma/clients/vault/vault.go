@@ -96,7 +96,7 @@ func buildClientOptions(thelmaConfig config.Config, clientOptions ...ClientOptio
 func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.Credentials, opts *ClientOptions) credentials.TokenProvider {
 	githubToken := buildGithubTokenProvider(unauthedClient, creds)
 
-	return creds.NewTokenProvider(vaultTokenCredentialKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(vaultTokenCredentialKey, func(options *credentials.TokenOptions) {
 		// Use custom credential store that stores token at ~/.vault-token instead ~/.thelma/credentials
 		options.CredentialStore = opts.CredentialStore
 
@@ -134,14 +134,14 @@ func buildVaultTokenProvider(unauthedClient *vaultapi.Client, creds credentials.
 }
 
 func buildGithubTokenProvider(unauthedClient *vaultapi.Client, creds credentials.Credentials) credentials.TokenProvider {
-	return creds.NewTokenProvider(githubTokenCredentialKey, func(options *credentials.TokenOptions) {
+	return creds.GetTokenProvider(githubTokenCredentialKey, func(options *credentials.TokenOptions) {
 		options.PromptEnabled = true
 
 		options.PromptMessage = `
-A GitHub Personal Access Token is required to authenticate to Vault.
+A GitHub Personal Access ReturnString is required to authenticate to Vault.
 You can generate a new PAT at https://github.com/settings/tokens (select ONLY the read:org scope).
 
-Enter Personal Access Token: `
+Enter Personal Access ReturnString: `
 
 		// The GitHub PAT is valid if it can be used to authenticate to Vault
 		options.ValidateFn = func(githubPat []byte) error {

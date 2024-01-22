@@ -41,6 +41,10 @@ func (s dirStore) Write(key string, credential []byte) error {
 	return os.WriteFile(file, credential, 0600)
 }
 
+func (s dirStore) Remove(key string) error {
+	return os.Remove(s.credentialsFile(key))
+}
+
 func (s dirStore) credentialsFile(key string) string {
 	return path.Join(s.dir, key)
 }

@@ -29,7 +29,7 @@ var flagNames = struct {
 
 type exportCommand struct {
 	options        *options
-	sherlockClient *sherlock_client.Client
+	sherlockClient sherlock_client.Client
 }
 
 func NewStateExportCommand() cli.ThelmaCommand {
@@ -50,11 +50,9 @@ func (cmd *exportCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 	// construct a sherlock client to export state to, this is different than the app level
 	// sherlock client to support use cases such as exporting state from prod to a local sherlock for debugging
 
-	iapToken, err := app.Clients().IAPToken()
-	if err != nil {
-		return errors.Errorf("error retrieving iap token for exporter client: %v", err)
-	}
-	client, err := sherlock_client.NewWithHostnameOverride(cmd.options.destinationURL, iapToken)
+	client, err := app.Clients().Sherlock(func(options *sherlock_client.Options) {
+		options.Addr = cmd.options.destinationURL
+	})
 	if err != nil {
 		return errors.Errorf("error building exporter sherlock client")
 	}

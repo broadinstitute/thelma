@@ -2,6 +2,7 @@
 package clients
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/clients/github/gha"
 	"sync"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
@@ -21,7 +22,10 @@ import (
 
 // Clients convenience builders for client objects used in Thelma commands
 type Clients interface {
-	// IAPToken returns a valid dsp-tools-k8s IAP token (as a string), or an error
+	// IAP returns a credentials.TokenProvider for dsp-tools-k8s IAP tokens.
+	IAP() (credentials.TokenProvider, error)
+	// IAPToken returns a valid dsp-tools-k8s IAP token (as a string), or an error.
+	// This is a convenience method on top of IAP().
 	IAPToken() (string, error)
 	// Vault returns a Vault client for the DSP Vault instance
 	Vault() (*vaultapi.Client, error)
@@ -30,17 +34,11 @@ type Clients interface {
 	// Github returns a wrapper around a github api client instance
 	Github() (*github.Client, error)
 	// Google returns a client factory for GCP clients, using Thelma's default configuration
-	Google() google.Clients
-	// GoogleUsingVaultSA is like Google but allows a vault path/key for the service account key file
-	// to be specified directly at runtime
-	GoogleUsingVaultSA(string, string) google.Clients
-	// GoogleUsingADC is like Google but forces usage of the environment's Application Default Credentials,
-	// optionally allowing non-Broad email addresses
-	GoogleUsingADC(bool) google.Clients
+	Google(options ...google.Option) google.Clients
 	// Kubernetes returns a factory for Kubernetes clients
 	Kubernetes() kubernetes.Clients
 	// Sherlock returns a swagger API client for a sherlock server instance
-	Sherlock() (*sherlock.Client, error)
+	Sherlock(options ...sherlock.Option) (sherlock.Client, error)
 	// Slack returns a wrapper around the official API client
 	Slack() (*slack.Slack, error)
 }
@@ -63,39 +61,28 @@ type clients struct {
 	kubernetes   kubernetes.Clients
 }
 
-func (c *clients) Google() google.Clients {
-	return google.New(c.thelmaConfig, c.thelmaRoot, c.runner, c)
+func (c *clients) Google(options ...google.Option) google.Clients {
+	opts := append([]google.Option{
+		func(o *google.Options) {
+			o.ConfigSource = c.thelmaConfig
+			o.VaultFactory = c.Vault
+		},
+	}, options...)
+	return google.New(opts...)
 }
 
-func (c *clients) GoogleUsingVaultSA(vaultPath string, vaultKey string) google.Clients {
-	return google.NewUsingVaultSA(c.thelmaConfig, c.thelmaRoot, c.runner, c, vaultPath, vaultKey)
-}
-
-func (c *clients) GoogleUsingADC(allowNonBroad bool) google.Clients {
-	return google.NewUsingADC(c.thelmaConfig, c.thelmaRoot, c.runner, c, allowNonBroad)
+func (c *clients) IAP() (credentials.TokenProvider, error) {
+	return iap.TokenProvider(c.thelmaConfig, c.creds, c.Vault, c.Google, c.runner)
 }
 
 func (c *clients) IAPToken() (string, error) {
-	if outOfBandToken := iap.CheckEnvironmentShortCircuit(); outOfBandToken != "" {
-		return outOfBandToken, nil
-	}
-
-	vaultClient, err := c.Vault()
-	if err != nil {
+	if tokenProvider, err := c.IAP(); err != nil {
 		return "", err
-	}
-
-	tokenProvider, err := iap.TokenProvider(c.thelmaConfig, c.creds, vaultClient, c.runner)
-	if err != nil {
+	} else if token, err := tokenProvider.Get(); err != nil {
 		return "", err
+	} else {
+		return string(token), nil
 	}
-
-	token, err := tokenProvider.Get()
-	if err != nil {
-		return "", err
-	}
-
-	return string(token), nil
 }
 
 func (c *clients) Vault() (*vaultapi.Client, error) {
@@ -108,20 +95,27 @@ func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
 		return nil, err
 	}
 
-	vaultClient, err := c.Vault()
-	if err != nil {
-		return nil, err
-	}
-
-	return argocd.New(c.thelmaConfig, c.runner, iapToken, vaultClient)
+	return argocd.New(c.thelmaConfig, c.runner, iapToken, c.Vault)
 }
 
-func (c *clients) Sherlock() (*sherlock.Client, error) {
-	iapToken, err := c.IAPToken()
+func (c *clients) Sherlock(options ...sherlock.Option) (sherlock.Client, error) {
+	iapProvider, err := c.IAP()
 	if err != nil {
 		return nil, err
 	}
-	return sherlock.New(c.thelmaConfig, iapToken)
+	ghaOidcProvider, err := gha.NewGhaOidcProvider(c.thelmaConfig, c.creds)
+	if err != nil {
+		return nil, err
+	}
+	opts := []sherlock.Option{
+		func(options *sherlock.Options) {
+			options.ConfigSource = c.thelmaConfig
+			options.IapTokenProvider = iapProvider
+			options.GhaOidcTokenProvider = ghaOidcProvider
+		},
+	}
+	opts = append(opts, options...)
+	return sherlock.NewClient(opts...)
 }
 
 func (c *clients) Kubernetes() kubernetes.Clients {

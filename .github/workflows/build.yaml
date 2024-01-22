@@ -63,12 +63,13 @@ env:
   THELMA_MACOS_APP_PWD: ${{ secrets.THELMA_MACOS_APP_PWD }}
 jobs:
   bump:
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -82,16 +83,17 @@ jobs:
           WITH_V: true
 
   cache-go-deps:
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Cache Go deps
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -106,13 +108,13 @@ jobs:
     needs: [bump, cache-go-deps]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Go deps cache
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -121,7 +123,7 @@ jobs:
 
       - name: Cache Linux amd64 build directories
         id: cache-build-linux-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
@@ -146,13 +148,13 @@ jobs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Go deps cache
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -167,7 +169,7 @@ jobs:
 
       - name: Cache release directory
         id: cache-release-darwin-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-amd64
         with:
@@ -193,13 +195,13 @@ jobs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Go deps cache
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -214,7 +216,7 @@ jobs:
 
       - name: Cache release directory
         id: cache-release-darwin-arm64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-arm64
         with:
@@ -238,14 +240,14 @@ jobs:
     needs: [bump, build-linux-amd64, build-darwin-amd64, build-darwin-arm64]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       # Pull binaries compiled in previous steps
       - name: Pull Linux amd64 build directories
         id: cache-build-linux-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
@@ -254,7 +256,7 @@ jobs:
 
       - name: Pull Darwin amd64 release directory
         id: cache-release-darwin-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-amd64
         with:
@@ -263,7 +265,7 @@ jobs:
 
       - name: Pull Darwin arm64 release directory
         id: cache-release-darwin-arm64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-arm64
         with:
@@ -311,13 +313,13 @@ jobs:
       image-name-with-tag: ${{ steps.image-name.outputs.tagged }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Linux amd64 build directories
         id: cache-build-linux-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
@@ -375,7 +377,7 @@ jobs:
     needs: [bump, dockerize-and-push, sign-and-notarize]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 

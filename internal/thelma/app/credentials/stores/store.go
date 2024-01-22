@@ -5,4 +5,5 @@ type Store interface {
 	Read(key string) ([]byte, error)
 	Exists(key string) (bool, error)
 	Write(key string, credential []byte) error
+	Remove(key string) error
 }

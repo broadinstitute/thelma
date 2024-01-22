@@ -67,7 +67,7 @@ type StateWriter interface {
 	SetEnvironmentOffline(environmentName string, offline bool) error
 }
 
-func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terra.CreateOptions) (string, error) {
+func (c *clientImpl) CreateEnvironmentFromTemplate(templateName string, options terra.CreateOptions) (string, error) {
 	creatableEnvironment := &models.V2controllersCreatableEnvironment{
 		TemplateEnvironment: templateName,
 	}
@@ -109,7 +109,7 @@ func (c *Client) CreateEnvironmentFromTemplate(templateName string, options terr
 	}
 }
 
-func (c *Client) PinEnvironmentVersions(environmentName string, versions map[string]terra.VersionOverride) error {
+func (c *clientImpl) PinEnvironmentVersions(environmentName string, versions map[string]terra.VersionOverride) error {
 	var chartReleaseEntries []*models.V2controllersChangesetPlanRequestChartReleaseEntry
 	for chartName, overrides := range versions {
 		entry := &models.V2controllersChangesetPlanRequestChartReleaseEntry{
@@ -142,7 +142,7 @@ func (c *Client) PinEnvironmentVersions(environmentName string, versions map[str
 	return nil
 }
 
-func (c *Client) SetTerraHelmfileRefForEntireEnvironment(environment terra.Environment, terraHelmfileRef string) error {
+func (c *clientImpl) SetTerraHelmfileRefForEntireEnvironment(environment terra.Environment, terraHelmfileRef string) error {
 	editableEnvironment := &models.V2controllersEditableEnvironment{
 		HelmfileRef: &terraHelmfileRef,
 	}
@@ -169,7 +169,7 @@ func (c *Client) SetTerraHelmfileRefForEntireEnvironment(environment terra.Envir
 	return nil
 }
 
-func (c *Client) ResetEnvironmentAndPinToDev(environment terra.Environment) error {
+func (c *clientImpl) ResetEnvironmentAndPinToDev(environment terra.Environment) error {
 	editableEnvironment := &models.V2controllersEditableEnvironment{
 		HelmfileRef:                utils.Nullable("HEAD"),
 		DefaultFirecloudDevelopRef: utils.Nullable("dev"),
@@ -195,7 +195,7 @@ func (c *Client) ResetEnvironmentAndPinToDev(environment terra.Environment) erro
 	return nil
 }
 
-func (c *Client) SetEnvironmentOffline(environmentName string, offline bool) error {
+func (c *clientImpl) SetEnvironmentOffline(environmentName string, offline bool) error {
 	editableEnvironment := &models.V2controllersEditableEnvironment{
 		Offline: &offline,
 	}
@@ -206,7 +206,7 @@ func (c *Client) SetEnvironmentOffline(environmentName string, offline bool) err
 
 // WriteEnvironments will take a list of terra.Environment interfaces them and issue POST requests
 // to write both the environment and any releases within that environment. 409 Conflict responses are ignored
-func (c *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
+func (c *clientImpl) WriteEnvironments(envs []terra.Environment) ([]string, error) {
 	createdEnvNames := make([]string, 0)
 	for _, environment := range envs {
 		log.Info().Msgf("exporting state for environment: %s", environment.Name())
@@ -246,7 +246,7 @@ func (c *Client) WriteEnvironments(envs []terra.Environment) ([]string, error) {
 
 // WriteClusters will take a list of terra.Cluster interfaces them and issue POST requests
 // to create both the cluster and any releases within that cluster. 409 Conflict responses are ignored
-func (c *Client) WriteClusters(cls []terra.Cluster) error {
+func (c *clientImpl) WriteClusters(cls []terra.Cluster) error {
 	for _, cluster := range cls {
 		log.Info().Msgf("exporting state for cluster: %s", cluster.Name())
 		if cluster.Name() == "dsp-tools-az" {
@@ -271,7 +271,7 @@ func (c *Client) WriteClusters(cls []terra.Cluster) error {
 	return nil
 }
 
-func (c *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) {
+func (c *clientImpl) DeleteEnvironments(envs []terra.Environment) ([]string, error) {
 	deletedEnvs := make([]string, 0)
 	for _, env := range envs {
 		// delete chart releases associated with environment
@@ -294,7 +294,7 @@ func (c *Client) DeleteEnvironments(envs []terra.Environment) ([]string, error) 
 	return deletedEnvs, nil
 }
 
-func (c *Client) EnableRelease(env terra.Environment, releaseName string) error {
+func (c *clientImpl) EnableRelease(env terra.Environment, releaseName string) error {
 	// need to pull info about the template env in order to set chart and app versions
 	templateEnv, err := c.getEnvironment(env.Template())
 	if err != nil {
@@ -325,7 +325,7 @@ func (c *Client) EnableRelease(env terra.Environment, releaseName string) error 
 	return err
 }
 
-func (c *Client) DisableRelease(envName, releaseName string) error {
+func (c *clientImpl) DisableRelease(envName, releaseName string) error {
 	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{envName, releaseName}, "/"))
 	_, err := c.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
 	return err
@@ -386,7 +386,7 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.SherlockClusterV3Cre
 	}
 }
 
-func (c *Client) writeReleases(destinationName string, releases []terra.Release) error {
+func (c *clientImpl) writeReleases(destinationName string, releases []terra.Release) error {
 	// for each release attempt to create a chart
 	for _, release := range releases {
 		log.Info().Msgf("exporting release: %v", release.Name())
@@ -406,7 +406,7 @@ func (c *Client) writeReleases(destinationName string, releases []terra.Release)
 	return nil
 }
 
-func (c *Client) writeAppRelease(environmentName string, release terra.AppRelease) error {
+func (c *clientImpl) writeAppRelease(environmentName string, release terra.AppRelease) error {
 	log.Debug().Msgf("release name: %v", release.Name())
 	modelChart := models.SherlockChartV3Create{
 		Name:            release.ChartName(),
@@ -470,7 +470,7 @@ func (c *Client) writeAppRelease(environmentName string, release terra.AppReleas
 	return nil
 }
 
-func (c *Client) writeClusterRelease(release terra.ClusterRelease) error {
+func (c *clientImpl) writeClusterRelease(release terra.ClusterRelease) error {
 	modelChart := models.SherlockChartV3Create{
 		Name:            release.ChartName(),
 		ChartRepo:       utils.Nullable(release.Repo()),
@@ -528,14 +528,14 @@ func (c *Client) writeClusterRelease(release terra.ClusterRelease) error {
 	return nil
 }
 
-func (c *Client) deleteRelease(release terra.Release) error {
+func (c *clientImpl) deleteRelease(release terra.Release) error {
 	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().
 		WithSelector(strings.Join([]string{release.ChartName(), release.Destination().Name()}, "-"))
 	_, err := c.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
 	return err
 }
 
-func (c *Client) getEnvironment(name string) (*Environment, error) {
+func (c *clientImpl) getEnvironment(name string) (*Environment, error) {
 	params := environments.NewGetAPIV2EnvironmentsSelectorParams().WithSelector(name)
 	environment, err := c.client.Environments.GetAPIV2EnvironmentsSelector(params)
 	if err != nil {
@@ -545,7 +545,7 @@ func (c *Client) getEnvironment(name string) (*Environment, error) {
 	return &Environment{environment.Payload}, nil
 }
 
-func (c *Client) getChartRelease(environmentName, releaseName string) (*Release, error) {
+func (c *clientImpl) getChartRelease(environmentName, releaseName string) (*Release, error) {
 	params := chart_releases.NewGetAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{environmentName, releaseName}, "/"))
 	release, err := c.client.ChartReleases.GetAPIV2ChartReleasesSelector(params)
 	if err != nil {

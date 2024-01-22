@@ -22,11 +22,10 @@ func (m *maskingProvider) Reissue() ([]byte, error) {
 }
 
 func (m *maskingProvider) mask(secret []byte, err error) ([]byte, error) {
-	if err != nil || len(secret) == 0 {
-		return secret, err
+	// Even if there's an error, if there was ever a value returned by one of these functions we want to mask it
+	if len(secret) > 0 {
+		logging.MaskSecret(string(secret))
 	}
-
-	logging.MaskSecret(string(secret))
 
 	return secret, err
 }
