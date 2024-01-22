@@ -35,15 +35,6 @@ func (d *destinations) All() ([]terra.Destination, error) {
 	return result, nil
 }
 
-func (d *destinations) Filter(filter terra.DestinationFilter) ([]terra.Destination, error) {
-	all, err := d.All()
-	if err != nil {
-		return nil, err
-	}
-
-	return filter.Filter(all), nil
-}
-
 func (d *destinations) Get(name string) (terra.Destination, error) {
 	if destination, exists := d.state.clusters[name]; exists {
 		return destination, nil

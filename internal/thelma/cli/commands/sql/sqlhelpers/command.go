@@ -101,10 +101,12 @@ func (c *command) Run(app app.ThelmaApp, ctx cli.RunContext) error {
 		if err != nil {
 			return err
 		}
-		releases, err := state.Releases().Filter(filter.Releases().HasFullName(c.flags.chartRelease))
+		allReleases, err := state.Releases().All()
 		if err != nil {
 			return err
 		}
+		// TODO we will soon have a Releases().ByName() method that will be waaay more efficient than this
+		releases := filter.Releases().HasFullName(c.flags.chartRelease).Filter(allReleases)
 		if len(releases) != 1 {
 			return errors.Errorf("found %d releases matching name %q, expected 1", len(releases), c.flags.chartRelease)
 		}

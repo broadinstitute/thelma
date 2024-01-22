@@ -4,6 +4,4 @@ package terra
 type Releases interface {
 	// All returns a list of all releases
 	All() ([]Release, error)
-	// Filter filters releases
-	Filter(filter ReleaseFilter) ([]Release, error)
 }

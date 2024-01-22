@@ -77,64 +77,6 @@ func (_c *Destinations_All_Call) RunAndReturn(run func() ([]terra.Destination, e
 	return _c
 }
 
-// Filter provides a mock function with given fields: filter
-func (_m *Destinations) Filter(filter terra.DestinationFilter) ([]terra.Destination, error) {
-	ret := _m.Called(filter)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Filter")
-	}
-
-	var r0 []terra.Destination
-	var r1 error
-	if rf, ok := ret.Get(0).(func(terra.DestinationFilter) ([]terra.Destination, error)); ok {
-		return rf(filter)
-	}
-	if rf, ok := ret.Get(0).(func(terra.DestinationFilter) []terra.Destination); ok {
-		r0 = rf(filter)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]terra.Destination)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(terra.DestinationFilter) error); ok {
-		r1 = rf(filter)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Destinations_Filter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Filter'
-type Destinations_Filter_Call struct {
-	*mock.Call
-}
-
-// Filter is a helper method to define mock.On call
-//   - filter terra.DestinationFilter
-func (_e *Destinations_Expecter) Filter(filter interface{}) *Destinations_Filter_Call {
-	return &Destinations_Filter_Call{Call: _e.mock.On("Filter", filter)}
-}
-
-func (_c *Destinations_Filter_Call) Run(run func(filter terra.DestinationFilter)) *Destinations_Filter_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(terra.DestinationFilter))
-	})
-	return _c
-}
-
-func (_c *Destinations_Filter_Call) Return(_a0 []terra.Destination, _a1 error) *Destinations_Filter_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *Destinations_Filter_Call) RunAndReturn(run func(terra.DestinationFilter) ([]terra.Destination, error)) *Destinations_Filter_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Get provides a mock function with given fields: name
 func (_m *Destinations) Get(name string) (terra.Destination, error) {
 	ret := _m.Called(name)

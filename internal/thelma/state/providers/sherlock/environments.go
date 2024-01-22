@@ -26,15 +26,6 @@ func (e *environments) All() ([]terra.Environment, error) {
 	return result, nil
 }
 
-func (e *environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environment, error) {
-	all, err := e.All()
-	if err != nil {
-		return nil, err
-	}
-
-	return filter.Filter(all), nil
-}
-
 func (e *environments) Get(name string) (terra.Environment, error) {
 	env, exists := e.state.environments[name]
 	if !exists {

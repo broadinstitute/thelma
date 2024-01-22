@@ -63,16 +63,13 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 17, len(envs))
 
-	lives, err := state.Environments().Filter(ef.HasBase("live"))
-	require.NoError(t, err)
+	lives := ef.HasBase("live").Filter(envs)
 	assert.Equal(t, len(lives), 5)
 
-	bees, err := state.Environments().Filter(ef.HasBase("bee"))
-	require.NoError(t, err)
+	bees := ef.HasBase("bee").Filter(envs)
 	assert.Equal(t, 9, len(bees))
 
-	personals, err := state.Environments().Filter(ef.HasBase("personal"))
-	require.NoError(t, err)
+	personals := ef.HasBase("personal").Filter(envs)
 	assert.Equal(t, 3, len(personals))
 
 	// make sure we have the expected number of clusters
@@ -81,62 +78,57 @@ func TestDefaultFixtureHasExpectedInitialState(t *testing.T) {
 	assert.Equal(t, 12, len(clusters))
 
 	// make sure we have the expected number of releases
-	sams, err := state.Releases().Filter(rf.HasName("sam"))
+	releases, err := state.Releases().All()
 	require.NoError(t, err)
+
+	sams := rf.HasName("sam").Filter(releases)
 	assert.Equal(t, 13, len(sams))
 
-	liveSams, err := state.Releases().Filter(rf.And(
+	liveSams := rf.And(
 		rf.HasName("sam"),
 		rf.DestinationMatches(df.HasBase("live")),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, 5, len(liveSams))
 
-	personalSams, err := state.Releases().Filter(rf.And(
+	personalSams := rf.And(
 		rf.HasName("sam"),
 		rf.DestinationMatches(df.HasBase("personal")),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, 0, len(personalSams))
 
-	swatBeeSams, err := state.Releases().Filter(rf.And(
+	swatBeeSams := rf.And(
 		rf.HasName("sam"),
 		rf.DestinationMatches(
 			df.IsEnvironmentMatching(ef.HasTemplateName("swatomation")),
 		),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, 4, len(swatBeeSams))
 
-	samciBeeSams, err := state.Releases().Filter(rf.And(
+	samciBeeSams := rf.And(
 		rf.HasName("sam"),
 		rf.DestinationMatches(
 			df.IsEnvironmentMatching(ef.HasTemplateName("sam-ci")),
 		),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, 2, len(samciBeeSams))
 
-	templateSams, err := state.Releases().Filter(rf.And(
+	templateSams := rf.And(
 		rf.HasName("sam"),
 		rf.DestinationMatches(
 			df.IsEnvironmentMatching(
 				ef.HasLifecycle(terra.Template),
 			),
 		),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, 2, len(templateSams))
 
-	rawlses, err := state.Releases().Filter(rf.HasName("rawls"))
-	require.NoError(t, err)
+	rawlses := rf.HasName("rawls").Filter(releases)
 	assert.Equal(t, 11, len(rawlses)) // 5 live, 1 template, 5 bees
 
-	datarepos, err := state.Releases().Filter(rf.HasName("datarepo"))
-	require.NoError(t, err)
+	datarepos := rf.HasName("datarepo").Filter(releases)
 	assert.Equal(t, 3, len(datarepos)) // 3 live (only in alpha, staging, prod)
 
-	externalcredses, err := state.Releases().Filter(rf.HasName("externalcreds"))
+	externalcredses := rf.HasName("externalcreds").Filter(releases)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(externalcredses)) // 2 live (only in dev and perf)
 }
@@ -152,68 +144,63 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 	state, err := app.State()
 	require.NoError(t, err)
 
+	releases, err := state.Releases().All()
+	require.NoError(t, err)
+
 	// test we have correct app and chart version for sam in 4 types of envs
-	devSam, err := state.Releases().Filter(rf.And(
+	devSam := rf.And(
 		rf.HasName("sam"),
 		rf.HasDestinationName("dev"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, "2d309b1645a0", devSam[0].AppVersion())
 	assert.Equal(t, "0.34.0", devSam[0].ChartVersion())
 
-	prodSam, err := state.Releases().Filter(rf.And(
+	prodSam := rf.And(
 		rf.HasName("sam"),
 		rf.HasDestinationName("prod"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, "8f69c32bd9fe", prodSam[0].AppVersion())
 	assert.Equal(t, "0.33.0", prodSam[0].ChartVersion())
 
-	chipmunkSam, err := state.Releases().Filter(rf.And(
+	chipmunkSam := rf.And(
 		rf.HasName("sam"),
 		rf.HasDestinationName("fiab-funky-chipmunk"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, "2d309b1645a0", chipmunkSam[0].AppVersion())
 	assert.Equal(t, "0.34.0", chipmunkSam[0].ChartVersion())
 
-	walrusSam, err := state.Releases().Filter(rf.And(
+	walrusSam := rf.And(
 		rf.HasName("sam"),
 		rf.HasDestinationName("fiab-nerdy-walrus"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, "1.2.3", walrusSam[0].AppVersion())
 	assert.Equal(t, "0.34.0", walrusSam[0].ChartVersion())
 
-	snowflakeSam, err := state.Releases().Filter(rf.And(
+	snowflakeSam := rf.And(
 		rf.HasName("sam"),
 		rf.HasDestinationName("fiab-special-snowflake"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, 0, len(snowflakeSam), "sam is disabled in fiab-special-snowflake")
 
-	snowflakeRawls, err := state.Releases().Filter(rf.And(
+	snowflakeRawls := rf.And(
 		rf.HasName("rawls"),
 		rf.HasDestinationName("fiab-special-snowflake"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, "cead2f9206b5", snowflakeRawls[0].AppVersion())
 	assert.Equal(t, "100.200.300", snowflakeRawls[0].ChartVersion())
 	assert.Equal(t, "my-terra-helmfile-branch", snowflakeRawls[0].TerraHelmfileRef())
 	assert.Equal(t, "", snowflakeRawls[0].FirecloudDevelopRef())
 
-	paniniSam, err := state.Releases().Filter(rf.And(
+	paniniSam := rf.And(
 		rf.HasName("sam"),
 		rf.HasDestinationName("fiab-snarky-panini"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, "some-pr", paniniSam[0].TerraHelmfileRef())
 
-	paniniRawls, err := state.Releases().Filter(rf.And(
+	paniniRawls := rf.And(
 		rf.HasName("rawls"),
 		rf.HasDestinationName("fiab-snarky-panini"),
-	))
-	require.NoError(t, err)
+	).Filter(releases)
 	assert.Equal(t, "completely-different-pr", paniniRawls[0].TerraHelmfileRef())
 
 	// test urp is loaded correctly
