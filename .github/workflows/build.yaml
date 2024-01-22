@@ -74,7 +74,7 @@ jobs:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Bump tag to new version
-        uses: databiosphere/github-actions/actions/bumper@bumper-0.0.6
+        uses: databiosphere/github-actions/actions/bumper@bumper-0.3.0
         id: tag
         env:
           DEFAULT_BUMP: patch
@@ -363,13 +363,13 @@ jobs:
       - name: Push image
         run: "docker push ${{ steps.image-name.outputs.tagged }}"
       - name: Comment pushed image
-        uses: actions/github-script@0.3.0
+        uses: actions/github-script@v7.0.1
         if: github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
-            github.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.tagged }}' });
+            github.rest.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.tagged }}' });
 
   update-latest-tag:
     if: github.event_name != 'pull_request'
