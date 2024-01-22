@@ -4,6 +4,7 @@ import (
 	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/stateutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -53,6 +54,16 @@ func (suite *ConfigSuite) Test_findReleases() {
 			chartName:      "agora",
 			configFile:     `"unterminated string`,
 			expectReleases: []string{"agora-dev"},
+		},
+		{
+			name:      "chart with release in .autorelease.yaml that does not exist",
+			chartName: "agora",
+			configFile: `
+sherlock:
+  chartReleasesToUseLatest:
+    - agora-doesnotexist
+`,
+			expectReleases: []string{},
 		},
 		{
 			name:      "chart should use releases in .autorelease.yaml if specified",
@@ -116,7 +127,7 @@ sherlock:
 
 			releases, err := suite.configLoader.FindReleasesToUpdate(tc.chartName)
 			require.NoError(suite.T(), err)
-			assert.ElementsMatch(suite.T(), tc.expectReleases, releaseFullNames(releases))
+			assert.ElementsMatch(suite.T(), tc.expectReleases, stateutils.ReleaseFullNames(releases))
 		})
 	}
 }

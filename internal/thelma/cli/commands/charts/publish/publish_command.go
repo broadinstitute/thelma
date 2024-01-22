@@ -7,6 +7,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/builders"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/sherlockflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/views"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile"
 	"github.com/broadinstitute/thelma/internal/thelma/utils"
@@ -67,12 +68,14 @@ var flagNames = struct {
 }
 
 type publishCommand struct {
-	options *options
+	options       *options
+	sherlockFlags sherlockflags.SherlockUpdaterFlags
 }
 
 func NewChartsPublishCommand() cli.ThelmaCommand {
 	return &publishCommand{
-		options: &options{},
+		options:       &options{},
+		sherlockFlags: sherlockflags.NewSherlockUpdaterFlags(),
 	}
 }
 
@@ -85,6 +88,7 @@ func (cmd *publishCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.options.bucketName, flagNames.bucketName, defaultBucketName, "Publish charts to custom GCS bucket")
 	cobraCommand.Flags().BoolVarP(&cmd.options.dryRun, flagNames.dryRun, "n", false, "Dry run (don't actually update Helm repo or release to any versioning systems)")
 	cobraCommand.Flags().StringVarP(&cmd.options.changedFilesList, flagNames.changedFilesList, "f", "", "Path to a file trigger (see --help for more info)")
+	cmd.sherlockFlags.AddFlags(cobraCommand)
 }
 
 func (cmd *publishCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
@@ -120,7 +124,7 @@ func (cmd *publishCommand) PreRun(app app.ThelmaApp, ctx cli.RunContext) error {
 }
 
 func (cmd *publishCommand) Run(app app.ThelmaApp, ctx cli.RunContext) error {
-	published, err := publishCharts(cmd.options, app)
+	published, err := publishCharts(cmd.options, cmd.sherlockFlags, app)
 	if err != nil {
 		return err
 	}
@@ -147,7 +151,7 @@ func (cmd *publishCommand) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 // This requires the Helm repositories and their indexes to already exist, so we borrow
 // Helmfile's `helmfile repos` capability to do this based on the same Helm repository
 // configuration used for rendering manifests.
-func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, error) {
+func publishCharts(options *options, sherlockFlags sherlockflags.SherlockUpdaterFlags, app app.ThelmaApp) ([]views.ChartRelease, error) {
 	if len(options.charts) == 0 {
 		log.Warn().Msgf("No charts specified; exiting")
 		return []views.ChartRelease{}, nil
@@ -173,9 +177,13 @@ func publishCharts(options *options, app app.ThelmaApp) ([]views.ChartRelease, e
 		return nil, err
 	}
 
-	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher)
+	updater, err := sherlockFlags.GetDeployedVersionUpdater(app, options.dryRun)
+	if err != nil {
+		return nil, err
+	}
+	chartReleaser := releaser.NewChartReleaser(chartsDir, publisher, updater)
 
-	chartVersions, err := chartReleaser.Release(options.charts)
+	chartVersions, err := chartReleaser.Release(options.charts, sherlockFlags.Description())
 	if err != nil {
 		return nil, err
 	}

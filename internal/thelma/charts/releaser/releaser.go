@@ -29,19 +29,21 @@ type ChartReleaser interface {
 	//   "bar": "0.2.0",
 	// }
 	//
-	Release(chartsToPublish []string) (publishedVersions map[string]VersionPair, err error)
+	Release(chartsToPublish []string, changeDescription string) (publishedVersions map[string]VersionPair, err error)
 }
 
-func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher) ChartReleaser {
+func NewChartReleaser(chartsDir source.ChartsDir, publisher publish.Publisher, deployedVersionUpdater *DeployedVersionUpdater) ChartReleaser {
 	return &chartReleaser{
-		chartsDir: chartsDir,
-		publisher: publisher,
+		chartsDir:              chartsDir,
+		publisher:              publisher,
+		deployedVersionUpdater: deployedVersionUpdater,
 	}
 }
 
 type chartReleaser struct {
-	chartsDir source.ChartsDir
-	publisher publish.Publisher
+	chartsDir              source.ChartsDir
+	publisher              publish.Publisher
+	deployedVersionUpdater *DeployedVersionUpdater
 }
 
 type VersionPair struct {
@@ -51,7 +53,7 @@ type VersionPair struct {
 	NewVersion string
 }
 
-func (r *chartReleaser) Release(chartNames []string) (map[string]VersionPair, error) {
+func (r *chartReleaser) Release(chartNames []string, description string) (map[string]VersionPair, error) {
 	// make sure all charts exist in source dir
 	chartsToPublish := chartNames
 	for _, chartName := range chartsToPublish {
@@ -91,7 +93,22 @@ func (r *chartReleaser) Release(chartNames []string) (map[string]VersionPair, er
 		return nil, err
 	}
 
+	// report new chart versions to Sherlock
+	if err = r.reportNewVersionsToSherlock(chartVersions, description); err != nil {
+		return nil, err
+	}
+
 	return chartVersions, nil
+}
+
+func (r *chartReleaser) reportNewVersionsToSherlock(chartVersions map[string]VersionPair, description string) error {
+	for chartName, versions := range chartVersions {
+		if err := r.deployedVersionUpdater.ReportNewChartVersion(chartName, versions, description); err != nil {
+			return err
+		}
+	}
+	log.Info().Msgf("%d new chart versions were reported to Sherlock", len(chartVersions))
+	return nil
 }
 
 func (r *chartReleaser) publishCharts() error {

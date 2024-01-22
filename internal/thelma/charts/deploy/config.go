@@ -3,6 +3,7 @@ package deploy
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/stateutils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -50,7 +51,7 @@ func newConfigLoader(chartsDir source.ChartsDir, state terra.State) (ConfigLoade
 
 	return &configLoaderImpl{
 		chartsDir: chartsDir,
-		releases:  buildReleaseMap(releases),
+		releases:  stateutils.BuildReleaseMap(releases),
 	}, nil
 }
 

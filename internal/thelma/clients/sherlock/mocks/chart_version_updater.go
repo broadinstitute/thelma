@@ -17,6 +17,51 @@ func (_m *ChartVersionUpdater) EXPECT() *ChartVersionUpdater_Expecter {
 	return &ChartVersionUpdater_Expecter{mock: &_m.Mock}
 }
 
+// ReportNewChartVersion provides a mock function with given fields: chartSelector, newVersion, lastVersion, description
+func (_m *ChartVersionUpdater) ReportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
+	ret := _m.Called(chartSelector, newVersion, lastVersion, description)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, string) error); ok {
+		r0 = rf(chartSelector, newVersion, lastVersion, description)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ChartVersionUpdater_ReportNewChartVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReportNewChartVersion'
+type ChartVersionUpdater_ReportNewChartVersion_Call struct {
+	*mock.Call
+}
+
+// ReportNewChartVersion is a helper method to define mock.On call
+//   - chartSelector string
+//   - newVersion string
+//   - lastVersion string
+//   - description string
+func (_e *ChartVersionUpdater_Expecter) ReportNewChartVersion(chartSelector interface{}, newVersion interface{}, lastVersion interface{}, description interface{}) *ChartVersionUpdater_ReportNewChartVersion_Call {
+	return &ChartVersionUpdater_ReportNewChartVersion_Call{Call: _e.mock.On("ReportNewChartVersion", chartSelector, newVersion, lastVersion, description)}
+}
+
+func (_c *ChartVersionUpdater_ReportNewChartVersion_Call) Run(run func(chartSelector string, newVersion string, lastVersion string, description string)) *ChartVersionUpdater_ReportNewChartVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *ChartVersionUpdater_ReportNewChartVersion_Call) Return(_a0 error) *ChartVersionUpdater_ReportNewChartVersion_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ChartVersionUpdater_ReportNewChartVersion_Call) RunAndReturn(run func(string, string, string, string) error) *ChartVersionUpdater_ReportNewChartVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateForNewChartVersion provides a mock function with given fields: chartSelector, newVersion, lastVersion, description, chartReleaseSelectors
 func (_m *ChartVersionUpdater) UpdateForNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string, chartReleaseSelectors []string) error {
 	ret := _m.Called(chartSelector, newVersion, lastVersion, description, chartReleaseSelectors)

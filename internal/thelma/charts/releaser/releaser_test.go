@@ -5,6 +5,8 @@ import (
 	indexmocks "github.com/broadinstitute/thelma/internal/thelma/charts/repo/index/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
 	sourcemocks "github.com/broadinstitute/thelma/internal/thelma/charts/source/mocks"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
+	sherlockmocks "github.com/broadinstitute/thelma/internal/thelma/clients/sherlock/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -22,7 +24,13 @@ func Test_ChartReleaser(t *testing.T) {
 	publisher.EXPECT().Index().Return(index)
 	publisher.EXPECT().ChartDir().Return(dir)
 
-	releaser := NewChartReleaser(chartsDir, publisher)
+	description := "my commit message"
+	sherlockUpdater := sherlockmocks.NewChartVersionUpdater(t)
+	deployedVersionUpdater := &DeployedVersionUpdater{
+		SherlockUpdaters: []sherlock.ChartVersionUpdater{sherlockUpdater},
+	}
+
+	releaser := NewChartReleaser(chartsDir, publisher, deployedVersionUpdater)
 
 	// set additional mocks mocks
 	chartsDir.EXPECT().Exists("mysql").Return(true)
@@ -37,6 +45,7 @@ func Test_ChartReleaser(t *testing.T) {
 	chartsDir.EXPECT().UpdateDependentVersionConstraints(mysql, "1.3.0").Return(nil)
 	mysql.EXPECT().GenerateDocs().Return(nil)
 	mysql.EXPECT().PackageChart(dir).Return(nil)
+	sherlockUpdater.EXPECT().ReportNewChartVersion("mysql", "1.3.0", "1.2.3", description).Return(nil)
 
 	yale := sourcemocks.NewChart(t)
 	yale.EXPECT().Name().Return("yale")
@@ -46,6 +55,7 @@ func Test_ChartReleaser(t *testing.T) {
 	chartsDir.EXPECT().UpdateDependentVersionConstraints(yale, "0.24.0").Return(nil)
 	yale.EXPECT().GenerateDocs().Return(nil)
 	yale.EXPECT().PackageChart(dir).Return(nil)
+	sherlockUpdater.EXPECT().ReportNewChartVersion("yale", "0.24.0", "0.23.4", description).Return(nil)
 
 	foundation := sourcemocks.NewChart(t)
 	foundation.EXPECT().Name().Return("foundation")
@@ -55,6 +65,7 @@ func Test_ChartReleaser(t *testing.T) {
 	chartsDir.EXPECT().UpdateDependentVersionConstraints(foundation, "1.31.0").Return(nil)
 	foundation.EXPECT().GenerateDocs().Return(nil)
 	foundation.EXPECT().PackageChart(dir).Return(nil)
+	sherlockUpdater.EXPECT().ReportNewChartVersion("foundation", "1.31.0", "1.30.5", description).Return(nil)
 
 	agora := sourcemocks.NewChart(t)
 	agora.EXPECT().Name().Return("agora")
@@ -64,6 +75,7 @@ func Test_ChartReleaser(t *testing.T) {
 	chartsDir.EXPECT().UpdateDependentVersionConstraints(agora, "11.13.0").Return(nil)
 	agora.EXPECT().GenerateDocs().Return(nil)
 	agora.EXPECT().PackageChart(dir).Return(nil)
+	sherlockUpdater.EXPECT().ReportNewChartVersion("agora", "11.13.0", "11.12.13", description).Return(nil)
 
 	sam := sourcemocks.NewChart(t)
 	sam.EXPECT().Name().Return("sam")
@@ -73,6 +85,7 @@ func Test_ChartReleaser(t *testing.T) {
 	chartsDir.EXPECT().UpdateDependentVersionConstraints(sam, "1.1.0").Return(nil)
 	sam.EXPECT().GenerateDocs().Return(nil)
 	sam.EXPECT().PackageChart(dir).Return(nil)
+	sherlockUpdater.EXPECT().ReportNewChartVersion("sam", "1.1.0", "1.0.0", description).Return(nil)
 
 	bpm := sourcemocks.NewChart(t)
 	bpm.EXPECT().Name().Return("bpm")
@@ -82,6 +95,7 @@ func Test_ChartReleaser(t *testing.T) {
 	chartsDir.EXPECT().UpdateDependentVersionConstraints(bpm, "2.14.0").Return(nil)
 	bpm.EXPECT().GenerateDocs().Return(nil)
 	bpm.EXPECT().PackageChart(dir).Return(nil)
+	sherlockUpdater.EXPECT().ReportNewChartVersion("bpm", "2.14.0", "2.13.0", description).Return(nil)
 
 	chartsDir.EXPECT().GetCharts("mysql", "foundation", "yale").Return([]source.Chart{
 		mysql,
@@ -111,7 +125,7 @@ func Test_ChartReleaser(t *testing.T) {
 
 	publisher.EXPECT().Publish().Return(6, nil)
 
-	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"})
+	versionMap, err := releaser.Release([]string{"mysql", "foundation", "yale"}, "my commit message")
 	require.NoError(t, err)
 
 	assert.Equal(t, map[string]VersionPair{
