@@ -535,14 +535,12 @@ func (b *bees) FilterBees(_filter terra.EnvironmentFilter) ([]terra.Environment,
 }
 
 func (b *bees) templateNames() ([]string, error) {
-	templateFilter := filter.Environments().HasLifecycle(terra.Template)
-
 	allEnvs, err := b.state.Environments().All()
 	if err != nil {
 		return nil, err
 	}
 
-	templates := templateFilter.Filter(allEnvs)
+	templates := filter.Environments().IsTemplate().Filter(allEnvs)
 
 	var names []string
 	for _, t := range templates {

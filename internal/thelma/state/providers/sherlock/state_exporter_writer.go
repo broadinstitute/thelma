@@ -19,23 +19,19 @@ func NewSherlockStateWriter(state terra.State, writer terra.StateWriter) *StateE
 
 func (s *StateExporterWriter) WriteEnvironments() error {
 	// Need to create template envs first as other envs that reference them will 404 in sherlock otherwise
-	templateEnvfilter := filter.Environments().HasLifecycle(terra.Template)
-
 	allEnvs, err := s.state.Environments().All()
 	if err != nil {
 		return err
 	}
 
-	templateEnvs := templateEnvfilter.Filter(allEnvs)
+	isTemplate := filter.Environments().IsTemplate()
+
+	templateEnvs := isTemplate.Filter(allEnvs)
 	if _, err = s.stateWriter.WriteEnvironments(templateEnvs); err != nil {
 		return err
 	}
 
-	allOtherEnvsFilter := filter.Environments().
-		Or(
-			filter.Environments().HasLifecycle(terra.Dynamic),
-			filter.Environments().HasLifecycle(terra.Static),
-		)
+	allOtherEnvsFilter := isTemplate.Negate()
 
 	allOtherEnvs := allOtherEnvsFilter.Filter(allEnvs)
 
