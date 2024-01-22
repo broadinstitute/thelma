@@ -4,6 +4,7 @@ package pool
 import (
 	"context"
 	"fmt"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/repeater"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -21,8 +22,12 @@ type Options struct {
 	NumWorkers int
 	// StopProcessingOnError whether to stop processing work items in the event a job returns an error
 	StopProcessingOnError bool
-	// Summarizer options for printing periodic processing summaries to the log
-	Summarizer SummarizerOptions
+	// LogSummarizer options for printing periodic processing summaries to the log
+	LogSummarizer LogSummarizerOptions
+	// ChartReleaseSummarizer can be optionally set to if the jobs statuses are chart release
+	// statuses that should be further summarized/reported. Note that only Jobs with a
+	// ChartReleaseName set will be summarized in this way.
+	ChartReleaseSummarizer ChartReleaseSummarizerOptions
 	// Metrics options for recording metrics
 	Metrics MetricsOptions
 }
@@ -36,8 +41,13 @@ type MetricsOptions struct {
 
 // Job a unit of work that can be executed by a Pool
 type Job struct {
-	// Name short text description for this job to use in log messages
+	// Name is a short text description for this job to use in log messages
 	Name string
+	// ChartReleaseName is an optional full name of the chart release as understood
+	// by Sherlock (in other words, the canonical globally-unique name for the
+	// chart release, like "leonardo-dev"). This must be set for the job to be
+	// summarized by a configured ChartReleaseSummarizer.
+	ChartReleaseName string
 	// Run function that performs work
 	Run func(StatusReporter) error
 	// Labels optional set of metric labels to add to job metrics
@@ -56,13 +66,17 @@ func New(jobs []Job, options ...Option) Pool {
 	opts := Options{
 		NumWorkers:            runtime.NumCPU(),
 		StopProcessingOnError: true,
-		Summarizer: SummarizerOptions{
+		LogSummarizer: LogSummarizerOptions{
 			Enabled:         true,
 			Interval:        30 * time.Second,
 			LogLevel:        zerolog.InfoLevel,
 			WorkDescription: "items processed",
 			Footer:          "",
 			MaxLineItems:    50,
+		},
+		ChartReleaseSummarizer: ChartReleaseSummarizerOptions{
+			Enabled:  false,
+			Interval: 30 * time.Second,
 		},
 		Metrics: MetricsOptions{
 			Enabled:  false,
@@ -82,31 +96,34 @@ func New(jobs []Job, options ...Option) Pool {
 	cancelCtx, cancelFn := context.WithCancel(context.Background())
 
 	return &pool{
-		items:      items,
-		options:    opts,
-		waitGroup:  sync.WaitGroup{},
-		queue:      make(chan workItem, len(items)),
-		cancelCtx:  cancelCtx,
-		cancelFn:   cancelFn,
-		summarizer: newSummarizer(items, opts.Summarizer),
+		items:                  items,
+		options:                opts,
+		waitGroup:              sync.WaitGroup{},
+		queue:                  make(chan workItem, len(items)),
+		cancelCtx:              cancelCtx,
+		cancelFn:               cancelFn,
+		logSummarizer:          newLogSummarizer(items, opts.LogSummarizer),
+		chartReleaseSummarizer: newChartReleaseSummarizer(items, opts.ChartReleaseSummarizer),
 	}
 }
 
 type pool struct {
-	options    Options
-	items      []workItem
-	waitGroup  sync.WaitGroup
-	queue      chan workItem
-	cancelCtx  context.Context
-	cancelFn   context.CancelFunc
-	summarizer *summarizer
+	options                Options
+	items                  []workItem
+	waitGroup              sync.WaitGroup
+	queue                  chan workItem
+	cancelCtx              context.Context
+	cancelFn               context.CancelFunc
+	logSummarizer          repeater.Repeater
+	chartReleaseSummarizer repeater.Repeater
 }
 
 func (p *pool) Execute() error {
 	log.Debug().Msgf("executing %d job(s) with %d worker(s)", len(p.items), p.NumWorkers())
 
 	p.addJobsToQueue()
-	p.summarizer.start()
+	p.logSummarizer.Start()
+	p.chartReleaseSummarizer.Start()
 
 	for i := 0; i < p.NumWorkers(); i++ {
 		p.spawnWorker(i)
@@ -114,7 +131,8 @@ func (p *pool) Execute() error {
 
 	// wait for execution to finish
 	p.waitGroup.Wait()
-	p.summarizer.stop()
+	p.logSummarizer.Stop()
+	p.chartReleaseSummarizer.Stop()
 
 	return p.aggregateErrors()
 }

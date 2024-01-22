@@ -144,12 +144,14 @@ func selectAvailableLocalRedirectURI(redirectURIs []string) (string, error) {
 			continue
 		}
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%s", parts[2]))
-		_ = ln.Close()
+		if ln != nil {
+			_ = ln.Close()
+		}
 		if err == nil {
 			redirectURI = uri
 			break
 		} else {
-			log.Trace().Msgf("couldn't use %s, (port busy)", uri)
+			log.Debug().Err(err).Msgf("couldn't use %s", uri)
 		}
 	}
 

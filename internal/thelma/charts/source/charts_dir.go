@@ -12,6 +12,8 @@ import (
 
 // ChartsDir represents a directory of Helm chart sources on the local filesystem.
 type ChartsDir interface {
+	// Path returns the filesystem path of the source directory
+	Path() string
 	// Exists returns true if a chart by the given name exists in the directory
 	Exists(name string) bool
 	// GetChart returns a Chart for the chart with the given name, or an error if no chart by that name exists in source dir
@@ -64,6 +66,10 @@ type chartsDir struct {
 	sourceDir       string
 	charts          map[string]Chart
 	dependencyGraph *dependency.Graph
+}
+
+func (d *chartsDir) Path() string {
+	return d.sourceDir
 }
 
 func (d *chartsDir) Exists(chartName string) bool {

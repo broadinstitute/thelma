@@ -141,7 +141,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 
 	err = pool.New(jobs, func(o *pool.Options) {
 		o.NumWorkers = cmd.options.maxParallel
-		o.Summarizer.Enabled = true
+		o.LogSummarizer.Enabled = true
 		o.Metrics.Enabled = true
 		o.Metrics.PoolName = "bees_bulk_delete"
 	}).Execute()

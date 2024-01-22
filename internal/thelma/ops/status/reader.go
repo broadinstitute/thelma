@@ -11,24 +11,25 @@ import (
 	"sync"
 )
 
-type Reporter interface {
+// Reader can read the status of a release from Kubernetes and ArgoCD
+type Reader interface {
 	Status(release terra.Release) (*Status, error)
 	Statuses(releases []terra.Release) (map[terra.Release]*Status, error)
 }
 
-func NewReporter(argocd argocd.ArgoCD, kubeclients k8sclients.Clients) Reporter {
-	return &reporter{
+func NewReporter(argocd argocd.ArgoCD, kubeclients k8sclients.Clients) Reader {
+	return &reader{
 		argocd:      argocd,
 		kubeclients: kubeclients,
 	}
 }
 
-type reporter struct {
+type reader struct {
 	argocd      argocd.ArgoCD
 	kubeclients k8sclients.Clients
 }
 
-func (r *reporter) Status(release terra.Release) (*Status, error) {
+func (r *reader) Status(release terra.Release) (*Status, error) {
 	appStatus, err := r.argocd.AppStatus(argocdnames.ApplicationName(release))
 	if err != nil {
 		return nil, err
@@ -43,7 +44,7 @@ func (r *reporter) Status(release terra.Release) (*Status, error) {
 	return &status, nil
 }
 
-func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]*Status, error) {
+func (r *reader) Statuses(releases []terra.Release) (map[terra.Release]*Status, error) {
 	statuses := make(map[terra.Release]*Status)
 	var mutex sync.Mutex
 
@@ -69,7 +70,7 @@ func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]*Status
 
 	_pool := pool.New(jobs, func(options *pool.Options) {
 		options.NumWorkers = 10
-		options.Summarizer.WorkDescription = "services checked"
+		options.LogSummarizer.WorkDescription = "services checked"
 	})
 	err := _pool.Execute()
 	if err != nil {
@@ -78,7 +79,7 @@ func (r *reporter) Statuses(releases []terra.Release) (map[terra.Release]*Status
 	return statuses, nil
 }
 
-func (r *reporter) buildUnhealthyResourceList(appStatus argocd.ApplicationStatus, release terra.Release) []Resource {
+func (r *reader) buildUnhealthyResourceList(appStatus argocd.ApplicationStatus, release terra.Release) []Resource {
 	var unhealthyResources []Resource
 
 	for _, argoResource := range appStatus.Resources {
@@ -105,7 +106,7 @@ func (r *reporter) buildUnhealthyResourceList(appStatus argocd.ApplicationStatus
 	return unhealthyResources
 }
 
-func (r *reporter) buildEventMatcher(release terra.Release) (*eventMatcher, error) {
+func (r *reader) buildEventMatcher(release terra.Release) (*eventMatcher, error) {
 	apiClient, err := r.kubeclients.ForRelease(release)
 	if err != nil {
 		return nil, err

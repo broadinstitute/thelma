@@ -124,7 +124,7 @@ func (s *seeder) seedStep2RegisterSaProfiles(appReleases map[string]terra.AppRel
 
 		err := pool.New(jobs, func(o *pool.Options) {
 			o.NumWorkers = opts.RegistrationParallelism
-			o.Summarizer.Enabled = true
+			o.LogSummarizer.Enabled = true
 			o.Metrics.Enabled = false
 			o.StopProcessingOnError = !opts.Force
 		}).Execute()
@@ -148,7 +148,7 @@ func (s *seeder) _registerSaProfile(appRelease terra.AppRelease, orch terra.AppR
 	if err != nil {
 		return err
 	}
-	_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile("None", "None", "None", terraClient.GoogleUserInfo().Email, "None", "None", "None", "None", "None", "None", "None")
+	_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile("None", "None", "None", terraClient.GoogleUserinfo().Email, "None", "None", "None", "None", "None", "None", "None")
 
 	return _ignore409Conflict(err)
 }

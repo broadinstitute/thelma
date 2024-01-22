@@ -94,7 +94,7 @@ type seedConfig struct {
 	}
 }
 
-func (s *seeder) googleAuthAs(appRelease terra.AppRelease) (google.Clients, error) {
+func (s *seeder) googleAuthAs(appRelease terra.AppRelease, options ...google.Option) (google.Clients, error) {
 	config, err := s.configWithBasicDefaults()
 	if err != nil {
 		return nil, err
@@ -128,9 +128,8 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease) (google.Clients, erro
 	if strings.ContainsRune(vaultPath, '%') {
 		vaultPath = fmt.Sprintf(vaultPath, appRelease.Cluster().ProjectSuffix())
 	}
-	return s.clientFactory.GoogleUsingVaultSA(
-		vaultPath,
-		vaultKey,
+	return s.clientFactory.Google(
+		append(options, google.OptionForceVaultSA(vaultPath, vaultKey))...,
 	), nil
 }
 

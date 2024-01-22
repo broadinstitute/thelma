@@ -83,7 +83,7 @@ func Test_OrchClientRetriesFailedRequests(t *testing.T) {
 			client := &firecloudOrchClient{
 				terraClient: &terraClient{
 					tokenSource: testutils.NewFakeTokenSource("fake-token"),
-					userInfo:    googleoauth.Userinfo{},
+					userInfo:    &googleoauth.Userinfo{},
 					httpClient:  *fakeOrchServer.Client(),
 					retryDelay:  5 * time.Millisecond,
 				},

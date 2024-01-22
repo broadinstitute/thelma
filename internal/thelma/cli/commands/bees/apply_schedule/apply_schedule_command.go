@@ -205,7 +205,7 @@ func (cmd *command) Run(app app.ThelmaApp, rc cli.RunContext) error {
 
 	err = pool.New(jobs, func(o *pool.Options) {
 		o.NumWorkers = cmd.options.maxParallel
-		o.Summarizer.Enabled = true
+		o.LogSummarizer.Enabled = true
 		o.Metrics.Enabled = !cmd.options.dryRun // When dry-running, don't report metrics!
 		o.Metrics.PoolName = "bees_apply_schedule"
 		o.StopProcessingOnError = false
