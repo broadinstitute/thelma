@@ -13,7 +13,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.15.0
 	github.com/go-openapi/runtime v0.26.0
-	github.com/go-openapi/strfmt v0.21.8
+	github.com/go-openapi/strfmt v0.22.0
 	github.com/go-playground/validator/v10 v10.17.0
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-github v17.0.0+incompatible
