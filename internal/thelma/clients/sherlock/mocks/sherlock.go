@@ -457,13 +457,13 @@ func (_c *Client_Releases_Call) RunAndReturn(run func() (sherlock.Releases, erro
 	return _c
 }
 
-// ReportNewChartVersion provides a mock function with given fields: chartSelector, newVersion, lastVersion, description
-func (_m *Client) ReportNewChartVersion(chartSelector string, newVersion string, lastVersion string, description string) error {
-	ret := _m.Called(chartSelector, newVersion, lastVersion, description)
+// ReportNewChartVersion provides a mock function with given fields: chartName, newVersion, lastVersion, description
+func (_m *Client) ReportNewChartVersion(chartName string, newVersion string, lastVersion string, description string) error {
+	ret := _m.Called(chartName, newVersion, lastVersion, description)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, string, string, string) error); ok {
-		r0 = rf(chartSelector, newVersion, lastVersion, description)
+		r0 = rf(chartName, newVersion, lastVersion, description)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -477,15 +477,15 @@ type Client_ReportNewChartVersion_Call struct {
 }
 
 // ReportNewChartVersion is a helper method to define mock.On call
-//   - chartSelector string
+//   - chartName string
 //   - newVersion string
 //   - lastVersion string
 //   - description string
-func (_e *Client_Expecter) ReportNewChartVersion(chartSelector interface{}, newVersion interface{}, lastVersion interface{}, description interface{}) *Client_ReportNewChartVersion_Call {
-	return &Client_ReportNewChartVersion_Call{Call: _e.mock.On("ReportNewChartVersion", chartSelector, newVersion, lastVersion, description)}
+func (_e *Client_Expecter) ReportNewChartVersion(chartName interface{}, newVersion interface{}, lastVersion interface{}, description interface{}) *Client_ReportNewChartVersion_Call {
+	return &Client_ReportNewChartVersion_Call{Call: _e.mock.On("ReportNewChartVersion", chartName, newVersion, lastVersion, description)}
 }
 
-func (_c *Client_ReportNewChartVersion_Call) Run(run func(chartSelector string, newVersion string, lastVersion string, description string)) *Client_ReportNewChartVersion_Call {
+func (_c *Client_ReportNewChartVersion_Call) Run(run func(chartName string, newVersion string, lastVersion string, description string)) *Client_ReportNewChartVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string))
 	})
