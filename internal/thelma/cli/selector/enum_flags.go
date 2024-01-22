@@ -177,11 +177,13 @@ func newEnvironmentTemplatesFlag() *enumFlag {
 		usageMessage:  `Run for dynamic environments with a specific template (eg. "swatomation")`,
 
 		validValues: func(state terra.State) (set.StringSet, error) {
-			envs, err := state.Environments().Filter(filter.Environments().HasLifecycle(terra.Template))
+			allEnvs, err := state.Environments().All()
 			if err != nil {
 				return nil, err
 			}
-			return namesSet(envs), nil
+
+			templates := filter.Environments().IsTemplate().Filter(allEnvs)
+			return namesSet(templates), nil
 		},
 
 		buildFilter: func(f *filterBuilder, values []string) {

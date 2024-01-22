@@ -26,12 +26,3 @@ func (r *releases) All() ([]terra.Release, error) {
 
 	return result, nil
 }
-
-func (r *releases) Filter(filter terra.ReleaseFilter) ([]terra.Release, error) {
-	all, err := r.All()
-	if err != nil {
-		return nil, err
-	}
-
-	return filter.Filter(all), nil
-}

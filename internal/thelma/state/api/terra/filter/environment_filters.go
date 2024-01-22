@@ -23,6 +23,8 @@ type EnvironmentFilters interface {
 	HasLifecycleName(lifecycleName ...string) terra.EnvironmentFilter
 	// HasTemplate matches environments with the given template
 	HasTemplate(template terra.Environment) terra.EnvironmentFilter
+	// IsTemplate matches environments that are templates
+	IsTemplate() terra.EnvironmentFilter
 	// HasTemplateName matches environments with the given template name(s)
 	HasTemplateName(templateNames ...string) terra.EnvironmentFilter
 	// NameIncludes returns environments with names that include the given substring
@@ -91,6 +93,15 @@ func (e environmentFilters) HasTemplate(template terra.Environment) terra.Enviro
 		string: fmt.Sprintf("hasTemplate(%s)", template.Name()),
 		matcher: func(environment terra.Environment) bool {
 			return environment.Template() == template.Name()
+		},
+	}
+}
+
+func (e environmentFilters) IsTemplate() terra.EnvironmentFilter {
+	return environmentFilter{
+		string: "isTemplate()",
+		matcher: func(environment terra.Environment) bool {
+			return environment.Lifecycle().IsTemplate()
 		},
 	}
 }

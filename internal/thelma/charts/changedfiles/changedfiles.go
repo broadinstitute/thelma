@@ -151,7 +151,11 @@ func (c *changedFiles) identifyImpactedCharts(inputFile string) (set.Set[string]
 
 	// identify releases that are impacted by global values files, and add all their charts to the list
 	_filter := matchesToReleaseFilter(matches)
-	matchingReleases, err := c.state.Releases().Filter(_filter)
+	allReleases, err := c.state.Releases().All()
+	if err != nil {
+		return nil, err
+	}
+	matchingReleases := _filter.Filter(allReleases)
 	if err != nil {
 		return nil, err
 	}

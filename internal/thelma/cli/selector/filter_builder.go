@@ -81,10 +81,12 @@ func (f *filterBuilder) addDestinationInclude(filter terra.DestinationFilter) {
 }
 
 func applyFilter(state terra.State, filter terra.ReleaseFilter) ([]terra.Release, error) {
-	releases, err := state.Releases().Filter(filter)
+	allReleases, err := state.Releases().All()
 	if err != nil {
 		return nil, err
 	}
+
+	releases := filter.Filter(allReleases)
 
 	log.Debug().Msgf("%d releases matched filter: %s", len(releases), filter.String())
 	sort.Releases(releases)

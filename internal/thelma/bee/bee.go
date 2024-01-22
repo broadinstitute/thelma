@@ -383,10 +383,11 @@ func (b *bees) SyncEnvironmentGenerator(env terra.Environment) error {
 }
 
 func (b *bees) SyncArgoAppsIn(env terra.Environment, options ...argocd.SyncOption) (map[terra.Release]*status.Status, error) {
-	releases, err := b.state.Releases().Filter(filter.Releases().BelongsToEnvironment(env))
+	allReleases, err := b.state.Releases().All()
 	if err != nil {
 		return nil, err
 	}
+	releases := filter.Releases().BelongsToEnvironment(env).Filter(allReleases)
 
 	_sync, err := b.ops.Sync()
 	if err != nil {
@@ -526,14 +527,22 @@ func (b *bees) Seeder() seed.Seeder {
 
 func (b *bees) FilterBees(_filter terra.EnvironmentFilter) ([]terra.Environment, error) {
 	_filter = filter.Environments().HasLifecycle(terra.Dynamic).And(_filter)
-	return b.state.Environments().Filter(_filter)
-}
-
-func (b *bees) templateNames() ([]string, error) {
-	templates, err := b.state.Environments().Filter(filter.Environments().HasLifecycle(terra.Template))
+	allEnvs, err := b.state.Environments().All()
 	if err != nil {
 		return nil, err
 	}
+	return _filter.Filter(allEnvs), nil
+}
+
+func (b *bees) templateNames() ([]string, error) {
+	templateFilter := filter.Environments().HasLifecycle(terra.Template)
+
+	allEnvs, err := b.state.Environments().All()
+	if err != nil {
+		return nil, err
+	}
+
+	templates := templateFilter.Filter(allEnvs)
 
 	var names []string
 	for _, t := range templates {

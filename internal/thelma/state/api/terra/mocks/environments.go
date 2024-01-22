@@ -330,64 +330,6 @@ func (_c *Environments_Exists_Call) RunAndReturn(run func(string) (bool, error))
 	return _c
 }
 
-// Filter provides a mock function with given fields: filter
-func (_m *Environments) Filter(filter terra.EnvironmentFilter) ([]terra.Environment, error) {
-	ret := _m.Called(filter)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Filter")
-	}
-
-	var r0 []terra.Environment
-	var r1 error
-	if rf, ok := ret.Get(0).(func(terra.EnvironmentFilter) ([]terra.Environment, error)); ok {
-		return rf(filter)
-	}
-	if rf, ok := ret.Get(0).(func(terra.EnvironmentFilter) []terra.Environment); ok {
-		r0 = rf(filter)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]terra.Environment)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(terra.EnvironmentFilter) error); ok {
-		r1 = rf(filter)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Environments_Filter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Filter'
-type Environments_Filter_Call struct {
-	*mock.Call
-}
-
-// Filter is a helper method to define mock.On call
-//   - filter terra.EnvironmentFilter
-func (_e *Environments_Expecter) Filter(filter interface{}) *Environments_Filter_Call {
-	return &Environments_Filter_Call{Call: _e.mock.On("Filter", filter)}
-}
-
-func (_c *Environments_Filter_Call) Run(run func(filter terra.EnvironmentFilter)) *Environments_Filter_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(terra.EnvironmentFilter))
-	})
-	return _c
-}
-
-func (_c *Environments_Filter_Call) Return(_a0 []terra.Environment, _a1 error) *Environments_Filter_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *Environments_Filter_Call) RunAndReturn(run func(terra.EnvironmentFilter) ([]terra.Environment, error)) *Environments_Filter_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Get provides a mock function with given fields: name
 func (_m *Environments) Get(name string) (terra.Environment, error) {
 	ret := _m.Called(name)

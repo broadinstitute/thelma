@@ -4,8 +4,6 @@ package terra
 type Environments interface {
 	// All returns a list of all environments
 	All() ([]Environment, error)
-	// Filter returns a list of environments matching the given filter
-	Filter(filter EnvironmentFilter) ([]Environment, error)
 	// Get returns the environment with the given name, or nil if no such environment exists
 	Get(name string) (Environment, error)
 	// Exists returns true if an environment by the given name exists
