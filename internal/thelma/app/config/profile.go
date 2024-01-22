@@ -39,6 +39,8 @@ func chooseProfile(options Options) string {
 		return name
 	}
 
+	// GoLand's inspection will be wrong here, because it doesn't know that runtime.GOOS can change.
+	//goland:noinspection GoBoolExpressions
 	if utils.Interactive() || runtime.GOOS == osx {
 		return defaultProfile
 	} else {

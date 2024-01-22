@@ -4,17 +4,16 @@ import (
 	container "cloud.google.com/go/container/apiv1"
 	"cloud.google.com/go/pubsub"
 	"context"
-	"encoding/json"
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/api"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/sqladmin"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
+	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	oauth2google "golang.org/x/oauth2/google"
+	"google.golang.org/api/iamcredentials/v1"
 	googleoauth "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
 	googlesqladmin "google.golang.org/api/sqladmin/v1"
@@ -22,27 +21,12 @@ import (
 	"strings"
 )
 
-const configKey = "google"
-
-const broadEmailSuffix = "@broadinstitute.org"
-
-var tokenScopes = []string{
-	"https://www.googleapis.com/auth/cloud-platform",
-	"https://www.googleapis.com/auth/devstorage.full_control",
-	"https://www.googleapis.com/auth/userinfo.email",
-	"https://www.googleapis.com/auth/userinfo.profile",
-	"openid",
-}
-
-// Clients client factory for GCP api clients
+// Clients factory for GCP api clients
 type Clients interface {
 	// Bucket constructs a new Bucket using Thelma's globally-configured Google authentication options
 	Bucket(name string, options ...bucket.BucketOption) (bucket.Bucket, error)
 	// Terra returns a new terraapi.TerraClient instance
 	Terra() (terraapi.TerraClient, error)
-	// SetSubject allows usage of domain-wide delegation privileges, to authenticate as a user via
-	// a different account.
-	SetSubject(subject string) Clients
 	// PubSub returns a new google pubsub client
 	PubSub(projectId string) (*pubsub.Client, error)
 	// ClusterManager returns a new google container cluster manager client
@@ -51,6 +35,36 @@ type Clients interface {
 	SqlAdmin() (sqladmin.Client, error)
 	// TokenSource returns an oauth TokenSource for this client factory's configured identity
 	TokenSource() (oauth2.TokenSource, error)
+	// IdTokenGenerator returns a function suitable to be an issueFn for credentials.TokenProvider
+	IdTokenGenerator(audience string, serviceAccountChain ...string) (func() ([]byte, error), error)
+}
+
+type Options struct {
+	// ConfigSource should be provided if neither OptionForceADC nor OptionForceVaultSA are passed.
+	ConfigSource config.Config
+	// VaultFactory will be lazily executed if Vault SA auth is used.
+	VaultFactory func() (*vaultapi.Client, error)
+	// Subject, when set, indicates that delegation to that subject should be attempted.
+	Subject string
+
+	// configFns is set internally by OptionForceVaultSA and OptionForceADC.
+	configFns []func(*googleConfig)
+}
+
+type Option func(*Options)
+
+const configKey = "google"
+
+const broadEmailSuffix = "@broadinstitute.org"
+const serviceAccountEmailSuffix = ".iam.gserviceaccount.com"
+const serviceAccountResourceNamePrefix = "projects/-/serviceAccounts/"
+
+var tokenScopes = []string{
+	"https://www.googleapis.com/auth/cloud-platform",
+	"https://www.googleapis.com/auth/devstorage.full_control",
+	"https://www.googleapis.com/auth/userinfo.email",
+	"https://www.googleapis.com/auth/userinfo.profile",
+	"openid",
 }
 
 type googleConfig struct {
@@ -74,289 +88,276 @@ type googleConfig struct {
 	}
 }
 
-func New(thelmaConfig config.Config, vaultFactory api.VaultFactory) Clients {
-	return &google{
-		thelmaConfig: thelmaConfig,
-		vaultFactory: vaultFactory,
-	}
-}
-
-func NewUsingVaultSA(
-	thelmaConfig config.Config,
-	vaultFactory api.VaultFactory,
+func OptionForceVaultSA(
 	saVaultPath string,
 	saVaultKey string,
-) Clients {
-	customConfig := &googleConfig{}
-	customConfig.Auth.Type = "vault-sa"
-	customConfig.Auth.Vault.Path = saVaultPath
-	customConfig.Auth.Vault.Key = saVaultKey
-	return &google{
-		thelmaConfig: thelmaConfig,
-		vaultFactory: vaultFactory,
-		customConfig: customConfig,
+) Option {
+	return func(o *Options) {
+		o.configFns = append(o.configFns, func(c *googleConfig) {
+			c.Auth.Type = "vault-sa"
+			c.Auth.Vault.Path = saVaultPath
+			c.Auth.Vault.Key = saVaultKey
+		})
 	}
 }
 
-func NewUsingADC(
-	thelmaConfig config.Config,
-	vaultFactory api.VaultFactory,
+func OptionForceADC(
 	allowNonBroad bool,
-) Clients {
-	customConfig := &googleConfig{}
-	customConfig.Auth.Type = "adc"
-	customConfig.Auth.ADC.VerifyBroadEmail = !allowNonBroad
-	return &google{
-		thelmaConfig: thelmaConfig,
-		vaultFactory: vaultFactory,
-		customConfig: customConfig,
+) Option {
+	return func(o *Options) {
+		o.configFns = append(o.configFns, func(c *googleConfig) {
+			c.Auth.Type = "adc"
+			c.Auth.ADC.VerifyBroadEmail = !allowNonBroad
+		})
 	}
 }
 
-type google struct {
-	thelmaConfig config.Config
-	vaultFactory api.VaultFactory
-	customConfig *googleConfig
-	subject      string
-}
-
-func (g *google) Bucket(name string, options ...bucket.BucketOption) (bucket.Bucket, error) {
-	clientOpts, err := g.clientOptions(false)
-	if err != nil {
-		return nil, err
+func New(options ...Option) Clients {
+	opts := Options{}
+	for _, opt := range options {
+		opt(&opts)
 	}
 
-	options = append(options, bucket.WithClientOptions(clientOpts...))
-	return bucket.NewBucket(name, options...)
-}
-
-func (g *google) Terra() (terraapi.TerraClient, error) {
-	tokenSource, err := g.TokenSource()
-	if err != nil {
-		return nil, errors.Errorf("error obtaining token source: %v", err)
-	}
-	oauth2Service, err := googleoauth.NewService(context.Background(), option.WithTokenSource(tokenSource))
-	if err != nil {
-		return nil, errors.Errorf("error obtaining google oauth2 service: %v", err)
-	}
-	info, err := oauth2Service.Userinfo.V2.Me.Get().Do()
-	if err != nil {
-		return nil, errors.Errorf("error getting google user info: %v", err)
-	}
-	log.Debug().Msgf("using Terra API client authenticated as %s", info.Email)
-	client := terraapi.NewClient(tokenSource, *info)
-	return client, nil
-}
-
-func (g *google) SetSubject(subject string) Clients {
-	g.subject = subject
-	return g
-}
-
-func (g *google) PubSub(projectId string) (*pubsub.Client, error) {
-	clientOpts, err := g.clientOptions(true)
-	if err != nil {
-		return nil, err
-	}
-	return pubsub.NewClient(context.Background(), projectId, clientOpts...)
-}
-
-func (g *google) ClusterManager() (*container.ClusterManagerClient, error) {
-	clientOpts, err := g.clientOptions(true)
-	if err != nil {
-		return nil, err
-	}
-	return container.NewClusterManagerClient(context.Background(), clientOpts...)
-}
-
-func (g *google) TokenSource() (oauth2.TokenSource, error) {
-	creds, err := g.oauthCredentials()
-	if err != nil {
-		return nil, err
-	}
-	return creds.TokenSource, nil
-}
-
-func (g *google) SqlAdmin() (sqladmin.Client, error) {
-	clientOpts, err := g.clientOptions(false)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := googlesqladmin.NewService(context.Background(), clientOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	return sqladmin.New(client), nil
-}
-
-func (g *google) clientOptions(usesGrpc bool) ([]option.ClientOption, error) {
-	cfg, err := g.loadConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	creds, err := g.oauthCredentials()
-	if err != nil {
-		return nil, err
-	}
-
-	if cfg.TransportLogging.Enabled && !usesGrpc {
-		client, _, err := transport.NewHTTPClient(context.Background(), option.WithCredentials(creds))
-		if err != nil {
-			return nil, err
+	var cfg googleConfig
+	if opts.ConfigSource != nil {
+		if err := opts.ConfigSource.Unmarshal(configKey, &cfg); err != nil {
+			log.Fatal().Err(err).Msgf("failed to unmarshal %s config", configKey)
 		}
-		client.Transport = &loggingTransport{
-			rt: client.Transport,
-		}
-
-		return []option.ClientOption{
-			option.WithHTTPClient(client),
-		}, nil
+	}
+	for _, fn := range opts.configFns {
+		fn(&cfg)
 	}
 
-	return []option.ClientOption{
-		option.WithCredentials(creds),
-	}, nil
+	return &clientsImpl{
+		options: opts,
+		cfg:     cfg,
+	}
 }
 
-func (g *google) oauthCredentials() (*oauth2google.Credentials, error) {
-	cfg, err := g.loadConfig()
-	if err != nil {
-		return nil, err
-	}
+type clientsImpl struct {
+	options Options
+	cfg     googleConfig
 
-	params := oauth2google.CredentialsParams{
-		Scopes: g.copyTokenScopes(),
-	}
-	if len(g.subject) > 0 {
-		log.Debug().Msgf("Using Google client with delegated subject: %s", g.subject)
-		params.Subject = g.subject
-	}
+	cachedGoogleUserinfo    *googleoauth.Userinfo
+	cachedGoogleCredentials *oauth2google.Credentials
+}
 
-	switch cfg.Auth.Type {
-	case "adc":
-		log.Debug().Msg("Google clients will use application default credentials")
-		creds, err := oauth2google.FindDefaultCredentialsWithParams(context.Background(), params)
-		if err != nil {
-			return nil, errors.Errorf("error loading Google Cloud ADC credentials: %v", err)
+func (c *clientsImpl) googleCredentials() (*oauth2google.Credentials, error) {
+	if c.cachedGoogleCredentials == nil {
+		params := oauth2google.CredentialsParams{
+			Subject: c.options.Subject,
+			Scopes:  tokenScopes,
 		}
-		if cfg.Auth.ADC.VerifyBroadEmail {
-			tokenSource := creds.TokenSource
-			if err = g.verifyTokenUsesBroadEmail(context.Background(), tokenSource); err != nil {
-				return nil, errors.Errorf("error verifying Google Cloud credentials: %v", err)
+		log.Trace().
+			Str("authType", c.cfg.Auth.Type).
+			Str("delegationSubject", params.Subject).
+			Msg("initializing google credentials")
+		switch c.cfg.Auth.Type {
+		case "adc":
+			var err error
+			c.cachedGoogleCredentials, err = oauth2google.FindDefaultCredentialsWithParams(context.Background(), params)
+			if err != nil {
+				return nil, errors.Errorf("error finding default credentials: %v", err)
 			}
-		}
-		return creds, nil
-	case "vault-sa":
-		jsonKey, err := g.readServiceAccountKeyFromVault(cfg)
-		if err != nil {
-			return nil, errors.Errorf("failed to retrieve service account key from Vault: %v", err)
-		}
-		log.Debug().Msgf("Loaded Google service account key from Vault (%s .%s)", cfg.Auth.Vault.Path, cfg.Auth.Vault.Key)
-		creds, err := oauth2google.CredentialsFromJSONWithParams(context.Background(), jsonKey, params)
-		if err != nil {
-			return nil, errors.Errorf("error loading Google Cloud JSON credentials: %v", err)
-		}
-		return creds, nil
-	default:
-		return nil, errors.Errorf("invalid authentication type: %q", cfg.Auth.Type)
-	}
-}
-
-func (g *google) copyTokenScopes() []string {
-	var scopes []string
-	scopes = append(scopes, tokenScopes...)
-	return scopes
-}
-
-func (g *google) verifyTokenUsesBroadEmail(ctx context.Context, tokenSource oauth2.TokenSource) error {
-	oauth2Service, err := googleoauth.NewService(ctx, option.WithTokenSource(tokenSource))
-	if err != nil {
-		return err
-	}
-	info, err := oauth2Service.Userinfo.Get().Do()
-	if err != nil {
-		return err
-	}
-
-	if !strings.HasSuffix(info.Email, broadEmailSuffix) {
-		return errors.Errorf(`
+			if c.cfg.Auth.ADC.VerifyBroadEmail {
+				userinfo, err := c.GoogleUserinfo()
+				if err != nil {
+					return nil, err
+				}
+				if !strings.HasSuffix(userinfo.Email, broadEmailSuffix) {
+					return nil, errors.Errorf(`
 Current email %q does not end with %s! Please run
 
   gcloud auth login <you>@broadinstitute.org --update-adc
 
-and try re-running this command`, info.Email, broadEmailSuffix)
+and try re-running this command`, userinfo.Email, broadEmailSuffix)
+				}
+			}
+		case "vault-sa":
+			if c.options.VaultFactory == nil {
+				return nil, errors.Errorf("vault-sa auth requested but no VaultFactory provided")
+			}
+			vaultClient, err := c.options.VaultFactory()
+			if err != nil {
+				return nil, errors.Errorf("error initializing vault client: %v", err)
+			}
+			jsonBytes, err := getServiceAccountKeyFromVault(vaultClient, c.cfg.Auth.Vault.Path, c.cfg.Auth.Vault.Key)
+			if err != nil {
+				return nil, errors.Errorf("unable to get key from vault: %v", err)
+			}
+			c.cachedGoogleCredentials, err = oauth2google.CredentialsFromJSONWithParams(context.Background(), jsonBytes, params)
+			if err != nil {
+				return nil, errors.Errorf("error initializing credentials from key file from vault: %v", err)
+			}
+		default:
+			return nil, errors.Errorf("unknown google auth type %q", c.cfg.Auth.Type)
+		}
 	}
-
-	return nil
+	return c.cachedGoogleCredentials, nil
 }
 
-var _serviceAccountKeyVaultCache = map[string][]byte{}
-
-// readServiceAccountKeyFromVault caches key bytes in _serviceAccountKeyVaultCache to avoid DDOS-ing our
-// Vault server during BEE seeding, when Thelma rapidly and repeatedly authenticates using the same
-// SA keys but different subjects (Google's client libraries don't provide convenient variable-subject
-// authentication options).
-func (g *google) readServiceAccountKeyFromVault(cfg googleConfig) ([]byte, error) {
-	path := cfg.Auth.Vault.Path
-	key := cfg.Auth.Vault.Key
-
-	cacheKey := fmt.Sprintf("%s:%s", path, key)
-	if cached, present := _serviceAccountKeyVaultCache[cacheKey]; present {
-		return cached, nil
-	}
-
-	if key == "" {
-		log.Debug().Msgf("Google client will use Vault client (splatted key file at %s)", path)
-	} else {
-		log.Debug().Msgf("Google client will use Vault client (key %s at %s)", key, path)
-	}
-
-	vaultClient, err := g.vaultFactory.Vault()
+func (c *clientsImpl) googleClientOptions(usesGrpc bool) ([]option.ClientOption, error) {
+	credentials, err := c.googleCredentials()
 	if err != nil {
-		return nil, errors.Errorf("error reading Google service account key from Vault: %v", err)
+		return nil, errors.Errorf("error initializing google credentials: %v", err)
 	}
-	secret, err := vaultClient.Logical().Read(path)
-	if err != nil {
-		return nil, errors.Errorf("error reading Google service account key from Vault: %v", err)
-	}
-	if secret == nil {
-		return nil, errors.Errorf("error reading Google service account key from Vault: no secret at path %s", path)
-	}
-
-	if key == "" {
-		jsonBytes, err := json.Marshal(secret.Data)
+	if c.cfg.TransportLogging.Enabled && !usesGrpc {
+		client, _, err := transport.NewHTTPClient(context.Background(), option.WithCredentials(credentials))
 		if err != nil {
-			return nil, errors.Errorf("error parsing 'splatted' Google service account key from Vault: %s caused %v", path, err)
+			return nil, err
 		}
-		_serviceAccountKeyVaultCache[cacheKey] = jsonBytes
-		return jsonBytes, nil
+		client.Transport = &loggingTransport{client.Transport}
+		return []option.ClientOption{option.WithHTTPClient(client)}, nil
 	} else {
-		value, exists := secret.Data[key]
-		if !exists {
-			return nil, errors.Errorf("error reading Google service account key from Vault: missing key %s at path %s", key, path)
-		}
-		asString, ok := value.(string)
-		if !ok {
-			return nil, errors.Errorf("error reading Google service account key from Vault: invalid data for key %s at path %s", key, path)
-		}
-		jsonBytes := []byte(asString)
-		_serviceAccountKeyVaultCache[cacheKey] = jsonBytes
-		return jsonBytes, nil
+		return []option.ClientOption{option.WithCredentials(credentials)}, nil
 	}
 }
 
-func (g *google) loadConfig() (googleConfig, error) {
-	if g.customConfig != nil {
-		return *g.customConfig, nil
+func (c *clientsImpl) GoogleUserinfo() (*googleoauth.Userinfo, error) {
+	if c.cachedGoogleUserinfo == nil {
+		credentials, err := c.googleCredentials()
+		if err != nil {
+			return nil, err
+		}
+		// You might think we could use option.WithCredentials(c.googleClientOptions(false)) here,
+		// but it seems not -- ADC human user credentials seem to get messed up if you do that.
+		// You'll get an error complaining about "user must be authenticated when user project is
+		// provided", which doesn't make much sense but the project would be in the credentials
+		// but not the credentials.TokenSource.
+		oauth2Service, err := googleoauth.NewService(context.Background(), option.WithTokenSource(credentials.TokenSource))
+		if err != nil {
+			return nil, errors.Errorf("error initializing oauth2 service: %v", err)
+		}
+		userinfo, err := googleoauth.NewUserinfoService(oauth2Service).V2.Me.Get().Do()
+		if err != nil {
+			return nil, errors.Errorf("error connecting to userinfo service: %v", err)
+		} else {
+			c.cachedGoogleUserinfo = userinfo
+		}
+	}
+	return c.cachedGoogleUserinfo, nil
+}
+
+func (c *clientsImpl) TokenSource() (oauth2.TokenSource, error) {
+	credentials, err := c.googleCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return credentials.TokenSource, nil
+}
+
+func (c *clientsImpl) Bucket(name string, options ...bucket.BucketOption) (bucket.Bucket, error) {
+	clientOptions, err := c.googleClientOptions(false)
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, bucket.WithClientOptions(clientOptions...))
+	b, err := bucket.NewBucket(name, options...)
+	if err != nil {
+		return nil, errors.Errorf("error initializing client library for bucket %q: %v", name, err)
+	} else {
+		return b, nil
+	}
+}
+
+func (c *clientsImpl) Terra() (terraapi.TerraClient, error) {
+	tokenSource, err := c.TokenSource()
+	if err != nil {
+		return nil, err
+	}
+	userinfo, err := c.GoogleUserinfo()
+	if err != nil {
+		return nil, err
+	}
+	return terraapi.NewClient(tokenSource, userinfo), nil
+}
+
+func (c *clientsImpl) PubSub(projectId string) (*pubsub.Client, error) {
+	clientOptions, err := c.googleClientOptions(true)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewClient(context.Background(), projectId, clientOptions...)
+}
+
+func (c *clientsImpl) ClusterManager() (*container.ClusterManagerClient, error) {
+	clientOptions, err := c.googleClientOptions(true)
+	if err != nil {
+		return nil, err
+	}
+	return container.NewClusterManagerClient(context.Background(), clientOptions...)
+}
+
+func (c *clientsImpl) SqlAdmin() (sqladmin.Client, error) {
+	clientOptions, err := c.googleClientOptions(true)
+	if err != nil {
+		return nil, err
+	}
+	client, err := googlesqladmin.NewService(context.Background(), clientOptions...)
+	if err != nil {
+		return nil, err
+	}
+	return sqladmin.New(client), nil
+}
+
+// IdTokenGenerator returns a function to generate ID tokens of a service account for a
+// given audience.
+//
+// When no serviceAccountChain is provided, the authenticated identity will be used
+// (an error will be returned if the identity is not a service account).
+// When a serviceAccountChain is provided, the last entry will be the name passed
+// in the request, with each one before that in order being given as the delegate
+// chain.
+// See https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateIdToken
+func (c *clientsImpl) IdTokenGenerator(audience string, serviceAccountChain ...string) (func() ([]byte, error), error) {
+	if len(serviceAccountChain) == 0 {
+		log.Trace().Msg("IdTokenGenerator called with no service account chain; using authenticated identity")
+		userinfo, err := c.GoogleUserinfo()
+		if err != nil {
+			return nil, err
+		}
+		serviceAccountChain = []string{userinfo.Email}
+	}
+	for i := 0; i < len(serviceAccountChain); i++ {
+		if !strings.HasSuffix(serviceAccountChain[i], serviceAccountEmailSuffix) {
+			return nil, errors.Errorf("IdTokenGenerator called with non-service-account email %q", serviceAccountChain[i])
+		} else if !strings.HasPrefix(serviceAccountChain[i], serviceAccountResourceNamePrefix) {
+			// Both the name and the delegates need to be in "resource name" format,
+			// so we add that prefix if it is missing
+			serviceAccountChain[i] = serviceAccountResourceNamePrefix + serviceAccountChain[i]
+		}
 	}
 
-	var cfg googleConfig
-	err := g.thelmaConfig.Unmarshal(configKey, &cfg)
+	clientOptions, err := c.googleClientOptions(false)
 	if err != nil {
-		return cfg, errors.Errorf("error reading Google client config: %v", err)
+		return nil, err
 	}
-	return cfg, nil
+	iamcredentialsService, err := iamcredentials.NewService(context.Background(), clientOptions...)
+	if err != nil {
+		return nil, errors.Errorf("error initializing iamcredentials service: %v", err)
+	}
+	serviceAccountService := iamcredentials.NewProjectsServiceAccountsService(iamcredentialsService)
+	idTokenRequest := &iamcredentials.GenerateIdTokenRequest{
+		Audience:     audience,
+		IncludeEmail: true,
+		Delegates:    serviceAccountChain[1:],
+	}
+	requestJson, err := idTokenRequest.MarshalJSON()
+	if err != nil {
+		log.Warn().Err(err).Msg("error marshaling ID token request to JSON")
+	} else {
+		log.Trace().RawJSON("request", requestJson).Str("name", serviceAccountChain[0]).Msg("performing ID token request")
+	}
+
+	return func() ([]byte, error) {
+		resp, err := serviceAccountService.GenerateIdToken(serviceAccountChain[0], idTokenRequest).Do()
+		if err != nil {
+			if userinfo, err2 := c.GoogleUserinfo(); err2 != nil {
+				return nil, errors.Errorf("error generating ID token for %s, and couldn't identify caller (GoogleUserinfo() = %v): %v", serviceAccountChain[0], err2, err)
+			} else {
+				return nil, errors.Errorf("error generating ID token for %s (called by %s): %v", serviceAccountChain[0], userinfo.Email, err)
+			}
+		}
+		return []byte(resp.Token), nil
+	}, nil
 }

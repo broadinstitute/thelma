@@ -93,7 +93,7 @@ jobs:
 
       - name: Cache Go deps
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -114,7 +114,7 @@ jobs:
 
       - name: Pull Go deps cache
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -123,7 +123,7 @@ jobs:
 
       - name: Cache Linux amd64 build directories
         id: cache-build-linux-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
@@ -154,7 +154,7 @@ jobs:
 
       - name: Pull Go deps cache
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -169,7 +169,7 @@ jobs:
 
       - name: Cache release directory
         id: cache-release-darwin-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-amd64
         with:
@@ -201,7 +201,7 @@ jobs:
 
       - name: Pull Go deps cache
         id: go-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: go-cache
         with:
@@ -216,7 +216,7 @@ jobs:
 
       - name: Cache release directory
         id: cache-release-darwin-arm64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-arm64
         with:
@@ -247,7 +247,7 @@ jobs:
       # Pull binaries compiled in previous steps
       - name: Pull Linux amd64 build directories
         id: cache-build-linux-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
@@ -256,7 +256,7 @@ jobs:
 
       - name: Pull Darwin amd64 release directory
         id: cache-release-darwin-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-amd64
         with:
@@ -265,7 +265,7 @@ jobs:
 
       - name: Pull Darwin arm64 release directory
         id: cache-release-darwin-arm64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: release-dir-cache-darwin-arm64
         with:
@@ -319,7 +319,7 @@ jobs:
 
       - name: Pull Linux amd64 build directories
         id: cache-build-linux-amd64
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: build-dir-cache-linux-amd64
         with:
@@ -363,13 +363,13 @@ jobs:
       - name: Push image
         run: "docker push ${{ steps.image-name.outputs.tagged }}"
       - name: Comment pushed image
-        uses: actions/github-script@0.3.0
+        uses: actions/github-script@v7.0.1
         if: github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
-            github.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.tagged }}' });
+            github.rest.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.tagged }}' });
 
   update-latest-tag:
     if: github.event_name != 'pull_request'

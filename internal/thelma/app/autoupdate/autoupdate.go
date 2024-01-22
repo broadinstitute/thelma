@@ -114,7 +114,7 @@ func (a *autoupdate) StartBackgroundUpdateIfEnabled() error {
 
 	_installer, err := a.installer.Get()
 	if err != nil {
-		return errors.Errorf("error initializing installer: %v", err)
+		return errors.Errorf("error initializing installer to resolve versions: %v", err)
 	}
 	resolved, err := _installer.ResolveVersions(a.config.Tag)
 	if err != nil {
@@ -137,7 +137,7 @@ func (a *autoupdate) Bootstrap() error {
 func (a *autoupdate) updateTo(versionOrTag string) error {
 	_installer, err := a.installer.Get()
 	if err != nil {
-		return errors.Errorf("error initializing installer: %v", err)
+		return errors.Errorf("error initializing installer to update thelma: %v", err)
 	}
 	return _installer.UpdateThelma(versionOrTag)
 }

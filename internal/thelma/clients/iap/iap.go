@@ -3,6 +3,7 @@ package iap
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
@@ -27,7 +28,7 @@ const (
 )
 
 type iapConfig struct {
-	Provider string `default:"browser"  validate:"oneof=workloadidentity browser"`
+	Provider string `default:"browser"  validate:"oneof=google workloadidentity browser"`
 	// Audience is the client ID of the OAuth credentials, but it isn't secret, and embedding it in Thelma's
 	// config helps some Provider implementations avoid needing Vault access.
 	Audience         string `default:"1038484894585-k8qvf7l876733laev0lm8kenfa2lj6bn.apps.googleusercontent.com"`
@@ -41,13 +42,20 @@ type iapConfig struct {
 }
 
 // TokenProvider returns a new token provider for IAP tokens
-func TokenProvider(thelmaConfig config.Config, creds credentials.Credentials, lazyVaultClient func() (*vaultapi.Client, error), runner shell.Runner) (credentials.TokenProvider, error) {
+func TokenProvider(
+	thelmaConfig config.Config,
+	creds credentials.Credentials,
+	lazyVaultClient func() (*vaultapi.Client, error),
+	lazyGoogleClient func(options ...google.Option) google.Clients,
+	runner shell.Runner) (credentials.TokenProvider, error) {
 	var cfg iapConfig
 	if err := thelmaConfig.Unmarshal(configKey, &cfg); err != nil {
 		return nil, err
 	}
 
 	switch cfg.Provider {
+	case "google":
+		return googleProvider(creds, cfg, lazyGoogleClient())
 	case "workloadidentity":
 		return workloadIdentityProvider(creds, cfg), nil
 	case "browser":

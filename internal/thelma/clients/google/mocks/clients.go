@@ -6,8 +6,6 @@ import (
 	container "cloud.google.com/go/container/apiv1"
 	bucket "github.com/broadinstitute/thelma/internal/thelma/clients/google/bucket"
 
-	google "github.com/broadinstitute/thelma/internal/thelma/clients/google"
-
 	mock "github.com/stretchr/testify/mock"
 
 	oauth2 "golang.org/x/oauth2"
@@ -154,6 +152,75 @@ func (_c *Clients_ClusterManager_Call) RunAndReturn(run func() (*container.Clust
 	return _c
 }
 
+// IdTokenGenerator provides a mock function with given fields: audience, serviceAccountChain
+func (_m *Clients) IdTokenGenerator(audience string, serviceAccountChain ...string) (func() ([]byte, error), error) {
+	_va := make([]interface{}, len(serviceAccountChain))
+	for _i := range serviceAccountChain {
+		_va[_i] = serviceAccountChain[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, audience)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 func() ([]byte, error)
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, ...string) (func() ([]byte, error), error)); ok {
+		return rf(audience, serviceAccountChain...)
+	}
+	if rf, ok := ret.Get(0).(func(string, ...string) func() ([]byte, error)); ok {
+		r0 = rf(audience, serviceAccountChain...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(func() ([]byte, error))
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string, ...string) error); ok {
+		r1 = rf(audience, serviceAccountChain...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Clients_IdTokenGenerator_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IdTokenGenerator'
+type Clients_IdTokenGenerator_Call struct {
+	*mock.Call
+}
+
+// IdTokenGenerator is a helper method to define mock.On call
+//   - audience string
+//   - serviceAccountChain ...string
+func (_e *Clients_Expecter) IdTokenGenerator(audience interface{}, serviceAccountChain ...interface{}) *Clients_IdTokenGenerator_Call {
+	return &Clients_IdTokenGenerator_Call{Call: _e.mock.On("IdTokenGenerator",
+		append([]interface{}{audience}, serviceAccountChain...)...)}
+}
+
+func (_c *Clients_IdTokenGenerator_Call) Run(run func(audience string, serviceAccountChain ...string)) *Clients_IdTokenGenerator_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]string, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(string)
+			}
+		}
+		run(args[0].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *Clients_IdTokenGenerator_Call) Return(_a0 func() ([]byte, error), _a1 error) *Clients_IdTokenGenerator_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Clients_IdTokenGenerator_Call) RunAndReturn(run func(string, ...string) (func() ([]byte, error), error)) *Clients_IdTokenGenerator_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PubSub provides a mock function with given fields: projectId
 func (_m *Clients) PubSub(projectId string) (*pubsub.Client, error) {
 	ret := _m.Called(projectId)
@@ -204,50 +271,6 @@ func (_c *Clients_PubSub_Call) Return(_a0 *pubsub.Client, _a1 error) *Clients_Pu
 }
 
 func (_c *Clients_PubSub_Call) RunAndReturn(run func(string) (*pubsub.Client, error)) *Clients_PubSub_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SetSubject provides a mock function with given fields: subject
-func (_m *Clients) SetSubject(subject string) google.Clients {
-	ret := _m.Called(subject)
-
-	var r0 google.Clients
-	if rf, ok := ret.Get(0).(func(string) google.Clients); ok {
-		r0 = rf(subject)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(google.Clients)
-		}
-	}
-
-	return r0
-}
-
-// Clients_SetSubject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSubject'
-type Clients_SetSubject_Call struct {
-	*mock.Call
-}
-
-// SetSubject is a helper method to define mock.On call
-//   - subject string
-func (_e *Clients_Expecter) SetSubject(subject interface{}) *Clients_SetSubject_Call {
-	return &Clients_SetSubject_Call{Call: _e.mock.On("SetSubject", subject)}
-}
-
-func (_c *Clients_SetSubject_Call) Run(run func(subject string)) *Clients_SetSubject_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *Clients_SetSubject_Call) Return(_a0 google.Clients) *Clients_SetSubject_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Clients_SetSubject_Call) RunAndReturn(run func(string) google.Clients) *Clients_SetSubject_Call {
 	_c.Call.Return(run)
 	return _c
 }

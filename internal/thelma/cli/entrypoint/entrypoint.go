@@ -37,6 +37,7 @@ import (
 	bees_delete "github.com/broadinstitute/thelma/internal/thelma/cli/commands/bees/delete"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts"
+	charts_deploy "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/deploy"
 	charts_import "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/import"
 	charts_publish "github.com/broadinstitute/thelma/internal/thelma/cli/commands/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/logs"
@@ -99,6 +100,7 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("charts", charts.NewChartsCommand())
 	opts.AddCommand("charts import", charts_import.NewChartsImportCommand())
 	opts.AddCommand("charts publish", charts_publish.NewChartsPublishCommand())
+	opts.AddCommand("charts deploy", charts_deploy.NewChartsDeployCommand())
 
 	opts.AddCommand("logs", logs.NewLogsCommand())
 

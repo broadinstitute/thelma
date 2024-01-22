@@ -3,6 +3,13 @@ package argocd
 import (
 	"bytes"
 	"fmt"
+	"net/url"
+	"os"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -15,11 +22,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"net/url"
-	"regexp"
-	"sort"
-	"strings"
-	"time"
 )
 
 const prog = `argocd`
@@ -137,7 +139,7 @@ type argocdConfig struct {
 	SyncRetries int `default:"4"`
 
 	// WaitHealthyTimeoutSeconds how long to wait for an application to become healthy after syncing
-	WaitHealthyTimeoutSeconds int `default:"600"`
+	WaitHealthyTimeoutSeconds int `default:"900"`
 
 	WaitExistOptions
 }
@@ -187,18 +189,24 @@ func BrowserLogin(thelmaConfig config.Config, shellRunner shell.Runner, iapToken
 }
 
 // New return a new ArgoCD client
-func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (ArgoCD, error) {
-	return newArgocd(thelmaConfig, shellRunner, iapToken, vaultClient)
+func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (ArgoCD, error) {
+	return newArgocd(thelmaConfig, shellRunner, iapToken, vaultClientFactory)
 }
 
 // private constructor used in tests
-func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClient *vaultapi.Client) (*argocd, error) {
+func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (*argocd, error) {
 	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
 	if err != nil {
 		return nil, err
 	}
 
-	if a.cfg.Vault.Enabled {
+	if os.Getenv(envVars.token) != "" {
+		log.Debug().Msgf("Env var %s is set; will be used to to authenticate ArgoCD CLI commands", envVars.token)
+	} else if a.cfg.Vault.Enabled {
+		vaultClient, err := vaultClientFactory()
+		if err != nil {
+			return nil, errors.Errorf("argocd: failed to instantiate Vault client: %v", err)
+		}
 		token, err := readTokenFromVault(a.cfg, vaultClient)
 		if err != nil {
 			return nil, err
@@ -447,6 +455,14 @@ func (a *argocd) DestinationURL(d terra.Destination) string {
 
 	labels := make(map[string]string)
 
+	// We have seen a few transient cases where the terra.Destination parameter is nil, resulting in a SIGSEGV.
+	// This is a defensive check to prevent a panic in that case.
+	// This function is only used for logging, so it's not a big deal if we return an empty URL.
+	if d == nil {
+		log.Warn().Msgf("Destination is nil when generating argocd url, returning empty URL")
+		return ""
+	}
+
 	if d.IsEnvironment() {
 		labels["env"] = d.Name()
 	} else {
@@ -642,6 +658,7 @@ func (a *argocd) browserLogin() error {
 
 // run `argocd app set <app-name> --revision=<ref>` to set an Argo app's git ref
 func (a *argocd) setRef(appName string, ref string) error {
+	log.Info().Msgf("Setting app %s to ref %s", appName, ref)
 	err := a.runCommand([]string{"app", "set", appName, "--revision", ref, "--validate=false"})
 	if err != nil {
 		return errors.Errorf("error setting %s to revision %q: %v", appName, ref, err)

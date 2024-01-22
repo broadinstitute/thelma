@@ -20,7 +20,7 @@ import (
 type TerraClient interface {
 	FirecloudOrch(release terra.AppRelease) FirecloudOrchClient
 	Sam(release terra.AppRelease) SamClient
-	GoogleUserInfo() googleoauth.Userinfo
+	GoogleUserinfo() *googleoauth.Userinfo
 
 	// SetPoolStatusReporter makes the TerraClient play nice inside a pool.Job by
 	// redirecting console output to the pool.StatusReporter rather than to
@@ -30,7 +30,7 @@ type TerraClient interface {
 
 type terraClient struct {
 	tokenSource   oauth2.TokenSource
-	userInfo      googleoauth.Userinfo
+	userInfo      *googleoauth.Userinfo
 	httpClient    http.Client
 	retryAttempts uint
 	retryDelay    time.Duration
@@ -39,7 +39,7 @@ type terraClient struct {
 	statusReporter pool.StatusReporter
 }
 
-func NewClient(tokenSource oauth2.TokenSource, userInfo googleoauth.Userinfo) TerraClient {
+func NewClient(tokenSource oauth2.TokenSource, userInfo *googleoauth.Userinfo) TerraClient {
 	return &terraClient{tokenSource: tokenSource, userInfo: userInfo, httpClient: http.Client{}}
 }
 
@@ -61,7 +61,7 @@ func (c *terraClient) Sam(appRelease terra.AppRelease) SamClient {
 	}
 }
 
-func (c *terraClient) GoogleUserInfo() googleoauth.Userinfo {
+func (c *terraClient) GoogleUserinfo() *googleoauth.Userinfo {
 	return c.userInfo
 }
 
