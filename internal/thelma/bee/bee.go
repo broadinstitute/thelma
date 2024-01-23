@@ -144,81 +144,10 @@ func (b *bees) CreateWith(options CreateOptions) (*Bee, error) {
 }
 
 func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error) {
-	env, err := b.state.Environments().Get(name)
-	if err != nil {
-		return nil, err
-	}
-	if env == nil {
-		// don't think this could ever happen, but let's provide a useful error anyway
-		return nil, errors.Errorf("error provisioning environment %q: missing from state", env.Name())
-	}
-
-	bee := &Bee{
-		Environment: env,
-	}
-
-	err = b.kubectl.CreateNamespace(env)
-
-	if err == nil {
-		env, err = b.PinVersions(env, options.PinOptions)
-		bee.Environment = env
-	}
-
-	if err == nil {
-		err = b.RefreshBeeGenerator()
-	}
-
-	if err == nil {
-		err = b.argocd.WaitExist(argocd_names.GeneratorName(env))
-	}
-
-	if err == nil {
-		err = b.provisionBeeApps(bee, options.ProvisionExistingOptions)
-	}
-
-	if err == nil && options.Seed {
-		log.Info().Msgf("Seeding BEE with test data")
-		err = b.seeder.Seed(env, options.SeedOptions)
-	}
-
-	if err != nil && options.ExportLogsOnFailure {
-		_, logErr := b.exportLogs(env)
-		if logErr != nil {
-			log.Error().Err(logErr).Msgf("error exporting logs from %s: %v", env.Name(), logErr)
-		}
-		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
-	}
+	bee, err := b.provisionBee(name, options)
 
 	if options.Notify {
-		if env.Owner() != "" {
-			if b.slack != nil {
-				log.Info().Msgf("Notifying %s", env.Owner())
-
-				var markdown string
-				if err != nil {
-					// If you try to actually include the error here, Slack will try to parse it and it'll be quite unhappy.
-					markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE didn't come up properly; see the link and contact <#CADM7MZ35> for more information.", env.Name(), env.Name())
-				} else {
-					markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is ready to go!", env.Name(), env.Name())
-					for _, release := range env.Releases() {
-						if release.IsAppRelease() && release.ChartName() == "terraui" {
-							if terraui, ok := release.(terra.AppRelease); ok {
-								markdown += fmt.Sprintf(" Terra's UI is at %s.", terraui.URL())
-							}
-						}
-					}
-					markdown += fmt.Sprintf(" You'll probably want to set up your BEE with a billing account, <%s|instructions available here>.", beeDocLink)
-				}
-
-				if err := b.slack.SendDirectMessage(env.Owner(), markdown); err != nil {
-					log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
-				}
-			} else {
-				log.Debug().Msgf("Would have tried to notify but Slack client wasn't present; perhaps it errored earlier")
-			}
-		} else {
-			log.Debug().Msgf("Wanted to notify but the environment lacked an owner")
-		}
+		b.trySendBeeProvisionNotification(bee.Environment, err)
 	}
 
 	return bee, err
@@ -247,9 +176,108 @@ func (b *bees) SyncWith(name string, options ProvisionExistingOptions) (*Bee, er
 	return bee, err
 }
 
+func (b *bees) provisionBee(name string, options ProvisionOptions) (*Bee, error) {
+	env, err := b.state.Environments().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	if env == nil {
+		// don't think this could ever happen, but let's provide a useful error anyway
+		return nil, errors.Errorf("error provisioning environment %q: missing from state", name)
+	}
+	env, err = b.PinVersions(env, options.PinOptions)
+	if err != nil {
+		return nil, errors.Errorf("error pinning versions for environment %q: %v", name, err)
+	}
+
+	if err = b.provisionBeeNamespaceAndGenerator(env); err != nil {
+		return nil, err
+	}
+
+	bee, err := b.provisionBeeAppsAndSeed(env, options)
+
+	if err != nil && options.ExportLogsOnFailure {
+		_, logErr := b.exportLogs(env)
+		if logErr != nil {
+			log.Error().Err(logErr).Msgf("error exporting logs from %s", env.Name())
+		}
+		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
+	}
+
+	return bee, err
+}
+
+func (b *bees) trySendBeeProvisionNotification(env terra.Environment, maybeErr error) {
+	if env.Owner() == "" {
+		log.Debug().Msgf("Wanted to notify but the environment lacked an owner")
+		return
+	}
+
+	if b.slack == nil {
+		log.Debug().Msgf("Would have tried to notify but Slack client wasn't present; perhaps it errored earlier")
+		return
+	}
+
+	log.Info().Msgf("Notifying %s", env.Owner())
+
+	var markdown string
+	if maybeErr != nil {
+		// If you try to actually include the error here, Slack will try to parse it and it'll be quite unhappy.
+		markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE didn't come up properly; see the link and contact <#CADM7MZ35> for more information.", env.Name(), env.Name())
+	} else {
+		markdown = fmt.Sprintf("Your <https://broad.io/beehive/r/environment/%s|%s> BEE is ready to go!", env.Name(), env.Name())
+		for _, release := range env.Releases() {
+			if release.IsAppRelease() && release.ChartName() == "terraui" {
+				if terraui, ok := release.(terra.AppRelease); ok {
+					markdown += fmt.Sprintf(" Terra's UI is at %s.", terraui.URL())
+				}
+			}
+		}
+		markdown += fmt.Sprintf(" You'll probably want to set up your BEE with a billing account, <%s|instructions available here>.", beeDocLink)
+	}
+
+	if err := b.slack.SendDirectMessage(env.Owner(), markdown); err != nil {
+		log.Warn().Msgf("Wasn't able to notify %s: %v", env.Owner(), err)
+	}
+}
+
+func (b *bees) provisionBeeNamespaceAndGenerator(env terra.Environment) error {
+	if err := b.kubectl.CreateNamespace(env); err != nil {
+		return errors.Errorf("error creating namespace for environment %q: %v", env.Name(), err)
+	}
+
+	if err := b.RefreshBeeGenerator(); err != nil {
+		return errors.Errorf("error refreshing bee generator: %v", err)
+	}
+
+	if err := b.argocd.WaitExist(argocd_names.GeneratorName(env)); err != nil {
+		return errors.Errorf("error waiting for environment generator for %s to exist: %v", env.Name(), err)
+	}
+
+	return nil
+}
+
+func (b *bees) provisionBeeAppsAndSeed(env terra.Environment, options ProvisionOptions) (*Bee, error) {
+	bee := &Bee{
+		Environment: env,
+	}
+	if err := b.provisionBeeApps(bee, options.ProvisionExistingOptions); err != nil {
+		return bee, err
+	}
+
+	if options.Seed {
+		log.Info().Msgf("Seeding BEE with test data")
+		if err := b.seeder.Seed(env, options.SeedOptions); err != nil {
+			return bee, errors.Errorf("error seeding environment %q: %v", env.Name(), err)
+		}
+	}
+
+	return bee, nil
+}
+
 func (b *bees) provisionBeeApps(bee *Bee, options ProvisionExistingOptions) error {
 	if err := b.SyncEnvironmentGenerator(bee.Environment); err != nil {
-		return err
+		return errors.Errorf("error syncing environment generator for %s: %v", bee.Environment.Name(), err)
 	}
 	if options.SyncGeneratorOnly {
 		log.Warn().Msgf("Won't sync Argo apps for %s", bee.Environment.Name())

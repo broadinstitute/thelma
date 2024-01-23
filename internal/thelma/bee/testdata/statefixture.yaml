@@ -1,0 +1,64 @@
+---
+clusters:
+  - name: terra-qa-bees
+    base: terra
+    address: https://ignored
+    project: fake-project
+    location: us-central1-a
+    requiresuitable: false
+environments:
+  - name: swatomation
+    base: bee
+    template: ""
+    lifecycle: template
+    uniqueresourceprefix: ""
+    defaultcluster: terra-qa-bees
+    requiresuitable: false
+  - name: my-bee
+    base: bee
+    template: swatomation
+    lifecycle: dynamic
+    uniqueresourceprefix: abcd
+    defaultcluster: terra-qa-bees
+    requiresuitable: false
+charts:
+  - name: leonardo
+    repo: terra-helm
+  - name: sam
+    repo: terra-helm
+  - name: workspacemanager
+    repo: terra-helm
+releases:
+  - fullname: leonardo-my-bee
+    repo: terra-helm
+    chart: leonardo
+    cluster: terra-qa-bees
+    namespace: terra-my-bee
+    environment: my-bee
+    appversion: leo-v100
+    chartversion: 1.2.3
+    subdomain: leonardo
+    protocol: https
+    port: 443
+  - fullname: sam-my-bee
+    repo: terra-helm
+    chart: sam
+    cluster: terra-qa-bees
+    namespace: terra-my-bee
+    environment: my-bee
+    appversion: sam-v2
+    chartversion: 4.5.6
+    subdomain: sam
+    protocol: https
+    port: 443
+  - fullname: workspacemanager-my-bee
+    repo: terra-helm
+    chart: workspacemanager
+    cluster: terra-qa-bees
+    namespace: terra-my-bee
+    environment: my-bee
+    appversion: wsm-v02
+    chartversion: 7.8.9
+    subdomain: workspace
+    protocol: https
+    port: 443
