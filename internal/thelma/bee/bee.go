@@ -199,7 +199,7 @@ func (b *bees) provisionBee(name string, options ProvisionOptions) (*Bee, error)
 	if err != nil && options.ExportLogsOnFailure {
 		_, logErr := b.exportLogs(env)
 		if logErr != nil {
-			log.Error().Err(logErr).Msgf("error exporting logs from %s: %v", env.Name(), logErr)
+			log.Error().Err(logErr).Msgf("error exporting logs from %s", env.Name())
 		}
 		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
 	}
@@ -262,7 +262,7 @@ func (b *bees) provisionBeeAppsAndSeed(env terra.Environment, options ProvisionO
 		Environment: env,
 	}
 	if err := b.provisionBeeApps(bee, options.ProvisionExistingOptions); err != nil {
-		return bee, errors.Errorf("error provisioning services for environment %q: %v", env.Name(), err)
+		return bee, err
 	}
 
 	if options.Seed {
