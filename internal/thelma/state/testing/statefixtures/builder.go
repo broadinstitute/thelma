@@ -1,6 +1,7 @@
 package statefixtures
 
 import (
+	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"strings"
@@ -88,6 +89,7 @@ func (b *builder) populateClusterSet() {
 		cluster.EXPECT().Type().Return(terra.ClusterDestination)
 		cluster.EXPECT().IsEnvironment().Return(false)
 		cluster.EXPECT().ReleaseType().Return(terra.ClusterReleaseType)
+		cluster.EXPECT().ArtifactBucket().Return(fmt.Sprintf("thelma-artifacts-%s", c.Name))
 
 		tokens := strings.Split(c.Project, "-")
 		suffix := tokens[len(tokens)-1:][0]

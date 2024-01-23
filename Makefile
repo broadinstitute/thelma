@@ -174,6 +174,8 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/app/autoupdate/releases --name Dir --output=./internal/thelma/app/autoupdate/releases/mocks --outpkg mocks --filename dir.go
 	mockery --dir ./internal/thelma/app/autoupdate/spawn --name Spawn --output=./internal/thelma/app/autoupdate/spawn/mocks --outpkg mocks --filename spawn.go
 	mockery --dir ./internal/thelma/app/scratch --name Scratch --output=./internal/thelma/app/scratch/mocks --outpkg mocks --filename scratch.go
+	mockery --dir ./internal/thelma/bee/cleanup --name Cleanup --output=./internal/thelma/bee/cleanup/mocks --outpkg mocks --filename cleanup.go
+	mockery --dir ./internal/thelma/bee/seed --name Seeder --output=./internal/thelma/bee/seed/mocks --outpkg mocks --filename seeder.go
 	mockery --dir ./internal/thelma/charts/deploy --name ConfigLoader --output=./internal/thelma/charts/deploy/mocks --outpkg mocks --filename config.go
 	mockery --dir ./internal/thelma/charts/publish --name Publisher --output=./internal/thelma/charts/publish/mocks --outpkg mocks --filename publisher.go
 	mockery --dir ./internal/thelma/charts/repo --name Repo --output=./internal/thelma/charts/repo/mocks --outpkg mocks --filename repo.go
@@ -201,9 +203,11 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/clients/kubernetes/testing/aliases --name Services --output=./internal/thelma/clients/kubernetes/testing/mocks --outpkg mocks --filename services.go
 	mockery --dir ./internal/thelma/clients/kubernetes/testing/aliases --name StatefulSets --output=./internal/thelma/clients/kubernetes/testing/mocks --outpkg mocks --filename statefulsets.go
 	mockery --dir ./internal/thelma/clients/kubernetes/testing/aliases --name Watch --output=./internal/thelma/clients/kubernetes/testing/mocks --outpkg mocks --filename watch.go
-	mockery --dir ./internal/thelma/clients/sherlock --name ChartVersionUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_version_updater.go
 	mockery --dir ./internal/thelma/clients/sherlock --name ChartReleaseStatusUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_release_status_updater.go
+	mockery --dir ./internal/thelma/clients/sherlock --name ChartVersionUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_version_updater.go
 	mockery --dir ./internal/thelma/clients/sherlock --name Client --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename sherlock.go
+	mockery --dir ./internal/thelma/ops --name Ops --output=./internal/thelma/ops/mocks --outpkg mocks --filename ops.go
+	mockery --dir ./internal/thelma/ops/logs --name Logs --output=./internal/thelma/ops/logs/mocks --outpkg mocks --filename logs.go
 	mockery --dir ./internal/thelma/ops/sql/dbms --name DBMS --output=./internal/thelma/ops/sql/dbms/mocks --outpkg mocks --filename dbms.go
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Pod --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename pod.go
 	mockery --dir ./internal/thelma/ops/sql/podrun --name Runner --output=./internal/thelma/ops/sql/podrun/mocks --outpkg mocks --filename runner.go
@@ -223,5 +227,6 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/state/api/terra --name State --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state.go
 	mockery --dir ./internal/thelma/state/api/terra --name StateLoader --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_loader.go
 	mockery --dir ./internal/thelma/state/api/terra --name StateWriter --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename state_writer.go
+	mockery --dir ./internal/thelma/toolbox/argocd --name ArgoCD --output=./internal/thelma/toolbox/argocd/mocks --outpkg mocks --filename argocd.go
 	mockery --dir ./internal/thelma/toolbox/kubectl --name Kubectl --output=./internal/thelma/toolbox/kubectl/mocks --outpkg mocks --filename kubectl.go
 	mockery --dir ./internal/thelma/utils/prompt --name Prompt --output=./internal/thelma/utils/prompt/mocks --outpkg mocks --filename prompt.go
