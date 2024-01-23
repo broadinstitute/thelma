@@ -8,9 +8,6 @@ import (
 )
 
 type appRelease struct {
-	subdomain string
-	protocol  string
-	port      int
 	release
 }
 

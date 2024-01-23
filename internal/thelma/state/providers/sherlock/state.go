@@ -8,12 +8,9 @@ import (
 // state is an implementer of terra.State, the overall provider interface for Thelma
 type state struct {
 	sherlock     sherlock.Client
+	releases     map[string]*release
 	environments map[string]*environment
 	clusters     map[string]*cluster
-}
-
-func (s *state) Destinations() terra.Destinations {
-	return newDestinationsView(s)
 }
 
 func (s *state) Environments() terra.Environments {

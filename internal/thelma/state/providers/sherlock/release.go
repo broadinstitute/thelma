@@ -21,6 +21,9 @@ type release struct {
 	firecloudDevelopRef string
 	helmfileOverlays    []string
 	appVersion          string
+	subdomain           string
+	protocol            string
+	port                int
 }
 
 // FullName provides the entire name of the chart release, globally unique as enforced by Sherlock. Name provides

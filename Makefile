@@ -219,7 +219,6 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/state/api/terra --name ClusterRelease --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename cluster_release.go
 	mockery --dir ./internal/thelma/state/api/terra --name Clusters --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename clusters.go
 	mockery --dir ./internal/thelma/state/api/terra --name Destination --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename destination.go
-	mockery --dir ./internal/thelma/state/api/terra --name Destinations --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename destinations.go
 	mockery --dir ./internal/thelma/state/api/terra --name Environment --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename environment.go
 	mockery --dir ./internal/thelma/state/api/terra --name Environments --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename environments.go
 	mockery --dir ./internal/thelma/state/api/terra --name Release --output=./internal/thelma/state/api/terra/mocks --outpkg mocks --filename release.go
