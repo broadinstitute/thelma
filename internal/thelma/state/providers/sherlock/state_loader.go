@@ -58,7 +58,7 @@ retry:
 				address:       stateCluster.Address,
 				googleProject: stateCluster.GoogleProject,
 				location:      *stateCluster.Location,
-				releases:      make(map[string]*clusterRelease),
+				releases:      make(map[string]*release),
 				destination: destination{
 					name:             stateCluster.Name,
 					base:             stateCluster.Base,
@@ -96,7 +96,7 @@ retry:
 				createdAt:                   time.Time(stateEnvironment.CreatedAt),
 				defaultCluster:              _clusters[stateEnvironment.DefaultCluster],
 				defaultNamespace:            stateEnvironment.DefaultNamespace,
-				releases:                    make(map[string]*appRelease),
+				releases:                    make(map[string]*release),
 				lifecycle:                   lifecycle,
 				template:                    stateEnvironment.TemplateEnvironment,
 				baseDomain:                  *stateEnvironment.BaseDomain,
@@ -134,46 +134,42 @@ retry:
 			}
 			switch stateRelease.DestinationType {
 			case "cluster":
-				_clusters[stateRelease.Cluster].releases[stateRelease.Name] = &clusterRelease{
-					release: release{
-						name:                stateRelease.Name,
-						enabled:             true,
-						releaseType:         terra.ClusterReleaseType,
-						chartVersion:        stateRelease.ChartVersionExact,
-						chartName:           stateRelease.Chart,
-						repo:                *stateRelease.ChartInfo.ChartRepo,
-						namespace:           stateRelease.Namespace,
-						cluster:             _clusters[stateRelease.Cluster],
-						destination:         _clusters[stateRelease.Cluster],
-						helmfileRef:         *stateRelease.HelmfileRef,
-						firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
-						appVersion:          stateRelease.AppVersionExact,
-					},
+				_clusters[stateRelease.Cluster].releases[stateRelease.Name] = &release{
+					name:                stateRelease.Name,
+					enabled:             true,
+					releaseType:         terra.ClusterReleaseType,
+					chartVersion:        stateRelease.ChartVersionExact,
+					chartName:           stateRelease.Chart,
+					repo:                *stateRelease.ChartInfo.ChartRepo,
+					namespace:           stateRelease.Namespace,
+					cluster:             _clusters[stateRelease.Cluster],
+					destination:         _clusters[stateRelease.Cluster],
+					helmfileRef:         *stateRelease.HelmfileRef,
+					firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
+					appVersion:          stateRelease.AppVersionExact,
 				}
 			case "environment":
 				var helmfileOverlays []string
 				if e, present := _environments[stateRelease.Environment]; present && e.offline {
 					helmfileOverlays = []string{"offline"}
 				}
-				_environments[stateRelease.Environment].releases[stateRelease.Name] = &appRelease{
-					subdomain: stateRelease.Subdomain,
-					protocol:  stateRelease.Protocol,
-					port:      int(stateRelease.Port),
-					release: release{
-						name:                stateRelease.Name,
-						enabled:             true,
-						releaseType:         terra.AppReleaseType,
-						chartVersion:        stateRelease.ChartVersionExact,
-						chartName:           stateRelease.Chart,
-						repo:                *stateRelease.ChartInfo.ChartRepo,
-						namespace:           stateRelease.Namespace,
-						cluster:             _clusters[stateRelease.Cluster],
-						destination:         _environments[stateRelease.Environment],
-						helmfileRef:         *stateRelease.HelmfileRef,
-						firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
-						helmfileOverlays:    helmfileOverlays,
-						appVersion:          stateRelease.AppVersionExact,
-					},
+				_environments[stateRelease.Environment].releases[stateRelease.Name] = &release{
+					name:                stateRelease.Name,
+					enabled:             true,
+					releaseType:         terra.AppReleaseType,
+					chartVersion:        stateRelease.ChartVersionExact,
+					chartName:           stateRelease.Chart,
+					repo:                *stateRelease.ChartInfo.ChartRepo,
+					namespace:           stateRelease.Namespace,
+					cluster:             _clusters[stateRelease.Cluster],
+					destination:         _environments[stateRelease.Environment],
+					helmfileRef:         *stateRelease.HelmfileRef,
+					firecloudDevelopRef: stateRelease.FirecloudDevelopRef,
+					helmfileOverlays:    helmfileOverlays,
+					appVersion:          stateRelease.AppVersionExact,
+					subdomain:           stateRelease.Subdomain,
+					protocol:            stateRelease.Protocol,
+					port:                int(stateRelease.Port),
 				}
 			default:
 				return nil, errors.Errorf("unexpected destination type '%s' for release '%s'", stateRelease.DestinationType, stateRelease.Name)

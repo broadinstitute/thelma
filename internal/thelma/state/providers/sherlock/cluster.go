@@ -13,7 +13,7 @@ type cluster struct {
 	address       string
 	googleProject string
 	location      string
-	releases      map[string]*clusterRelease
+	releases      map[string]*release
 	destination
 }
 
