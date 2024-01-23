@@ -172,6 +172,17 @@ func (suite *BeesTestSuite) TestProvisionWith() {
 			},
 			expectErr: "sync totally failed",
 		},
+		{
+			name: "failed log export should still report original error",
+			opts: provisionOptions(),
+			setup: func(s *BeesTestSuite, opts ProvisionOptions) {
+				s.expectPinReleaseVersionsEmptyOverrides()
+				s.expectProvisionBeeNamespaceAndGenerator()
+				s.expectSyncArgoAppsForReleasesReturnSamFailure(opts.WaitHealthy, opts.WaitHealthTimeoutSeconds, errors.New("sync totally failed"))
+				s.expectExportLogsReturnError(errors.New("log export boo-boo"))
+			},
+			expectErr: "sync totally failed",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -294,6 +305,10 @@ func (suite *BeesTestSuite) expectSeed(opts seed.SeedOptions) {
 }
 
 func (suite *BeesTestSuite) expectExportLogs() {
+	suite.expectExportLogsReturnError(nil)
+}
+
+func (suite *BeesTestSuite) expectExportLogsReturnError(exportErr error) {
 	releases := suite.getReleases()
 
 	locations := make(map[terra.Release]artifacts.Location)
@@ -318,7 +333,7 @@ func (suite *BeesTestSuite) expectExportLogs() {
 				Upload: true, // harccoded in bees.go
 			},
 		}, options)
-	}).Return(locations, nil)
+	}).Return(locations, exportErr)
 }
 
 func (suite *BeesTestSuite) getReleases() []terra.Release {
