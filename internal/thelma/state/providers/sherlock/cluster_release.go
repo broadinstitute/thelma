@@ -7,5 +7,5 @@ type clusterRelease struct {
 }
 
 func (r *clusterRelease) Cluster() terra.Cluster {
-	return r.destination.(terra.Cluster)
+	return r.cluster
 }

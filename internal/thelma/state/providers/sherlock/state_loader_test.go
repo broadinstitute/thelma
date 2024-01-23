@@ -1,6 +1,7 @@
 package sherlock
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
 	"testing"
 
@@ -33,6 +34,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 
 	_environments := state.Environments()
 	_clusters := state.Clusters()
+	_releases := state.Releases()
 
 	// ensure the state object was actually populated with data
 	suite.Assert().NotNil(_environments)
@@ -74,6 +76,17 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	suite.Assert().True(offlineBeeEnv.Offline())
 	for _, release := range offlineBeeEnv.Releases() {
 		suite.Assert().Equal([]string{"offline"}, release.HelmfileOverlays())
+	}
+
+	allReleases, err := _releases.All()
+	suite.Assert().NoError(err)
+	suite.Assert().Equal(6, len(allReleases))
+	for _, r := range allReleases {
+		if r.IsAppRelease() {
+			r.(terra.AppRelease).AppVersion()
+		} else {
+			r.(terra.ClusterRelease).IsClusterRelease()
+		}
 	}
 
 	// Calling Load() is cached

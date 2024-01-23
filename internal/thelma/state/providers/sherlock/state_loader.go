@@ -121,7 +121,7 @@ retry:
 			}
 		}
 
-		_releases := make(map[string]*release)
+		_releases := make(map[string]*release) // I bet that casting will fail.
 		for _, stateRelease := range stateReleases {
 			if _, knownCluster := _clusters[stateRelease.Cluster]; stateRelease.Cluster != "" && !knownCluster {
 				log.Warn().Msgf("chart release '%s' has cluster '%s' that we do not have: race condition detected, retrying...",
