@@ -21,6 +21,9 @@ type release struct {
 	firecloudDevelopRef string
 	helmfileOverlays    []string
 	appVersion          string
+	subdomain           string
+	protocol            string
+	port                int
 }
 
 // FullName provides the entire name of the chart release, globally unique as enforced by Sherlock. Name provides
@@ -97,4 +100,49 @@ func (r *release) HelmfileOverlays() []string {
 
 func (r *release) AppVersion() string {
 	return r.appVersion
+}
+
+func (r *release) Environment() terra.Environment {
+	if !r.IsAppRelease() {
+		return nil
+	}
+	return r.destination.(terra.Environment)
+}
+
+func (r *release) Subdomain() string {
+	if r.subdomain == "" {
+		return r.chartName
+	}
+	return r.subdomain
+}
+
+func (r *release) Protocol() string {
+	if r.protocol == "" {
+		return "https"
+	}
+	return r.protocol
+}
+
+func (r *release) Port() int {
+	if r.port == 0 {
+		return 443
+	}
+	return r.port
+}
+
+func (r *release) Host() string {
+	var components []string
+	components = append(components, r.Subdomain())
+	if r.Environment().NamePrefixesDomain() {
+		components = append(components, r.Environment().Name())
+	}
+
+	if r.Environment().BaseDomain() != "" {
+		components = append(components, r.Environment().BaseDomain())
+	}
+	return strings.Join(components, ".")
+}
+
+func (r *release) URL() string {
+	return fmt.Sprintf("%s://%s", r.Protocol(), r.Host())
 }

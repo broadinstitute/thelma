@@ -1,6 +1,7 @@
 package sherlock
 
 import (
+	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
 	"testing"
 
@@ -75,6 +76,42 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 	for _, release := range offlineBeeEnv.Releases() {
 		suite.Assert().Equal([]string{"offline"}, release.HelmfileOverlays())
 	}
+
+	// make sure that we can coerce *release into a terra.AppRelease or terra.ClusterRelease
+	allReleases, err := state.Releases().All()
+	suite.Require().NoError(err)
+	suite.Assert().Equal(6, len(allReleases))
+
+	var samBeeOnline terra.Release
+	for _, r := range allReleases {
+		if r.IsAppRelease() {
+			ar, ok := r.(terra.AppRelease)
+			suite.Assert().True(ok)
+			suite.Assert().NotNil(ar.Environment())
+			suite.Assert().IsType(&environment{}, ar.Environment())
+			suite.Assert().NotNil(ar.Destination())
+			suite.Assert().IsType(&environment{}, ar.Destination())
+			suite.Assert().NotNil(ar.Cluster())
+			suite.Assert().IsType(&cluster{}, ar.Cluster())
+		} else {
+			cr, ok := r.(terra.ClusterRelease)
+			suite.Assert().True(ok)
+			suite.Assert().NotNil(cr.Destination())
+			suite.Assert().IsType(&cluster{}, cr.Destination())
+			suite.Assert().NotNil(cr.Cluster())
+			suite.Assert().IsType(&cluster{}, cr.Cluster())
+			suite.Assert().Same(cr.Destination(), cr.Cluster())
+		}
+
+		if r.FullName() == "sam-bee-online" {
+			samBeeOnline = r
+		}
+	}
+
+	suite.Assert().NotNil(samBeeOnline)
+	suite.Assert().Equal(443, samBeeOnline.(terra.AppRelease).Port())
+	suite.Assert().Equal("https", samBeeOnline.(terra.AppRelease).Protocol())
+	suite.Assert().Equal("sam", samBeeOnline.(terra.AppRelease).Subdomain())
 
 	// Calling Load() is cached
 	stateSource.AssertNumberOfCalls(suite.T(), "Releases", 1)
@@ -223,6 +260,9 @@ func setStateExpectations(mock *mocks.Client) {
 					Namespace:           "terra-dev",
 					HelmfileRef:         utils.Nullable("wlekjerw"),
 					FirecloudDevelopRef: "",
+					Port:                443,
+					Protocol:            "https",
+					Subdomain:           "sam",
 				},
 			},
 			sherlock.Release{
@@ -240,6 +280,9 @@ func setStateExpectations(mock *mocks.Client) {
 					Namespace:           "terra-prod",
 					HelmfileRef:         utils.Nullable("wlekjerw"),
 					FirecloudDevelopRef: "",
+					Port:                443,
+					Protocol:            "https",
+					Subdomain:           "sam",
 				},
 			},
 			sherlock.Release{
@@ -257,6 +300,9 @@ func setStateExpectations(mock *mocks.Client) {
 					Namespace:           "terra-dev",
 					HelmfileRef:         utils.Nullable("oisgff"),
 					FirecloudDevelopRef: "",
+					Port:                443,
+					Protocol:            "https",
+					Subdomain:           "datarepo",
 				},
 			},
 			sherlock.Release{
@@ -274,6 +320,9 @@ func setStateExpectations(mock *mocks.Client) {
 					Namespace:           "terra-prod",
 					HelmfileRef:         utils.Nullable("wlekjerw"),
 					FirecloudDevelopRef: "",
+					Port:                443,
+					Protocol:            "https",
+					Subdomain:           "datarepo",
 				},
 			},
 			sherlock.Release{
@@ -291,6 +340,9 @@ func setStateExpectations(mock *mocks.Client) {
 					Namespace:           "terra-bee-online",
 					HelmfileRef:         utils.Nullable("wlekjerw"),
 					FirecloudDevelopRef: "",
+					Port:                443,
+					Protocol:            "https",
+					Subdomain:           "",
 				},
 			},
 			sherlock.Release{
@@ -308,6 +360,9 @@ func setStateExpectations(mock *mocks.Client) {
 					Namespace:           "terra-bee-offline",
 					HelmfileRef:         utils.Nullable("wlekjerw"),
 					FirecloudDevelopRef: "",
+					Port:                443,
+					Protocol:            "https",
+					Subdomain:           "sam",
 				},
 			},
 		}, nil,

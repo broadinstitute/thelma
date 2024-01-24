@@ -9,7 +9,7 @@ type environment struct {
 	createdAt                   time.Time
 	defaultCluster              terra.Cluster
 	defaultNamespace            string
-	releases                    map[string]*appRelease
+	releases                    map[string]*release
 	lifecycle                   terra.Lifecycle
 	template                    string
 	baseDomain                  string
