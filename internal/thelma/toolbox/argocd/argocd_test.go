@@ -256,6 +256,37 @@ func Test_setRef(t *testing.T) {
 	require.NoError(t, _argocd.setRef("fake-app", "main"))
 }
 
+func Test_isRetryableError(t *testing.T) {
+	testCases := []struct {
+		msg string
+		exp bool
+	}{
+		{
+			msg: "not retryable",
+			exp: false,
+		},
+		{
+			msg: "error communicating with server: EOF",
+			exp: true,
+		},
+		{
+			msg: "Timeout exceeded while awaiting headers",
+			exp: true,
+		},
+		{
+			msg: `rpc error: code = Unknown desc = Post "https://ap-argocd.dsp-devops.broadinstitute.org:443/application.ApplicationService/Get": "dial tcp: lookup ap-argocd.dsp-devops.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout"`,
+			exp: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.msg, func(t *testing.T) {
+			err := &shell.ExitError{Stderr: tc.msg}
+			assert.Equal(t, tc.exp, isRetryableError(err))
+		})
+	}
+}
+
 type mocks struct {
 	fakeIapToken string
 	fakeHost     string

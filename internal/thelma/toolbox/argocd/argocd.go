@@ -67,7 +67,7 @@ var retryableErrors = []*regexp.Regexp{
 	// dial tcp: lookup ap-argocd.dsp-devops.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout\"
 	regexp.MustCompile("rpc error: code = Unknown.*dial tcp: lookup .*: read udp .*: i/o timeout"),
 	// occasional errors where ArgoCD can't connect to GitHub to fetch the repo
-	regexp.MustCompile("Timeout exceeded while awaiting headers"),
+	regexp.MustCompile("[tT]imeout exceeded while awaiting headers"),
 	// occasional network errors in communication between GHA and ArgoCD
 	regexp.MustCompile("EOF"),
 }
