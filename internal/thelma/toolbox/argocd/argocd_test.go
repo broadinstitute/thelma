@@ -270,7 +270,7 @@ func Test_isRetryableError(t *testing.T) {
 			exp: true,
 		},
 		{
-			msg: "Timeout exceeded while awaiting headers",
+			msg: "dial tcp 140.82.113.3:443: i/o timeout (Client.Timeout exceeded while awaiting headers)",
 			exp: true,
 		},
 		{
