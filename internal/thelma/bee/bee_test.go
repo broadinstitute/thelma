@@ -5,6 +5,7 @@ import (
 	cleanupmocks "github.com/broadinstitute/thelma/internal/thelma/bee/cleanup/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	seedmocks "github.com/broadinstitute/thelma/internal/thelma/bee/seed/mocks"
+	slackmocks "github.com/broadinstitute/thelma/internal/thelma/clients/slack/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/artifacts"
 	"github.com/broadinstitute/thelma/internal/thelma/ops/logs"
 	logsmocks "github.com/broadinstitute/thelma/internal/thelma/ops/logs/mocks"
@@ -26,6 +27,7 @@ import (
 )
 
 const beeName = "my-bee"
+const beeOwner = "codemonkey42@broadinstitute.org"
 
 type BeesTestSuite struct {
 	suite.Suite
@@ -45,6 +47,7 @@ type BeesTestSuite struct {
 		kubectl *kubectlmocks.Kubectl
 		sync    *syncmocks.Sync
 		logs    *logsmocks.Logs
+		slack   *slackmocks.Slack
 	}
 
 	bees Bees
@@ -71,6 +74,8 @@ func (suite *BeesTestSuite) SetupSubTest() {
 	ops.EXPECT().Sync().Return(suite.mocks.sync, nil).Maybe()
 	ops.EXPECT().Logs().Return(suite.mocks.logs).Maybe()
 
+	suite.mocks.slack = slackmocks.NewSlack(suite.T())
+
 	bees, err := NewBees(
 		suite.mocks.argocd,
 		statefixture.Mocks().StateLoader,
@@ -78,7 +83,7 @@ func (suite *BeesTestSuite) SetupSubTest() {
 		suite.mocks.cleanup,
 		suite.mocks.kubectl,
 		ops,
-		nil,
+		suite.mocks.slack,
 	)
 	require.NoError(suite.T(), err)
 	suite.bees = bees
@@ -166,9 +171,7 @@ func (suite *BeesTestSuite) TestProvisionWith() {
 				s.expectPinReleaseVersionsEmptyOverrides()
 				s.expectProvisionBeeNamespaceAndGenerator()
 				s.expectSyncArgoAppsForReleasesReturnSamFailure(opts.WaitHealthy, opts.WaitHealthTimeoutSeconds, errors.New("sync totally failed"))
-
 				s.expectExportLogs()
-
 			},
 			expectErr: "sync totally failed",
 		},
@@ -183,6 +186,45 @@ func (suite *BeesTestSuite) TestProvisionWith() {
 			},
 			expectErr: "sync totally failed",
 		},
+		{
+			name: "slack notification should success message for for successful provision",
+			opts: provisionOptions(func(options *ProvisionOptions) {
+				options.Notify = true
+			}),
+			setup: func(s *BeesTestSuite, opts ProvisionOptions) {
+				s.expectPinReleaseVersionsEmptyOverrides()
+				s.expectProvisionBeeNamespaceAndGenerator()
+				s.expectSyncArgoAppsForReleases(opts.WaitHealthy, opts.WaitHealthTimeoutSeconds)
+				s.expectSeed(opts.SeedOptions)
+				s.expectSendSlackNotificationToOwnerContaining("ready to go")
+			},
+		},
+		{
+			name: "slack notification should send failure message for failed provision",
+			opts: provisionOptions(func(options *ProvisionOptions) {
+				options.Notify = true
+			}),
+			setup: func(s *BeesTestSuite, opts ProvisionOptions) {
+				s.expectPinReleaseVersionsEmptyOverrides()
+				s.expectProvisionBeeNamespaceAndGenerator()
+				s.expectSyncArgoAppsForReleasesReturnSamFailure(opts.WaitHealthy, opts.WaitHealthTimeoutSeconds, errors.New("something went wrong"))
+				s.expectExportLogs()
+				s.expectSendSlackNotificationToOwnerContaining("BEE didn't come up properly")
+			},
+			expectErr: "something went wrong",
+		},
+		{
+			name: "slack notification should be sent on pin environments failure",
+			opts: provisionOptions(func(options *ProvisionOptions) {
+				options.PinOptions.Flags.TerraHelmfileRef = "my-helmfile-ref"
+				options.Notify = true
+			}),
+			setup: func(s *BeesTestSuite, opts ProvisionOptions) {
+				s.expectPinEnvHelmfileRefReturnError("my-helmfile-ref", errors.New("pin totally failed"))
+				s.expectSendSlackNotificationToOwnerContaining("BEE didn't come up properly")
+			},
+			expectErr: "pin totally failed",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -195,11 +237,10 @@ func (suite *BeesTestSuite) TestProvisionWith() {
 			if tc.expectErr != "" {
 				require.Error(suite.T(), err)
 				assert.Contains(suite.T(), err.Error(), tc.expectErr)
-				return
+			} else {
+				require.NoError(suite.T(), err)
+				assert.Equal(suite.T(), beeName, bee.Environment.Name())
 			}
-
-			require.NoError(suite.T(), err)
-			assert.Equal(suite.T(), beeName, bee.Environment.Name())
 		})
 	}
 }
@@ -334,6 +375,12 @@ func (suite *BeesTestSuite) expectExportLogsReturnError(exportErr error) {
 			},
 		}, options)
 	}).Return(locations, exportErr)
+}
+
+func (suite *BeesTestSuite) expectSendSlackNotificationToOwnerContaining(substring string) {
+	suite.mocks.slack.EXPECT().SendDirectMessage(beeOwner, mock.Anything).Run(func(email string, markdown string) {
+		assert.Contains(suite.T(), markdown, substring)
+	}).Return(nil)
 }
 
 func (suite *BeesTestSuite) getReleases() []terra.Release {

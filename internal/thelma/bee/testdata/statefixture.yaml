@@ -21,6 +21,7 @@ environments:
     uniqueresourceprefix: abcd
     defaultcluster: terra-qa-bees
     requiresuitable: false
+    owner: codemonkey42@broadinstitute.org
 charts:
   - name: leonardo
     repo: terra-helm
