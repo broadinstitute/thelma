@@ -40,7 +40,7 @@ type Clients interface {
 	// Sherlock returns a swagger API client for a sherlock server instance
 	Sherlock(options ...sherlock.Option) (sherlock.Client, error)
 	// Slack returns a wrapper around the official API client
-	Slack() (*slack.Slack, error)
+	Slack() (slack.Slack, error)
 }
 
 func New(thelmaConfig config.Config, thelmaRoot root.Root, creds credentials.Credentials, runner shell.Runner) (Clients, error) {
@@ -132,7 +132,7 @@ func (c *clients) Kubernetes() kubernetes.Clients {
 	return c.kubernetes
 }
 
-func (c *clients) Slack() (*slack.Slack, error) {
+func (c *clients) Slack() (slack.Slack, error) {
 	return slack.New(c.thelmaConfig, c.Vault)
 }
 
