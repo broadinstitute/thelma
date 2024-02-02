@@ -92,7 +92,7 @@ type Bee struct {
 	ContainerLogsURL string
 }
 
-func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl, ops ops.Ops, slack *slack.Slack) (Bees, error) {
+func NewBees(argocd argocd.ArgoCD, stateLoader terra.StateLoader, seeder seed.Seeder, cleanup cleanup.Cleanup, kubectl kubectl.Kubectl, ops ops.Ops, slack slack.Slack) (Bees, error) {
 	state, err := stateLoader.Load()
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ type bees struct {
 	kubectl     kubectl.Kubectl
 	cleanup     cleanup.Cleanup
 	ops         ops.Ops
-	slack       *slack.Slack
+	slack       slack.Slack
 }
 
 func (b *bees) CreateWith(options CreateOptions) (*Bee, error) {
@@ -146,7 +146,7 @@ func (b *bees) CreateWith(options CreateOptions) (*Bee, error) {
 func (b *bees) ProvisionWith(name string, options ProvisionOptions) (*Bee, error) {
 	bee, err := b.provisionBee(name, options)
 
-	if options.Notify {
+	if bee != nil && options.Notify {
 		b.trySendBeeProvisionNotification(bee.Environment, err)
 	}
 
@@ -185,23 +185,33 @@ func (b *bees) provisionBee(name string, options ProvisionOptions) (*Bee, error)
 		// don't think this could ever happen, but let's provide a useful error anyway
 		return nil, errors.Errorf("error provisioning environment %q: missing from state", name)
 	}
+
+	bee := &Bee{
+		Environment: env,
+	}
+
 	env, err = b.PinVersions(env, options.PinOptions)
 	if err != nil {
-		return nil, errors.Errorf("error pinning versions for environment %q: %v", name, err)
+		return bee, errors.Errorf("error pinning versions for environment %q: %v", name, err)
+	}
+	if env == nil {
+		// don't think this could ever happen, but let's provide a useful error anyway
+		return bee, errors.Errorf("error pinning versions for environment %q: returned env is nil?", name)
+	}
+	bee.Environment = env
+
+	if err = b.provisionBeeNamespaceAndGenerator(bee); err != nil {
+		return bee, err
 	}
 
-	if err = b.provisionBeeNamespaceAndGenerator(env); err != nil {
-		return nil, err
-	}
-
-	bee, err := b.provisionBeeAppsAndSeed(env, options)
+	err = b.provisionBeeAppsAndSeed(bee, options)
 
 	if err != nil && options.ExportLogsOnFailure {
-		_, logErr := b.exportLogs(env)
+		_, logErr := b.exportLogs(bee)
 		if logErr != nil {
-			log.Error().Err(logErr).Msgf("error exporting logs from %s", env.Name())
+			log.Error().Err(logErr).Msgf("error exporting logs from %s", name)
 		}
-		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(env)
+		bee.ContainerLogsURL = artifacts.DefaultArtifactsURL(bee.Environment)
 	}
 
 	return bee, err
@@ -241,7 +251,9 @@ func (b *bees) trySendBeeProvisionNotification(env terra.Environment, maybeErr e
 	}
 }
 
-func (b *bees) provisionBeeNamespaceAndGenerator(env terra.Environment) error {
+func (b *bees) provisionBeeNamespaceAndGenerator(bee *Bee) error {
+	env := bee.Environment
+
 	if err := b.kubectl.CreateNamespace(env); err != nil {
 		return errors.Errorf("error creating namespace for environment %q: %v", env.Name(), err)
 	}
@@ -257,22 +269,20 @@ func (b *bees) provisionBeeNamespaceAndGenerator(env terra.Environment) error {
 	return nil
 }
 
-func (b *bees) provisionBeeAppsAndSeed(env terra.Environment, options ProvisionOptions) (*Bee, error) {
-	bee := &Bee{
-		Environment: env,
-	}
+func (b *bees) provisionBeeAppsAndSeed(bee *Bee, options ProvisionOptions) error {
+	env := bee.Environment
 	if err := b.provisionBeeApps(bee, options.ProvisionExistingOptions); err != nil {
-		return bee, err
+		return err
 	}
 
 	if options.Seed {
 		log.Info().Msgf("Seeding BEE with test data")
 		if err := b.seeder.Seed(env, options.SeedOptions); err != nil {
-			return bee, errors.Errorf("error seeding environment %q: %v", env.Name(), err)
+			return errors.Errorf("error seeding environment %q: %v", env.Name(), err)
 		}
 	}
 
-	return bee, nil
+	return nil
 }
 
 func (b *bees) provisionBeeApps(bee *Bee, options ProvisionExistingOptions) error {
@@ -298,8 +308,8 @@ func (b *bees) provisionBeeApps(bee *Bee, options ProvisionExistingOptions) erro
 	return err
 }
 
-func (b *bees) exportLogs(bee terra.Environment) (map[terra.Release]artifacts.Location, error) {
-	return b.ops.Logs().Export(bee.Releases(), func(opts *logs.ExportOptions) {
+func (b *bees) exportLogs(bee *Bee) (map[terra.Release]artifacts.Location, error) {
+	return b.ops.Logs().Export(bee.Environment.Releases(), func(opts *logs.ExportOptions) {
 		opts.Artifacts.Upload = true
 	})
 }
@@ -318,7 +328,7 @@ func (b *bees) DeleteWith(name string, options DeleteOptions) (*Bee, error) {
 	}
 
 	if options.ExportLogs {
-		_, err := b.exportLogs(env)
+		_, err := b.exportLogs(bee)
 		if err != nil {
 			log.Warn().Msgf("Container log export failed")
 		}
