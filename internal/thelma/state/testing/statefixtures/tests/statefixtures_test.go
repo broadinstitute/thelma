@@ -263,6 +263,8 @@ func Test_EnvironmentAttributes(t *testing.T) {
 	assert.Equal(t, 6, len(beeEnv.Releases()))
 	assert.Equal(t, terra.Dynamic, beeEnv.Lifecycle())
 	assert.Equal(t, "e101", beeEnv.UniqueResourcePrefix())
+
+	assert.Equal(t, "codemonkey42@broadinstitute.org", beeEnv.Owner())
 }
 
 func Test_ReleaseURLs(t *testing.T) {

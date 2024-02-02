@@ -93,6 +93,7 @@ environments:
       uniqueresourceprefix: e101
       defaultcluster: terra-qa
       requiresuitable: false
+      owner: codemonkey42@broadinstitute.org
     - name: tools
       base: personal
       template: ""
