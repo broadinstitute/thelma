@@ -31,6 +31,7 @@ type Environment struct {
 	DefaultCluster       string
 	RequireSuitable      bool
 	TerraHelmfileRef     string
+	Owner                string
 }
 
 type Chart struct {

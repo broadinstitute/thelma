@@ -7,7 +7,7 @@ import (
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/slack-go/slack"
+	slackapi "github.com/slack-go/slack"
 )
 
 const configPrefix = "slack"
@@ -31,8 +31,15 @@ type slackConfig struct {
 	}
 }
 
-type Slack struct {
-	client             *slack.Client
+type Slack interface {
+	// SendDevopsAlert posts a message to the configured DevOps alert channel
+	SendDevopsAlert(title string, text string, ok bool) error
+	// SendDirectMessage send a direct message to a user, by email
+	SendDirectMessage(email string, markdown string) error
+}
+
+type slack struct {
+	client             *slackapi.Client
 	cfg                slackConfig
 	vaultClientFactory func() (*vaultapi.Client, error)
 }
@@ -41,19 +48,19 @@ type Slack struct {
 // This makes it much less likely to error, so that a Slack client can be safely passed
 // around Thelma and only try-caught at the actual call-site of attempting to send a
 // message
-func New(thelmaConfig config.Config, vaultClientFactory func() (*vaultapi.Client, error)) (*Slack, error) {
+func New(thelmaConfig config.Config, vaultClientFactory func() (*vaultapi.Client, error)) (Slack, error) {
 	var cfg slackConfig
 	if err := thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
 		return nil, err
 	}
-	return &Slack{
+	return &slack{
 		cfg:                cfg,
 		vaultClientFactory: vaultClientFactory,
 	}, nil
 }
 
 // SendDevopsAlert posts a message to the configured DevOps alert channel
-func (s *Slack) SendDevopsAlert(title string, text string, ok bool) error {
+func (s *slack) SendDevopsAlert(title string, text string, ok bool) error {
 	if err := s.requireClient(); err != nil {
 		return err
 	}
@@ -67,7 +74,7 @@ func (s *Slack) SendDevopsAlert(title string, text string, ok bool) error {
 		color = colorRed
 	}
 
-	_, _, err := s.client.PostMessage(channelId, slack.MsgOptionAttachments(slack.Attachment{
+	_, _, err := s.client.PostMessage(channelId, slackapi.MsgOptionAttachments(slackapi.Attachment{
 		Color:     color,
 		Title:     title,
 		TitleLink: platform.Lookup().Link(),
@@ -81,7 +88,7 @@ func (s *Slack) SendDevopsAlert(title string, text string, ok bool) error {
 }
 
 // SendDirectMessage send a direct message to a user, by email
-func (s *Slack) SendDirectMessage(email string, markdown string) error {
+func (s *slack) SendDirectMessage(email string, markdown string) error {
 	if err := s.requireClient(); err != nil {
 		log.Info().Msg("will continue without sending Slack messages; enable debug logging for more information")
 		log.Debug().Msgf("failed to initialize Slack client: %v", err)
@@ -93,7 +100,7 @@ func (s *Slack) SendDirectMessage(email string, markdown string) error {
 	} else if user == nil {
 		return errors.Errorf("couldn't get user for %s: Slack didn't error but didn't return a user object either", email)
 	}
-	channel, _, _, err := s.client.OpenConversation(&slack.OpenConversationParameters{
+	channel, _, _, err := s.client.OpenConversation(&slackapi.OpenConversationParameters{
 		Users: []string{user.ID},
 	})
 	if err != nil {
@@ -101,10 +108,10 @@ func (s *Slack) SendDirectMessage(email string, markdown string) error {
 	} else if channel == nil {
 		return errors.Errorf("couldn't open channel for %s user %s: Slack didn't error but didn't return a channel object either", email, user.ID)
 	}
-	_, _, err = s.client.PostMessage(channel.ID, slack.MsgOptionBlocks(slack.SectionBlock{
-		Type: slack.MBTSection,
-		Text: &slack.TextBlockObject{
-			Type: slack.MarkdownType,
+	_, _, err = s.client.PostMessage(channel.ID, slackapi.MsgOptionBlocks(slackapi.SectionBlock{
+		Type: slackapi.MBTSection,
+		Text: &slackapi.TextBlockObject{
+			Type: slackapi.MarkdownType,
 			Text: markdown,
 		},
 	}))
@@ -114,7 +121,7 @@ func (s *Slack) SendDirectMessage(email string, markdown string) error {
 	return nil
 }
 
-func (s *Slack) requireClient() error {
+func (s *slack) requireClient() error {
 	if s.client == nil {
 		if s.cfg.Vault.Enabled {
 			vaultClient, err := s.vaultClientFactory()
@@ -125,7 +132,7 @@ func (s *Slack) requireClient() error {
 			if err != nil {
 				return err
 			}
-			s.client = slack.New(token)
+			s.client = slackapi.New(token)
 		}
 	}
 	if s.client == nil {

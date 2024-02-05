@@ -119,6 +119,7 @@ func (b *builder) populateEnvironmentSet() {
 		env.EXPECT().Namespace().Return("terra-" + e.Name)
 		env.EXPECT().NamePrefixesDomain().Return(true)
 		env.EXPECT().PreventDeletion().Return(false)
+		env.EXPECT().Owner().Return(e.Owner)
 
 		autodelete := new(statemocks.AutoDelete)
 		autodelete.EXPECT().Enabled().Return(false)

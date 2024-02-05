@@ -161,7 +161,7 @@ func (cmd *command) PostRun(_ app.ThelmaApp, _ cli.RunContext) error {
 	return nil
 }
 
-func sendSlackMessage(slackClient *slack.Slack, name string, err error) {
+func sendSlackMessage(slackClient slack.Slack, name string, err error) {
 	var markdown string
 	if err == nil {
 		markdown = fmt.Sprintf("Orphaned BEE %s was automatically deleted", name)

@@ -206,6 +206,7 @@ mocks: ## Generate testify mocks with Mockery
 	mockery --dir ./internal/thelma/clients/sherlock --name ChartReleaseStatusUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_release_status_updater.go
 	mockery --dir ./internal/thelma/clients/sherlock --name ChartVersionUpdater --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename chart_version_updater.go
 	mockery --dir ./internal/thelma/clients/sherlock --name Client --output=./internal/thelma/clients/sherlock/mocks --outpkg mocks --filename sherlock.go
+	mockery --dir ./internal/thelma/clients/slack --name Slack --output=./internal/thelma/clients/slack/mocks --outpkg mocks --filename slack.go
 	mockery --dir ./internal/thelma/ops --name Ops --output=./internal/thelma/ops/mocks --outpkg mocks --filename ops.go
 	mockery --dir ./internal/thelma/ops/logs --name Logs --output=./internal/thelma/ops/logs/mocks --outpkg mocks --filename logs.go
 	mockery --dir ./internal/thelma/ops/sql/dbms --name DBMS --output=./internal/thelma/ops/sql/dbms/mocks --outpkg mocks --filename dbms.go
