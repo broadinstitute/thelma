@@ -168,6 +168,8 @@ retry:
 			default:
 				return nil, errors.Errorf("unexpected destination type '%s' for release '%s'", stateRelease.DestinationType, stateRelease.Name)
 			}
+
+			_releases[stateRelease.Name] = _release
 		}
 
 		_state := &state{
