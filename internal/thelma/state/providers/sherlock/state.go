@@ -10,10 +10,7 @@ type state struct {
 	sherlock     sherlock.Client
 	environments map[string]*environment
 	clusters     map[string]*cluster
-}
-
-func (s *state) Destinations() terra.Destinations {
-	return newDestinationsView(s)
+	releases     map[string]*release
 }
 
 func (s *state) Environments() terra.Environments {
