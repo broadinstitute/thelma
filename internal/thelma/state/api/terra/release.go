@@ -16,7 +16,6 @@ type Release interface {
 	ClusterAddress() string
 	Destination() Destination
 	TerraHelmfileRef() string
-	FirecloudDevelopRef() string
 	HelmfileOverlays() []string
 	AppVersion() string
 }

@@ -44,14 +44,12 @@ func Test_LoadFromEnv(t *testing.T) {
 
 	// make sure global flags were not set
 	assert.Equal(t, "", pinOpts.Flags.TerraHelmfileRef)
-	assert.Equal(t, "", pinOpts.Flags.FirecloudDevelopRef)
 
 	// make sure version overrides were copied from dev environment
 	assert.Equal(t, 8, len(pinOpts.FileOverrides))
 	assert.Equal(t, "2d309b1645a0", pinOpts.FileOverrides["sam"].AppVersion)
 	assert.Equal(t, "0.34.0", pinOpts.FileOverrides["sam"].ChartVersion)
 	assert.Equal(t, "", pinOpts.FileOverrides["sam"].TerraHelmfileRef)
-	assert.Equal(t, "", pinOpts.FileOverrides["sam"].FirecloudDevelopRef)
 }
 
 func Test_LoadFromFile(t *testing.T) {
@@ -62,8 +60,7 @@ func Test_LoadFromFile(t *testing.T) {
 		"sam": {
 			"appVersion": "1.2.3",
 			"chartVersion": "4.5.6",
-			"terraHelmfileRef": "pr-1",
-			"firecloudDevelopRef": "pr-2"
+			"terraHelmfileRef": "pr-1"
 		}
 	}
 	`), 0600))
@@ -99,14 +96,12 @@ func Test_LoadFromFile(t *testing.T) {
 
 	// make sure global flags were not set
 	assert.Equal(t, "", pinOpts.Flags.TerraHelmfileRef)
-	assert.Equal(t, "", pinOpts.Flags.FirecloudDevelopRef)
 
 	// make sure version overrides were copied from file
 	assert.Equal(t, 1, len(pinOpts.FileOverrides))
 	assert.Equal(t, "1.2.3", pinOpts.FileOverrides["sam"].AppVersion)
 	assert.Equal(t, "4.5.6", pinOpts.FileOverrides["sam"].ChartVersion)
 	assert.Equal(t, "pr-1", pinOpts.FileOverrides["sam"].TerraHelmfileRef)
-	assert.Equal(t, "pr-2", pinOpts.FileOverrides["sam"].FirecloudDevelopRef)
 }
 
 func Test_GlobalFlags(t *testing.T) {
@@ -120,7 +115,7 @@ func Test_GlobalFlags(t *testing.T) {
 	rc.On("CobraCommand").Return(cmd)
 
 	// set the flags we actually want to test
-	cmd.SetArgs([]string{"--terra-helmfile-ref", "foo", "--firecloud-develop-ref", "bar"})
+	cmd.SetArgs([]string{"--terra-helmfile-ref", "foo"})
 
 	flags := NewPinFlags()
 	flags.AddFlags(cmd)
@@ -134,7 +129,6 @@ func Test_GlobalFlags(t *testing.T) {
 
 	// make sure global flags were not set
 	assert.Equal(t, "foo", pinOpts.Flags.TerraHelmfileRef)
-	assert.Equal(t, "bar", pinOpts.Flags.FirecloudDevelopRef)
 
 	// no version overrides should be set
 	assert.Empty(t, pinOpts.FileOverrides)

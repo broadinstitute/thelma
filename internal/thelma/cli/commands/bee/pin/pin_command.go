@@ -25,20 +25,13 @@ thelma bee pin -n swat-grungy-puma sam --chart-version=0.10.3
 # Pin sam to the terra-helmfile PR branch my-pr-1
 thelma bee pin -n swat-grungy-puma sam --terra-helmfile-ref=my-pr-1
 
-# Pin sam to the firecloud-develop PR branch my-pr-1
-thelma bee pin -n swat-grungy-puma sam --firecloud-develop-ref=my-pr-1
-
 # Pin all services in a BEE to the terra-helmfile PR branch my-pr-1
 thelma bee pin -n swat-grungy-puma ALL --terra-helmfile-ref=my-pr-1
-
-# Pin all services in a BEE to the firecloud-develop PR branch my-pr-1
-thelma bee pin -n swat-grungy-puma ALL --firecloud-develop-ref=my-pr-1
 
 # Pin services in a BEE to specific versions described in the given file, with a format like:
 #   {
 #      "sam": {
 #        "appVersion": "my-image-tag",
-#        "firecloudDevelopRef": "my-firecloud-develop-branch",
 #        "terraHelmfileRef": "my-terra-helmfile-branch"
 #      },
 #      "leonardo": {

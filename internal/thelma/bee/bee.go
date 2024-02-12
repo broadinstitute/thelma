@@ -69,12 +69,10 @@ type ProvisionExistingOptions struct {
 }
 
 type PinOptions struct {
-	// Flags holds global-to-the-environment overrides like --terra-helmfile-ref, firecloud-develop-ref, --build-number
+	// Flags holds global-to-the-environment overrides like --terra-helmfile-ref, --build-number
 	Flags struct {
 		// TerraHelmfileRef the ref the environments Argo app generator should use
 		TerraHelmfileRef string
-		// FirecloudDevelopRef the ref the environments Argo app generator should use
-		FirecloudDevelopRef string
 	}
 	// FileOverrides holds overrides for individual releases, loaded from a YAML or JSON file
 	FileOverrides map[string]terra.VersionOverride
@@ -466,11 +464,6 @@ func (b *bees) PinVersions(bee terra.Environment, pinOptions PinOptions) (terra.
 		// if global --terra-helmfile-ref was set, add it to our release override
 		if pinOptions.Flags.TerraHelmfileRef != "" {
 			override.TerraHelmfileRef = pinOptions.Flags.TerraHelmfileRef
-		}
-
-		// if global --firecloud-develop-ref was set, add it to our release override
-		if pinOptions.Flags.FirecloudDevelopRef != "" {
-			override.FirecloudDevelopRef = pinOptions.Flags.FirecloudDevelopRef
 		}
 
 		releaseOverrides[r.Name()] = override

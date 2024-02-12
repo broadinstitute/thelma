@@ -174,7 +174,6 @@ func Test_SyncRelease(t *testing.T) {
 	leonardoDev.EXPECT().Destination().Return(dev)
 	leonardoDev.EXPECT().Name().Return("leonardo")
 	leonardoDev.EXPECT().IsAppRelease().Return(true)
-	leonardoDev.EXPECT().FirecloudDevelopRef().Return("dev")
 	leonardoDev.EXPECT().TerraHelmfileRef().Return("HEAD")
 
 	// check for legacy configs app
@@ -224,7 +223,6 @@ func Test_RefreshRelease(t *testing.T) {
 	leonardoDev.EXPECT().Destination().Return(dev)
 	leonardoDev.EXPECT().Name().Return("leonardo")
 	leonardoDev.EXPECT().IsAppRelease().Return(true)
-	leonardoDev.EXPECT().FirecloudDevelopRef().Return("dev")
 	leonardoDev.EXPECT().TerraHelmfileRef().Return("HEAD")
 
 	// check for legacy configs app
