@@ -2,8 +2,6 @@ module github.com/broadinstitute/thelma
 
 go 1.21
 
-toolchain go1.21.4
-
 require (
 	cloud.google.com/go/container v1.29.0
 	cloud.google.com/go/pubsub v1.33.0
