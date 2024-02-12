@@ -13,26 +13,23 @@ import (
 )
 
 type flagValues struct {
-	terraHelmfileRef    string
-	firecloudDevelopRef string
-	versionsFile        string
-	versionsFormat      string
-	fromEnv             string
+	terraHelmfileRef string
+	versionsFile     string
+	versionsFormat   string
+	fromEnv          string
 }
 
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
-	terraHelmfileRef    string
-	firecloudDevelopRef string
-	versionsFile        string
-	versionsFormat      string
-	fromEnv             string
+	terraHelmfileRef string
+	versionsFile     string
+	versionsFormat   string
+	fromEnv          string
 }{
-	terraHelmfileRef:    "terra-helmfile-ref",
-	firecloudDevelopRef: "firecloud-develop-ref",
-	versionsFile:        "versions-file",
-	versionsFormat:      "versions-format",
-	fromEnv:             "from-env",
+	terraHelmfileRef: "terra-helmfile-ref",
+	versionsFile:     "versions-file",
+	versionsFormat:   "versions-format",
+	fromEnv:          "from-env",
 }
 
 type pinFlags struct {
@@ -54,7 +51,6 @@ func NewPinFlags() PinFlags {
 
 func (p *pinFlags) AddFlags(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&p.options.terraHelmfileRef, flagNames.terraHelmfileRef, "", "Pin BEE to specific terra-helmfile branch (instead of master)")
-	cobraCommand.Flags().StringVar(&p.options.firecloudDevelopRef, flagNames.firecloudDevelopRef, "", "Pin BEE to specific firecloud-develop branch (instead of dev)")
 	cobraCommand.Flags().StringVar(&p.options.versionsFile, flagNames.versionsFile, "", `Path to file containing application version overrides (see "thelma bee pin --help" for more info)`)
 	cobraCommand.Flags().StringVar(&p.options.versionsFormat, flagNames.versionsFormat, "yaml", fmt.Sprintf("Format of --%s. One of: %s", flagNames.versionsFile, utils.QuoteJoin(versionFormats())))
 	cobraCommand.Flags().StringVar(&p.options.fromEnv, flagNames.fromEnv, "", "Name of an environment to pull versions from")
@@ -64,7 +60,6 @@ func (p *pinFlags) GetPinOptions(thelmaApp app.ThelmaApp, rc cli.RunContext) (be
 	var pinOpts bee.PinOptions
 
 	pinOpts.Flags.TerraHelmfileRef = p.options.terraHelmfileRef
-	pinOpts.Flags.FirecloudDevelopRef = p.options.firecloudDevelopRef
 
 	fileOverrides, err := p.loadReleaseOverrides(thelmaApp, rc)
 	if err != nil {
@@ -125,10 +120,9 @@ func (p *pinFlags) loadReleaseOverridesFromEnv(thelmaApp app.ThelmaApp) (map[str
 			appVersion = release.AppVersion()
 		}
 		override := terra.VersionOverride{
-			AppVersion:          appVersion,
-			ChartVersion:        release.ChartVersion(),
-			TerraHelmfileRef:    release.TerraHelmfileRef(),
-			FirecloudDevelopRef: release.FirecloudDevelopRef(),
+			AppVersion:       appVersion,
+			ChartVersion:     release.ChartVersion(),
+			TerraHelmfileRef: release.TerraHelmfileRef(),
 		}
 		result[release.Name()] = override
 	}

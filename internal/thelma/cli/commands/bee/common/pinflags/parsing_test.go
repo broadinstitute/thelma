@@ -53,19 +53,17 @@ func Test_NormalizeImageTag(t *testing.T) {
 func Test_NormalizeImageTags(t *testing.T) {
 	input := map[string]terra.VersionOverride{
 		"sam": {
-			AppVersion:          "/with/sl(ash)es/",
-			ChartVersion:        "1.2.3",
-			TerraHelmfileRef:    "master",
-			FirecloudDevelopRef: "dev",
+			AppVersion:       "/with/sl(ash)es/",
+			ChartVersion:     "1.2.3",
+			TerraHelmfileRef: "master",
 		},
 	}
 
 	expected := map[string]terra.VersionOverride{
 		"sam": {
-			AppVersion:          "with-sl-ash-es-",
-			ChartVersion:        "1.2.3",
-			TerraHelmfileRef:    "master",
-			FirecloudDevelopRef: "dev",
+			AppVersion:       "with-sl-ash-es-",
+			ChartVersion:     "1.2.3",
+			TerraHelmfileRef: "master",
 		},
 	}
 

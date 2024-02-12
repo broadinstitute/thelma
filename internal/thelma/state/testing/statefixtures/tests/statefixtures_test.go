@@ -189,7 +189,6 @@ func TestDefaultFixtureHasCorrectVersions(t *testing.T) {
 	assert.Equal(t, "cead2f9206b5", snowflakeRawls[0].AppVersion())
 	assert.Equal(t, "100.200.300", snowflakeRawls[0].ChartVersion())
 	assert.Equal(t, "my-terra-helmfile-branch", snowflakeRawls[0].TerraHelmfileRef())
-	assert.Equal(t, "", snowflakeRawls[0].FirecloudDevelopRef())
 
 	paniniSam := rf.And(
 		rf.HasName("sam"),

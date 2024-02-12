@@ -40,20 +40,19 @@ type Chart struct {
 }
 
 type Release struct {
-	FullName            string
-	Name                string
-	Repo                string
-	Chart               string
-	Cluster             string
-	Namespace           string
-	Environment         string
-	AppVersion          string
-	ChartVersion        string
-	TerraHelmfileRef    string
-	FirecloudDevelopRef string
-	Port                int
-	Protocol            string
-	Subdomain           string
+	FullName         string
+	Name             string
+	Repo             string
+	Chart            string
+	Cluster          string
+	Namespace        string
+	Environment      string
+	AppVersion       string
+	ChartVersion     string
+	TerraHelmfileRef string
+	Port             int
+	Protocol         string
+	Subdomain        string
 }
 
 func (r Release) name() string {

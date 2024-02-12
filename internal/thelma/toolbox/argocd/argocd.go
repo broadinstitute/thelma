@@ -319,7 +319,10 @@ func (a *argocd) SyncRelease(release terra.Release, options ...SyncOption) error
 	// Sync the legacy configs app, if one exists
 	legacyConfigsWereSynced := false
 	if hasLegacyConfigsApp {
-		if err := a.setRef(legacyConfigsApp, release.FirecloudDevelopRef()); err != nil {
+		// Sherlock has dropped support for firecloud-develop refs. There also aren't any more legacy config apps,
+		// but a smaller refactoring is to remove the references to firecloud-develop and just hardcode to this to
+		// dev for now.
+		if err := a.setRef(legacyConfigsApp, "dev"); err != nil {
 			return err
 		}
 		syncResult, err := a.SyncApp(legacyConfigsApp, options...)

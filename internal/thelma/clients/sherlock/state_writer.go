@@ -126,9 +126,6 @@ func (c *clientImpl) PinEnvironmentVersions(environmentName string, versions map
 		if overrides.TerraHelmfileRef != "" {
 			entry.ToHelmfileRef = overrides.TerraHelmfileRef
 		}
-		if overrides.FirecloudDevelopRef != "" {
-			entry.ToFirecloudDevelopRef = overrides.FirecloudDevelopRef
-		}
 		chartReleaseEntries = append(chartReleaseEntries, entry)
 	}
 	changesetPlanRequest := &models.V2controllersChangesetPlanRequest{
@@ -171,8 +168,7 @@ func (c *clientImpl) SetTerraHelmfileRefForEntireEnvironment(environment terra.E
 
 func (c *clientImpl) ResetEnvironmentAndPinToDev(environment terra.Environment) error {
 	editableEnvironment := &models.V2controllersEditableEnvironment{
-		HelmfileRef:                utils.Nullable("HEAD"),
-		DefaultFirecloudDevelopRef: utils.Nullable("dev"),
+		HelmfileRef: utils.Nullable("HEAD"),
 	}
 	_, err := c.client.Environments.PatchAPIV2EnvironmentsSelector(
 		environments.NewPatchAPIV2EnvironmentsSelectorParams().WithEnvironment(editableEnvironment).WithSelector(environment.Name()))
@@ -309,15 +305,14 @@ func (c *clientImpl) EnableRelease(env terra.Environment, releaseName string) er
 
 	// enable the chart-release in environment
 	enabledChart := &models.V2controllersCreatableChartRelease{
-		AppVersionExact:     templateRelease.AppVersionExact,
-		Chart:               templateRelease.Chart,
-		ChartVersionExact:   templateRelease.ChartVersionExact,
-		Environment:         env.Name(),
-		HelmfileRef:         templateRelease.HelmfileRef,
-		Port:                templateRelease.Port,
-		Protocol:            templateRelease.Protocol,
-		Subdomain:           templateRelease.Subdomain,
-		FirecloudDevelopRef: templateRelease.FirecloudDevelopRef,
+		AppVersionExact:   templateRelease.AppVersionExact,
+		Chart:             templateRelease.Chart,
+		ChartVersionExact: templateRelease.ChartVersionExact,
+		Environment:       env.Name(),
+		HelmfileRef:       templateRelease.HelmfileRef,
+		Port:              templateRelease.Port,
+		Protocol:          templateRelease.Protocol,
+		Subdomain:         templateRelease.Subdomain,
 	}
 	log.Info().Msgf("enabling chart-release: %q in environment: %q", releaseName, env.Name())
 	params := chart_releases.NewPostAPIV2ChartReleasesParams().WithChartRelease(enabledChart)
@@ -444,18 +439,17 @@ func (c *clientImpl) writeAppRelease(environmentName string, release terra.AppRe
 	}
 
 	modelChartRelease := models.V2controllersCreatableChartRelease{
-		AppVersionExact:     release.AppVersion(),
-		Chart:               release.ChartName(),
-		ChartVersionExact:   release.ChartVersion(),
-		Cluster:             release.ClusterName(),
-		Environment:         environmentName,
-		HelmfileRef:         utils.Nullable(helmfileRef),
-		Name:                releaseName,
-		Namespace:           release.Namespace(),
-		Port:                int64(release.Port()),
-		Protocol:            release.Protocol(),
-		Subdomain:           release.Subdomain(),
-		FirecloudDevelopRef: release.FirecloudDevelopRef(),
+		AppVersionExact:   release.AppVersion(),
+		Chart:             release.ChartName(),
+		ChartVersionExact: release.ChartVersion(),
+		Cluster:           release.ClusterName(),
+		Environment:       environmentName,
+		HelmfileRef:       utils.Nullable(helmfileRef),
+		Name:              releaseName,
+		Namespace:         release.Namespace(),
+		Port:              int64(release.Port()),
+		Protocol:          release.Protocol(),
+		Subdomain:         release.Subdomain(),
 	}
 
 	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
@@ -507,13 +501,12 @@ func (c *clientImpl) writeClusterRelease(release terra.ClusterRelease) error {
 		helmfileRef = release.TerraHelmfileRef()
 	}
 	modelChartRelease := models.V2controllersCreatableChartRelease{
-		Chart:               release.ChartName(),
-		ChartVersionExact:   release.ChartVersion(),
-		Cluster:             release.ClusterName(),
-		HelmfileRef:         utils.Nullable(helmfileRef),
-		Name:                releaseName,
-		Namespace:           release.Namespace(),
-		FirecloudDevelopRef: release.FirecloudDevelopRef(),
+		Chart:             release.ChartName(),
+		ChartVersionExact: release.ChartVersion(),
+		Cluster:           release.ClusterName(),
+		HelmfileRef:       utils.Nullable(helmfileRef),
+		Name:              releaseName,
+		Namespace:         release.Namespace(),
 	}
 
 	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().

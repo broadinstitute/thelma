@@ -284,7 +284,6 @@ releases:
       appversion: 2d309b1645a0
       chartversion: 0.34.0
       terrahelmfileref: my-th-branch-1
-      fireclouddevelopref: my-fc-branch-1
       subdomain: sam
       protocol: sam
       port: 443

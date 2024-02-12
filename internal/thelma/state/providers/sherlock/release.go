@@ -8,22 +8,21 @@ import (
 )
 
 type release struct {
-	name                string
-	enabled             bool
-	releaseType         terra.ReleaseType
-	chartVersion        string
-	chartName           string
-	repo                string
-	namespace           string
-	cluster             terra.Cluster
-	destination         terra.Destination
-	helmfileRef         string
-	firecloudDevelopRef string
-	helmfileOverlays    []string
-	appVersion          string
-	subdomain           string
-	protocol            string
-	port                int
+	name             string
+	enabled          bool
+	releaseType      terra.ReleaseType
+	chartVersion     string
+	chartName        string
+	repo             string
+	namespace        string
+	cluster          terra.Cluster
+	destination      terra.Destination
+	helmfileRef      string
+	helmfileOverlays []string
+	appVersion       string
+	subdomain        string
+	protocol         string
+	port             int
 }
 
 // FullName provides the entire name of the chart release, globally unique as enforced by Sherlock. Name provides
@@ -88,10 +87,6 @@ func (r *release) Destination() terra.Destination {
 
 func (r *release) TerraHelmfileRef() string {
 	return r.helmfileRef
-}
-
-func (r *release) FirecloudDevelopRef() string {
-	return r.firecloudDevelopRef
 }
 
 func (r *release) HelmfileOverlays() []string {
