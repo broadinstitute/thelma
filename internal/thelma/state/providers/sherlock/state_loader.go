@@ -81,11 +81,9 @@ retry:
 				return nil, err
 			}
 			var envAutoDelete autoDelete
-			if stateEnvironment.AutoDelete != nil {
-				if stateEnvironment.AutoDelete.Enabled != nil {
-					envAutoDelete.enabled = *stateEnvironment.AutoDelete.Enabled
-				}
-				envAutoDelete.after = time.Time(stateEnvironment.AutoDelete.After)
+			if !stateEnvironment.DeleteAfter.IsZero() {
+				envAutoDelete.enabled = true
+				envAutoDelete.after = time.Time(stateEnvironment.DeleteAfter)
 			}
 			var offline bool
 			if stateEnvironment.Offline != nil {

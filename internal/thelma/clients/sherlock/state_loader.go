@@ -20,18 +20,18 @@ type Cluster struct {
 type Clusters []Cluster
 
 type Environment struct {
-	*models.V2controllersEnvironment
+	*models.SherlockEnvironmentV3
 }
 
 type Environments []Environment
 
 type Release struct {
-	*models.V2controllersChartRelease
+	*models.SherlockChartReleaseV3
 }
 
 type Releases []Release
 
-func wrapEnvironments(envs ...*models.V2controllersEnvironment) Environments {
+func wrapEnvironments(envs ...*models.SherlockEnvironmentV3) Environments {
 	environments := make([]Environment, 0)
 	for _, env := range envs {
 		environments = append(environments, Environment{env})
@@ -41,8 +41,8 @@ func wrapEnvironments(envs ...*models.V2controllersEnvironment) Environments {
 }
 
 func (c *clientImpl) Environments() (Environments, error) {
-	params := environments.NewGetAPIV2EnvironmentsParams()
-	environmentsResponse, err := c.client.Environments.GetAPIV2Environments(params)
+	environmentsResponse, err := c.client.Environments.GetAPIEnvironmentsV3(
+		environments.NewGetAPIEnvironmentsV3Params())
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (c *clientImpl) Clusters() (Clusters, error) {
 	return clusters, nil
 }
 
-func wrapReleases(rs ...*models.V2controllersChartRelease) Releases {
+func wrapReleases(rs ...*models.SherlockChartReleaseV3) Releases {
 	releases := make([]Release, 0)
 	for _, release := range rs {
 		releases = append(releases, Release{release})
@@ -85,8 +85,8 @@ func wrapReleases(rs ...*models.V2controllersChartRelease) Releases {
 }
 
 func (c *clientImpl) Releases() (Releases, error) {
-	response, err := c.client.ChartReleases.GetAPIV2ChartReleases(
-		chart_releases.NewGetAPIV2ChartReleasesParams())
+	response, err := c.client.ChartReleases.GetAPIChartReleasesV3(
+		chart_releases.NewGetAPIChartReleasesV3Params())
 	if err != nil {
 		return nil, err
 	}

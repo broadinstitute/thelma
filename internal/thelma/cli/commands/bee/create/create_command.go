@@ -28,7 +28,6 @@ thelma bee create \
 // flagNames the names of all this command's CLI flags are kept in a struct so they can be easily referenced in error messages
 var flagNames = struct {
 	name                      string
-	namePrefix                string
 	owner                     string
 	template                  string
 	generatorOnly             string
@@ -44,7 +43,6 @@ var flagNames = struct {
 	dailyStartWeekends        string
 }{
 	name:                      "name",
-	namePrefix:                "name-prefix",
 	owner:                     "owner",
 	template:                  "template",
 	generatorOnly:             "generator-only",
@@ -91,7 +89,6 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Long = helpMessage
 
 	cobraCommand.Flags().StringVarP(&cmd.options.Name, flagNames.name, "n", "NAME", "Name for this BEE. If not given, a name will be generated")
-	cobraCommand.Flags().StringVarP(&cmd.options.NamePrefix, flagNames.namePrefix, "p", "bee", "Prefix to use when generating a name for this BEE")
 	cobraCommand.Flags().StringVarP(&cmd.options.Owner, flagNames.owner, "o", "", "Email address of the owner of the BEE")
 	cobraCommand.Flags().StringVarP(&cmd.options.Template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
@@ -111,17 +108,11 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 }
 
 func (cmd *createCommand) PreRun(thelmaApp app.ThelmaApp, ctx cli.RunContext) error {
-	// if --name not specified, generate a name for this BEE
+	// Validate name
 	if ctx.CobraCommand().Flags().Changed(flagNames.name) {
 		if err := validate.EnvironmentName(cmd.options.Name); err != nil {
 			return errors.Errorf("--%s: %q is not a valid environment name: %v", flagNames.name, cmd.options.Name, err)
 		}
-		cmd.options.GenerateName = false
-	} else {
-		if err := validate.EnvironmentNamePrefix(cmd.options.NamePrefix); err != nil {
-			return errors.Errorf("--%s: %q is not a valid environment name prefix: %v", flagNames.namePrefix, cmd.options.NamePrefix, err)
-		}
-		cmd.options.GenerateName = true
 	}
 
 	if ctx.CobraCommand().Flags().Changed(flagNames.deleteAfter) {

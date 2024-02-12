@@ -184,7 +184,7 @@ func setStateExpectations(mock *mocks.Client) {
 	mock.On("Environments").Return(
 		sherlock.Environments{
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
+				&models.SherlockEnvironmentV3{
 					Name:                "dev",
 					Base:                "live",
 					BaseDomain:          utils.Nullable("dsde-dev.broadinstitute.org"),
@@ -198,7 +198,7 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
+				&models.SherlockEnvironmentV3{
 					Name:                "prod",
 					Base:                "live",
 					BaseDomain:          utils.Nullable("dsde-prod.broadinstitute.org"),
@@ -212,7 +212,7 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
+				&models.SherlockEnvironmentV3{
 					Name:                "bee-online",
 					Base:                "bee",
 					BaseDomain:          utils.Nullable("bee.envs-terra.bio"),
@@ -226,7 +226,7 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
+				&models.SherlockEnvironmentV3{
 					Name:                "bee-offline",
 					Base:                "bee",
 					BaseDomain:          utils.Nullable("bee.envs-terra.bio"),
@@ -246,13 +246,13 @@ func setStateExpectations(mock *mocks.Client) {
 	mock.On("Releases").Return(
 		sherlock.Releases{
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "cluster",
 					AppVersionExact:   "1.0.1",
 					Chart:             "sam",
 					ChartVersionExact: "0.43.0",
 					Cluster:           "terra-dev",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "dev",
@@ -265,13 +265,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "cluster",
 					AppVersionExact:   "12.13.14",
 					Chart:             "sam",
 					ChartVersionExact: "0.42.0",
 					Cluster:           "terra-prod",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "prod",
@@ -284,13 +284,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "0.160.0",
 					Chart:             "datarepo",
 					ChartVersionExact: "0.33.0",
 					Cluster:           "terra-dev",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "dev",
@@ -303,13 +303,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "0.156.0",
 					Chart:             "datarepo",
 					ChartVersionExact: "0.32.0",
 					Cluster:           "terra-prod",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "prod",
@@ -322,13 +322,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "1.0.1",
 					Chart:             "sam",
 					ChartVersionExact: "0.43.0",
 					Cluster:           "terra-qa-bees",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "bee-online",
@@ -341,13 +341,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "1.0.1",
 					Chart:             "sam",
 					ChartVersionExact: "0.43.0",
 					Cluster:           "terra-qa-bees",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "bee-offline",

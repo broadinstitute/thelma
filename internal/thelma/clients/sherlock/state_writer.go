@@ -68,24 +68,18 @@ type StateWriter interface {
 }
 
 func (c *clientImpl) CreateEnvironmentFromTemplate(templateName string, options terra.CreateOptions) (string, error) {
-	creatableEnvironment := &models.V2controllersCreatableEnvironment{
+	creatableEnvironment := &models.SherlockEnvironmentV3Create{
 		TemplateEnvironment: templateName,
 	}
 
 	if options.Name != "" {
 		creatableEnvironment.Name = options.Name
 	}
-	if options.GenerateName && options.NamePrefix != "" {
-		creatableEnvironment.NamePrefix = options.NamePrefix
-	}
 	if options.Owner != "" {
 		creatableEnvironment.Owner = options.Owner
 	}
 	if options.AutoDelete.Enabled {
-		creatableEnvironment.AutoDelete = &models.EnvironmentAutoDelete{
-			After:   strfmt.DateTime(options.AutoDelete.After),
-			Enabled: utils.Nullable(options.AutoDelete.Enabled),
-		}
+		creatableEnvironment.DeleteAfter = strfmt.DateTime(options.AutoDelete.After)
 	}
 	if options.StopSchedule.Enabled {
 		creatableEnvironment.OfflineScheduleBeginEnabled = true
@@ -96,12 +90,10 @@ func (c *clientImpl) CreateEnvironmentFromTemplate(templateName string, options 
 		creatableEnvironment.OfflineScheduleEndTime = strfmt.DateTime(options.StartSchedule.RepeatingTime)
 		creatableEnvironment.OfflineScheduleEndWeekends = options.StartSchedule.Weekends
 	}
-	existing, created, err := c.client.Environments.PostAPIV2Environments(
-		environments.NewPostAPIV2EnvironmentsParams().WithEnvironment(creatableEnvironment))
+	created, err := c.client.Environments.PostAPIEnvironmentsV3(
+		environments.NewPostAPIEnvironmentsV3Params().WithEnvironment(creatableEnvironment))
 	if err != nil {
 		return "", errors.Errorf("error from Sherlock creating environment from '%s' template: %v", templateName, err)
-	} else if existing != nil && existing.Payload != nil {
-		return "", errors.Errorf("error handling Sherlock response, it didn't create a new environment and said that '%s' already matched the request", existing.Payload.Name)
 	} else if created != nil && created.Payload != nil {
 		return created.Payload.Name, nil
 	} else {
@@ -110,9 +102,9 @@ func (c *clientImpl) CreateEnvironmentFromTemplate(templateName string, options 
 }
 
 func (c *clientImpl) PinEnvironmentVersions(environmentName string, versions map[string]terra.VersionOverride) error {
-	var chartReleaseEntries []*models.V2controllersChangesetPlanRequestChartReleaseEntry
+	var chartReleaseEntries []*models.SherlockChangesetV3PlanRequestChartReleaseEntry
 	for chartName, overrides := range versions {
-		entry := &models.V2controllersChangesetPlanRequestChartReleaseEntry{
+		entry := &models.SherlockChangesetV3PlanRequestChartReleaseEntry{
 			ChartRelease: fmt.Sprintf("%s/%s", environmentName, chartName),
 		}
 		if overrides.AppVersion != "" {
@@ -128,11 +120,11 @@ func (c *clientImpl) PinEnvironmentVersions(environmentName string, versions map
 		}
 		chartReleaseEntries = append(chartReleaseEntries, entry)
 	}
-	changesetPlanRequest := &models.V2controllersChangesetPlanRequest{
+	changesetPlanRequest := &models.SherlockChangesetV3PlanRequest{
 		ChartReleases: chartReleaseEntries,
 	}
-	_, _, err := c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
-		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
+	_, _, err := c.client.Changesets.PostAPIChangesetsProceduresV3PlanAndApply(
+		changesets.NewPostAPIChangesetsProceduresV3PlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
 		return errors.Errorf("error from Sherlock setting environment '%s' releases to overrides: %v", environmentName, err)
 	}
@@ -140,26 +132,26 @@ func (c *clientImpl) PinEnvironmentVersions(environmentName string, versions map
 }
 
 func (c *clientImpl) SetTerraHelmfileRefForEntireEnvironment(environment terra.Environment, terraHelmfileRef string) error {
-	editableEnvironment := &models.V2controllersEditableEnvironment{
+	editableEnvironment := &models.SherlockEnvironmentV3Edit{
 		HelmfileRef: &terraHelmfileRef,
 	}
-	_, err := c.client.Environments.PatchAPIV2EnvironmentsSelector(
-		environments.NewPatchAPIV2EnvironmentsSelectorParams().WithEnvironment(editableEnvironment).WithSelector(environment.Name()))
+	_, err := c.client.Environments.PatchAPIEnvironmentsV3Selector(
+		environments.NewPatchAPIEnvironmentsV3SelectorParams().WithEnvironment(editableEnvironment).WithSelector(environment.Name()))
 	if err != nil {
 		return errors.Errorf("error from Sherlock setting environment '%s' terra-helmfile ref to '%s': %v", environment.Name(), terraHelmfileRef, err)
 	}
-	var chartReleaseEntries []*models.V2controllersChangesetPlanRequestChartReleaseEntry
+	var chartReleaseEntries []*models.SherlockChangesetV3PlanRequestChartReleaseEntry
 	for _, release := range environment.Releases() {
-		chartReleaseEntries = append(chartReleaseEntries, &models.V2controllersChangesetPlanRequestChartReleaseEntry{
+		chartReleaseEntries = append(chartReleaseEntries, &models.SherlockChangesetV3PlanRequestChartReleaseEntry{
 			ChartRelease:  fmt.Sprintf("%s/%s", environment.Name(), release.ChartName()),
 			ToHelmfileRef: terraHelmfileRef,
 		})
 	}
-	changesetPlanRequest := &models.V2controllersChangesetPlanRequest{
+	changesetPlanRequest := &models.SherlockChangesetV3PlanRequest{
 		ChartReleases: chartReleaseEntries,
 	}
-	_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
-		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
+	_, _, err = c.client.Changesets.PostAPIChangesetsProceduresV3PlanAndApply(
+		changesets.NewPostAPIChangesetsProceduresV3PlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
 		return errors.Errorf("error from Sherlock setting environment '%s' releases terra-helmfile ref to '%s': %v", environment.Name(), terraHelmfileRef, err)
 	}
@@ -167,24 +159,24 @@ func (c *clientImpl) SetTerraHelmfileRefForEntireEnvironment(environment terra.E
 }
 
 func (c *clientImpl) ResetEnvironmentAndPinToDev(environment terra.Environment) error {
-	editableEnvironment := &models.V2controllersEditableEnvironment{
+	editableEnvironment := &models.SherlockEnvironmentV3Edit{
 		HelmfileRef: utils.Nullable("HEAD"),
 	}
-	_, err := c.client.Environments.PatchAPIV2EnvironmentsSelector(
-		environments.NewPatchAPIV2EnvironmentsSelectorParams().WithEnvironment(editableEnvironment).WithSelector(environment.Name()))
+	_, err := c.client.Environments.PatchAPIEnvironmentsV3Selector(
+		environments.NewPatchAPIEnvironmentsV3SelectorParams().WithEnvironment(editableEnvironment).WithSelector(environment.Name()))
 	if err != nil {
 		return errors.Errorf("error from Sherlock unpinning environment '%s': %v", environment.Name(), err)
 	}
-	changesetPlanRequest := &models.V2controllersChangesetPlanRequest{
-		Environments: []*models.V2controllersChangesetPlanRequestEnvironmentEntry{
+	changesetPlanRequest := &models.SherlockChangesetV3PlanRequest{
+		Environments: []*models.SherlockChangesetV3PlanRequestEnvironmentEntry{
 			{
 				Environment:                          environment.Name(),
 				UseExactVersionsFromOtherEnvironment: "dev",
 			},
 		},
 	}
-	_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
-		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
+	_, _, err = c.client.Changesets.PostAPIChangesetsProceduresV3PlanAndApply(
+		changesets.NewPostAPIChangesetsProceduresV3PlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
 		return errors.Errorf("error from Sherlock pinning environment '%s' to dev: %v", environment.Name(), err)
 	}
@@ -192,11 +184,11 @@ func (c *clientImpl) ResetEnvironmentAndPinToDev(environment terra.Environment) 
 }
 
 func (c *clientImpl) SetEnvironmentOffline(environmentName string, offline bool) error {
-	editableEnvironment := &models.V2controllersEditableEnvironment{
+	editableEnvironment := &models.SherlockEnvironmentV3Edit{
 		Offline: &offline,
 	}
-	_, err := c.client.Environments.PatchAPIV2EnvironmentsSelector(
-		environments.NewPatchAPIV2EnvironmentsSelectorParams().WithSelector(environmentName).WithEnvironment(editableEnvironment))
+	_, err := c.client.Environments.PatchAPIEnvironmentsV3Selector(
+		environments.NewPatchAPIEnvironmentsV3SelectorParams().WithSelector(environmentName).WithEnvironment(editableEnvironment))
 	return err
 }
 
@@ -211,13 +203,13 @@ func (c *clientImpl) WriteEnvironments(envs []terra.Environment) ([]string, erro
 		// in the next step.
 		newEnv := toModelCreatableEnvironment(environment, false)
 
-		newEnvRequestParams := environments.NewPostAPIV2EnvironmentsParams().
+		newEnvRequestParams := environments.NewPostAPIEnvironmentsV3Params().
 			WithEnvironment(newEnv)
-		_, createdEnv, err := c.client.Environments.PostAPIV2Environments(newEnvRequestParams)
+		createdEnv, err := c.client.Environments.PostAPIEnvironmentsV3(newEnvRequestParams)
 		var envAlreadyExists bool
 		if err != nil {
 			// Don't error if creating the chart results in 409 conflict
-			if _, ok := err.(*environments.PostAPIV2EnvironmentsConflict); !ok {
+			if _, ok := err.(*environments.PostAPIEnvironmentsV3Conflict); !ok {
 				return nil, errors.Errorf("error creating cluster: %v", err)
 			}
 			envAlreadyExists = true
@@ -277,10 +269,10 @@ func (c *clientImpl) DeleteEnvironments(envs []terra.Environment) ([]string, err
 				return nil, errors.Errorf("error deleting chart release %s in environment %s: %v", release.Name(), env.Name(), err)
 			}
 		}
-		params := environments.NewDeleteAPIV2EnvironmentsSelectorParams().
+		params := environments.NewDeleteAPIEnvironmentsV3SelectorParams().
 			WithSelector(env.Name())
 
-		deletedEnv, err := c.client.Environments.DeleteAPIV2EnvironmentsSelector(params)
+		deletedEnv, err := c.client.Environments.DeleteAPIEnvironmentsV3Selector(params)
 		if err != nil {
 			return nil, errors.Errorf("error deleting environment %s: %v", env.Name(), err)
 		}
@@ -304,7 +296,7 @@ func (c *clientImpl) EnableRelease(env terra.Environment, releaseName string) er
 	}
 
 	// enable the chart-release in environment
-	enabledChart := &models.V2controllersCreatableChartRelease{
+	enabledChart := &models.SherlockChartReleaseV3Create{
 		AppVersionExact:   templateRelease.AppVersionExact,
 		Chart:             templateRelease.Chart,
 		ChartVersionExact: templateRelease.ChartVersionExact,
@@ -315,18 +307,18 @@ func (c *clientImpl) EnableRelease(env terra.Environment, releaseName string) er
 		Subdomain:         templateRelease.Subdomain,
 	}
 	log.Info().Msgf("enabling chart-release: %q in environment: %q", releaseName, env.Name())
-	params := chart_releases.NewPostAPIV2ChartReleasesParams().WithChartRelease(enabledChart)
-	_, _, err = c.client.ChartReleases.PostAPIV2ChartReleases(params)
+	params := chart_releases.NewPostAPIChartReleasesV3Params().WithChartRelease(enabledChart)
+	_, err = c.client.ChartReleases.PostAPIChartReleasesV3(params)
 	return err
 }
 
 func (c *clientImpl) DisableRelease(envName, releaseName string) error {
-	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{envName, releaseName}, "/"))
-	_, err := c.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
+	params := chart_releases.NewDeleteAPIChartReleasesV3SelectorParams().WithSelector(strings.Join([]string{envName, releaseName}, "/"))
+	_, err := c.client.ChartReleases.DeleteAPIChartReleasesV3Selector(params)
 	return err
 }
 
-func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartReleases bool) *models.V2controllersCreatableEnvironment {
+func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartReleases bool) *models.SherlockEnvironmentV3Create {
 	// if Helmfile ref isn't set it should default to head
 	var helmfileRef string
 	if env.TerraHelmfileRef() == "" {
@@ -334,14 +326,11 @@ func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartRelease
 	} else {
 		helmfileRef = env.TerraHelmfileRef()
 	}
-	var autoDelete *models.EnvironmentAutoDelete
+	var deleteAfter strfmt.DateTime
 	if env.AutoDelete().Enabled() {
-		autoDelete = &models.EnvironmentAutoDelete{
-			Enabled: utils.Nullable(env.AutoDelete().Enabled()),
-			After:   strfmt.DateTime(env.AutoDelete().After()),
-		}
+		deleteAfter = strfmt.DateTime(env.AutoDelete().After())
 	}
-	return &models.V2controllersCreatableEnvironment{
+	return &models.SherlockEnvironmentV3Create{
 		Base:                      env.Base(),
 		BaseDomain:                utils.Nullable(env.BaseDomain()),
 		DefaultCluster:            env.DefaultCluster().Name(),
@@ -355,7 +344,7 @@ func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartRelease
 		AutoPopulateChartReleases: &autoPopulateChartReleases,
 		UniqueResourcePrefix:      env.UniqueResourcePrefix(),
 		PreventDeletion:           utils.Nullable(env.PreventDeletion()),
-		AutoDelete:                autoDelete,
+		DeleteAfter:               deleteAfter,
 	}
 }
 
@@ -408,8 +397,6 @@ func (c *clientImpl) writeAppRelease(environmentName string, release terra.AppRe
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     utils.Nullable(int64(release.Port())),
 		DefaultProtocol: utils.Nullable(release.Protocol()),
-		// TODO don't default this figure out how thelma actually determines if legacy configs should be rendered
-		LegacyConfigsEnabled: utils.Nullable(true),
 	}
 	// first try to create the chart
 	newChartRequestParams := charts.NewPostAPIChartsV3Params().
@@ -438,7 +425,7 @@ func (c *clientImpl) writeAppRelease(environmentName string, release terra.AppRe
 		helmfileRef = release.TerraHelmfileRef()
 	}
 
-	modelChartRelease := models.V2controllersCreatableChartRelease{
+	modelChartRelease := models.SherlockChartReleaseV3Create{
 		AppVersionExact:   release.AppVersion(),
 		Chart:             release.ChartName(),
 		ChartVersionExact: release.ChartVersion(),
@@ -452,12 +439,12 @@ func (c *clientImpl) writeAppRelease(environmentName string, release terra.AppRe
 		Subdomain:         release.Subdomain(),
 	}
 
-	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
+	newChartReleaseRequestParams := chart_releases.NewPostAPIChartReleasesV3Params().
 		WithChartRelease(&modelChartRelease)
 
-	_, _, err = c.client.ChartReleases.PostAPIV2ChartReleases(newChartReleaseRequestParams)
+	_, err = c.client.ChartReleases.PostAPIChartReleasesV3(newChartReleaseRequestParams)
 	if err != nil {
-		if _, ok := err.(*chart_releases.PostAPIV2ChartReleasesConflict); !ok {
+		if _, ok := err.(*chart_releases.PostAPIChartReleasesV3Conflict); !ok {
 			return errors.Errorf("error creating chart release: %v", err)
 		}
 	}
@@ -470,8 +457,6 @@ func (c *clientImpl) writeClusterRelease(release terra.ClusterRelease) error {
 		ChartRepo:       utils.Nullable(release.Repo()),
 		DefaultPort:     nil,
 		DefaultProtocol: nil,
-		// Cluster releases will never have legacy configs
-		LegacyConfigsEnabled: utils.Nullable(false),
 	}
 
 	// first try to create the chart
@@ -500,7 +485,7 @@ func (c *clientImpl) writeClusterRelease(release terra.ClusterRelease) error {
 	} else {
 		helmfileRef = release.TerraHelmfileRef()
 	}
-	modelChartRelease := models.V2controllersCreatableChartRelease{
+	modelChartRelease := models.SherlockChartReleaseV3Create{
 		Chart:             release.ChartName(),
 		ChartVersionExact: release.ChartVersion(),
 		Cluster:           release.ClusterName(),
@@ -509,12 +494,12 @@ func (c *clientImpl) writeClusterRelease(release terra.ClusterRelease) error {
 		Namespace:         release.Namespace(),
 	}
 
-	newChartReleaseRequestParams := chart_releases.NewPostAPIV2ChartReleasesParams().
+	newChartReleaseRequestParams := chart_releases.NewPostAPIChartReleasesV3Params().
 		WithChartRelease(&modelChartRelease)
 
-	_, _, err = c.client.ChartReleases.PostAPIV2ChartReleases(newChartReleaseRequestParams)
+	_, err = c.client.ChartReleases.PostAPIChartReleasesV3(newChartReleaseRequestParams)
 	if err != nil {
-		if _, ok := err.(*chart_releases.PostAPIV2ChartReleasesConflict); !ok {
+		if _, ok := err.(*chart_releases.PostAPIChartReleasesV3Conflict); !ok {
 			return errors.Errorf("error creating chart release: %v", err)
 		}
 	}
@@ -522,15 +507,15 @@ func (c *clientImpl) writeClusterRelease(release terra.ClusterRelease) error {
 }
 
 func (c *clientImpl) deleteRelease(release terra.Release) error {
-	params := chart_releases.NewDeleteAPIV2ChartReleasesSelectorParams().
+	params := chart_releases.NewDeleteAPIChartReleasesV3SelectorParams().
 		WithSelector(strings.Join([]string{release.ChartName(), release.Destination().Name()}, "-"))
-	_, err := c.client.ChartReleases.DeleteAPIV2ChartReleasesSelector(params)
+	_, err := c.client.ChartReleases.DeleteAPIChartReleasesV3Selector(params)
 	return err
 }
 
 func (c *clientImpl) getEnvironment(name string) (*Environment, error) {
-	params := environments.NewGetAPIV2EnvironmentsSelectorParams().WithSelector(name)
-	environment, err := c.client.Environments.GetAPIV2EnvironmentsSelector(params)
+	params := environments.NewGetAPIEnvironmentsV3SelectorParams().WithSelector(name)
+	environment, err := c.client.Environments.GetAPIEnvironmentsV3Selector(params)
 	if err != nil {
 		return nil, err
 	}
@@ -539,8 +524,8 @@ func (c *clientImpl) getEnvironment(name string) (*Environment, error) {
 }
 
 func (c *clientImpl) getChartRelease(environmentName, releaseName string) (*Release, error) {
-	params := chart_releases.NewGetAPIV2ChartReleasesSelectorParams().WithSelector(strings.Join([]string{environmentName, releaseName}, "/"))
-	release, err := c.client.ChartReleases.GetAPIV2ChartReleasesSelector(params)
+	params := chart_releases.NewGetAPIChartReleasesV3SelectorParams().WithSelector(strings.Join([]string{environmentName, releaseName}, "/"))
+	release, err := c.client.ChartReleases.GetAPIChartReleasesV3Selector(params)
 	if err != nil {
 		return nil, err
 	}

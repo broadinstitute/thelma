@@ -170,17 +170,17 @@ func (suite *sherlockClientSuite) TestFetchReleasesError() {
 
 func newMockSherlockServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v2/environments", mockEnvironmentsHandler())
+	mux.HandleFunc("/api/environments/v3", mockEnvironmentsHandler())
 	mux.HandleFunc("/api/clusters/v3", mockClustersHandler())
-	mux.HandleFunc("/api/v2/chart-releases", mockChartReleasesHandler())
+	mux.HandleFunc("/api/chart-releases/v3", mockChartReleasesHandler())
 	return httptest.NewServer(mux)
 }
 
 func newMockErroringSherlockServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v2/environments", mockErroringHandler())
+	mux.HandleFunc("/api/environments/v3", mockErroringHandler())
 	mux.HandleFunc("/api/clusters/v3", mockErroringHandler())
-	mux.HandleFunc("/api/v2/chart-releases", mockErroringHandler())
+	mux.HandleFunc("/api/chart-releases/v3", mockErroringHandler())
 	mux.HandleFunc("/api/charts/v3", mockErroringHandler())
 	return httptest.NewServer(mux)
 }
@@ -188,7 +188,7 @@ func newMockErroringSherlockServer() *httptest.Server {
 func mockEnvironmentsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]*models.V2controllersEnvironment{
+		_ = json.NewEncoder(w).Encode([]*models.SherlockEnvironmentV3{
 			{
 				Base:           "live",
 				DefaultCluster: "terra-dev",
@@ -227,7 +227,7 @@ func mockChartReleasesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		encoder := json.NewEncoder(w)
-		_ = encoder.Encode([]*models.V2controllersChartRelease{
+		_ = encoder.Encode([]*models.SherlockChartReleaseV3{
 			{
 				DestinationType:   "environment",
 				AppVersionExact:   "0.2.1",
