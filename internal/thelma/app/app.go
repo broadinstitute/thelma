@@ -9,7 +9,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/app/paths"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
-	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/clients"
 	"github.com/broadinstitute/thelma/internal/thelma/ops"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -22,10 +21,6 @@ import (
 type Options struct {
 	Runner      shell.Runner
 	StateLoader terra.StateLoader
-}
-
-func init() {
-	seed.Rand()
 }
 
 // ThelmaApp holds references to global/cross-cutting dependencies for Thelma commands
