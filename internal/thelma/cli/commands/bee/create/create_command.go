@@ -88,7 +88,7 @@ func (cmd *createCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Short = "Create a new BEE from a template"
 	cobraCommand.Long = helpMessage
 
-	cobraCommand.Flags().StringVarP(&cmd.options.Name, flagNames.name, "n", "NAME", "Name for this BEE. If not given, a name will be generated")
+	cobraCommand.Flags().StringVarP(&cmd.options.Name, flagNames.name, "n", "", "Name for this BEE. If not given, a name will be generated")
 	cobraCommand.Flags().StringVarP(&cmd.options.Owner, flagNames.owner, "o", "", "Email address of the owner of the BEE")
 	cobraCommand.Flags().StringVarP(&cmd.options.Template, flagNames.template, "t", "swatomation", "Template to use for this BEE")
 	cobraCommand.Flags().BoolVar(&cmd.options.SyncGeneratorOnly, flagNames.generatorOnly, false, "Sync the BEE generator but not the BEE's Argo apps")
