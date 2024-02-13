@@ -57,18 +57,18 @@ func (c *clientImpl) ReportNewChartVersion(chartName string, newVersion string, 
 
 // Step 2 of UpdateForNewChartVersion
 func (c *clientImpl) setChartReleasesToLatestChartVersion(chartReleaseSelectors ...string) error {
-	var chartReleaseEntriesToUpdate []*models.V2controllersChangesetPlanRequestChartReleaseEntry
+	var chartReleaseEntriesToUpdate []*models.SherlockChangesetV3PlanRequestChartReleaseEntry
 	for _, chartReleaseSelector := range chartReleaseSelectors {
-		chartReleaseEntriesToUpdate = append(chartReleaseEntriesToUpdate, &models.V2controllersChangesetPlanRequestChartReleaseEntry{
+		chartReleaseEntriesToUpdate = append(chartReleaseEntriesToUpdate, &models.SherlockChangesetV3PlanRequestChartReleaseEntry{
 			ChartRelease:           chartReleaseSelector,
 			ToChartVersionResolver: "latest",
 		})
 	}
-	changesetPlanRequest := &models.V2controllersChangesetPlanRequest{
+	changesetPlanRequest := &models.SherlockChangesetV3PlanRequest{
 		ChartReleases: chartReleaseEntriesToUpdate,
 	}
-	_, _, err := c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
-		changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
+	_, _, err := c.client.Changesets.PostAPIChangesetsProceduresV3PlanAndApply(
+		changesets.NewPostAPIChangesetsProceduresV3PlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 	if err != nil {
 		return errors.Errorf("error from Sherlock: %v", err)
 	}
@@ -79,8 +79,8 @@ func (c *clientImpl) setChartReleasesToLatestChartVersion(chartReleaseSelectors 
 func (c *clientImpl) refreshDownstreamTemplateChartReleases(chartSelector string, updatedChartReleases ...string) (refreshedChartReleases []string, err error) {
 	// Get list of template environments
 	templateString := "template"
-	templates, err := c.client.Environments.GetAPIV2Environments(
-		environments.NewGetAPIV2EnvironmentsParams().
+	templates, err := c.client.Environments.GetAPIEnvironmentsV3(
+		environments.NewGetAPIEnvironmentsV3Params().
 			WithLifecycle(&templateString),
 	)
 	if err != nil {
@@ -94,8 +94,8 @@ func (c *clientImpl) refreshDownstreamTemplateChartReleases(chartSelector string
 	for _, template := range templates.Payload {
 		// First, get applicable template chart releases that are currently following the latest chart version (that
 		// we just updated)
-		chartReleasesUsingLatest, err := c.client.ChartReleases.GetAPIV2ChartReleases(
-			chart_releases.NewGetAPIV2ChartReleasesParams().
+		chartReleasesUsingLatest, err := c.client.ChartReleases.GetAPIChartReleasesV3(
+			chart_releases.NewGetAPIChartReleasesV3Params().
 				WithChart(&chartSelector).
 				WithEnvironment(&template.Name).
 				WithChartVersionResolver(&latestString),
@@ -111,8 +111,8 @@ func (c *clientImpl) refreshDownstreamTemplateChartReleases(chartSelector string
 		// Second, get applicable template chart releases that are currently following a chart release we just specifically
 		// updated
 		for _, chartReleaseThatGotUpdated := range updatedChartReleases {
-			chartReleasesUsingFollow, err := c.client.ChartReleases.GetAPIV2ChartReleases(
-				chart_releases.NewGetAPIV2ChartReleasesParams().
+			chartReleasesUsingFollow, err := c.client.ChartReleases.GetAPIChartReleasesV3(
+				chart_releases.NewGetAPIChartReleasesV3Params().
 					WithChart(&chartSelector).
 					WithEnvironment(&template.Name).
 					WithChartVersionResolver(&followString).
@@ -130,17 +130,17 @@ func (c *clientImpl) refreshDownstreamTemplateChartReleases(chartSelector string
 
 	// Create a changeset request to just refresh every chart release we collected
 	if len(chartReleasesToRefresh) > 0 {
-		var chartReleaseEntriesToRefresh []*models.V2controllersChangesetPlanRequestChartReleaseEntry
+		var chartReleaseEntriesToRefresh []*models.SherlockChangesetV3PlanRequestChartReleaseEntry
 		for _, chartReleaseSelector := range chartReleasesToRefresh {
-			chartReleaseEntriesToRefresh = append(chartReleaseEntriesToRefresh, &models.V2controllersChangesetPlanRequestChartReleaseEntry{
+			chartReleaseEntriesToRefresh = append(chartReleaseEntriesToRefresh, &models.SherlockChangesetV3PlanRequestChartReleaseEntry{
 				ChartRelease: chartReleaseSelector,
 			})
 		}
-		changesetPlanRequest := &models.V2controllersChangesetPlanRequest{
+		changesetPlanRequest := &models.SherlockChangesetV3PlanRequest{
 			ChartReleases: chartReleaseEntriesToRefresh,
 		}
-		_, _, err = c.client.Changesets.PostAPIV2ProceduresChangesetsPlanAndApply(
-			changesets.NewPostAPIV2ProceduresChangesetsPlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
+		_, _, err = c.client.Changesets.PostAPIChangesetsProceduresV3PlanAndApply(
+			changesets.NewPostAPIChangesetsProceduresV3PlanAndApplyParams().WithChangesetPlanRequest(changesetPlanRequest))
 		if err != nil {
 			return []string{}, errors.Errorf("error from Sherlock: %v", err)
 		}

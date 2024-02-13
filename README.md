@@ -35,7 +35,7 @@ The `build` and `release` targets accept useful parameters:
     make release OS=linux ARCH=arm64
 
 #### Environment Setup
-1. Ensure you have the go 1.19 toolchain installed on your local machine `brew install go@1.19`
+1. Ensure you have the go 1.19 toolchain installed on your local machine `brew install go@1.21`
 2. Running thelma requires a local copy of the terra-helmfile repo. clone [terra-helmfile](https://github.com/broadinstitute/terra-helmfile)
 3. Set the `THELMA_HOME` environment variable as the path to your local clone of terra-helmfile
 

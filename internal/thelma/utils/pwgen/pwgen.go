@@ -2,16 +2,11 @@ package pwgen
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
-	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
 	"math/rand"
 )
 
 const defaultLength = 24
 const absoluteMinimumLength = 8
-
-func init() {
-	seed.Rand()
-}
 
 type Generator interface {
 	Generate() string

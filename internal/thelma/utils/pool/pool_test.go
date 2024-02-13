@@ -13,10 +13,6 @@ import (
 	"time"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixMilli())
-}
-
 func Test_EmptyWorkloadSucceeds(t *testing.T) {
 	require.NoError(t, New([]Job{}).Execute())
 }

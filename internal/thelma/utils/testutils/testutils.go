@@ -2,17 +2,12 @@ package testutils
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/app/seed"
 	"github.com/pkg/errors"
 	"math/rand"
 	"sort"
 	"strings"
 	"time"
 )
-
-func init() {
-	seed.Rand()
-}
 
 var alphaNumeric = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
