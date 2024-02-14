@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/coreos/go-oidc"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"time"
 )
 
 var verifier *oidc.IDTokenVerifier
@@ -13,7 +15,13 @@ func initOidcVerifier(validatingIssuer string) error {
 	if verifier == nil {
 		provider, err := oidc.NewProvider(context.Background(), validatingIssuer)
 		if err != nil {
-			return err
+			time.Sleep(time.Second)
+			provider, err = oidc.NewProvider(context.Background(), validatingIssuer)
+			if err != nil {
+				return err
+			} else {
+				log.Info().Msg("Thelma recovered from a transient error while initializing the GHA OIDC verifier.")
+			}
 		}
 
 		type extraConfigurationClaims struct {
