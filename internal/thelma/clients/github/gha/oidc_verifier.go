@@ -20,7 +20,7 @@ func initOidcVerifier(validatingIssuer string) error {
 			if err != nil {
 				return err
 			} else {
-				log.Info().Msg("Thelma recovered from a transient error while initializing the GHA OIDC verifier.")
+				log.Info().Msg("Thelma recovered from a transient error while initializing the GHA OIDC verifier")
 			}
 		}
 
