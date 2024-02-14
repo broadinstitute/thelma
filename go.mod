@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/storage v1.33.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/broadinstitute/sherlock/sherlock-go-client v1.0.0
+	github.com/broadinstitute/sherlock/sherlock-go-client v1.0.1
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.15.0
