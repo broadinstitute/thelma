@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/coreos/go-oidc"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"time"
 )
 
 var verifier *oidc.IDTokenVerifier
@@ -11,7 +13,7 @@ var verifier *oidc.IDTokenVerifier
 // initOidcVerifier will initialize the verifier if it hasn't been initialized yet.
 func initOidcVerifier(validatingIssuer string) error {
 	if verifier == nil {
-		provider, err := oidc.NewProvider(context.Background(), validatingIssuer)
+		provider, err := makeOidcProvider(context.Background(), validatingIssuer)
 		if err != nil {
 			return err
 		}
@@ -34,6 +36,22 @@ func initOidcVerifier(validatingIssuer string) error {
 		})
 	}
 	return nil
+}
+
+// makeOidcProvider creates an oidc.Provider that can be used to make an oidc.IDTokenVerifier.
+// It has some basic retry logic to handle truly transient errors.
+func makeOidcProvider(ctx context.Context, validatingIssuer string) (*oidc.Provider, error) {
+	provider, err := oidc.NewProvider(ctx, validatingIssuer)
+	if err != nil {
+		time.Sleep(time.Second)
+		provider, err = oidc.NewProvider(ctx, validatingIssuer)
+		if err != nil {
+			return nil, err
+		} else {
+			log.Info().Msg("Thelma recovered from a transient error while initializing the GHA OIDC provider")
+		}
+	}
+	return provider, nil
 }
 
 func verifyOidcToken(token []byte) error {
