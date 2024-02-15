@@ -16,7 +16,6 @@ type builder struct {
 	clusterReleaseSet map[string]*statemocks.ClusterRelease
 	clusters          *statemocks.Clusters
 	environments      *StubEnvironments
-	destinations      *StubDestinations
 	releases          *StubReleases
 	state             *statemocks.State
 	stateLoader       *statemocks.StateLoader
@@ -31,7 +30,6 @@ func newBuilder(data *FixtureData) *builder {
 		clusterReleaseSet: make(map[string]*statemocks.ClusterRelease),
 		clusters:          new(statemocks.Clusters),
 		environments:      &StubEnvironments{Environments: new(statemocks.Environments)},
-		destinations:      &StubDestinations{Destinations: new(statemocks.Destinations)},
 		releases:          &StubReleases{Releases: new(statemocks.Releases)},
 		state:             new(statemocks.State),
 		stateLoader:       new(statemocks.StateLoader),
@@ -50,7 +48,6 @@ func (b *builder) buildMocks() *Mocks {
 	b.setClustersMocks()
 	b.setEnvironmentsMocks()
 	b.setReleasesMocks()
-	b.setDestinationsMocks()
 
 	// set up root objects
 	b.setStateMocks()
@@ -58,7 +55,6 @@ func (b *builder) buildMocks() *Mocks {
 
 	return &Mocks{
 		Clusters:     b.clusters,
-		Destinations: b.destinations,
 		Environments: b.environments,
 		Releases:     b.releases,
 		State:        b.state,
@@ -260,23 +256,9 @@ func (b *builder) setReleasesMocks() {
 	b.releases.EXPECT().All().Return(allReleases, nil)
 }
 
-func (b *builder) setDestinationsMocks() {
-	var allDestinations []terra.Destination
-
-	for _, cluster := range b.clusterSet {
-		allDestinations = append(allDestinations, cluster)
-	}
-	for _, env := range b.environmentSet {
-		allDestinations = append(allDestinations, env)
-	}
-
-	b.destinations.EXPECT().All().Return(allDestinations, nil)
-}
-
 func (b *builder) setStateMocks() {
 	b.state.EXPECT().Environments().Return(b.environments)
 	b.state.EXPECT().Clusters().Return(b.clusters)
-	b.state.EXPECT().Destinations().Return(b.destinations)
 	b.state.EXPECT().Releases().Return(b.releases)
 }
 

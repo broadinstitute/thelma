@@ -15,13 +15,8 @@ func newReleasesView(s *state) terra.Releases {
 func (r *releases) All() ([]terra.Release, error) {
 	var result []terra.Release
 
-	allDestinations, err := r.state.Destinations().All()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, destination := range allDestinations {
-		result = append(result, destination.Releases()...)
+	for _, r := range r.state.releases {
+		result = append(result, r)
 	}
 
 	return result, nil
