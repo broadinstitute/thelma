@@ -27,8 +27,8 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.17.0
-	github.com/prometheus/common v0.44.0
+	github.com/prometheus/client_golang v1.18.0
+	github.com/prometheus/common v0.48.0
 	github.com/rs/zerolog v1.31.0
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.7.0
@@ -120,7 +120,6 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
