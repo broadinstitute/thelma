@@ -137,7 +137,7 @@ type argocdConfig struct {
 	WaitInProgressOperationTimeoutSeconds int `default:"300"`
 
 	// SyncTimeoutSeconds timeout for sync operations
-	SyncTimeoutSeconds int `default:"600"`
+	SyncTimeoutSeconds int `default:"1200"`
 
 	// SyncRetries how many times to retry failed sync operations before giving up
 	SyncRetries int `default:"4"`
