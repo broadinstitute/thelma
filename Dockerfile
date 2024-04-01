@@ -9,6 +9,10 @@ ARG THELMA_LINUX_RELEASE
 
 COPY output/releases/${THELMA_LINUX_RELEASE} .
 
+# Include ArgoCD plugin.yaml
+# https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#place-the-plugin-configuration-file-in-the-sidecar
+COPY argocd/plugin.yaml /home/argocd/cmp-server/config/
+
 # OS updates for security
 RUN apk update
 RUN apk upgrade
