@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/name"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/environmentflags"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing"
 	"github.com/broadinstitute/thelma/internal/thelma/cli/printing/format"
 	"github.com/rs/zerolog/log"
@@ -36,8 +37,12 @@ func (r *rootCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.SilenceUsage = true  // Only print out usage error when user supplies -h/--help
 	cobraCommand.SilenceErrors = true // Don't print errors, we do it ourselves using a logging library
 
-	// Add output formatting flags to Cobra command (eg. "--output-format=yaml")
+	// Add output formatting flags to Cobra command (e.g. "--output-format=yaml")
 	r.printer.AddFlags(cobraCommand.PersistentFlags())
+
+	// Add flag for control if other flags should be read from the environment (e.g. "--flags-from-environment-prefix=PARAM_")
+	// See execution.setFlagsFromEnvironment for where this option gets picked up (and why there, rather than in PreRun here)
+	environmentflags.AddFlag(cobraCommand.PersistentFlags())
 }
 
 func (r *rootCommand) PreRun(_ app.ThelmaApp, _ RunContext) error {
