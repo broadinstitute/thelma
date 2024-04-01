@@ -28,15 +28,21 @@ const wrapperUserEnvVar = "LEGACY_WRAPPER_USER"
 // local username that processes run as in ArgoCD containers
 const argocdUser = "argocd"
 
+// name of an environment variable set in ArgoCD
+// https://argo-cd.readthedocs.io/en/stable/user-guide/build-environment/
+const argocdEnvVar = "ARGOCD_APP_NAME"
+
 // local username that Jenkins nodes run as
 const jenkinsUser = "jenkins"
 
-// name an environment variable set in GitHub actions
+// name of an environment variable set in GitHub actions
 // https://docs.github.com/en/actions/learn-github-actions/environment-variables
 const githubWorkflowEnvVar = "GITHUB_WORKFLOW"
 
 // Lookup best-effort attempt to guess platform based on the environment thelma is running in
 func Lookup() Platform {
+	// Usage on a Mac is always local
+	//goland:noinspection ALL
 	if runtime.GOOS == "darwin" {
 		return Local
 	}
@@ -47,9 +53,16 @@ func Lookup() Platform {
 		return Unknown
 	}
 
-	// ArgoCD containers run as the ArgoCD user
+	// ArgoCD configmap plugins run as the ArgoCD user
 	// https://github.com/argoproj/argo-cd/blob/master/Dockerfile#L76
 	if u.Username == argocdUser {
+		return ArgoCD
+	}
+
+	// ArgoCD sidecar plugins can run as arbitrary users but will still have ArgoCD
+	// build environment variables set
+	// https://argo-cd.readthedocs.io/en/stable/user-guide/build-environment/
+	if os.Getenv(argocdEnvVar) != "" {
 		return ArgoCD
 	}
 
