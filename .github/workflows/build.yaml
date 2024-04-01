@@ -15,12 +15,9 @@ name: Bump, Tag, and Publish
 #    for `./output/releases/darwin-arm64`.
 # Afterwards:
 # 3. The `sign-and-notarize` job pulls the above release caches, signs and notarizes
-#    the darwin release tarballs, puts the output in `./output/releases`, and creates
-#    a new cache for `./output/releases`. This is necessary because the existing cache
-#    won't be uploaded for that directory as it already exists.
-# 4. The `dockerize-and-push` job pulls the new release cache from the previous job,
-#    builds the docker image, pushes it, and uploads the tarballs in `./output/releases`
-#    to the Thelma release GCS bucket.
+#    the darwin release tarballs, and uploads them to the thelma-releases GCS bucket.
+# 4. The `dockerize-and-push` job pulls the above release caches, builds the docker
+#    image, and pushes it.
 #
 # When run on merge to main, it tags and bumps the patch version by default. You can
 # bump other parts of the version by putting #major, #minor, or #patch in your commit
@@ -29,8 +26,6 @@ name: Bump, Tag, and Publish
 # When run on a PR, it simulates bumping the tag and appends a hash to the pushed image.
 #
 # The workflow relies on github secrets:
-# - GCP_PUBLISH_EMAIL - SA email for publishing to dsp-artifact-registry
-# - GCP_PUBLISH_KEY_B64 - SA key (Base64-encoded JSON string) for publishing to dsp-artifact-registry
 # - BROADBOT_TOKEN - the broadbot token, so we can avoid two reviewer rule on GHA operations
 on:
   pull_request:
@@ -44,17 +39,8 @@ on:
       - 'README.md'
       - 'foundation.yaml'
 env:
-  GOOGLE_PROJECT: dsp-artifact-registry
-  # Name of the app-specific Docker repository configured in GOOGLE_PROJECT
-  REPOSITORY_NAME: ${{ github.event.repository.name }}
-  # Name of the image to make in REPOSITORY_NAME
-  IMAGE_NAME: ${{ github.event.repository.name }}
-  # Region-specific Google Docker repository where GOOGLE_PROJECT/REPOSITORY_NAME can be found
-  GOOGLE_DOCKER_REPOSITORY: us-central1-docker.pkg.dev
   # GCS bucket where thelma releases are hosted
   THELMA_RELEASE_BUCKET: thelma-releases
-  # Version of gcloud to use for workflow steps that require it
-  SETUP_GCLOUD_VERSION: '0.3.0'
   # macOS release signing cert
   THELMA_MACOS_CERT: ${{ secrets.THELMA_MACOS_CERT}}
   # macOS release signing cert password
@@ -65,6 +51,8 @@ jobs:
   bump:
     if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.tag.outputs.tag }}
     steps:
@@ -85,11 +73,11 @@ jobs:
   cache-go-deps:
     if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Cache Go deps
         id: go-cache
@@ -105,12 +93,12 @@ jobs:
 
   build-linux-amd64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [bump, cache-go-deps]
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Go deps cache
         id: go-cache
@@ -143,14 +131,14 @@ jobs:
 
   build-darwin-amd64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [bump, cache-go-deps]
     outputs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Go deps cache
         id: go-cache
@@ -190,14 +178,14 @@ jobs:
 
   build-darwin-arm64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [bump, cache-go-deps]
     outputs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
 
       - name: Pull Go deps cache
         id: go-cache
@@ -237,12 +225,13 @@ jobs:
 
   sign-and-notarize:
     runs-on: macos-latest
+    permissions:
+      contents: read
+      id-token: write
     needs: [bump, build-linux-amd64, build-darwin-amd64, build-darwin-arm64]
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
 
       # Pull binaries compiled in previous steps
       - name: Pull Linux amd64 build directories
@@ -298,24 +287,28 @@ jobs:
           target: "checksum"
           version: ${{ needs.bump.outputs.version }}
       - name: Auth to GCP
-        uses: ./.github/actions/setup-gcloud
+        uses: google-github-actions/auth@v2
         with:
-          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
+          workload_identity_provider: projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider
+          service_account: thelma-releases-sa@dsp-artifact-registry.iam.gserviceaccount.com
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
       - name: Upload release files to bucket
         run: |
           gsutil cp -r output/releases/* gs://${{ env.THELMA_RELEASE_BUCKET }}/releases/${{ needs.bump.outputs.version }}/
 
   dockerize-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
     needs: [bump, build-linux-amd64]
-    outputs:
-      image-name: ${{ steps.image-name.outputs.name }}
-      image-name-with-tag: ${{ steps.image-name.outputs.tagged }}
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Pull Linux amd64 build directories
         id: cache-build-linux-amd64
@@ -329,65 +322,116 @@ jobs:
       #
       # Build Docker image
       #
-      - name: Construct docker image name and tag
-        id: image-name
-        run: |
-          NAME="${GOOGLE_DOCKER_REPOSITORY}/${GOOGLE_PROJECT}/${REPOSITORY_NAME}/${IMAGE_NAME}"
-          DOCKER_TAG="${{ needs.bump.outputs.version }}"
-          TAGGED="${NAME}:${DOCKER_TAG}"
-          echo "NAME: ${NAME}"
-          echo "TAGGED: ${TAGGED}"
-          echo ::set-output "name=name::${NAME}"
-          echo ::set-output "name=tagged::${TAGGED}"
+      - name: Assemble Docker images names and tags
+        uses: docker/metadata-action@v5
+        id: meta
+        with:
+          # We want to push to multiple images, so we use Docker's metadata action to help;
+          # it automatically does the cartesian product of image names and tags.
+          #
+          # Note that we're intentionally inlining the image names here -- the pattern in
+          # some other workflows of exposing image name segments as environment variables
+          # breaks down when you want to push to multiple image names. We judge it's clearer
+          # to just see the image names in plaintext.
+          images: |
+            us-central1-docker.pkg.dev/dsp-artifact-registry/thelma/thelma
+            us-central1-docker.pkg.dev/dsp-devops-super-prod/thelma/thelma
+          # Creates tags like v1.2.3, v1.2, v1, and latest on main branch;
+          # creates just v1.2.3-a1b2c3 otherwise.
+          tags: |
+            type=raw,value=${{ needs.bump.outputs.version }}
+            type=semver,pattern=v{{major}},value=${{ needs.bump.outputs.version }},enable={{is_default_branch}}
+            type=semver,pattern=v{{major}}.{{minor}},value=${{ needs.bump.outputs.version }},enable={{is_default_branch}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Build image
-        run: |
-          docker build \
-            --build-arg THELMA_LINUX_RELEASE=thelma_${{ needs.bump.outputs.version }}_linux_amd64.tar.gz \
-            -t ${{ steps.image-name.outputs.tagged }} .
+        uses: docker/build-push-action@v5
+        with:
+          # Don't push, just build and load locally.
+          push: false
+          load: true
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            THELMA_LINUX_RELEASE=thelma_${{ needs.bump.outputs.version }}_linux_amd64.tar.gz
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Run Trivy vulnerability scanner
-        # From https://github.com/broadinstitute/dsp-appsec-trivy-action
         uses: broadinstitute/dsp-appsec-trivy-action@v1
         with:
-          image: ${{ steps.image-name.outputs.tagged }}
+          image: us-central1-docker.pkg.dev/dsp-artifact-registry/thelma/thelma:${{ needs.bump.outputs.version }}
 
-      #
-      # Push Docker image
-      #
       - name: Auth to GCP
-        uses: ./.github/actions/setup-gcloud
+        id: auth
+        uses: google-github-actions/auth@v2
         with:
-          version: '345.0.0'
-          service-account-key: ${{ secrets.GCP_PUBLISH_KEY_B64 }}
-      - name: Explicitly auth Docker for Artifact Registry
-        run: gcloud auth configure-docker $GOOGLE_DOCKER_REPOSITORY --quiet
+          token_format: access_token
+          workload_identity_provider: projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider
+          service_account: gha-gar-writer@dsp-devops-super-prod.iam.gserviceaccount.com
+
+      - name: Login to GAR
+        uses: docker/login-action@v3
+        with:
+          registry: us-central1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
       - name: Push image
-        run: "docker push ${{ steps.image-name.outputs.tagged }}"
+        uses: docker/build-push-action@v5
+        with:
+          # "Build" (instant, via local cache from earlier) and push images;
+          # we do have to repeat the earlier parameters here for the cache to work.
+          push: true
+          load: false
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            THELMA_LINUX_RELEASE=thelma_${{ needs.bump.outputs.version }}_linux_amd64.tar.gz
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Comment pushed image
-        uses: actions/github-script@v7.0.1
+        uses: marocchino/sticky-pull-request-comment@v2
         if: github.event_name == 'pull_request'
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
-            github.rest.issues.createComment({ issue_number, owner, repo, body: 'Pushed image: ${{ steps.image-name.outputs.tagged }}' });
+          header: image
+          message: |
+            Published image from ${{ github.event.pull_request.head.sha }} (merge ${{ github.sha }}):
+            
+            ```
+            us-central1-docker.pkg.dev/dsp-artifact-registry/thelma/thelma:${{ needs.bump.outputs.version }}
+            us-central1-docker.pkg.dev/dsp-devops-super-prod/thelma/thelma:${{ needs.bump.outputs.version }}
+            ```
 
-  update-latest-tag:
+  update-latest-tarball:
     if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
+    # We don't actually rely on dockerize-and-push, but we block on it so we don't update latest if it fails.
     needs: [bump, dockerize-and-push, sign-and-notarize]
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.BROADBOT_TOKEN }}
 
       #
       # Update tags.json
       #
       - name: Auth to GCP
-        uses: ./.github/actions/setup-gcloud
+        uses: google-github-actions/auth@v2
         with:
-          service-account-key: ${{ secrets.THELMA_RELEASES_KEY_B64 }}
+          workload_identity_provider: projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider
+          service_account: thelma-releases-sa@dsp-artifact-registry.iam.gserviceaccount.com
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
       - name: Update tags.json
         # TODO: we can make this more sophisticated at some point, but the goal right now
         # is to minimally simulate Docker's "latest" tag for thelma binary releases, to support auto-update.
@@ -397,16 +441,3 @@ jobs:
           EOF
           gsutil cp tags.json gs://${{ env.THELMA_RELEASE_BUCKET }}/tags.json
 
-      #
-      # Update Docker image tag
-      #
-      - name: Auth to GCP
-        uses: ./.github/actions/setup-gcloud
-        with:
-          version: '345.0.0'
-          service-account-key: ${{ secrets.GCP_PUBLISH_KEY_B64 }}
-      - name: Add latest tag to Docker image
-        run: |
-          gcloud artifacts docker tags add \
-            "${{ needs.dockerize-and-push.outputs.image-name-with-tag }}" \
-            "${{ needs.dockerize-and-push.outputs.image-name }}:latest"
