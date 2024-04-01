@@ -348,6 +348,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           # Don't push, just build and load locally.
+          # The build is so fast (no compilation) that using GHA cache actually slows us down.
           push: false
           load: true
           context: .
@@ -357,8 +358,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             THELMA_LINUX_RELEASE=thelma_${{ needs.bump.outputs.version }}_linux_amd64.tar.gz
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
         uses: broadinstitute/dsp-appsec-trivy-action@v1
@@ -394,8 +393,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             THELMA_LINUX_RELEASE=thelma_${{ needs.bump.outputs.version }}_linux_amd64.tar.gz
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Comment pushed image
         uses: marocchino/sticky-pull-request-comment@v2
