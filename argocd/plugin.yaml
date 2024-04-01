@@ -3,6 +3,11 @@ kind: ConfigManagementPlugin
 metadata:
   name: thelma
 spec:
+  # Thelma has a config profile named "argocd" that provides helpful defaults for running Thelma within an ArgoCD on GKE.
+  # This file doesn't offer a clean way to specify the THELMA_CONFIG_PROFILE environment variable to set it (at least,
+  # not in any way where it could be safely overridden later) so we leave that up whoever is configuring this plugin with
+  # ArgoCD. Since ArgoCD isn't interactive, the "ci" profile will be chosen by default.
+  #
   # https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#write-the-plugin-configuration-file
   generate:
     command: ["thelma", "render"]
