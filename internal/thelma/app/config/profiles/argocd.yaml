@@ -1,5 +1,10 @@
 # This file contains custom configuration for Thelma that can be set for running in ArgoCD
 
+# ArgoCD runs plugins in the "Applications"'s repository, which means terra-helmfile for us.
+# Rather than worrying about setting `THELMA_HOME=.` (actually difficult to do for a plugin),
+# we set it directly in config here.
+home: .
+
 autoupdate:
   # Don't auto-update on ArgoCD, that's unproven and for now we'll
   # control Thelma's version with the ArgoCD appVersion from Beehive
