@@ -7,11 +7,12 @@ import (
 
 // RunError aggregates errors that can occur during execution of a ThelmaCommand
 type RunError struct {
-	CommandName   string       // CommandName key of the Thelma command that was executed
-	PreRunError   *HookError   // PreRunError error returned by PreRun hook
-	RunError      *HookError   // RunError error returned by Run hook
-	PostRunErrors []*HookError // PostRunErrors all errors returned by PostRun hooks
-	Count         int          // Count number of errors wrapped by this error
+	CommandName                   string       // CommandName key of the Thelma command that was executed
+	SetFlagsFromEnvironmentErrors []*HookError // SetFlagsFromEnvironmentErrors errors that occurred while setting flags from environment
+	PreRunError                   *HookError   // PreRunError error returned by PreRun hook
+	RunError                      *HookError   // RunError error returned by Run hook
+	PostRunErrors                 []*HookError // PostRunErrors all errors returned by PostRun hooks
+	Count                         int          // Count number of errors wrapped by this error
 }
 
 // Error returns a summary of all errors that occurred during command execution
@@ -26,6 +27,9 @@ func (e *RunError) Error() string {
 	var lines []string
 
 	lines = append(lines, fmt.Sprintf("execution of command %q generated %d errors:", e.CommandName, e.Count))
+	for _, setFlagsFromEnvironmentError := range e.SetFlagsFromEnvironmentErrors {
+		lines = append(lines, setFlagsFromEnvironmentError.Error())
+	}
 	if e.PreRunError != nil {
 		lines = append(lines, e.PreRunError.Error())
 	}
@@ -46,6 +50,9 @@ func (e *RunError) Cause() error {
 
 // firstError return the first error encountered during execution
 func (e *RunError) firstError() *HookError {
+	if len(e.SetFlagsFromEnvironmentErrors) > 0 {
+		return e.SetFlagsFromEnvironmentErrors[0]
+	}
 	if e.RunError != nil {
 		return e.RunError
 	}

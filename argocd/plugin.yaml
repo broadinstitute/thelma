@@ -1,0 +1,112 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ConfigManagementPlugin
+metadata:
+  name: thelma
+spec:
+  # Thelma has a config profile named "argocd" that provides helpful defaults for running Thelma within an ArgoCD on GKE.
+  # This file doesn't offer a clean way to specify the THELMA_CONFIG_PROFILE environment variable to set it (at least,
+  # not in any way where it could be safely overridden later) so we leave that up whoever is configuring this plugin with
+  # ArgoCD. Since ArgoCD isn't interactive, the "ci" profile will be chosen by default.
+  #
+  # https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#write-the-plugin-configuration-file
+  generate:
+    command: ["thelma", "render"]
+    args: ["--flags-from-environment-prefix=PARAM_"]
+  # Parameter declarations are for UI sugar only. They have no bearing on what actually gets passed to the Thelma:
+  # even the `string` default values aren't passed, and it's up to Thelma to supply these defaults internally.
+  #
+  # ArgoCD will convert parameter names to environment variables by uppercasing them and replacing dashes with
+  # underscores with a PARAM_ prefix, same as how Thelma handles --flags-from-environment-prefix=PARAM_.
+  #
+  # https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#using-environment-variables-in-your-plugin
+  parameters:
+    static:
+      - name: release
+        title: Run for specific release(s) (set to ALL to include all releases)
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+        string: "ALL"
+
+      - name: exact-release
+        title: Run for specific release(s), via globally-unique destination-suffixed names like are stored in Sherlock
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+
+      - name: environment
+        title: Run for specific Terra environment(s) (default [ALL])
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+        string: "ALL"
+
+      - name: cluster
+        title: Run for specific Terra cluster(s) (default [ALL])
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+        string: "ALL"
+
+      - name: destination-type
+        title: Run for a specific destination type (eg. "environment", "cluster") (default [ALL])
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+        string: "ALL"
+
+      - name: destination-base
+        title: Run for a specific environment or cluster base (eg. \"live\", \"bee\") (default [ALL])
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+        string: "ALL"
+
+      - name: environment-template
+        title: Run for dynamic environments with a specific template (eg. "swatomation") (default [ALL])
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+        string: "ALL"
+
+      - name: environment-lifecycle
+        title: Run for environments with a specific lifecycle (eg. "static", "template", "dynamic") (default [static,template])
+        tooltip: Comma-separated list of strings
+        itemType: string
+        required: false
+        string: "static,template"
+
+      - name: argocd
+        title: Render ArgoCD manifests instead of application manifests
+        tooltip: Boolean ("true" or "false")
+        itemType: string
+        required: false
+        string: "false"
+
+      - name: scope
+        title: One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types) (default "all")
+        tooltip: String
+        itemType: string
+        required: false
+        string: "all"
+
+      - name: validate
+        title: One of "skip" (no validation on render output), "warn" (print validation of render output but don't fail), or "fail" (exit with error if render output validation fails) (default "skip")
+        tooltip: String
+        itemType: string
+        required: false
+        string: "skip"
+
+      - name: chart-version
+        title: Override chart version
+        tooltip: String
+        itemType: string
+        required: false
+
+      - name: app-version
+        title: Override application version
+        tooltip: String
+        itemType: string
+        required: false
+
+  preserveFileMode: false
