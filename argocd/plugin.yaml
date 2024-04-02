@@ -11,7 +11,11 @@ spec:
   # https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#write-the-plugin-configuration-file
   generate:
     command: ["thelma", "render"]
-    args: ["--flags-from-environment-prefix=PARAM_"]
+    args:
+      # ArgoCD requires all plugins to return manifests (and nothing but manifests) to STDOUT
+      - "--stdout"
+      # Enable parsing other parameters below
+      - "--flags-from-environment-prefix=PARAM_"
   # Parameter declarations are for UI sugar only. They have no bearing on what actually gets passed to the Thelma:
   # even the `string` default values aren't passed, and it's up to Thelma to supply these defaults internally.
   #
