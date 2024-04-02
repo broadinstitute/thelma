@@ -86,6 +86,10 @@ func (e *execution) setFlagsFromEnvironment() {
 
 // preRun executes pre-run phase of a Thelma command execution
 func (e *execution) preRun() {
+	if e.errorRecorder.hasErrors() {
+		log.Debug().Msgf("skipping pre-run phase, an error has already occured")
+		return
+	}
 	// Run ancestor and leafNode PreRun hooks in descending order (root first)
 	for _, n := range pathFromRoot(e.leafNode) {
 		e.runContext.setCurrentExecutingNode(n)
@@ -104,7 +108,7 @@ func (e *execution) run() {
 		return
 	}
 	if e.errorRecorder.hasErrors() {
-		log.Debug().Msgf("skipping run phase, pre-run returned an error")
+		log.Debug().Msgf("skipping run phase, an error has already occured")
 		return
 	}
 	e.runContext.setCurrentExecutingNode(e.leafNode)
