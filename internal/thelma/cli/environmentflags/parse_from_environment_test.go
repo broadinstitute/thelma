@@ -37,7 +37,6 @@ func restoreEnvVars() error {
 }
 
 func TestSetFlagsFromEnvironment(t *testing.T) {
-
 	testCases := []struct {
 		name         string
 		args         []string
