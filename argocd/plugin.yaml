@@ -87,6 +87,16 @@ spec:
         required: false
         string: "false"
 
+      - name: mode
+        title: >-
+          Either "development" (use the ArgoCD git ref's terra-helmfile), "deploy" (use published chart versions), 
+          or "argocd-auto" (use "development" for a unique ArgoCD git ref, "deploy" otherwise). Defaults to 
+          "development" for backwards compatibility.
+        tooltip: String
+        itemType: string
+        required: false
+        string: "development"
+
       - name: scope
         title: One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types) (default "all")
         tooltip: String
