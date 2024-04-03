@@ -28,6 +28,14 @@ const stateFixture = statefixtures.Default
 
 // TestRenderArgParsing Given given a set of CLI args, verify that options structures are populated correctly
 func TestRenderArgParsing(t *testing.T) {
+	// This function plays with ArgoCD's standard environment variable for indicating an app's git ref.
+	// It does this to help test the --mode=argocd-auto mode. We read the value of the magic env var here
+	// and store it so we can unset/reset it when this function is complete.
+	//
+	// (It's extremely unlikely that a test environment would actually have this set, but it's good practice
+	// for tests to not leave side effects.)
+	existingArgocdVar, existingArgocdVarPresent := os.LookupEnv(modeArgocdAutoRefEnvVar)
+
 	type expectedAttrs struct {
 		renderOptions *render.Options
 		helmfileArgs  *helmfile.Args
@@ -496,6 +504,33 @@ func TestRenderArgParsing(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			description: "--mode=argocd-auto defaults to development",
+			arguments:   Args("render --mode argocd-auto ALL"),
+			setupFn: func(tc *testConfig) error {
+				_ = os.Unsetenv(modeArgocdAutoRefEnvVar)
+				tc.expected.renderOptions.ResolverMode = resolver.Development
+				return nil
+			},
+		},
+		{
+			description: "--mode=argocd-auto uses development for a custom ref",
+			arguments:   Args("render --mode argocd-auto ALL"),
+			setupFn: func(tc *testConfig) error {
+				_ = os.Setenv(modeArgocdAutoRefEnvVar, "charts/sam-1.2.3")
+				tc.expected.renderOptions.ResolverMode = resolver.Development
+				return nil
+			},
+		},
+		{
+			description: "--mode=argocd-auto uses deploy for main branch ref",
+			arguments:   Args("render --mode argocd-auto ALL"),
+			setupFn: func(tc *testConfig) error {
+				_ = os.Setenv(modeArgocdAutoRefEnvVar, "main")
+				tc.expected.renderOptions.ResolverMode = resolver.Deploy
+				return nil
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -574,6 +609,12 @@ func TestRenderArgParsing(t *testing.T) {
 			assert.Equal(t, expected.renderOptions, cmd.renderOptions)
 			assert.Equal(t, expected.helmfileArgs, cmd.helmfileArgs)
 		})
+	}
+
+	if existingArgocdVarPresent {
+		assert.NoError(t, os.Setenv(modeArgocdAutoRefEnvVar, existingArgocdVar))
+	} else {
+		assert.NoError(t, os.Unsetenv(modeArgocdAutoRefEnvVar))
 	}
 }
 
