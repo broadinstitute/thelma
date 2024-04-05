@@ -23,9 +23,8 @@ google:
       verifybroademail: false
 
 iap:
-  # Use Google auth to generate IAP tokens (will work since the Google
-  # auth is via a service account)
-  provider: google
+  # Use Workload Identity directly to generate ID tokens for IAP
+  provider: workloadidentity
 
 logging:
   console:
