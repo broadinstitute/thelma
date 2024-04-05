@@ -14,7 +14,7 @@ COPY output/releases/${THELMA_LINUX_RELEASE} .
 COPY argocd/plugin.yaml /home/argocd/cmp-server/config/
 RUN echo 'argocd-thelma:!::0:::::' >> /etc/shadow
 RUN echo 'argocd-thelma:x:999:' >> /etc/group
-RUN echo 'argocd-thelma:x:999:999:/home/argocd-thelma:/sbin/nologin' >> /etc/passwd
+RUN echo 'argocd-thelma:x:999:999:/home/argocd-thelma:/bin/sh' >> /etc/passwd
 RUN mkdir /home/argocd-thelma
 RUN chown 999:999 /home/argocd-thelma
 
