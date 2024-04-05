@@ -32,6 +32,8 @@ type logConfig struct {
 		Level string `default:"info" validate:"oneof=trace debug info warn error"`
 		// WordWrap if true, wrap long log lines at word boundary to max terminal width
 		WordWrap bool `default:"true"`
+		// Color if true, colorize console output
+		Color bool `default:"true"`
 	}
 	File struct {
 		// Log
@@ -179,6 +181,7 @@ func newConsoleWriter(cfg *logConfig, consoleStream io.Writer) zerolog.LevelWrit
 		w.Out = outputStream
 		w.TimeFormat = consoleTimeFormatter
 		w.FieldsExclude = []string{pidField}
+		w.NoColor = !cfg.Console.Color
 	})
 
 	return NewFilteredWriter(zerolog.MultiLevelWriter(consoleWriter), parseLogLevel(cfg.Console.Level))

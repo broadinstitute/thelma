@@ -30,6 +30,7 @@ iap:
 logging:
   console:
     level: info
+    color: false
   file:
     enabled: false
 
