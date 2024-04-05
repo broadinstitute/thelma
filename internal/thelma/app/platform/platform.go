@@ -47,6 +47,18 @@ func Lookup() Platform {
 		return Local
 	}
 
+	// ArgoCD sidecar plugins can run as user 999, so calling user.Current() will fail
+	// (Presumably due to lack of username, though the stated error complains about
+	// `user: Current requires cgo or $USER set in environment`)
+	// https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#register-the-plugin-sidecar:~:text=Make%20sure%20that%20sidecar%20container%20is%20running%20as%20user%20999
+	//
+	// We can still identify ArgoCD by its build environment variables, and exit out
+	// before calling user.Current()
+	// https://argo-cd.readthedocs.io/en/stable/user-guide/build-environment/
+	if _, present := os.LookupEnv(argocdEnvVar); present {
+		return ArgoCD
+	}
+
 	u, err := user.Current()
 	if err != nil {
 		log.Warn().Err(err).Msgf("failed to identify process owner")
@@ -56,13 +68,6 @@ func Lookup() Platform {
 	// ArgoCD configmap plugins run as the ArgoCD user
 	// https://github.com/argoproj/argo-cd/blob/master/Dockerfile#L76
 	if u.Username == argocdUser {
-		return ArgoCD
-	}
-
-	// ArgoCD sidecar plugins can run as arbitrary users but will still have ArgoCD
-	// build environment variables set
-	// https://argo-cd.readthedocs.io/en/stable/user-guide/build-environment/
-	if os.Getenv(argocdEnvVar) != "" {
 		return ArgoCD
 	}
 
