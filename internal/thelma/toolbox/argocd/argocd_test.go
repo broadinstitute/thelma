@@ -272,7 +272,7 @@ func Test_isRetryableError(t *testing.T) {
 			exp: true,
 		},
 		{
-			msg: `rpc error: code = Unknown desc = Post "https://ap-argocd.dsp-devops.broadinstitute.org:443/application.ApplicationService/Get": "dial tcp: lookup ap-argocd.dsp-devops.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout"`,
+			msg: `rpc error: code = Unknown desc = Post "https://argocd.dsp-devops-prod.broadinstitute.org:443/application.ApplicationService/Get": "dial tcp: lookup argocd.dsp-devops-prod.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout"`,
 			exp: true,
 		},
 	}
