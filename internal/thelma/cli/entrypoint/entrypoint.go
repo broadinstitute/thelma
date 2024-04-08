@@ -14,6 +14,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
 	auth_argocd "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/argocd"
 	auth_iap "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/iap"
+	auth_new_iap "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/newiap"
 	auth_vault "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/vault"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/bee"
@@ -75,6 +76,7 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("auth", auth.NewAuthCommand())
 	opts.AddCommand("auth argocd", auth_argocd.NewAuthArgoCDCommand())
 	opts.AddCommand("auth iap", auth_iap.NewAuthIAPCommand())
+	opts.AddCommand("auth new-iap", auth_new_iap.NewAuthIAPCommand())
 	opts.AddCommand("auth vault", auth_vault.NewAuthVaultCommand())
 
 	opts.AddCommand("bee", bee.NewBeeCommand())
