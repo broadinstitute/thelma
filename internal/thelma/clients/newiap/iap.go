@@ -18,7 +18,7 @@ const (
 	// configKey prefix used for configuration for this package
 	configKey = "iap"
 	// tokenKey unique name for IAP tokens issued by this package, used to identify it in Thelma's token storage
-	tokenKey = "new-iap-oauth-token"
+	tokenKey = "devops-prod-iap-oauth-token"
 )
 
 type iapConfig struct {
