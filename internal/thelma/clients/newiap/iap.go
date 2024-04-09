@@ -41,6 +41,8 @@ type iapConfig struct {
 	//
 	// https://cloud.google.com/iap/docs/authentication-howto#authenticating_from_a_desktop_app
 	// https://broadinstitute.slack.com/archives/CADU7L0SZ/p1712604883191549
+	// https://github.com/broadinstitute/terraform-ap-deployments/tree/master/devops-super-prod#desktop-iap-credentials
+	// https://broadworkbench.atlassian.net/browse/DDO-3605
 	ClientID     string `default:"257801540345-1gqi6qi66bjbssbv01horu9243el2r8b.apps.googleusercontent.com"` // Intentionally public!
 	ClientSecret string `default:"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"`                                      // Intentionally public!
 
