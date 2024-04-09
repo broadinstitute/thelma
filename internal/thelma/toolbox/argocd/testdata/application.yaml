@@ -3,7 +3,7 @@
 metadata:
   annotations:
     kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"argoproj.io/v1alpha1","kind":"Application","metadata":{"annotations":{},"finalizers":["resources-finalizer.argocd.argoproj.io"],"labels":{"app":"workspacemanager","argocd.argoproj.io/instance":"terra-staging-generator","cluster":"terra-qa-bees","env":"staging","has-legacy-configs":"false","jenkins-sync-enabled":"true","release":"workspacemanager","type":"app"},"name":"workspacemanager-staging","namespace":"ap-argocd"},"spec":{"destination":{"namespace":"terra-staging","server":"https://35.224.67.121"},"project":"terra-staging","source":{"path":".","plugin":{"env":[{"name":"TERRA_ENV","value":"staging"},{"name":"TERRA_RELEASE","value":"workspacemanager"},{"name":"THELMA_RENDER_MODE","value":""}],"name":"terra-helmfile-app"},"repoURL":"https://github.com/broadinstitute/terra-helmfile","targetRevision":"HEAD"}}}
+      {"apiVersion":"argoproj.io/v1alpha1","kind":"Application","metadata":{"annotations":{},"finalizers":["resources-finalizer.argocd.argoproj.io"],"labels":{"app":"workspacemanager","argocd.argoproj.io/instance":"terra-staging-generator","cluster":"terra-qa-bees","env":"staging","has-legacy-configs":"false","jenkins-sync-enabled":"true","release":"workspacemanager","type":"app"},"name":"workspacemanager-staging","namespace":"argocd"},"spec":{"destination":{"namespace":"terra-staging","server":"https://35.224.67.121"},"project":"terra-staging","source":{"path":".","plugin":{"env":[{"name":"TERRA_ENV","value":"staging"},{"name":"TERRA_RELEASE","value":"workspacemanager"},{"name":"THELMA_RENDER_MODE","value":""}],"name":"terra-helmfile-app"},"repoURL":"https://github.com/broadinstitute/terra-helmfile","targetRevision":"HEAD"}}}
   creationTimestamp: "2022-06-06T22:06:32Z"
   finalizers:
   - resources-finalizer.argocd.argoproj.io
@@ -128,7 +128,7 @@ metadata:
     operation: Update
     time: "2022-11-21T18:45:41Z"
   name: workspacemanager-staging
-  namespace: ap-argocd
+  namespace: argocd
   resourceVersion: "719759516"
   uid: 6c2ded23-9f24-4e92-b9dd-71aceea52606
 spec:

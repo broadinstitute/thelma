@@ -27,7 +27,7 @@ import (
 const prog = `argocd`
 const configPrefix = `argocd`
 const yamlFormat = "yaml"
-const applicationNamespace = "ap-argocd"
+const applicationNamespace = "argocd"
 
 // envVars holds names of environment variables we pass to the `argocd` cli
 var envVars = struct {

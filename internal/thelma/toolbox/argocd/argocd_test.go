@@ -178,7 +178,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	// check for legacy configs app
 	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
-		WithStdout("ap-argocd/leonardo-configs-dev\nap-argocd/leonardo-dev\n")
+		WithStdout("argocd/leonardo-configs-dev\nargocd/leonardo-dev\n")
 
 	// sync legacy configs app
 	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
@@ -227,7 +227,7 @@ func Test_RefreshRelease(t *testing.T) {
 
 	// check for legacy configs app
 	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
-		WithStdout("ap-argocd/leonardo-configs-dev\nap-argocd/leonardo-dev\n")
+		WithStdout("argocd/leonardo-configs-dev\nargocd/leonardo-dev\n")
 
 	// sync legacy configs app
 	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
