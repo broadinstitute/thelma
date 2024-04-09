@@ -17,9 +17,8 @@ const (
 
 func workloadIdentityProvider(creds credentials.Credentials, cfg iapConfig) credentials.TokenProvider {
 	return creds.GetTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
-		options.EnvVars = []string{defaultTokenEnvVar, backwardsCompatibilityTokenEnvVar}
 		options.IssueFn = workloadIdentityIdtokenIssuer(cfg.WorkloadIdentity.ServiceAccount, cfg.ClientID)
-		options.ValidateFn = idtokenValidator
+		options.ValidateFn = makeIdTokenValidator(cfg)
 	})
 }
 

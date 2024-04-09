@@ -40,8 +40,9 @@ func browserProvider(creds credentials.Credentials, cfg iapConfig, runner shell.
 		IdToken string        `json:"idToken"`
 	}
 
+	idTokenValidator := makeIdTokenValidator(cfg)
+
 	return credentials.GetTypedTokenProvider(creds, tokenKey, func(options *credentials.TypedTokenOptions[*oauth2.Token]) {
-		options.EnvVars = []string{defaultTokenEnvVar, backwardsCompatibilityTokenEnvVar}
 		options.UnmarshalFromStoreFn = func(bytes []byte) (*oauth2.Token, error) {
 			var stored storedFormat
 			if err := json.Unmarshal(bytes, &stored); err != nil {
@@ -71,7 +72,7 @@ func browserProvider(creds credentials.Credentials, cfg iapConfig, runner shell.
 			if idtoken, ok := token.Extra("id_token").(string); !ok {
 				return errors.Errorf("id token was unexpected type %T", token.Extra("id_token"))
 			} else {
-				return idtokenValidator([]byte(idtoken))
+				return idTokenValidator([]byte(idtoken))
 			}
 		}
 		options.IssueFn = func() (*oauth2.Token, error) {

@@ -19,11 +19,6 @@ const (
 	configKey = "iap"
 	// tokenKey unique name for IAP tokens issued by this package, used to identify it in Thelma's token storage
 	tokenKey = "new-iap-oauth-token"
-	// The default that credentials.TokenOptions would set up based on
-	defaultTokenEnvVar = "IAP_OAUTH_TOKEN"
-	// The old value that this package accepted directly, short-circuiting the Vault logic. The actual value used
-	// was "THELMA_IAP_ID_TOKEN", but credentials.TokenProvider will automatically check for "THELMA_" prefix too.
-	backwardsCompatibilityTokenEnvVar = "IAP_ID_TOKEN"
 )
 
 type iapConfig struct {

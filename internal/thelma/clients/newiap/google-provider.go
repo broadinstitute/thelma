@@ -11,8 +11,7 @@ func googleProvider(creds credentials.Credentials, cfg iapConfig, googleClient g
 		return nil, err
 	}
 	return creds.GetTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
-		options.EnvVars = []string{defaultTokenEnvVar, backwardsCompatibilityTokenEnvVar}
 		options.IssueFn = issuer
-		options.ValidateFn = idtokenValidator
+		options.ValidateFn = makeIdTokenValidator(cfg)
 	}), nil
 }
