@@ -27,23 +27,33 @@ const (
 )
 
 type iapConfig struct {
+	// Provider is the mechanism to generate an IAP ID token with.
+	// - "google" borrows Thelma's Google authentication (see google.Clients; only works for a service account)
+	// - "workloadidentity" uses the GCP metadata server (only works for a service account)
+	// - "browser" uses the OAuth flow for desktop applications (only works for a human)
 	Provider string `default:"browser"  validate:"oneof=google workloadidentity browser"`
 
 	// ClientID and ClientSecret are the OAuth credentials for the IAP client. THESE ARE NOT SECRET!!
 	//
 	// At least, the defaults here aren't. These defaults are "desktop" client credentials that are allowed
 	// programmatic access but aren't allowed anything else -- all they do is let the caller prove their identity
-	// to our tools.
+	// to our tools. We embed them here because Thelma is a client-side application and we need to bootstrap
+	// somehow. These values *will* trip all manner of "don't commit secrets" alarms, but our usage is one of the
+	// very rare cases where it's okay.
 	//
 	// The client ID is used by all providers, as the audience at the very least. The client secret is only used by
 	// the "browser" provider to do the desktop-application flow.
 	//
 	// https://cloud.google.com/iap/docs/authentication-howto#authenticating_from_a_desktop_app
-	ClientID     string `default:"257801540345-1gqi6qi66bjbssbv01horu9243el2r8b.apps.googleusercontent.com"`
-	ClientSecret string `default:"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"`
+	// https://broadinstitute.slack.com/archives/CADU7L0SZ/p1712604883191549
+	ClientID     string `default:"257801540345-1gqi6qi66bjbssbv01horu9243el2r8b.apps.googleusercontent.com"` // Intentionally public!
+	ClientSecret string `default:"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"`                                      // Intentionally public!
 
 	WorkloadIdentity struct {
-		ServiceAccount string `default:"default"` // default to using compute engine default service account
+		// ServiceAccount is the service account to use for the workload identity provider. Note that "default" doesn't
+		// necessarily mean the default service account for the project; it means the service account that the
+		// individual workload authenticates as by default.
+		ServiceAccount string `default:"default"`
 	}
 }
 
