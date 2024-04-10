@@ -56,7 +56,9 @@ func SetFlagsFromEnvironment(flags *pflag.FlagSet) []error {
 
 			// If the environment variable is set, even if it's empty, we'll set the flag.
 			if value, present := os.LookupEnv(envVar); present {
-				if flagSetErr := flag.Value.Set(value); flagSetErr != nil {
+				// We use flags.Set instead of flag.Value.Set because the latter doesn't set
+				// the flag as "changed", which is important for how we validate inputs.
+				if flagSetErr := flags.Set(flag.Name, value); flagSetErr != nil {
 					// Include the value in the error message for better debugging; this is
 					// safe enough because we don't accept secret values from flags.
 					errs = append(errs, errors.Wrapf(flagSetErr,
