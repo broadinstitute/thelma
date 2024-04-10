@@ -27,7 +27,7 @@ import (
 const prog = `argocd`
 const configPrefix = `argocd`
 const yamlFormat = "yaml"
-const applicationNamespace = "ap-argocd"
+const applicationNamespace = "argocd"
 
 // envVars holds names of environment variables we pass to the `argocd` cli
 var envVars = struct {
@@ -63,8 +63,8 @@ var retryableErrors = []*regexp.Regexp{
 	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: address already in use"),
 	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: file exists"),
 	// occasional weird socket errors that only show up in Jenkins. example full message:
-	// rpc error: code = Unknown desc = Post \\\"https://ap-argocd.dsp-devops.broadinstitute.org:443/application.ApplicationService/Get\\\":
-	// dial tcp: lookup ap-argocd.dsp-devops.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout\"
+	// rpc error: code = Unknown desc = Post \\\"https://argocd.dsp-devops-prod.broadinstitute.org:443/application.ApplicationService/Get\\\":
+	// dial tcp: lookup argocd.dsp-devops-prod.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout\"
 	regexp.MustCompile("rpc error: code = Unknown.*dial tcp: lookup .*: read udp .*: i/o timeout"),
 	// occasional errors where ArgoCD can't connect to GitHub to fetch the repo
 	regexp.MustCompile("[tT]imeout exceeded while awaiting headers"),
@@ -112,7 +112,7 @@ type WaitExistOption func(options *WaitExistOptions)
 
 type argocdConfig struct {
 	// Host hostname of the ArgoCD server
-	Host string `valid:"hostname" default:"ap-argocd.dsp-devops.broadinstitute.org"`
+	Host string `valid:"hostname" default:"argocd.dsp-devops-prod.broadinstitute.org"`
 
 	// Vault (optional) pull ArgoCD token from Vault and use that to authenticate to ArgoCD. (should only be used in CI pipelines)
 	Vault struct {

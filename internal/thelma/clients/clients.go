@@ -3,6 +3,7 @@ package clients
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/github/gha"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/newiap"
 	"sync"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
@@ -24,9 +25,13 @@ import (
 type Clients interface {
 	// IAP returns a credentials.TokenProvider for dsp-tools-k8s IAP tokens.
 	IAP() (credentials.TokenProvider, error)
+	// NewIAP is like IAP but for dsp-devops-super-prod.
+	NewIAP() (credentials.TokenProvider, error)
 	// IAPToken returns a valid dsp-tools-k8s IAP token (as a string), or an error.
 	// This is a convenience method on top of IAP().
 	IAPToken() (string, error)
+	// NewIAPToken is like IAPToken but for dsp-devops-super-prod.
+	NewIAPToken() (string, error)
 	// Vault returns a Vault client for the DSP Vault instance
 	Vault() (*vaultapi.Client, error)
 	// ArgoCD returns a client for the DSP ArgoCD instance
@@ -75,8 +80,22 @@ func (c *clients) IAP() (credentials.TokenProvider, error) {
 	return iap.TokenProvider(c.thelmaConfig, c.creds, c.Vault, c.Google, c.runner)
 }
 
+func (c *clients) NewIAP() (credentials.TokenProvider, error) {
+	return newiap.TokenProvider(c.thelmaConfig, c.creds, c.Google, c.runner)
+}
+
 func (c *clients) IAPToken() (string, error) {
 	if tokenProvider, err := c.IAP(); err != nil {
+		return "", err
+	} else if token, err := tokenProvider.Get(); err != nil {
+		return "", err
+	} else {
+		return string(token), nil
+	}
+}
+
+func (c *clients) NewIAPToken() (string, error) {
+	if tokenProvider, err := c.NewIAP(); err != nil {
 		return "", err
 	} else if token, err := tokenProvider.Get(); err != nil {
 		return "", err
@@ -90,7 +109,7 @@ func (c *clients) Vault() (*vaultapi.Client, error) {
 }
 
 func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
-	iapToken, err := c.IAPToken()
+	iapToken, err := c.NewIAPToken()
 	if err != nil {
 		return nil, err
 	}
