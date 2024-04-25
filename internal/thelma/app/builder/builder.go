@@ -4,6 +4,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/autoupdate"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/app/scratch"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/lazy"
 	"testing"
@@ -169,7 +170,7 @@ func (b *thelmaBuilder) Build() (app.ThelmaApp, error) {
 
 	// Initialize metrics
 	if b.manageSingletons {
-		iapToken, err := _clients.IAPToken()
+		iapToken, err := _clients.IAPToken(iap.DspToolsK8s)
 		if err != nil {
 			return nil, err
 		}
