@@ -35,7 +35,7 @@ type Options struct {
 type Option func(*Options)
 
 type sherlockConfig struct {
-	Addr string `default:"https://sherlock.dsp-devops.broadinstitute.org"`
+	Addr string `default:"https://sherlock.dsp-devops-prod.broadinstitute.org"`
 }
 
 // NewClient creates a Sherlock client, but you probably don't want to call it. You want to hit
