@@ -13,7 +13,7 @@ import (
 )
 
 const helpMessage = `Exports thelma's internal state to a destination`
-const prodSherlockHostName = "sherlock.dsp-devops.broadinstitute.org"
+const prodSherlockHostName = "sherlock.dsp-devops-prod.broadinstitute.org"
 
 var ErrExportDestinationForbidden = errors.Errorf("state export to production sherlock: %s is not allowed", prodSherlockHostName)
 

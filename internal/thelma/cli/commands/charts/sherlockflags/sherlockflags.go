@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const sherlockProdURL = "https://sherlock.dsp-devops.broadinstitute.org"
+const sherlockProdURL = "https://sherlock.dsp-devops-prod.broadinstitute.org"
 const sherlockDevURL = "https://sherlock-dev.dsp-devops.broadinstitute.org"
 
 type flagValues struct {

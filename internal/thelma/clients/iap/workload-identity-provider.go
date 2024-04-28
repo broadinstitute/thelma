@@ -7,14 +7,28 @@ import (
 	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
+	"time"
 )
 
-func workloadIdentityProvider(creds credentials.Credentials, cfg iapConfig) credentials.TokenProvider {
+const (
+	// how long to wait before timing out compute engine metadata request
+	computeEngineMetadataRequestTimeout = 15 * time.Second
+)
+
+func workloadIdentityProvider(creds credentials.Credentials, cfg iapConfig, project Project) (credentials.TokenProvider, error) {
+	clientID, _, err := project.oauthCredentials(cfg)
+	if err != nil {
+		return nil, err
+	}
+	tokenKey, err := project.tokenKey()
+	if err != nil {
+		return nil, err
+	}
+
 	return creds.GetTokenProvider(tokenKey, func(options *credentials.TokenOptions) {
-		options.EnvVars = []string{defaultTokenEnvVar, backwardsCompatibilityTokenEnvVar}
-		options.IssueFn = workloadIdentityIdtokenIssuer(cfg.WorkloadIdentity.ServiceAccount, cfg.Audience)
-		options.ValidateFn = idtokenValidator
-	})
+		options.IssueFn = workloadIdentityIdtokenIssuer(cfg.WorkloadIdentity.ServiceAccount, clientID)
+		options.ValidateFn = makeIdTokenValidator(clientID)
+	}), nil
 }
 
 func workloadIdentityIdtokenIssuer(serviceAccount string, audience string) func() ([]byte, error) {
