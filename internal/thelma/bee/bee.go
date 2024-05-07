@@ -3,6 +3,7 @@ package bee
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/broadinstitute/thelma/internal/thelma/bee/cleanup"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
 	"github.com/broadinstitute/thelma/internal/thelma/ops"
@@ -11,6 +12,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/ops/status"
 	"github.com/pkg/errors"
 	"strings"
+	"time"
 
 	"github.com/broadinstitute/thelma/internal/thelma/bee/seed"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -256,15 +258,31 @@ func (b *bees) provisionBeeNamespaceAndGenerator(bee *Bee) error {
 		return errors.Errorf("error creating namespace for environment %q: %v", env.Name(), err)
 	}
 
-	if err := b.RefreshBeeGenerator(); err != nil {
-		return errors.Errorf("error refreshing bee generator: %v", err)
+	retryOptions := []retry.Option{
+		retry.Attempts(10),
+		retry.MaxDelay(time.Minute),
+		retry.OnRetry(func(n uint, err error) {
+			log.Warn().Msgf("Attempt %d to provision environment generator, will retry up to %d times: %v", n, 10, err)
+		}),
 	}
 
-	if err := b.argocd.WaitExist(argocd_names.GeneratorName(env)); err != nil {
-		return errors.Errorf("error waiting for environment generator for %s to exist: %v", env.Name(), err)
-	}
+	return retry.Do(func() error {
+		log.Info().Msgf("Provisioning environment generator for %s...", env.Name())
 
-	return nil
+		if err := b.RefreshBeeGenerator(); err != nil {
+			return errors.Errorf("error refreshing bee generator: %v", err)
+		}
+
+		if err := b.argocd.WaitExist(argocd_names.GeneratorName(env), func(opts *argocd.WaitExistOptions) {
+			opts.WaitExistPollIntervalSeconds = 10
+			opts.WaitExistTimeoutSeconds = 60
+		}); err != nil {
+			return errors.Errorf("error waiting for environment generator for %s to exist: %v", env.Name(), err)
+		}
+
+		return nil
+	},
+		retryOptions...)
 }
 
 func (b *bees) provisionBeeAppsAndSeed(bee *Bee, options ProvisionOptions) error {

@@ -278,7 +278,13 @@ func (suite *BeesTestSuite) expectProvisionBeeNamespaceAndGenerator() {
 	myBeeGenerator := argocd_names.GeneratorName(suite.env)
 
 	// wait for terra-<name>-generator to exist
-	suite.mocks.argocd.EXPECT().WaitExist(myBeeGenerator).Return(nil)
+	suite.mocks.argocd.EXPECT().WaitExist(myBeeGenerator, mock.MatchedBy(func(opt argocd.WaitExistOption) bool {
+		var opts argocd.WaitExistOptions
+		opt(&opts)
+		assert.Equal(suite.T(), 60, opts.WaitExistTimeoutSeconds)
+		assert.Equal(suite.T(), 10, opts.WaitExistPollIntervalSeconds)
+		return true
+	})).Return(nil)
 
 	// sync terra-<name>-generator
 	suite.mocks.argocd.EXPECT().SyncApp(myBeeGenerator).Return(argocd.SyncResult{Synced: true}, nil)
