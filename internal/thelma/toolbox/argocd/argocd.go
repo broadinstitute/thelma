@@ -3,6 +3,7 @@ package argocd
 import (
 	"bytes"
 	"fmt"
+	"github.com/avast/retry-go"
 	"net/url"
 	"os"
 	"regexp"
@@ -51,25 +52,21 @@ var flags = struct {
 	outputFormat: "--output",
 }
 
-// retryInterval how long to wait between retries of failed ArgoCD cli commands
-const retryInterval = 10 * time.Second
+// retryBaseInterval base interval for how long to wait between retries of failed ArgoCD cli commands
+// (passed to backoff algo)
+const retryBaseInterval = 10 * time.Second
 
-// retryCount max number of retries
-const retryCount = 3
+// retryMaxDelay upper limit for retry interval for failed ArgoCD cli commands
+const retryMaxDelay = time.Minute
 
-// flags holds list of errors that indicate an argocd cli command should be re-run
-var retryableErrors = []*regexp.Regexp{
-	// occasional weird socket errors that only show up on OSX
-	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: address already in use"),
-	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: file exists"),
-	// occasional weird socket errors that only show up in Jenkins. example full message:
-	// rpc error: code = Unknown desc = Post \\\"https://argocd.dsp-devops-prod.broadinstitute.org:443/application.ApplicationService/Get\\\":
-	// dial tcp: lookup argocd.dsp-devops-prod.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout\"
-	regexp.MustCompile("rpc error: code = Unknown.*dial tcp: lookup .*: read udp .*: i/o timeout"),
-	// occasional errors where ArgoCD can't connect to GitHub to fetch the repo
-	regexp.MustCompile("[tT]imeout exceeded while awaiting headers"),
-	// occasional network errors in communication between GHA and ArgoCD
-	regexp.MustCompile("EOF"),
+// retryAttempts max number of attempts to run a failed ArgoCD cli command
+const retryAttempts = 4
+
+// unretryableErrors holds list of errors that indicate a failed ArgoCD cli command should NOT be re-run
+var unretryableErrors = []*regexp.Regexp{
+	// don't retry commands that fail with a timeout error, whatever we were waiting for (sync to finish, app to
+	// become healthy) did not finish successfully within the desired timeout.
+	regexp.MustCompile(regexp.QuoteMeta("rpc error: code = Canceled")),
 }
 
 // SyncOptions options for an ArgoCD sync operation
@@ -137,7 +134,7 @@ type argocdConfig struct {
 	WaitInProgressOperationTimeoutSeconds int `default:"300"`
 
 	// SyncTimeoutSeconds timeout for sync operations
-	SyncTimeoutSeconds int `default:"600"`
+	SyncTimeoutSeconds int `default:"900"`
 
 	// SyncRetries how many times to retry failed sync operations before giving up
 	SyncRetries int `default:"4"`
@@ -389,7 +386,7 @@ func (a *argocd) AppStatus(appName string) (ApplicationStatus, error) {
 func (a *argocd) waitHealthy(appName string, timeoutSeconds int) error {
 	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", timeoutSeconds, appName)
 
-	return a.runCommand([]string{
+	return a.runCommandWithRetries([]string{
 		"app",
 		"wait",
 		appName,
@@ -424,7 +421,7 @@ func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
 				logger.Debug().Msgf("Timeout reached, exiting polling")
 				return
 			default:
-				if err := a.runCommand([]string{
+				if err := a.runCommandOnce([]string{
 					"app",
 					"get",
 					appName,
@@ -505,7 +502,7 @@ func (a *argocd) asSyncOptions(options ...SyncOption) SyncOptions {
 }
 
 func (a *argocd) restartDeployments(appName string) error {
-	if err := a.runCommand([]string{
+	if err := a.runCommandWithRetries([]string{
 		"app",
 		"actions",
 		"list",
@@ -525,7 +522,7 @@ func (a *argocd) restartDeployments(appName string) error {
 	}
 
 	log.Debug().Msgf("Restarting all deployments in %s", appName)
-	return a.runCommand([]string{"app", "actions", "run", "--kind=Deployment", appName, "restart", "--all"})
+	return a.runCommandWithRetries([]string{"app", "actions", "run", "--kind=Deployment", appName, "restart", "--all"})
 }
 
 func (a *argocd) hasLegacyConfigsApp(release terra.Release) (bool, error) {
@@ -553,7 +550,7 @@ func (a *argocd) hasLegacyConfigsApp(release terra.Release) (bool, error) {
 func (a *argocd) waitForInProgressSyncToComplete(appName string) error {
 	log.Debug().Msgf("Waiting up to %d seconds for in-progress sync operations on %s to complete", a.cfg.WaitInProgressOperationTimeoutSeconds, appName)
 
-	return a.runCommand([]string{
+	return a.runCommandWithRetries([]string{
 		"app",
 		"wait",
 		appName,
@@ -581,7 +578,7 @@ func (a *argocd) sync(appName string, opts SyncOptions) error {
 		args = append(args, "--label", joinSelector(opts.OnlyLabels))
 	}
 
-	err := a.runCommand(args)
+	err := a.runCommandWithRetries(args)
 	if err == nil {
 		return nil
 	}
@@ -622,7 +619,9 @@ func (a *argocd) diff(appName string, opts SyncOptions) (bool, error) {
 	if opts.HardRefresh {
 		args = append(args, "--hard-refresh")
 	}
-	err := a.runCommand(args)
+	// don't use default retries here because this command is already wrapped in retries
+	// with specific, custom options that have been adjusted over time.
+	err := a.runCommandOnce(args)
 	if err == nil {
 		// no error means no differences were found
 		return false, nil
@@ -660,13 +659,15 @@ func (a *argocd) ensureLoggedIn() error {
 // run `argocd login` to put up an SSO prompt in the browser
 func (a *argocd) browserLogin() error {
 	log.Info().Msgf("Launching browser to authenticate Thelma to ArgoCD")
-	return a.runCommand([]string{"login", "--sso", a.cfg.Host})
+
+	// this is always local (not in CI) so retrying it is unnecessary
+	return a.runCommandOnce([]string{"login", "--sso", a.cfg.Host})
 }
 
 // run `argocd app set <app-name> --revision=<ref>` to set an Argo app's git ref
 func (a *argocd) setRef(appName string, ref string) error {
 	log.Info().Msgf("Setting app %s to ref %s", appName, ref)
-	err := a.runCommand([]string{"app", "set", appName, "--revision", ref, "--validate=false"})
+	err := a.runCommandWithRetries([]string{"app", "set", appName, "--revision", ref, "--validate=false"})
 	if err != nil {
 		return errors.Errorf("error setting %s to revision %q: %v", appName, ref, err)
 	}
@@ -678,7 +679,7 @@ func (a *argocd) getApplication(appName string) (application, error) {
 	var app application
 
 	buf := bytes.Buffer{}
-	err := a.runCommand([]string{"app", "get", appName, "-o", "yaml"}, func(options *shell.RunOptions) {
+	err := a.runCommandWithRetries([]string{"app", "get", appName, "-o", "yaml"}, func(options *shell.RunOptions) {
 		options.Stdout = &buf
 	})
 	if err != nil {
@@ -697,7 +698,7 @@ func (a *argocd) runCommandAndParseYamlOutput(args []string, out interface{}) er
 
 	args = append(args, flags.outputFormat, yamlFormat)
 
-	err := a.runCommand(args, func(options *shell.RunOptions) {
+	err := a.runCommandWithRetries(args, func(options *shell.RunOptions) {
 		options.Stdout = buf
 	})
 	if err != nil {
@@ -715,7 +716,7 @@ func (a *argocd) runCommandAndParseYamlOutput(args []string, out interface{}) er
 func (a *argocd) runCommandAndParseLineSeparatedOutput(args []string) ([]string, error) {
 	buf := new(bytes.Buffer)
 
-	err := a.runCommand(args, func(options *shell.RunOptions) {
+	err := a.runCommandWithRetries(args, func(options *shell.RunOptions) {
 		options.Stdout = buf
 	})
 	if err != nil {
@@ -732,31 +733,28 @@ func isRetryableError(err error) bool {
 		return false
 	}
 
-	for _, regex := range retryableErrors {
+	for _, regex := range unretryableErrors {
 		if regex.MatchString(exitErr.Stderr) {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
-func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
-	err := a.runCommandOnce(args, options...)
-
-	for i := 0; i < retryCount; i++ {
-		if err == nil {
-			return nil
-		}
-		if !isRetryableError(err) {
-			return err
-		}
-		log.Debug().Err(err).Msgf("argocd cli command failed, retrying in %s", retryInterval)
-
-		time.Sleep(retryInterval)
-		err = a.runCommandOnce(args, options...)
-	}
-
-	return err
+func (a *argocd) runCommandWithRetries(args []string, options ...shell.RunOption) error {
+	return retry.Do(
+		func() error {
+			return a.runCommandOnce(args, options...)
+		},
+		retry.RetryIf(isRetryableError),
+		retry.Delay(retryBaseInterval),
+		retry.DelayType(retry.BackOffDelay),
+		retry.MaxDelay(retryMaxDelay),
+		retry.Attempts(retryAttempts),
+		retry.OnRetry(func(n uint, err error) {
+			log.Debug().Err(err).Msgf("argocd cli command failed, will retry up to %d times", retryAttempts)
+		}),
+	)
 }
 
 func (a *argocd) runCommandOnce(args []string, options ...shell.RunOption) error {

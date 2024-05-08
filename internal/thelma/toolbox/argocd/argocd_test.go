@@ -187,7 +187,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--operation", "--timeout", "300")
 
-	_mocks.expectCmd("app", "sync", "leonardo-configs-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
+	_mocks.expectCmd("app", "sync", "leonardo-configs-dev", "--retry-limit", "4", "--prune", "--timeout", "900")
 
 	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--timeout", "900", "--health")
 
@@ -198,7 +198,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	_mocks.expectCmd("app", "wait", "leonardo-dev", "--operation", "--timeout", "300")
 
-	_mocks.expectCmd("app", "sync", "leonardo-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
+	_mocks.expectCmd("app", "sync", "leonardo-dev", "--retry-limit", "4", "--prune", "--timeout", "900")
 
 	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "900", "--health")
 
@@ -260,20 +260,12 @@ func Test_isRetryableError(t *testing.T) {
 		exp bool
 	}{
 		{
-			msg: "not retryable",
+			msg: "is retryable",
+			exp: true,
+		},
+		{
+			msg: "rpc error: code = Canceled desc = context canceled",
 			exp: false,
-		},
-		{
-			msg: "error communicating with server: EOF",
-			exp: true,
-		},
-		{
-			msg: "dial tcp 140.82.113.3:443: i/o timeout (Client.Timeout exceeded while awaiting headers)",
-			exp: true,
-		},
-		{
-			msg: `rpc error: code = Unknown desc = Post "https://argocd.dsp-devops-prod.broadinstitute.org:443/application.ApplicationService/Get": "dial tcp: lookup argocd.dsp-devops-prod.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout"`,
-			exp: true,
 		},
 	}
 
