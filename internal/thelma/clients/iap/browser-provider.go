@@ -176,7 +176,8 @@ func useBrowserForAuthorizationCode(config *oauth2.Config, runner shell.Runner, 
 
 	var authorizationCode string
 
-	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Query().Get("code") == "" {
 			// Browsers insist on looking for a /favicon.ico, so ignore it silently
 			writer.WriteHeader(http.StatusBadRequest)
@@ -197,7 +198,7 @@ func useBrowserForAuthorizationCode(config *oauth2.Config, runner shell.Runner, 
 		}
 	})
 
-	redirectServer := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	redirectServer := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
 	go func() {
 		// We actually do want to precisely compare errors here, we're outputting at the trace level anyway
 		//goland:noinspection GoDirectComparisonOfErrors
