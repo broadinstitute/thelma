@@ -67,6 +67,9 @@ var unretryableErrors = []*regexp.Regexp{
 	// don't retry commands that fail with a timeout error, whatever we were waiting for (sync to finish, app to
 	// become healthy) did not finish successfully within the desired timeout.
 	regexp.MustCompile(regexp.QuoteMeta("rpc error: code = Canceled")),
+	// don't retry commands that fail with a 401, because we actually use 401s from ArgoCD to indicate that we
+	// need to re-run ArgoCD auth process -- if we retry, it seems to the user like Thelma is hanging.
+	regexp.MustCompile(regexp.QuoteMeta("failed with status code 401")),
 }
 
 // SyncOptions options for an ArgoCD sync operation
