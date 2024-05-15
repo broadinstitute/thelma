@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -28,6 +29,15 @@ const (
 	// The redirect URI will be tried on ports starting from startingPort and counting up to startingPort + portIterations.
 	portIterations = 10
 )
+
+// localServerMutex is used for useBrowserForAuthorizationCode to ensure that only one server is running at a time.
+// selectAvailableLocalRedirectURI does try to select open ports, but because it has to note the redirect URL into
+// the oauth2.Config when the credentials.TokenProvider is created, it's possible that multiple IAP
+// credentials.TokenProviders could all try to use the port that was previously open at the same time. That causes
+// a panic if two servers try to bind to the same port, but even if we were to force them to different ports it
+// would still be weird UX (since there's important console output associated with running the local server). We
+// just prevent concurrent executions entirely.
+var localServerMutex sync.Mutex
 
 func browserProvider(creds credentials.Credentials, cfg iapConfig, runner shell.Runner, project Project) (credentials.TokenProvider, error) {
 	oauthConfig, redirectPort, err := createOAuthConfig(cfg, project)
@@ -153,6 +163,8 @@ func parsePortOfRedirectURI(redirectURI string) (int, error) {
 }
 
 func useBrowserForAuthorizationCode(config *oauth2.Config, runner shell.Runner, port int) (string, error) {
+	localServerMutex.Lock()
+	defer localServerMutex.Unlock()
 	log.Debug().Msgf("Obtaining OAuth authorization code...")
 	stateBytes := make([]byte, 32)
 	_, err := rand.Read(stateBytes)
