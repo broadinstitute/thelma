@@ -1,6 +1,8 @@
 package schedule
 
-import "time"
+import (
+	"time"
+)
 
 // CheckDailyScheduleMatch determines if the `schedule` time's daily repetition happened between `since` and `now`.
 // We assume that `since` is before `now`.
@@ -16,9 +18,11 @@ import "time"
 // This edge case handling is correct in all cases because this function is concerned just with daily repetitions.
 // We could brute-force check all possible dates here and this function wouldn't be incorrect.
 func CheckDailyScheduleMatch(schedule time.Time, since time.Time, now time.Time) bool {
-	scheduleToUse := replaceDateOfTime(schedule, now)
+	scheduleLocalized := schedule.In(now.Location())
+	scheduleToUse := replaceDateOfTime(scheduleLocalized, now)
+
 	if scheduleToUse.After(now) {
-		scheduleToUse = replaceDateOfTime(schedule, since)
+		scheduleToUse = replaceDateOfTime(scheduleLocalized, since)
 	}
 	return scheduleToUse.After(since) && scheduleToUse.Before(now)
 }

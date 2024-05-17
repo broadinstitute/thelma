@@ -99,6 +99,24 @@ func TestCheckDailyScheduleMatch(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "thelma in UTC, schedule in PT - positive",
+			args: args{
+				schedule: testTimeFactory(t, "2000-01-01T18:00:00-08:00"),
+				since:    testTimeFactory(t, "2023-02-25T01:45:00-00:00"),
+				now:      testTimeFactory(t, "2023-02-25T02:15:00-00:00"),
+			},
+			want: true,
+		},
+		{
+			name: "thelma in UTC, schedule in PT - negative",
+			args: args{
+				schedule: testTimeFactory(t, "2000-01-01T18:00:00-08:00"),
+				since:    testTimeFactory(t, "2023-02-25T00:45:00-00:00"),
+				now:      testTimeFactory(t, "2023-02-25T01:15:00-00:00"),
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
