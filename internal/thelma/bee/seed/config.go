@@ -46,10 +46,6 @@ type seedConfig struct {
 			VaultPath string `default:"secret/dsde/firecloud/%s/leonardo/leonardo-account.json"`
 			VaultKey  string `default:""`
 		}
-		ImportService struct {
-			VaultPath string `default:"secret/dsde/firecloud/%s/import-service/import-service-account-fiab-bees"`
-			VaultKey  string `default:"key.json"`
-		}
 		FirecloudOrch struct {
 			VaultPath string `default:"secret/dsde/firecloud/%s/common/firecloud-account.json"`
 			VaultKey  string `default:""`
@@ -110,9 +106,6 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease, options ...google.Opt
 	case "leonardo":
 		vaultPath = config.Auth.Leonardo.VaultPath
 		vaultKey = config.Auth.Leonardo.VaultKey
-	case "importservice":
-		vaultPath = config.Auth.ImportService.VaultPath
-		vaultKey = config.Auth.ImportService.VaultKey
 	case "firecloudorch":
 		vaultPath = config.Auth.FirecloudOrch.VaultPath
 		vaultKey = config.Auth.FirecloudOrch.VaultKey
