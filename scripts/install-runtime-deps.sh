@@ -7,7 +7,7 @@ set -eo pipefail
 # the target directory, it won't download them again.
 
 HELM_VERSION=3.6.0
-HELMFILE_VERSION=0.143.1
+HELMFILE_VERSION=0.165.0
 YQ_VERSION=4.11.2
 HELM_DOCS_VERSION=1.5.0
 ARGOCD_VERSION=2.10.2
@@ -82,9 +82,10 @@ install_helm() {
 }
 
 install_helmfile() {
-  URL="https://github.com/roboll/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${OS}_${ARCH}"
+  URL="https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_${OS}_${ARCH}.tar.gz"
   echo "Downloading helmfile from ${URL}"
-  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O helmfile && \
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - | \
+    tar xz && \
     chmod +x helmfile && \
     testexec ./helmfile --version && \
     mv ./helmfile "${INSTALL_DIR}/helmfile"

@@ -1,11 +1,12 @@
 package render
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
-	"github.com/pkg/errors"
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
+	"github.com/pkg/errors"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -95,6 +96,7 @@ var flagNames = struct {
 	scope                      string
 	validate                   string
 	exitZeroNoMatchingReleases string
+	kubeVersion                string
 }{
 	argocd:                     "argocd",
 	chartDir:                   "chart-dir",
@@ -110,6 +112,7 @@ var flagNames = struct {
 	scope:                      "scope",
 	validate:                   "validate",
 	exitZeroNoMatchingReleases: "exit-zero-no-matching-releases",
+	kubeVersion:                "kube-version",
 }
 
 // flagValues is a struct for capturing flag values that are parsed by Cobra.
@@ -128,6 +131,7 @@ type flagValues struct {
 	scope                      string
 	validate                   string
 	exitZeroNoMatchingReleases bool
+	kubeVersion                string
 }
 
 // NewRenderCommand constructs a new renderCommand
@@ -170,6 +174,7 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().StringVar(&cmd.flagVals.scope, flagNames.scope, "all", `One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types)`)
 	cobraCommand.Flags().StringVar(&cmd.flagVals.validate, flagNames.validate, "skip", `One of "skip" (no validation on render output), "warn" (print validation of render output but don't fail), or "fail" (exit with error if render output validation fails)`)
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.exitZeroNoMatchingReleases, flagNames.exitZeroNoMatchingReleases, false, `Use to make Thelma exit with status code 0 if no chart releases match command-line arguments. Useful for CI/CD pipelines.`)
+	cobraCommand.Flags().StringVar(&cmd.flagVals.kubeVersion, flagNames.kubeVersion, "1.25.0", "Kubernetes version to pass to helmfile template --kube-version flag")
 
 	// Single-chart flags -- these can only be used for renders of a single chart
 	cobraCommand.Flags().StringVar(&cmd.flagVals.chartVersion, flagNames.chartVersion, "", "Override chart version")
@@ -284,6 +289,9 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.RenderSelection,
 
 	// debug mode
 	renderOptions.DebugMode = flagVals.debug
+
+	// kubeVersion
+	renderOptions.KubeVersion = flagVals.kubeVersion
 
 	// parallelWorkers
 	if flags.Changed(flagNames.parallelWorkers) && flags.Changed(flagNames.stdout) {

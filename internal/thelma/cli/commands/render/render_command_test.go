@@ -1,14 +1,15 @@
 package render
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/app"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path"
 	"regexp"
 	"sort"
 	"testing"
+
+	"github.com/broadinstitute/thelma/internal/thelma/app"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -531,6 +532,14 @@ func TestRenderArgParsing(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			description: "--kube-version should set kube version",
+			arguments:   Args("render --kube-version 1.27.0 ALL"),
+			setupFn: func(tc *testConfig) error {
+				tc.expected.renderOptions.KubeVersion = "1.27.0"
+				return nil
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -555,6 +564,7 @@ func TestRenderArgParsing(t *testing.T) {
 			expected.renderOptions.ChartSourceDir = path.Join(thelmaHome, "charts")
 			expected.renderOptions.ParallelWorkers = 1
 			expected.renderOptions.Scope = scope.All
+			expected.renderOptions.KubeVersion = "1.25.0"
 			expected.renderOptions.Releases = defaultReleases(fixture)
 
 			// set command-line args
