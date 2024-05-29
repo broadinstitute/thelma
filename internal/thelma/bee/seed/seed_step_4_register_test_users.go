@@ -1,6 +1,7 @@
 package seed
 
 import (
+	"github.com/avast/retry-go"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google/terraapi"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
@@ -52,12 +53,17 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 						reporter.Update(pool.Status{
 							Message: "Registering",
 						})
-						_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile(
-							user.FirstName, user.LastName, user.Role, user.Email,
-							"Hogwarts", "dsde",
-							"Cambridge", "MA", "USA",
-							"Remus Lupin", "Non-Profit")
-						if err = opts.handleErrorWithForce(err); err != nil {
+						if err = retry.Do(func() error {
+							_, _, err = terraClient.FirecloudOrch(orch).RegisterProfile(
+								user.FirstName, user.LastName, user.Role, user.Email,
+								"Hogwarts", "dsde",
+								"Cambridge", "MA", "USA",
+								"Remus Lupin", "Non-Profit")
+							if err = opts.handleErrorWithForce(err); err != nil {
+								return err
+							}
+							return nil
+						}, retry.Attempts(100)); err != nil {
 							return err
 						}
 						reporter.Update(pool.Status{
