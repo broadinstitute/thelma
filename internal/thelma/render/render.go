@@ -3,8 +3,9 @@ package render
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"strconv"
+
+	"github.com/pkg/errors"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics/labels"
@@ -24,6 +25,7 @@ type Options struct {
 	Stdout          bool            // Stdout if true, render to stdout instead of output directory
 	OutputDir       string          // OutputDir output directory where manifests should be rendered
 	DebugMode       bool            // DebugMode if true, pass --debug to helmfile to render out invalid manifests
+	KubeVersion     string          // kubernetes client version to pass to the helmfile --kube-version flag
 	ChartSourceDir  string          // ChartSourceDir path on filesystem where chart sources live
 	ResolverMode    resolver.Mode   // ResolverMode resolver mode
 	ParallelWorkers int             // ParallelWorkers number of parallel workers
@@ -108,6 +110,7 @@ func newRender(app app.ThelmaApp, options *Options) (*multiRender, error) {
 		HelmfileLogLevel: cfg.Helmfile.LogLevel,
 		Stdout:           options.Stdout,
 		DebugMode:        options.DebugMode,
+		KubeVersion:      options.KubeVersion,
 		OutputDir:        options.OutputDir,
 		ScratchDir:       scratchDir,
 		ShellRunner:      app.ShellRunner(),

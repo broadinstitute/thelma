@@ -2,6 +2,11 @@ package helmfile
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/render/helmfile/stateval"
 	"github.com/broadinstitute/thelma/internal/thelma/render/resolver"
@@ -11,10 +16,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
 )
 
 const cmdLogLevel = zerolog.DebugLevel
@@ -40,6 +41,7 @@ type Options struct {
 	OutputDir        string        // OutputDir directory where manifests should be rendered
 	DebugMode        bool          // DebugMode if true, pass the --debug flag to helmfile to render out invalid yaml
 	ScratchDir       string        // Scratch directory where temporary files should be written
+	KubeVersion      string        // KubeVersion is the value to pass to the --kube-version flag of helmfile
 	ShellRunner      shell.Runner  // ShellRunner shell Runner to use for executing helmfile commands
 }
 
@@ -52,6 +54,7 @@ type ConfigRepo struct {
 	debugMode        bool
 	outputDir        string
 	scratchDir       string
+	kubeVersion      string
 	shellRunner      shell.Runner
 }
 
@@ -71,6 +74,7 @@ func NewConfigRepo(options Options) *ConfigRepo {
 		stdout:           options.Stdout,
 		debugMode:        options.DebugMode,
 		outputDir:        options.OutputDir,
+		kubeVersion:      options.KubeVersion,
 		scratchDir:       path.Join(options.ScratchDir, "helmfile"),
 		shellRunner:      options.ShellRunner,
 	}
@@ -243,6 +247,7 @@ func (r *ConfigRepo) renderApplicationManifests(release terra.Release, args *Arg
 	cmd.setDebugMode(r.debugMode)
 	cmd.setDir(r.thelmaHome)
 	cmd.setLogLevel(r.helmfileLogLevel)
+	cmd.setKubeVersion(r.kubeVersion)
 
 	// resolver runs `helm dependency update` on local charts, so we always set --skip-deps to save time
 	cmd.setSkipDeps(true)
