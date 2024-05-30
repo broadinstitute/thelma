@@ -57,7 +57,6 @@ func (s *seeder) seedStep4RegisterTestUsers(appReleases map[string]terra.AppRele
 							"Hogwarts", "dsde",
 							"Cambridge", "MA", "USA",
 							"Remus Lupin", "Non-Profit")
-						err = _ignore409Conflict(err)
 						if err = opts.handleErrorWithForce(err); err != nil {
 							return err
 						}
