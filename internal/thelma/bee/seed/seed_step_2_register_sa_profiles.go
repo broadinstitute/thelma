@@ -74,22 +74,6 @@ func (s *seeder) seedStep2RegisterSaProfiles(appReleases map[string]terra.AppRel
 			log.Info().Msg("Leo not present in environment, skipping")
 		}
 
-		if importService, importServicePresent := appReleases["importservice"]; importServicePresent {
-			jobs = append(jobs, pool.Job{
-				Name: "importservice SA",
-				Run: func(reporter pool.StatusReporter) error {
-					reporter.Update(pool.Status{Message: "Registering"})
-					if err := opts.handleErrorWithForce(s._registerSaProfile(importService, orch)); err != nil {
-						return err
-					}
-					reporter.Update(pool.Status{Message: "Registered"})
-					return nil
-				},
-			})
-		} else {
-			log.Info().Msg("Import Service not present in environment, skipping")
-		}
-
 		if workspaceManager, workspaceManagerPresent := appReleases["workspacemanager"]; workspaceManagerPresent {
 			jobs = append(jobs, pool.Job{
 				Name: "workspacemanager SA",
