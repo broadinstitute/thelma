@@ -10,6 +10,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -23,9 +24,9 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 			panic("THIS SAM IS NOT IN A DYNAMIC ENVIRONMENT, REFUSING TO UNREGISTER ALL USERS")
 		}
 
-		vault, err := s.clientFactory.Vault()
+		k8s, err := s.clientFactory.Kubernetes().ForRelease(sam)
 		if err != nil {
-			return errors.Errorf("error getting vault client: %v", err)
+			return errors.Errorf("error getting Kubernetes client: %v", err)
 		}
 
 		config, err := s.configWithBasicDefaults()
@@ -33,18 +34,18 @@ func (s *seeder) unseedStep1UnregisterAllUsers(appReleases map[string]terra.AppR
 			return errors.Errorf("error getting Sam's database info: %v", err)
 		}
 
-		secretPath := fmt.Sprintf(config.Sam.Database.Credentials.VaultPath, sam.Cluster().ProjectSuffix())
-		secret, err := vault.Logical().Read(secretPath)
+		secretName := config.Sam.Database.Credentials.KubernetesSecretName
+		secret, err := k8s.CoreV1().Secrets(sam.Namespace()).Get(context.Background(), secretName, v1.GetOptions{})
 		if err != nil {
-			return errors.Errorf("error getting Sam's database credentials from %s: %v", secretPath, err)
+			return errors.Errorf("error getting Sam's database credentials from Kubernetes secret %s/%s: %v", sam.Namespace(), secretName, err)
 		}
-		dbUsername, exists := secret.Data[config.Sam.Database.Credentials.VaultUsernameKey]
+		dbUsername, exists := secret.Data[config.Sam.Database.Credentials.KubernetesUsernameKey]
 		if !exists {
-			return errors.Errorf("secret at %s didn't contain a %s key for Sam's database username", secretPath, config.Sam.Database.Credentials.VaultUsernameKey)
+			return errors.Errorf("secret at %s/%s didn't contain a %s key for Sam's database username", sam.Namespace(), secretName, config.Sam.Database.Credentials.KubernetesUsernameKey)
 		}
-		dbPassword, exists := secret.Data[config.Sam.Database.Credentials.VaultPasswordKey]
+		dbPassword, exists := secret.Data[config.Sam.Database.Credentials.KubernetesPasswordKey]
 		if !exists {
-			return errors.Errorf("secret at %s didn't contain a %s key for Sam's database password", secretPath, config.Sam.Database.Credentials.VaultPasswordKey)
+			return errors.Errorf("secret at %s/%s didn't contain a %s key for Sam's database password", sam.Namespace(), secretName, config.Sam.Database.Credentials.KubernetesPasswordKey)
 		}
 
 		localPort, stopFunc, err := s.kubectl.PortForward(sam, fmt.Sprintf("service/%s", config.Sam.Database.Service), config.Sam.Database.Port)
