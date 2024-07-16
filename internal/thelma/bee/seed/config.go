@@ -81,9 +81,9 @@ type seedConfig struct {
 			Name        string `default:"sam"`
 			Port        int    `default:"5432"`
 			Credentials struct {
-				VaultPath        string `default:"secret/dsde/firecloud/%s/sam/secrets/postgres/app_sql_user"`
-				VaultUsernameKey string `default:"username"`
-				VaultPasswordKey string `default:"password"`
+				KubernetesSecretName  string `default:"sam-db-creds-eso"`
+				KubernetesUsernameKey string `default:"username"`
+				KubernetesPasswordKey string `default:"password"`
 			}
 		}
 		ListUserQuery string `default:"SELECT email, id FROM sam_user"`
