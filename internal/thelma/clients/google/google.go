@@ -71,8 +71,9 @@ type googleConfig struct {
 	Auth struct {
 		// Type of authentication to use. One of:
 		// * "adc": application default credentials
-		// * "vault": load service account key from Vault. The default here may only be accessible from CI.
-		Type string `default:"adc" one-of:"adc vault-sa"`
+		// * "vault-sa": load service account key from Vault. The default here may only be accessible from CI.
+		// * "sa-key": auth using service account key JSON
+		Type string `default:"adc" one-of:"adc vault-sa sa-key"`
 		ADC  struct {
 			VerifyBroadEmail bool `default:"true"`
 		}
@@ -81,6 +82,9 @@ type googleConfig struct {
 			// Key can be set to an empty string internally at runtime to consume the entire secret as the SA key
 			// (for legacy "splatted" key file JSONs)
 			Key string `default:"sa-key.json"`
+		}
+		ServiceAccountKey struct {
+			JSON []byte
 		}
 	}
 	TransportLogging struct {
@@ -97,6 +101,17 @@ func OptionForceVaultSA(
 			c.Auth.Type = "vault-sa"
 			c.Auth.Vault.Path = saVaultPath
 			c.Auth.Vault.Key = saVaultKey
+		})
+	}
+}
+
+func OptionForceSAKey(
+	saKeyJson []byte,
+) Option {
+	return func(o *Options) {
+		o.configFns = append(o.configFns, func(c *googleConfig) {
+			c.Auth.Type = "sa-key"
+			c.Auth.ServiceAccountKey.JSON = saKeyJson
 		})
 	}
 }
@@ -188,6 +203,12 @@ and try re-running this command`, userinfo.Email, broadEmailSuffix)
 			c.cachedGoogleCredentials, err = oauth2google.CredentialsFromJSONWithParams(context.Background(), jsonBytes, params)
 			if err != nil {
 				return nil, errors.Errorf("error initializing credentials from key file from vault: %v", err)
+			}
+		case "sa-key":
+			var err error
+			c.cachedGoogleCredentials, err = oauth2google.CredentialsFromJSONWithParams(context.Background(), c.cfg.Auth.ServiceAccountKey.JSON, params)
+			if err != nil {
+				return nil, errors.Errorf("error initializing credentials from service account key json: %v", err)
 			}
 		default:
 			return nil, errors.Errorf("unknown google auth type %q", c.cfg.Auth.Type)
