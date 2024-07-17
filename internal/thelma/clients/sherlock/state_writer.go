@@ -338,7 +338,7 @@ func toModelCreatableEnvironment(env terra.Environment, autoPopulateChartRelease
 		Lifecycle:                 utils.Nullable(env.Lifecycle().String()),
 		Name:                      env.Name(),
 		NamePrefixesDomain:        utils.Nullable(env.NamePrefixesDomain()),
-		RequiresSuitability:       utils.Nullable(env.RequireSuitable()),
+		RequiresSuitability:       env.RequireSuitable(),
 		TemplateEnvironment:       env.Template(),
 		HelmfileRef:               utils.Nullable(helmfileRef),
 		AutoPopulateChartReleases: &autoPopulateChartReleases,
@@ -364,7 +364,7 @@ func toModelCreatableCluster(cluster terra.Cluster) *models.SherlockClusterV3Cre
 		Name:                cluster.Name(),
 		Provider:            &provider,
 		GoogleProject:       cluster.Project(),
-		RequiresSuitability: utils.Nullable(cluster.RequireSuitable()),
+		RequiresSuitability: cluster.RequireSuitable(),
 		HelmfileRef:         &helmfileRef,
 		Location:            utils.Nullable(cluster.Location()),
 	}

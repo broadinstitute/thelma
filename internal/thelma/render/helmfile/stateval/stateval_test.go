@@ -44,6 +44,7 @@ func Test_BuildStateValues(t *testing.T) {
 				Environment: Environment{
 					Name:                 "dev",
 					UniqueResourcePrefix: "",
+					EnableJanitor:        false,
 				},
 				Cluster: Cluster{
 					Name:                "terra-dev",
@@ -86,6 +87,7 @@ func Test_BuildStateValues(t *testing.T) {
 				Environment: Environment{
 					Name:                 "prod",
 					UniqueResourcePrefix: "",
+					EnableJanitor:        false,
 				},
 				Cluster: Cluster{
 					Name:                "terra-prod",
@@ -128,6 +130,7 @@ func Test_BuildStateValues(t *testing.T) {
 				Environment: Environment{
 					Name:                 "swatomation",
 					UniqueResourcePrefix: "",
+					EnableJanitor:        true,
 				},
 				Cluster: Cluster{
 					Name:                "terra-qa",
@@ -170,6 +173,7 @@ func Test_BuildStateValues(t *testing.T) {
 				Environment: Environment{
 					Name:                 "fiab-funky-chipmunk",
 					UniqueResourcePrefix: "e101",
+					EnableJanitor:        true,
 				},
 				Cluster: Cluster{
 					Name:                "terra-qa",

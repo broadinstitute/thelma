@@ -35,17 +35,16 @@ type Environment interface {
 	CreatedAt() time.Time
 	// Offline returns whether this environment should be currently offline
 	Offline() bool
-
 	// OfflineScheduleBeginEnabled indicates whether the environment is meant to be stopped on a schedule
 	OfflineScheduleBeginEnabled() bool
 	OfflineScheduleBeginTime() time.Time
-
 	// OfflineScheduleEndEnabled indicates whether the environment is meant to be started on a schedule
 	OfflineScheduleEndEnabled() bool
 	OfflineScheduleEndTime() time.Time
-
 	// OfflineScheduleEndWeekends indicates whether the start schedule should only apply on weekdays
 	OfflineScheduleEndWeekends() bool
+	// EnableJanitor indicates whether the Janitor service should be used for this environment to help reduce cloud costs.
+	EnableJanitor() bool
 
 	Destination
 }

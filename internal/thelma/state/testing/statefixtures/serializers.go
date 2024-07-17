@@ -32,6 +32,7 @@ type Environment struct {
 	RequireSuitable      bool
 	TerraHelmfileRef     string
 	Owner                string
+	EnableJanitor        bool
 }
 
 type Chart struct {

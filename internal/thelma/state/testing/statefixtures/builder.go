@@ -120,6 +120,7 @@ func (b *builder) populateEnvironmentSet() {
 		env.EXPECT().NamePrefixesDomain().Return(true)
 		env.EXPECT().PreventDeletion().Return(false)
 		env.EXPECT().Owner().Return(e.Owner)
+		env.EXPECT().EnableJanitor().Return(e.EnableJanitor)
 
 		autodelete := new(statemocks.AutoDelete)
 		autodelete.EXPECT().Enabled().Return(false)
