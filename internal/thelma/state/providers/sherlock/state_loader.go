@@ -62,7 +62,7 @@ retry:
 				destination: destination{
 					name:             stateCluster.Name,
 					base:             stateCluster.Base,
-					requireSuitable:  *stateCluster.RequiresSuitability,
+					requireSuitable:  stateCluster.RequiresSuitability,
 					destinationType:  terra.ClusterDestination,
 					terraHelmfileRef: *stateCluster.HelmfileRef,
 				},
@@ -109,10 +109,11 @@ retry:
 				offlineScheduleEndEnabled:   stateEnvironment.OfflineScheduleEndEnabled,
 				offlineScheduleEndTime:      time.Time(stateEnvironment.OfflineScheduleEndTime),
 				offlineScheduleEndWeekends:  stateEnvironment.OfflineScheduleEndWeekends,
+				enableJanitor:               stateEnvironment.EnableJanitor,
 				destination: destination{
 					name:             stateEnvironment.Name,
 					base:             stateEnvironment.Base,
-					requireSuitable:  *stateEnvironment.RequiresSuitability,
+					requireSuitable:  stateEnvironment.RequiresSuitability,
 					destinationType:  terra.EnvironmentDestination,
 					terraHelmfileRef: *stateEnvironment.HelmfileRef,
 				},

@@ -8,11 +8,11 @@ require (
 	cloud.google.com/go/storage v1.33.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/broadinstitute/sherlock/sherlock-go-client v1.0.0
+	github.com/broadinstitute/sherlock/sherlock-go-client v1.5.20
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.15.0
-	github.com/go-openapi/runtime v0.26.2
+	github.com/go-openapi/runtime v0.27.1
 	github.com/go-openapi/strfmt v0.22.0
 	github.com/go-playground/validator/v10 v10.17.0
 	github.com/gofrs/flock v0.8.1
@@ -33,7 +33,7 @@ require (
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/thediveo/enumflag/v2 v2.0.4
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/mod v0.14.0
@@ -70,14 +70,14 @@ require (
 	github.com/go-jose/go-jose/v3 v3.0.1 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/analysis v0.21.4 // indirect
-	github.com/go-openapi/errors v0.21.0 // indirect
-	github.com/go-openapi/jsonpointer v0.20.0 // indirect
-	github.com/go-openapi/jsonreference v0.20.2 // indirect
-	github.com/go-openapi/loads v0.21.2 // indirect
-	github.com/go-openapi/spec v0.20.11 // indirect
-	github.com/go-openapi/swag v0.22.4 // indirect
-	github.com/go-openapi/validate v0.22.3 // indirect
+	github.com/go-openapi/analysis v0.22.2 // indirect
+	github.com/go-openapi/errors v0.22.0 // indirect
+	github.com/go-openapi/jsonpointer v0.20.2 // indirect
+	github.com/go-openapi/jsonreference v0.20.4 // indirect
+	github.com/go-openapi/loads v0.21.5 // indirect
+	github.com/go-openapi/spec v0.20.14 // indirect
+	github.com/go-openapi/swag v0.23.0 // indirect
+	github.com/go-openapi/validate v0.23.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-test/deep v1.1.0 // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/stretchr/objx v0.5.1 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	go.mongodb.org/mongo-driver v1.13.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1 // indirect

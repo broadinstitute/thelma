@@ -79,6 +79,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-prod
       requiresuitable: true
+      enablejanitor: false
     - name: staging
       base: live
       template: ""
@@ -86,6 +87,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-staging
       requiresuitable: false
+      enablejanitor: false
     - name: fiab-funky-chipmunk
       base: bee
       template: swatomation
@@ -94,6 +96,7 @@ environments:
       defaultcluster: terra-qa
       requiresuitable: false
       owner: codemonkey42@broadinstitute.org
+      enablejanitor: true
     - name: tools
       base: personal
       template: ""
@@ -101,6 +104,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-integration
       requiresuitable: false
+      enablejanitor: true
     - name: buffertest
       base: personal
       template: ""
@@ -108,6 +112,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-integration
       requiresuitable: false
+      enablejanitor: true
     - name: fiab-special-snowflake
       base: bee
       template: swatomation
@@ -115,6 +120,7 @@ environments:
       uniqueresourceprefix: e103
       defaultcluster: terra-qa
       requiresuitable: false
+      enablejanitor: true
     - name: fiab-snarky-panini
       base: bee
       template: swatomation
@@ -123,6 +129,7 @@ environments:
       defaultcluster: terra-qa
       requiresuitable: false
       terrahelmfileref: some-pr
+      enablejanitor: true
     - name: alpha
       base: live
       template: ""
@@ -130,6 +137,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-alpha
       requiresuitable: false
+      enablejanitor: false
     - name: perf
       base: live
       template: ""
@@ -137,6 +145,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-perf
       requiresuitable: false
+      enablejanitor: false
     - name: sam-ci-002
       base: bee
       template: sam-ci
@@ -144,6 +153,7 @@ environments:
       uniqueresourceprefix: e105
       defaultcluster: terra-qa
       requiresuitable: false
+      enablejanitor: true
     - name: sam-ci
       base: bee
       template: ""
@@ -151,6 +161,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-qa
       requiresuitable: false
+      enablejanitor: true
     - name: fiab-nerdy-walrus
       base: bee
       template: swatomation
@@ -158,6 +169,7 @@ environments:
       uniqueresourceprefix: e102
       defaultcluster: terra-qa
       requiresuitable: false
+      enablejanitor: true
     - name: sam-ci-001
       base: bee
       template: sam-ci
@@ -165,6 +177,7 @@ environments:
       uniqueresourceprefix: e105
       defaultcluster: terra-qa
       requiresuitable: false
+      enablejanitor: true
     - name: dev
       base: live
       template: ""
@@ -172,6 +185,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-dev
       requiresuitable: false
+      enablejanitor: false
     - name: swatomation
       base: bee
       template: ""
@@ -179,6 +193,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-qa
       requiresuitable: false
+      enablejanitor: true
     - name: wsmtest
       base: personal
       template: ""
@@ -186,6 +201,7 @@ environments:
       uniqueresourceprefix: ""
       defaultcluster: terra-integration
       requiresuitable: false
+      enablejanitor: true
     - name: fiab-swirly-rabbit
       base: bee
       template: swatomation
@@ -193,6 +209,7 @@ environments:
       uniqueresourceprefix: e100
       defaultcluster: terra-qa
       requiresuitable: false
+      enablejanitor: true
 charts:
     - name: external-dns
       repo: terra-helm-thirdparty
