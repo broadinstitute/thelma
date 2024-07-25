@@ -15,6 +15,9 @@ type Destination struct {
 	ConfigName string `yaml:"ConfigName"`
 	// RequireSuitable whether users must be suitable in order to access/deploy to this destination
 	RequireSuitable bool `yaml:"RequireSuitable"`
+	// RequiredRole indicates the Sherlock role users must have to mutate this destination.
+	// Thelma should pass this value verbatim.
+	RequiredRole string `yaml:"RequiredRole"`
 }
 
 func forDestination(destination terra.Destination) Destination {
@@ -35,5 +38,6 @@ func forDestination(destination terra.Destination) Destination {
 		ConfigBase:      destination.Base(),
 		ConfigName:      configName,
 		RequireSuitable: destination.RequireSuitable(),
+		RequiredRole:    destination.RequiredRole(),
 	}
 }

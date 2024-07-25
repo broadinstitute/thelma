@@ -971,6 +971,47 @@ func (_c *Environment_RequireSuitable_Call) RunAndReturn(run func() bool) *Envir
 	return _c
 }
 
+// RequiredRole provides a mock function with given fields:
+func (_m *Environment) RequiredRole() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// Environment_RequiredRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequiredRole'
+type Environment_RequiredRole_Call struct {
+	*mock.Call
+}
+
+// RequiredRole is a helper method to define mock.On call
+func (_e *Environment_Expecter) RequiredRole() *Environment_RequiredRole_Call {
+	return &Environment_RequiredRole_Call{Call: _e.mock.On("RequiredRole")}
+}
+
+func (_c *Environment_RequiredRole_Call) Run(run func()) *Environment_RequiredRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_RequiredRole_Call) Return(_a0 string) *Environment_RequiredRole_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Environment_RequiredRole_Call) RunAndReturn(run func() string) *Environment_RequiredRole_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Template provides a mock function with given fields:
 func (_m *Environment) Template() string {
 	ret := _m.Called()
