@@ -19,6 +19,7 @@ type Cluster struct {
 	Project          string
 	Location         string
 	RequireSuitable  bool
+	RequiredRole     string
 	TerraHelmfileRef string
 }
 
@@ -30,6 +31,7 @@ type Environment struct {
 	UniqueResourcePrefix string
 	DefaultCluster       string
 	RequireSuitable      bool
+	RequiredRole         string
 	TerraHelmfileRef     string
 	Owner                string
 	EnableJanitor        bool

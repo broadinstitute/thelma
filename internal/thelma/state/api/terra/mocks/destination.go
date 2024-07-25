@@ -309,6 +309,47 @@ func (_c *Destination_RequireSuitable_Call) RunAndReturn(run func() bool) *Desti
 	return _c
 }
 
+// RequiredRole provides a mock function with given fields:
+func (_m *Destination) RequiredRole() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// Destination_RequiredRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequiredRole'
+type Destination_RequiredRole_Call struct {
+	*mock.Call
+}
+
+// RequiredRole is a helper method to define mock.On call
+func (_e *Destination_Expecter) RequiredRole() *Destination_RequiredRole_Call {
+	return &Destination_RequiredRole_Call{Call: _e.mock.On("RequiredRole")}
+}
+
+func (_c *Destination_RequiredRole_Call) Run(run func()) *Destination_RequiredRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Destination_RequiredRole_Call) Return(_a0 string) *Destination_RequiredRole_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Destination_RequiredRole_Call) RunAndReturn(run func() string) *Destination_RequiredRole_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // TerraHelmfileRef provides a mock function with given fields:
 func (_m *Destination) TerraHelmfileRef() string {
 	ret := _m.Called()

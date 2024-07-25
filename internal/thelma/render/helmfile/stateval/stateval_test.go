@@ -40,6 +40,7 @@ func Test_BuildStateValues(t *testing.T) {
 					ConfigBase:      "live",
 					ConfigName:      "dev",
 					RequireSuitable: false,
+					RequiredRole:    "all-users",
 				},
 				Environment: Environment{
 					Name:                 "dev",
@@ -83,6 +84,7 @@ func Test_BuildStateValues(t *testing.T) {
 					ConfigBase:      "live",
 					ConfigName:      "prod",
 					RequireSuitable: true,
+					RequiredRole:    "all-users-suspend-nonsuitable",
 				},
 				Environment: Environment{
 					Name:                 "prod",
@@ -126,6 +128,7 @@ func Test_BuildStateValues(t *testing.T) {
 					ConfigBase:      "bee",
 					ConfigName:      "swatomation",
 					RequireSuitable: false,
+					RequiredRole:    "all-users",
 				},
 				Environment: Environment{
 					Name:                 "swatomation",
@@ -169,6 +172,7 @@ func Test_BuildStateValues(t *testing.T) {
 					ConfigBase:      "bee",
 					ConfigName:      "swatomation",
 					RequireSuitable: false,
+					RequiredRole:    "all-users",
 				},
 				Environment: Environment{
 					Name:                 "fiab-funky-chipmunk",
@@ -212,6 +216,7 @@ func Test_BuildStateValues(t *testing.T) {
 					ConfigBase:      "terra",
 					ConfigName:      "terra-dev",
 					RequireSuitable: false,
+					RequiredRole:    "all-users",
 				},
 				Cluster: Cluster{
 					Name:                "terra-dev",
