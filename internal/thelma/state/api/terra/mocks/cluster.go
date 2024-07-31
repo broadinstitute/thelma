@@ -473,47 +473,6 @@ func (_c *Cluster_Releases_Call) RunAndReturn(run func() []terra.Release) *Clust
 	return _c
 }
 
-// RequireSuitable provides a mock function with given fields:
-func (_m *Cluster) RequireSuitable() bool {
-	ret := _m.Called()
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
-// Cluster_RequireSuitable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequireSuitable'
-type Cluster_RequireSuitable_Call struct {
-	*mock.Call
-}
-
-// RequireSuitable is a helper method to define mock.On call
-func (_e *Cluster_Expecter) RequireSuitable() *Cluster_RequireSuitable_Call {
-	return &Cluster_RequireSuitable_Call{Call: _e.mock.On("RequireSuitable")}
-}
-
-func (_c *Cluster_RequireSuitable_Call) Run(run func()) *Cluster_RequireSuitable_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *Cluster_RequireSuitable_Call) Return(_a0 bool) *Cluster_RequireSuitable_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Cluster_RequireSuitable_Call) RunAndReturn(run func() bool) *Cluster_RequireSuitable_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RequiredRole provides a mock function with given fields:
 func (_m *Cluster) RequiredRole() string {
 	ret := _m.Called()

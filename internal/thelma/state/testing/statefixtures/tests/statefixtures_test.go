@@ -17,7 +17,7 @@ var rf = filter.Releases()
 var ef = filter.Environments()
 var df = filter.Destinations()
 
-func TestRequireSuitableIsSetCorrectly(t *testing.T) {
+func TestRequiredRoleIsSetCorrectly(t *testing.T) {
 	//nolint:staticcheck // SA1019
 	fixture, err := statefixtures.LoadFixture(statefixtures.Default)
 	require.NoError(t, err)
@@ -40,10 +40,10 @@ func TestRequireSuitableIsSetCorrectly(t *testing.T) {
 	prodEnv, err := state.Environments().Get("prod")
 	require.NoError(t, err)
 
-	assert.False(t, devCluster.RequireSuitable())
-	assert.False(t, devEnv.RequireSuitable())
-	assert.True(t, prodCluster.RequireSuitable())
-	assert.True(t, prodEnv.RequireSuitable())
+	assert.Equal(t, "all-users", devCluster.RequiredRole())
+	assert.Equal(t, "all-users", devEnv.RequiredRole())
+	assert.Equal(t, "all-users-suspend-nonsuitable", prodCluster.RequiredRole())
+	assert.Equal(t, "all-users-suspend-nonsuitable", prodEnv.RequiredRole())
 }
 
 // verify the default fixture has the data we expect

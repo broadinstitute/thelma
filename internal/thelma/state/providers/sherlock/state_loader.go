@@ -62,7 +62,6 @@ retry:
 				destination: destination{
 					name:             stateCluster.Name,
 					base:             stateCluster.Base,
-					requireSuitable:  stateCluster.RequiresSuitability,
 					requiredRole:     stateCluster.RequiredRole,
 					destinationType:  terra.ClusterDestination,
 					terraHelmfileRef: *stateCluster.HelmfileRef,
@@ -114,7 +113,6 @@ retry:
 				destination: destination{
 					name:             stateEnvironment.Name,
 					base:             stateEnvironment.Base,
-					requireSuitable:  stateEnvironment.RequiresSuitability,
 					requiredRole:     stateEnvironment.RequiredRole,
 					destinationType:  terra.EnvironmentDestination,
 					terraHelmfileRef: *stateEnvironment.HelmfileRef,

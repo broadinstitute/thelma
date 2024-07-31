@@ -4,25 +4,21 @@ clusters:
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
   - name: terra-staging
     base: terra
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
   - name: terra-qa-bees
     base: terra
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
   - name: fake-tools
     base: tools
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
 environments:
   - name: dev
     base: live
@@ -42,14 +38,12 @@ environments:
     lifecycle: template
     uniqueresourceprefix: ""
     defaultcluster: terra-qa-bees
-    requiresuitable: false
   - name: my-bee
     base: bee
     template: swatomation
     lifecycle: dynamic
     uniqueresourceprefix: abcd
     defaultcluster: terra-qa-bees
-    requiresuitable: false
 charts:
   - name: agora
     repo: terra-helm
