@@ -5,6 +5,7 @@ clusters:
     address: https://ignored
     project: fake-project
     location: us-central1-a
+    requiredRole: all-users
 environments:
   - name: swatomation
     base: bee
@@ -12,12 +13,14 @@ environments:
     lifecycle: template
     uniqueresourceprefix: ""
     defaultcluster: terra-qa-bees
+    requiredRole: all-users
   - name: my-bee
     base: bee
     template: swatomation
     lifecycle: dynamic
     uniqueresourceprefix: abcd
     defaultcluster: terra-qa-bees
+    requiredRole: all-users
     owner: codemonkey42@broadinstitute.org
 charts:
   - name: leonardo
