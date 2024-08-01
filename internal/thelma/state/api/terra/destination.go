@@ -10,6 +10,5 @@ type Destination interface {
 	TerraHelmfileRef() string // TerraHelmfileRef this destination's generator should be pinned to
 	IsCluster() bool          // IsCluster Returns true if this destination is a cluster
 	IsEnvironment() bool      // IsEnvironment Returns true if this destination is an environment
-	RequireSuitable() bool    // RequireSuitable Returns true if this destination requires suitability in order to modify
 	RequiredRole() string     // RequiredRole is the role that users must have to mutate this destination. Thelma should pass this value verbatim.
 }

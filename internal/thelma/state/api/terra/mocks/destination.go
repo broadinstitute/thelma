@@ -268,47 +268,6 @@ func (_c *Destination_Releases_Call) RunAndReturn(run func() []terra.Release) *D
 	return _c
 }
 
-// RequireSuitable provides a mock function with given fields:
-func (_m *Destination) RequireSuitable() bool {
-	ret := _m.Called()
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
-// Destination_RequireSuitable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequireSuitable'
-type Destination_RequireSuitable_Call struct {
-	*mock.Call
-}
-
-// RequireSuitable is a helper method to define mock.On call
-func (_e *Destination_Expecter) RequireSuitable() *Destination_RequireSuitable_Call {
-	return &Destination_RequireSuitable_Call{Call: _e.mock.On("RequireSuitable")}
-}
-
-func (_c *Destination_RequireSuitable_Call) Run(run func()) *Destination_RequireSuitable_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *Destination_RequireSuitable_Call) Return(_a0 bool) *Destination_RequireSuitable_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Destination_RequireSuitable_Call) RunAndReturn(run func() bool) *Destination_RequireSuitable_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RequiredRole provides a mock function with given fields:
 func (_m *Destination) RequiredRole() string {
 	ret := _m.Called()

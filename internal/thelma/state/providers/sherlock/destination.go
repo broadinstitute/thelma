@@ -6,7 +6,6 @@ import "github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 type destination struct {
 	name             string
 	base             string
-	requireSuitable  bool
 	requiredRole     string
 	destinationType  terra.DestinationType
 	terraHelmfileRef string
@@ -38,10 +37,6 @@ func (t *destination) Releases() []terra.Release {
 
 func (t *destination) ReleaseType() terra.ReleaseType {
 	panic("abstract mehtod implemented by children")
-}
-
-func (t *destination) RequireSuitable() bool {
-	return t.requireSuitable
 }
 
 func (t *destination) RequiredRole() string {

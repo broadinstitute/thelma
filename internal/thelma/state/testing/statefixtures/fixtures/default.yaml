@@ -4,84 +4,72 @@ clusters:
       address: https://34.68.254.48
       project: dsp-tools-k8s
       location: us-central-1
-      requiresuitable: false
       requiredrole: all-users
     - name: terra-integration
       base: terra
       address: https://34.70.205.77
       project: terra-kernel-k8s
       location: us-central1-a
-      requiresuitable: false
       requiredrole: all-users
     - name: terra-prod
       base: terra
       address: https://35.232.149.177
       project: broad-dsde-prod
       location: us-central1
-      requiresuitable: true
       requiredrole: all-users-suspend-nonsuitable
     - name: terra-qa
       base: terra
       address: https://35.224.175.229
       project: broad-dsde-qa
       location: us-central1-a
-      requiresuitable: false
       requiredrole: all-users
     - name: dsp-eng-tools
       base: tools
       address: https://34.123.94.51
       project: dsp-tools-k8s
       location: us-central-1
-      requiresuitable: false
       requiredrole: all-users
     - name: datarepo-staging
       base: datarepo
       address: https://35.202.44.141
       project: terra-datarepo-staging
       location: us-central1
-      requiresuitable: false
       requiredrole: all-users
     - name: terra-staging
       base: terra
       address: https://35.202.93.150
       project: broad-dsde-staging
       location: us-central-1
-      requiresuitable: false
       requiredrole: all-users
     - name: terra-perf
       base: terra
       address: https://35.224.104.186
       project: broad-dsde-perf
       location: us-central1-a
-      requiresuitable: false
       requiredrole: all-users
     - name: datarepo-production
       base: datarepo
       address: https://34.72.249.113
       project: terra-datarepo-production
       location: us-central1
-      requiresuitable: false
       requiredrole: all-users
     - name: terra-alpha
       base: terra
       address: https://34.70.215.101
       project: broad-dsde-alpha
       location: us-central1-a
-      requiresuitable: false
       requiredrole: all-users
     - name: datarepo-alpha
       base: datarepo
       address: https://34.72.14.91
       project: terra-datarepo-alpha
       location: us-central1
-      requiresuitable: false
       requiredrole: all-users
     - name: terra-dev
       base: terra
       address: https://35.238.186.116
       project: broad-dsde-dev
       location: us-central1-a
-      requiresuitable: false
       requiredrole: all-users
 environments:
     - name: prod
@@ -90,7 +78,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-prod
-      requiresuitable: true
       requiredrole: all-users-suspend-nonsuitable
       enablejanitor: false
     - name: staging
@@ -99,7 +86,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-staging
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: false
     - name: fiab-funky-chipmunk
@@ -108,7 +94,6 @@ environments:
       lifecycle: dynamic
       uniqueresourceprefix: e101
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       owner: codemonkey42@broadinstitute.org
       enablejanitor: true
@@ -118,7 +103,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-integration
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: buffertest
@@ -127,7 +111,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-integration
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: fiab-special-snowflake
@@ -136,7 +119,6 @@ environments:
       lifecycle: dynamic
       uniqueresourceprefix: e103
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: fiab-snarky-panini
@@ -145,7 +127,6 @@ environments:
       lifecycle: dynamic
       uniqueresourceprefix: e104
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       terrahelmfileref: some-pr
       enablejanitor: true
@@ -155,7 +136,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-alpha
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: false
     - name: perf
@@ -164,7 +144,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-perf
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: false
     - name: sam-ci-002
@@ -173,7 +152,6 @@ environments:
       lifecycle: dynamic
       uniqueresourceprefix: e105
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: sam-ci
@@ -182,7 +160,6 @@ environments:
       lifecycle: template
       uniqueresourceprefix: ""
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: fiab-nerdy-walrus
@@ -191,7 +168,6 @@ environments:
       lifecycle: dynamic
       uniqueresourceprefix: e102
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: sam-ci-001
@@ -200,7 +176,6 @@ environments:
       lifecycle: dynamic
       uniqueresourceprefix: e105
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: dev
@@ -209,7 +184,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-dev
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: false
     - name: swatomation
@@ -218,7 +192,6 @@ environments:
       lifecycle: template
       uniqueresourceprefix: ""
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: wsmtest
@@ -227,7 +200,6 @@ environments:
       lifecycle: static
       uniqueresourceprefix: ""
       defaultcluster: terra-integration
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
     - name: fiab-swirly-rabbit
@@ -236,7 +208,6 @@ environments:
       lifecycle: dynamic
       uniqueresourceprefix: e100
       defaultcluster: terra-qa
-      requiresuitable: false
       requiredrole: all-users
       enablejanitor: true
 charts:

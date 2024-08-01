@@ -4,52 +4,54 @@ clusters:
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
+    requiredrole: all-users
   - name: terra-staging
     base: terra
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
+    requiredrole: all-users
   - name: terra-qa-bees
     base: terra
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
+    requiredrole: all-users
   - name: fake-tools
     base: tools
     address: https://ignored
     project: fake-project
     location: us-central1-a
-    requiresuitable: false
+    requiredrole: all-users
 environments:
   - name: dev
     base: live
     template: ""
     lifecycle: static
     uniqueresourceprefix: ""
+    requiredrole: all-users
     defaultcluster: terra-dev
   - name: staging
     base: live
     template: ""
     lifecycle: static
     uniqueresourceprefix: ""
+    requiredrole: all-users
     defaultcluster: terra-staging
   - name: swatomation
     base: bee
     template: ""
     lifecycle: template
     uniqueresourceprefix: ""
+    requiredrole: all-users
     defaultcluster: terra-qa-bees
-    requiresuitable: false
   - name: my-bee
     base: bee
     template: swatomation
     lifecycle: dynamic
     uniqueresourceprefix: abcd
+    requiredrole: all-users
     defaultcluster: terra-qa-bees
-    requiresuitable: false
 charts:
   - name: agora
     repo: terra-helm
