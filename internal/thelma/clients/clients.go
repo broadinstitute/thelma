@@ -90,12 +90,19 @@ func (c *clients) Vault() (*vaultapi.Client, error) {
 }
 
 func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
-	iapToken, err := c.IAPToken(iap.DspDevopsSuperProd)
+	iapTokenProvider, err := c.IAP(iap.DspDevopsSuperProd)
 	if err != nil {
 		return nil, err
 	}
 
-	return argocd.New(c.thelmaConfig, c.runner, iapToken, c.Vault)
+	// We make a new Sherlock here... it'll reuse token providers so we're not incurring that much overhead
+	sherlockClient, err := c.Sherlock()
+	if err != nil {
+		return nil, err
+	}
+
+	sherlockHttpClient := sherlockClient.HttpClient()
+	return argocd.New(c.thelmaConfig, c.runner, c.creds, iapTokenProvider, sherlockHttpClient)
 }
 
 func (c *clients) Sherlock(options ...sherlock.Option) (sherlock.Client, error) {

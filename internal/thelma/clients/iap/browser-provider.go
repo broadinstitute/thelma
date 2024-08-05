@@ -2,22 +2,19 @@ package iap
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base32"
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/serve_redirect"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"net"
-	"net/http"
 	"net/url"
 	"runtime"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -29,15 +26,6 @@ const (
 	// The redirect URI will be tried on ports starting from startingPort and counting up to startingPort + portIterations.
 	portIterations = 10
 )
-
-// localServerMutex is used for useBrowserForAuthorizationCode to ensure that only one server is running at a time.
-// selectAvailableLocalRedirectURI does try to select open ports, but because it has to note the redirect URL into
-// the oauth2.Config when the credentials.TokenProvider is created, it's possible that multiple IAP
-// credentials.TokenProviders could all try to use the port that was previously open at the same time. That causes
-// a panic if two servers try to bind to the same port, but even if we were to force them to different ports it
-// would still be weird UX (since there's important console output associated with running the local server). We
-// just prevent concurrent executions entirely.
-var localServerMutex sync.Mutex
 
 func browserProvider(creds credentials.Credentials, cfg iapConfig, runner shell.Runner, project Project) (credentials.TokenProvider, error) {
 	oauthConfig, redirectPort, err := createOAuthConfig(cfg, project)
@@ -163,51 +151,15 @@ func parsePortOfRedirectURI(redirectURI string) (int, error) {
 }
 
 func useBrowserForAuthorizationCode(config *oauth2.Config, runner shell.Runner, port int) (string, error) {
-	localServerMutex.Lock()
-	defer localServerMutex.Unlock()
-	log.Debug().Msgf("Obtaining OAuth authorization code...")
-	stateBytes := make([]byte, 32)
-	_, err := rand.Read(stateBytes)
-	if err != nil {
-		return "", err
-	}
-	// And that's when I realized I was CSRF-protecting a CLI
-	state := base32.StdEncoding.EncodeToString(stateBytes)[:24]
-
 	var authorizationCode string
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Query().Get("code") == "" {
-			// Browsers insist on looking for a /favicon.ico, so ignore it silently
-			writer.WriteHeader(http.StatusBadRequest)
-			_, _ = fmt.Fprintf(writer, "%d - no code in request", http.StatusBadRequest)
-		} else {
-			log.Debug().Msgf("Received redirect with authorization code")
-			if request.URL.Query().Get("state") != state {
-				log.Debug().Msgf("Redirect state incorrect, rejecting (%s)", request.URL.String())
-				writer.WriteHeader(http.StatusConflict)
-				_, _ = fmt.Fprintf(writer, "%d - bad state", http.StatusConflict)
-			} else {
-				log.Debug().Msgf("Redirect state correct, storing")
-				authorizationCode = request.URL.Query().Get("code")
-				writer.WriteHeader(http.StatusOK)
-				// Believe it or not, it is literally impossible for a page to close itself
-				_, _ = fmt.Fprintf(writer, "Success! You can close this window.")
-			}
-		}
+	state, closeFunc, err := serve_redirect.ServeRedirect(port, "/", func(code string) {
+		authorizationCode = code
 	})
+	if err != nil {
+		return "", errors.Errorf("failed to serve redirect: %v", err)
+	}
+	defer closeFunc()
 
-	redirectServer := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
-	go func() {
-		// We actually do want to precisely compare errors here, we're outputting at the trace level anyway
-		//goland:noinspection GoDirectComparisonOfErrors
-		if err := redirectServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Trace().Err(err).Msg("redirect server closed with unexpected error")
-		}
-	}()
-
-	log.Trace().Msgf("redirect server available on port %d", port)
 	browserUrl := config.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	var openBrowserCmd shell.Command
 	switch runtime.GOOS {
@@ -234,10 +186,5 @@ func useBrowserForAuthorizationCode(config *oauth2.Config, runner shell.Runner, 
 		time.Sleep(50 * time.Millisecond)
 	}
 	log.Info().Msg("Received authorization code, thanks!")
-	if err = redirectServer.Close(); err != nil {
-		log.Trace().Msgf("error closing redirect server: %v", err)
-	} else {
-		log.Trace().Msgf("redirect server stopped")
-	}
 	return authorizationCode, nil
 }

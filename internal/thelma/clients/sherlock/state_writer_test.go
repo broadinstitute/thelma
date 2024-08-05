@@ -2,6 +2,7 @@ package sherlock_test
 
 import (
 	"encoding/json"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+const testIapToken = "test identity aware proxy token"
 
 type sherlockStateWriterClientSuite struct {
 	suite.Suite
@@ -51,6 +54,8 @@ func (suite *sherlockStateWriterClientSuite) TearDownSuite() {
 func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.conflictServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 
@@ -68,6 +73,8 @@ func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
 func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.errServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 
@@ -85,6 +92,8 @@ func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
 func (suite *sherlockStateWriterClientSuite) TestSuccessfulStateExport() {
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.successfulCreateServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 
@@ -105,6 +114,8 @@ func (suite *sherlockStateWriterClientSuite) TestSuccessfulDelete() {
 	mockEnv.On("Releases").Return(nil)
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.successfulDeleteServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 
 	suite.Assert().NoError(err)

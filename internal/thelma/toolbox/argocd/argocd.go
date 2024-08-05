@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/avast/retry-go"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -15,7 +17,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	naming "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
-	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -114,6 +115,12 @@ type argocdConfig struct {
 	// Host hostname of the ArgoCD server
 	Host string `valid:"hostname" default:"argocd.dsp-devops-prod.broadinstitute.org"`
 
+	SherlockOidcProvider string `valid:"url" default:"https://sherlock-oidc.dsp-devops-prod.broadinstitute.org/oidc"`
+	// SherlockOidcCliClient is the public CLI client ID for running PKCE native OAuth2 flows from Thelma against
+	// Sherlock's OIDC provider. This value is intentionally public in a manner not dissimilar from the IAP
+	// client info stored within Thelma's codebase.
+	SherlockOidcCliClientID string `default:"PjVR6GrFsnKMN7k9Ldo9vWrvg5zPtEMOxSgbSaewoAo"`
+
 	// Vault (optional) pull ArgoCD token from Vault and use that to authenticate to ArgoCD. (should only be used in CI pipelines)
 	Vault struct {
 		Enabled bool   `default:"false"`
@@ -174,78 +181,37 @@ type ArgoCD interface {
 	DefaultSyncOptions() SyncOptions
 }
 
-// BrowserLogin is a thin wrapper around the `argocd login --sso` command, which:
-// * presents users with a web UI to log in with their GitHub SSO credentials (same flow as logging in to the ArgoCD webapp)
-// * uses those SSO credentials to generate a new ArgoCD authentication token for the user's identity
-// * stores the generated token in ~/.argocd/config
-func BrowserLogin(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) error {
-	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
-	if err != nil {
-		return err
-	}
-	if err = a.browserLogin(); err != nil {
-		return err
-	}
-	if err = a.ensureLoggedIn(); err != nil {
-		return errors.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
-	}
-	return nil
-}
-
-// New return a new ArgoCD client
-func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (ArgoCD, error) {
-	return newArgocd(thelmaConfig, shellRunner, iapToken, vaultClientFactory)
-}
-
-// private constructor used in tests
-func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (*argocd, error) {
-	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
-	if err != nil {
+func New(thelmaConfig config.Config, shellRunner shell.Runner, creds credentials.Credentials, iapTokenProvider credentials.TokenProvider, sherlockHttpClient *http.Client) (ArgoCD, error) {
+	var err error
+	var cfg argocdConfig
+	if err = thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
 		return nil, err
 	}
+	var tokenProvider credentials.TokenProvider
 
 	if os.Getenv(envVars.token) != "" {
+		// Backwards compatibility, use env token if provided
 		log.Debug().Msgf("Env var %s is set; will be used to to authenticate ArgoCD CLI commands", envVars.token)
-	} else if a.cfg.Vault.Enabled {
-		vaultClient, err := vaultClientFactory()
-		if err != nil {
-			return nil, errors.Errorf("argocd: failed to instantiate Vault client: %v", err)
-		}
-		token, err := readTokenFromVault(a.cfg, vaultClient)
+	} else {
+		tokenProvider, err = implicitTokenProvider(creds, cfg, sherlockHttpClient)
 		if err != nil {
 			return nil, err
-		}
-		a.token = token
-		if err = a.ensureLoggedIn(); err != nil {
-			return nil, errors.Errorf("error authenticating to ArgoCD with token pulled from Vault (path %s, key %s): %v", a.cfg.Vault.Path, a.cfg.Vault.Key, err)
-		}
-	} else if err := a.ensureLoggedIn(); err != nil {
-		log.Debug().Err(err).Msgf("argocd cli is not authenticated; will attempt browser login")
-
-		if !utils.Interactive() {
-			return nil, errors.Errorf("ArgoCD client is not authenticated and shell is not interactive; please supply an ArgoCD token via THELMA_ARGOCD_TOKEN or run `thelma auth argocd` in an interactive shell")
-		}
-		if err := BrowserLogin(thelmaConfig, shellRunner, iapToken); err != nil {
-			return nil, err
-		}
-		if err = a.ensureLoggedIn(); err != nil {
-			return nil, errors.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
 		}
 	}
-	return a, nil
-}
 
-func newUnauthenticated(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) (*argocd, error) {
-	var cfg argocdConfig
-	if err := thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
+	a := &argocd{
+		runner: shellRunner,
+		cfg:    cfg,
+
+		iapTokenProvider: iapTokenProvider,
+		tokenProvider:    tokenProvider,
+	}
+
+	if err = a.ensureLoggedIn(); err != nil {
 		return nil, err
 	}
 
-	return &argocd{
-		runner:   shellRunner,
-		cfg:      cfg,
-		iapToken: iapToken,
-	}, nil
+	return a, nil
 }
 
 // implements ArgoCD interface
@@ -254,6 +220,9 @@ type argocd struct {
 	cfg      argocdConfig
 	iapToken string
 	token    string
+
+	iapTokenProvider credentials.TokenProvider
+	tokenProvider    credentials.TokenProvider
 }
 
 func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, error) {
@@ -654,7 +623,7 @@ func (a *argocd) ensureLoggedIn() error {
 		return err
 	}
 	if err != nil || !output.LoggedIn {
-		return errors.Errorf("ArgoCD client is not authenticated; please run `thelma auth argocd` or supply an ArgoCD token via THELMA_ARGOCD_TOKEN")
+		return errors.Errorf("ArgoCD client is not authenticated; please retry or supply an ArgoCD token via %s", envVars.token)
 	}
 	return nil
 }
@@ -766,15 +735,21 @@ func (a *argocd) runCommandOnce(args []string, options ...shell.RunOption) error
 	if a.cfg.Host != "" {
 		env = append(env, fmt.Sprintf("%s=%s", envVars.server, a.cfg.Host))
 	}
-	if a.token != "" {
-		env = append(env, fmt.Sprintf("%s=%s", envVars.token, a.token))
+	if token, tokenOk, err := a.authToken(); err != nil {
+		return err
+	} else if tokenOk {
+		env = append(env, fmt.Sprintf("%s=%s", envVars.token, token))
 	}
 
 	// build arg list
 	var _args []string
 
 	// add IAP token header
-	_args = append(_args, flags.header, a.proxyAuthorizationHeader())
+	proxyAuthorizationHeader, err := a.proxyAuthorizationHeader()
+	if err != nil {
+		return err
+	}
+	_args = append(_args, flags.header, proxyAuthorizationHeader)
 
 	if a.cfg.GRPCWeb {
 		_args = append(_args, flags.grpcWeb)
@@ -800,8 +775,32 @@ func (a *argocd) runCommandOnce(args []string, options ...shell.RunOption) error
 	)
 }
 
-func (a *argocd) proxyAuthorizationHeader() string {
-	return fmt.Sprintf("Proxy-Authorization: Bearer %s", a.iapToken)
+func (a *argocd) authToken() (string, bool, error) {
+	if a.token != "" {
+		return a.token, true, nil
+	} else if a.tokenProvider != nil {
+		token, err := a.tokenProvider.Get()
+		if err != nil {
+			return "", false, err
+		}
+		return string(token), true, nil
+	} else {
+		return "", false, nil
+	}
+}
+
+func (a *argocd) proxyAuthorizationHeader() (string, error) {
+	if a.iapToken != "" {
+		return fmt.Sprintf("Proxy-Authorization: Bearer %s", a.iapToken), nil
+	} else if a.iapTokenProvider != nil {
+		token, err := a.iapTokenProvider.Get()
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Proxy-Authorization: Bearer %s", string(token)), nil
+	} else {
+		return "", errors.New("argocd: no IAP token or token provider available")
+	}
 }
 
 func readTokenFromVault(cfg argocdConfig, vaultClient *vaultapi.Client) (string, error) {
