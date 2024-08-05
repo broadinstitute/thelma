@@ -14,12 +14,10 @@ import (
 	"time"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	naming "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -628,14 +626,6 @@ func (a *argocd) ensureLoggedIn() error {
 	return nil
 }
 
-// run `argocd login` to put up an SSO prompt in the browser
-func (a *argocd) browserLogin() error {
-	log.Info().Msgf("Launching browser to authenticate Thelma to ArgoCD")
-
-	// this is always local (not in CI) so retrying it is unnecessary
-	return a.runCommandOnce([]string{"login", "--sso", a.cfg.Host})
-}
-
 // run `argocd app set <app-name> --revision=<ref>` to set an Argo app's git ref
 func (a *argocd) setRef(appName string, ref string) error {
 	log.Info().Msgf("Setting app %s to ref %s", appName, ref)
@@ -801,24 +791,6 @@ func (a *argocd) proxyAuthorizationHeader() (string, error) {
 	} else {
 		return "", errors.New("argocd: no IAP token or token provider available")
 	}
-}
-
-func readTokenFromVault(cfg argocdConfig, vaultClient *vaultapi.Client) (string, error) {
-	log.Debug().Msgf("Attempting to read ArgoCD token from Vault (%s)", cfg.Vault.Path)
-	secret, err := vaultClient.Logical().Read(cfg.Vault.Path)
-	if err != nil {
-		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: %v", cfg.Vault.Path, err)
-	}
-	v, exists := secret.Data[cfg.Vault.Key]
-	if !exists {
-		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
-	}
-	asStr, ok := v.(string)
-	if !ok {
-		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: expected string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
-	}
-	logging.MaskSecret(asStr)
-	return asStr, nil
 }
 
 // releaseSelector returns set of selectors for all argo apps associated with a release
