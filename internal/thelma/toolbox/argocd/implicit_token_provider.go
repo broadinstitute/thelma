@@ -65,7 +65,7 @@ func implicitTokenProvider(creds credentials.Credentials, cfg argocdConfig, sher
 			}
 		}
 		options.RefreshFn = func(token *oauth2.Token) (*oauth2.Token, error) {
-			return oauth2Config.TokenSource(context.Background(), token).Token()
+			return oauth2Config.TokenSource(ctx, token).Token()
 		}
 		options.ValidateFn = func(token *oauth2.Token) error {
 			if idtoken, ok := token.Extra("id_token").(string); !ok {
