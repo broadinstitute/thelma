@@ -119,13 +119,6 @@ type argocdConfig struct {
 	// client info stored within Thelma's codebase.
 	SherlockOidcCliClientID string `default:"PjVR6GrFsnKMN7k9Ldo9vWrvg5zPtEMOxSgbSaewoAo"`
 
-	// Vault (optional) pull ArgoCD token from Vault and use that to authenticate to ArgoCD. (should only be used in CI pipelines)
-	Vault struct {
-		Enabled bool   `default:"false"`
-		Path    string `default:"secret/devops/thelma/argocd"`
-		Key     string `default:"token"`
-	}
-
 	// GRPCWeb set to true to pass --grpc-web flag to all ArgoCD commands
 	GRPCWeb bool `default:"true"`
 
