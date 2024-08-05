@@ -1,7 +1,6 @@
 package argocd
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -12,130 +11,7 @@ import (
 
 const fakeArgocdHost = "fake-argo.com"
 const fakeIapToken = "fake-iap-token"
-
-func Test_Login(t *testing.T) {
-	testCases := []struct {
-		name          string
-		setupCommands func(runner *shell.MockRunner)
-		expectError   string
-	}{
-		{
-			name: "happy path",
-			setupCommands: func(runner *shell.MockRunner) {
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"login",
-						"--sso",
-						fakeArgocdHost,
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				})
-
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"account",
-						"get-user-info",
-						"--output",
-						"yaml",
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				}).WithStdout("loggedIn: true\n")
-			},
-		},
-		{
-			name: "login command fails",
-			setupCommands: func(runner *shell.MockRunner) {
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"login",
-						"--sso",
-						fakeArgocdHost,
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				}).Exits(2)
-			},
-			expectError: "login.*exited with status 2",
-		},
-		{
-			name: "browserLogin check fails",
-			setupCommands: func(runner *shell.MockRunner) {
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"login",
-						"--sso",
-						fakeArgocdHost,
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				})
-
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"account",
-						"get-user-info",
-						"--output",
-						"yaml",
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				}).WithStdout("loggedIn: false\n")
-			},
-			expectError: "login command succeeded but client is not logged in",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			runner := shell.DefaultMockRunner()
-			thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverrides(map[string]interface{}{
-				"argocd.host": fakeArgocdHost,
-			}))
-			require.NoError(t, err)
-
-			if tc.setupCommands != nil {
-				tc.setupCommands(runner)
-			}
-
-			err = BrowserLogin(thelmaConfig, runner, "my-iap-token")
-
-			if tc.expectError == "" {
-				require.NoError(t, err)
-				return
-			}
-
-			assert.Error(t, err)
-			assert.Regexp(t, tc.expectError, err.Error())
-		})
-	}
-}
+const fakeToken = "fake-token"
 
 func Test_releaseSelector(t *testing.T) {
 	samDev := statemocks.NewRelease(t)
@@ -246,6 +122,14 @@ func Test_RefreshRelease(t *testing.T) {
 	}))
 }
 
+func Test_ensureLoggedIn(t *testing.T) {
+	_mocks := setupMocks(t)
+	_argocd := _mocks.argocd
+
+	_mocks.expectCmd("account", "get-user-info", "--output", "yaml").WithStdout("loggedIn: true")
+	require.NoError(t, _argocd.ensureLoggedIn())
+}
+
 func Test_setRef(t *testing.T) {
 	_mocks := setupMocks(t)
 	_argocd := _mocks.argocd
@@ -279,6 +163,7 @@ func Test_isRetryableError(t *testing.T) {
 
 type mocks struct {
 	fakeIapToken string
+	fakeToken    string
 	fakeHost     string
 	argocd       *argocd
 	runner       *shell.MockRunner
@@ -291,12 +176,13 @@ func (m *mocks) expectCmd(args ...string) *shell.Call {
 	return m.runner.ExpectCmd(shell.Command{
 		Prog: prog,
 		Args: _args,
-		Env:  []string{envVars.server + "=" + m.fakeHost},
+		Env:  []string{envVars.server + "=" + m.fakeHost, envVars.token + "=" + m.fakeToken},
 	})
 }
 
 func setupMocks(t *testing.T) *mocks {
 	iapToken := fakeIapToken
+	token := fakeToken
 	host := fakeArgocdHost
 
 	testConfig, err := config.NewTestConfig(t, map[string]interface{}{
@@ -305,17 +191,21 @@ func setupMocks(t *testing.T) *mocks {
 	require.NoError(t, err)
 
 	mockRunner := shell.DefaultMockRunner()
-	mockRunner.ExpectCmd(shell.Command{
-		Prog: prog,
-		Args: []string{"--header", "Proxy-Authorization: Bearer " + iapToken, "--grpc-web", "account", "get-user-info", "--output", "yaml"},
-		Env:  []string{envVars.server + "=" + host},
-	}).WithStdout("loggedIn: true")
 
-	_argocd, err := newArgocd(testConfig, mockRunner, iapToken, nil)
+	var cfg argocdConfig
+	err = testConfig.Unmarshal(configPrefix, &cfg)
 	require.NoError(t, err)
+
+	_argocd := &argocd{
+		runner:   mockRunner,
+		cfg:      cfg,
+		iapToken: iapToken,
+		token:    token,
+	}
 
 	return &mocks{
 		fakeIapToken: iapToken,
+		fakeToken:    token,
 		fakeHost:     host,
 		argocd:       _argocd,
 		runner:       mockRunner,

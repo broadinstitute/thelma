@@ -14,15 +14,15 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const testGhaToken = "test github actions oidc jwt"
+const testIapToken = "test identity aware proxy token"
+
 type mockOkResponse struct {
 	Ok bool
 }
 
 // Verify that the sherlock client can successfully issue a request against a mock sherlock backend
 func Test_NewClient(t *testing.T) {
-	testGhaToken := "test github actions oidc jwt"
-	testIapToken := "test identity aware proxy token"
-
 	t.Run("just iap", func(t *testing.T) {
 		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
@@ -108,6 +108,8 @@ func (suite *sherlockClientSuite) TearDownSuite() {
 func (suite *sherlockClientSuite) TestFetchEnvironments() {
 	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.config
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 	envs, err := client.Environments()
@@ -120,6 +122,8 @@ func (suite *sherlockClientSuite) TestFetchEnvironments() {
 func (suite *sherlockClientSuite) TestFetchClusters() {
 	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.config
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 	clusters, err := client.Clusters()
@@ -132,6 +136,8 @@ func (suite *sherlockClientSuite) TestFetchClusters() {
 func (suite *sherlockClientSuite) TestFetchReleases() {
 	client, err := NewClient(func(options *Options) {
 		options.ConfigSource = suite.config
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 	releases, err := client.Releases()

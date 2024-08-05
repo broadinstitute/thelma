@@ -2,7 +2,9 @@ package sherlock
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/broadinstitute/sherlock/sherlock-go-client/client/models"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +14,7 @@ import (
 func TestChartReleaseUpdater(t *testing.T) {
 	t.Run("gha oidc unhappy", func(t *testing.T) {
 		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
 			t.Fail()
 		}))
 		defer mockSherlockServer.Close()
@@ -26,6 +29,8 @@ func TestChartReleaseUpdater(t *testing.T) {
 	t.Run("sherlock returns error", func(t *testing.T) {
 		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var body models.SherlockCiRunV3Upsert
+			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
+			require.Equal(t, testGhaToken, r.Header.Get(sherlockGhaOidcHeader))
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 			require.Equal(t, models.SherlockCiRunV3Upsert{
 				ChartReleaseStatuses: map[string]string{"foo": "bar"},
@@ -41,17 +46,18 @@ func TestChartReleaseUpdater(t *testing.T) {
 		defer mockSherlockServer.Close()
 		client, err := NewClient(func(options *Options) {
 			options.Addr = mockSherlockServer.URL
+			options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnString: testGhaToken}
 		})
 		require.NoError(t, err)
-		// Fake this so we don't have to mock a GHA OIDC provider
-		c := client.(*clientImpl)
-		c.ghaOidcTokenProviderIsHappy = true
 		err = client.UpdateChartReleaseStatuses(map[string]string{"foo": "bar"})
 		require.ErrorContains(t, err, "foo not found")
 	})
 	t.Run("sherlock returns nothing", func(t *testing.T) {
 		mockSherlockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var body models.SherlockCiRunV3Upsert
+			require.Equal(t, fmt.Sprintf("Bearer %s", testIapToken), r.Header.Get("Authorization"))
+			require.Equal(t, testGhaToken, r.Header.Get(sherlockGhaOidcHeader))
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 			require.Equal(t, models.SherlockCiRunV3Upsert{
 				ChartReleaseStatuses: map[string]string{"foo": "bar"},
@@ -81,11 +87,10 @@ func TestChartReleaseUpdater(t *testing.T) {
 		defer mockSherlockServer.Close()
 		client, err := NewClient(func(options *Options) {
 			options.Addr = mockSherlockServer.URL
+			options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+			options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnString: testGhaToken}
 		})
 		require.NoError(t, err)
-		// Fake this so we don't have to mock a GHA OIDC provider
-		c := client.(*clientImpl)
-		c.ghaOidcTokenProviderIsHappy = true
 		err = client.UpdateChartReleaseStatuses(map[string]string{"foo": "bar"})
 		require.NoError(t, err)
 	})
