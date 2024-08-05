@@ -69,6 +69,10 @@ var unretryableErrors = []*regexp.Regexp{
 	// don't retry commands that fail with a 401, because we actually use 401s from ArgoCD to indicate that we
 	// need to re-run ArgoCD auth process -- if we retry, it seems to the user like Thelma is hanging.
 	regexp.MustCompile(regexp.QuoteMeta("failed with status code 401")),
+	// don't retry commands that fail with a 403, because it means that ArgoCD does know who the caller is but
+	// that they explicitly aren't authorized. Failing fast makes the UX better -- otherwise it can take up to
+	// a minute for retries to run out.
+	regexp.MustCompile(regexp.QuoteMeta("rpc error: code = PermissionDenied")),
 }
 
 // SyncOptions options for an ArgoCD sync operation
