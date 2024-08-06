@@ -36,6 +36,7 @@ jobs:
         target: "smoke"
 
     - name: Run tests (dependabot)
+      if: ${{ github.actor == 'dependabot[bot]' }}
       uses: ./.github/actions/make
       with:
         # Dependabot can't run smoke tests but unit tests are better than nothing
