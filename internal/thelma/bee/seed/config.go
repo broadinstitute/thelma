@@ -3,12 +3,13 @@ package seed
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 )
 
 const configKey = "seed"
@@ -54,7 +55,7 @@ type seedConfig struct {
 		}
 		WorkspaceManager struct {
 			// WSM dev SA used for both Dev and QA BEEs, as of 7/13/2022
-			KubernetesSecretName string `default:"workspacemanager-app-sa"`
+			KubernetesSecretName string `default:"workspacemanager-sa-secret"`
 			KubernetesSecretKey  string `default:"service-account.json"`
 		}
 		TSPS struct {
