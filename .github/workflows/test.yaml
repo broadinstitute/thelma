@@ -29,16 +29,12 @@ jobs:
       with:
         workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
         service_account: 'thelma-ci@dsp-tools-k8s.iam.gserviceaccount.com'
-        # create_credentials_file: true
-        # export_environment_variables: true
 
     - name: Run tests
       uses: ./.github/actions/make
       if: ${{ github.actor != 'dependabot[bot]' }}
       with:
         target: "smoke"
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
 
     - name: Run tests (dependabot)
       if: ${{ github.actor == 'dependabot[bot]' }}
