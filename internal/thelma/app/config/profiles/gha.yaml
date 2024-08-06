@@ -4,11 +4,6 @@ autoupdate:
   # we never want auto-update enabled in CI environments
   enabled: false
 
-argocd:
-  # pull token from Vault instead of local user credentials
-  vault:
-    enabled: true
-
 credentials:
   # use inmemory store so creds aren't persistent to disk
   storetype: inmemory

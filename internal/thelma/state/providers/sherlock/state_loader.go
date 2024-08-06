@@ -62,7 +62,7 @@ retry:
 				destination: destination{
 					name:             stateCluster.Name,
 					base:             stateCluster.Base,
-					requireSuitable:  *stateCluster.RequiresSuitability,
+					requiredRole:     stateCluster.RequiredRole,
 					destinationType:  terra.ClusterDestination,
 					terraHelmfileRef: *stateCluster.HelmfileRef,
 				},
@@ -81,11 +81,9 @@ retry:
 				return nil, err
 			}
 			var envAutoDelete autoDelete
-			if stateEnvironment.AutoDelete != nil {
-				if stateEnvironment.AutoDelete.Enabled != nil {
-					envAutoDelete.enabled = *stateEnvironment.AutoDelete.Enabled
-				}
-				envAutoDelete.after = time.Time(stateEnvironment.AutoDelete.After)
+			if !stateEnvironment.DeleteAfter.IsZero() {
+				envAutoDelete.enabled = true
+				envAutoDelete.after = time.Time(stateEnvironment.DeleteAfter)
 			}
 			var offline bool
 			if stateEnvironment.Offline != nil {
@@ -111,10 +109,11 @@ retry:
 				offlineScheduleEndEnabled:   stateEnvironment.OfflineScheduleEndEnabled,
 				offlineScheduleEndTime:      time.Time(stateEnvironment.OfflineScheduleEndTime),
 				offlineScheduleEndWeekends:  stateEnvironment.OfflineScheduleEndWeekends,
+				enableJanitor:               stateEnvironment.EnableJanitor,
 				destination: destination{
 					name:             stateEnvironment.Name,
 					base:             stateEnvironment.Base,
-					requireSuitable:  *stateEnvironment.RequiresSuitability,
+					requiredRole:     stateEnvironment.RequiredRole,
 					destinationType:  terra.EnvironmentDestination,
 					terraHelmfileRef: *stateEnvironment.HelmfileRef,
 				},

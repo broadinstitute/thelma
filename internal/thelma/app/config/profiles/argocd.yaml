@@ -1,0 +1,39 @@
+# This file contains custom configuration for Thelma that can be set for running in ArgoCD
+
+# ArgoCD runs plugins in the "Applications"'s repository, which means terra-helmfile for us.
+# Rather than worrying about setting `THELMA_HOME=.` (actually difficult to do for a plugin),
+# we set it directly in config here.
+home: .
+
+autoupdate:
+  # Don't auto-update on ArgoCD, that's unproven and for now we'll
+  # control Thelma's version with the ArgoCD appVersion from Beehive
+  enabled: false
+
+credentials:
+  # Might as well cache credentials across runs, since the sidecar
+  # will be persistent
+  storetype: directory
+
+google:
+  auth:
+    type: adc
+    adc:
+      # Will use Google Service Account via Workload Identity
+      verifybroademail: false
+
+iap:
+  # Use Workload Identity directly to generate ID tokens for IAP
+  provider: workloadidentity
+
+logging:
+  console:
+    level: info
+    color: false
+  file:
+    enabled: false
+
+vault:
+  # Vault auth isn't available when running in ArgoCD (and it's not
+  # needed); so we won't declare management of ~/.vault-token
+  manageusertoken: false

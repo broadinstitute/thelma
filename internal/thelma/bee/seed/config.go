@@ -1,11 +1,13 @@
 package seed
 
 import (
+	"context"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 )
 
@@ -35,33 +37,29 @@ type AgoraPermission struct {
 type seedConfig struct {
 	Auth struct {
 		Rawls struct {
-			VaultPath string `default:"secret/dsde/firecloud/%s/rawls/rawls-account.json"`
-			VaultKey  string `default:""`
+			KubernetesSecretName string `default:"rawls-sa-secret"`
+			KubernetesSecretKey  string `default:"rawls-account.json"`
 		}
 		Sam struct {
-			VaultPath string `default:"secret/dsde/firecloud/%s/sam/sam-account.json"`
-			VaultKey  string `default:""`
+			KubernetesSecretName string `default:"sam-sa-secret"`
+			KubernetesSecretKey  string `default:"sam-account.json"`
 		}
 		Leonardo struct {
-			VaultPath string `default:"secret/dsde/firecloud/%s/leonardo/leonardo-account.json"`
-			VaultKey  string `default:""`
-		}
-		ImportService struct {
-			VaultPath string `default:"secret/dsde/firecloud/%s/import-service/import-service-account-fiab-bees"`
-			VaultKey  string `default:"key.json"`
+			KubernetesSecretName string `default:"leonardo-sa-secret"`
+			KubernetesSecretKey  string `default:"leonardo-account.json"`
 		}
 		FirecloudOrch struct {
-			VaultPath string `default:"secret/dsde/firecloud/%s/common/firecloud-account.json"`
-			VaultKey  string `default:""`
+			KubernetesSecretName string `default:"firecloudorch-sa-secret"`
+			KubernetesSecretKey  string `default:"firecloud-account.json"`
 		}
 		WorkspaceManager struct {
 			// WSM dev SA used for both Dev and QA BEEs, as of 7/13/2022
-			VaultPath string `default:"secret/dsde/terra/kernel/dev/dev/workspace/app-sa"`
-			VaultKey  string `default:"key.json"`
+			KubernetesSecretName string `default:"workspacemanager-app-sa"`
+			KubernetesSecretKey  string `default:"service-account.json"`
 		}
 		TSPS struct {
-			VaultPath string `default:"secret/dsde/firecloud/%s/tsps/tsps-account.json"`
-			VaultKey  string `default:""`
+			KubernetesSecretName string `default:"tsps-sa-secret"`
+			KubernetesSecretKey  string `default:"service-account.json"`
 		}
 	}
 	TestUsers struct {
@@ -85,9 +83,9 @@ type seedConfig struct {
 			Name        string `default:"sam"`
 			Port        int    `default:"5432"`
 			Credentials struct {
-				VaultPath        string `default:"secret/dsde/firecloud/%s/sam/secrets/postgres/app_sql_user"`
-				VaultUsernameKey string `default:"username"`
-				VaultPasswordKey string `default:"password"`
+				KubernetesSecretName  string `default:"sam-db-creds-eso"`
+				KubernetesUsernameKey string `default:"username"`
+				KubernetesPasswordKey string `default:"password"`
 			}
 		}
 		ListUserQuery string `default:"SELECT email, id FROM sam_user"`
@@ -99,37 +97,50 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease, options ...google.Opt
 	if err != nil {
 		return nil, err
 	}
-	var vaultPath, vaultKey string
+	var secretName, secretKey string
 	switch appRelease.Name() {
 	case "rawls":
-		vaultPath = config.Auth.Rawls.VaultPath
-		vaultKey = config.Auth.Rawls.VaultKey
+		secretName = config.Auth.Rawls.KubernetesSecretName
+		secretKey = config.Auth.Rawls.KubernetesSecretKey
 	case "sam":
-		vaultPath = config.Auth.Sam.VaultPath
-		vaultKey = config.Auth.Sam.VaultKey
+		secretName = config.Auth.Sam.KubernetesSecretName
+		secretKey = config.Auth.Sam.KubernetesSecretKey
 	case "leonardo":
-		vaultPath = config.Auth.Leonardo.VaultPath
-		vaultKey = config.Auth.Leonardo.VaultKey
-	case "importservice":
-		vaultPath = config.Auth.ImportService.VaultPath
-		vaultKey = config.Auth.ImportService.VaultKey
+		secretName = config.Auth.Leonardo.KubernetesSecretName
+		secretKey = config.Auth.Leonardo.KubernetesSecretKey
 	case "firecloudorch":
-		vaultPath = config.Auth.FirecloudOrch.VaultPath
-		vaultKey = config.Auth.FirecloudOrch.VaultKey
+		secretName = config.Auth.FirecloudOrch.KubernetesSecretName
+		secretKey = config.Auth.FirecloudOrch.KubernetesSecretKey
 	case "workspacemanager":
-		vaultPath = config.Auth.WorkspaceManager.VaultPath
-		vaultKey = config.Auth.WorkspaceManager.VaultKey
+		secretName = config.Auth.WorkspaceManager.KubernetesSecretName
+		secretKey = config.Auth.WorkspaceManager.KubernetesSecretKey
 	case "tsps":
-		vaultPath = config.Auth.TSPS.VaultPath
-		vaultKey = config.Auth.TSPS.VaultKey
+		secretName = config.Auth.TSPS.KubernetesSecretName
+		secretKey = config.Auth.TSPS.KubernetesSecretKey
 	default:
 		return nil, errors.Errorf("thelma doesn't know how to authenticate as %s", appRelease.Name())
 	}
-	if strings.ContainsRune(vaultPath, '%') {
-		vaultPath = fmt.Sprintf(vaultPath, appRelease.Cluster().ProjectSuffix())
+	if strings.ContainsRune(secretName, '%') {
+		secretName = fmt.Sprintf(secretName, appRelease.Cluster().ProjectSuffix())
 	}
+
+	k8s, err := s.clientFactory.Kubernetes().ForRelease(appRelease)
+	if err != nil {
+		return nil, errors.Errorf("failed to construct K8s client for release %s: %v", appRelease.FullName(), err)
+	}
+	secret, err := k8s.CoreV1().Secrets(appRelease.Namespace()).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.Errorf("failed to access %s service account key secret %s: %v", appRelease.FullName(), secretName, err)
+	}
+	saKeyJSON, exists := secret.Data[secretKey]
+	if !exists || len(saKeyJSON) == 0 {
+		return nil, errors.Errorf("failed to %s service account key secret %s missing key %s: %v", appRelease.FullName(), secretName, secretKey, err)
+	}
+
+	log.Debug().Msgf("Successfully downloaded SA key for %s from secret %s (key %s)", appRelease.FullName(), secretName, secretKey)
+
 	return s.clientFactory.Google(
-		append(options, google.OptionForceVaultSA(vaultPath, vaultKey))...,
+		append(options, google.OptionForceSAKey(saKeyJSON))...,
 	), nil
 }
 

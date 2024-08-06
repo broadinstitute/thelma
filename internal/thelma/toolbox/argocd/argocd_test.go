@@ -1,7 +1,6 @@
 package argocd
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
 	statemocks "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/mocks"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -12,130 +11,7 @@ import (
 
 const fakeArgocdHost = "fake-argo.com"
 const fakeIapToken = "fake-iap-token"
-
-func Test_Login(t *testing.T) {
-	testCases := []struct {
-		name          string
-		setupCommands func(runner *shell.MockRunner)
-		expectError   string
-	}{
-		{
-			name: "happy path",
-			setupCommands: func(runner *shell.MockRunner) {
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"login",
-						"--sso",
-						fakeArgocdHost,
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				})
-
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"account",
-						"get-user-info",
-						"--output",
-						"yaml",
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				}).WithStdout("loggedIn: true\n")
-			},
-		},
-		{
-			name: "login command fails",
-			setupCommands: func(runner *shell.MockRunner) {
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"login",
-						"--sso",
-						fakeArgocdHost,
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				}).Exits(2)
-			},
-			expectError: "login.*exited with status 2",
-		},
-		{
-			name: "browserLogin check fails",
-			setupCommands: func(runner *shell.MockRunner) {
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"login",
-						"--sso",
-						fakeArgocdHost,
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				})
-
-				runner.ExpectCmd(shell.Command{
-					Prog: "argocd",
-					Args: []string{
-						"--header",
-						"Proxy-Authorization: Bearer my-iap-token",
-						"--grpc-web",
-						"account",
-						"get-user-info",
-						"--output",
-						"yaml",
-					},
-					Env: []string{
-						fmt.Sprintf("ARGOCD_SERVER=%s", fakeArgocdHost),
-					},
-				}).WithStdout("loggedIn: false\n")
-			},
-			expectError: "login command succeeded but client is not logged in",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			runner := shell.DefaultMockRunner()
-			thelmaConfig, err := config.Load(config.WithTestDefaults(t), config.WithOverrides(map[string]interface{}{
-				"argocd.host": fakeArgocdHost,
-			}))
-			require.NoError(t, err)
-
-			if tc.setupCommands != nil {
-				tc.setupCommands(runner)
-			}
-
-			err = BrowserLogin(thelmaConfig, runner, "my-iap-token")
-
-			if tc.expectError == "" {
-				require.NoError(t, err)
-				return
-			}
-
-			assert.Error(t, err)
-			assert.Regexp(t, tc.expectError, err.Error())
-		})
-	}
-}
+const fakeToken = "fake-token"
 
 func Test_releaseSelector(t *testing.T) {
 	samDev := statemocks.NewRelease(t)
@@ -178,7 +54,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	// check for legacy configs app
 	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
-		WithStdout("ap-argocd/leonardo-configs-dev\nap-argocd/leonardo-dev\n")
+		WithStdout("argocd/leonardo-configs-dev\nargocd/leonardo-dev\n")
 
 	// sync legacy configs app
 	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
@@ -187,7 +63,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--operation", "--timeout", "300")
 
-	_mocks.expectCmd("app", "sync", "leonardo-configs-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
+	_mocks.expectCmd("app", "sync", "leonardo-configs-dev", "--retry-limit", "4", "--prune", "--timeout", "900")
 
 	_mocks.expectCmd("app", "wait", "leonardo-configs-dev", "--timeout", "900", "--health")
 
@@ -198,7 +74,7 @@ func Test_SyncRelease(t *testing.T) {
 
 	_mocks.expectCmd("app", "wait", "leonardo-dev", "--operation", "--timeout", "300")
 
-	_mocks.expectCmd("app", "sync", "leonardo-dev", "--retry-limit", "4", "--prune", "--timeout", "600")
+	_mocks.expectCmd("app", "sync", "leonardo-dev", "--retry-limit", "4", "--prune", "--timeout", "900")
 
 	_mocks.expectCmd("app", "wait", "leonardo-dev", "--timeout", "900", "--health")
 
@@ -227,7 +103,7 @@ func Test_RefreshRelease(t *testing.T) {
 
 	// check for legacy configs app
 	_mocks.expectCmd("app", "list", "--output", "name", "--selector", "app=leonardo,env=dev").
-		WithStdout("ap-argocd/leonardo-configs-dev\nap-argocd/leonardo-dev\n")
+		WithStdout("argocd/leonardo-configs-dev\nargocd/leonardo-dev\n")
 
 	// sync legacy configs app
 	_mocks.expectCmd("app", "set", "leonardo-configs-dev", "--revision", "dev", "--validate=false")
@@ -246,6 +122,14 @@ func Test_RefreshRelease(t *testing.T) {
 	}))
 }
 
+func Test_ensureLoggedIn(t *testing.T) {
+	_mocks := setupMocks(t)
+	_argocd := _mocks.argocd
+
+	_mocks.expectCmd("account", "get-user-info", "--output", "yaml").WithStdout("loggedIn: true")
+	require.NoError(t, _argocd.ensureLoggedIn())
+}
+
 func Test_setRef(t *testing.T) {
 	_mocks := setupMocks(t)
 	_argocd := _mocks.argocd
@@ -260,20 +144,12 @@ func Test_isRetryableError(t *testing.T) {
 		exp bool
 	}{
 		{
-			msg: "not retryable",
+			msg: "is retryable",
+			exp: true,
+		},
+		{
+			msg: "rpc error: code = Canceled desc = context canceled",
 			exp: false,
-		},
-		{
-			msg: "error communicating with server: EOF",
-			exp: true,
-		},
-		{
-			msg: "dial tcp 140.82.113.3:443: i/o timeout (Client.Timeout exceeded while awaiting headers)",
-			exp: true,
-		},
-		{
-			msg: `rpc error: code = Unknown desc = Post "https://ap-argocd.dsp-devops.broadinstitute.org:443/application.ApplicationService/Get": "dial tcp: lookup ap-argocd.dsp-devops.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout"`,
-			exp: true,
 		},
 	}
 
@@ -287,6 +163,7 @@ func Test_isRetryableError(t *testing.T) {
 
 type mocks struct {
 	fakeIapToken string
+	fakeToken    string
 	fakeHost     string
 	argocd       *argocd
 	runner       *shell.MockRunner
@@ -299,12 +176,13 @@ func (m *mocks) expectCmd(args ...string) *shell.Call {
 	return m.runner.ExpectCmd(shell.Command{
 		Prog: prog,
 		Args: _args,
-		Env:  []string{envVars.server + "=" + m.fakeHost},
+		Env:  []string{envVars.server + "=" + m.fakeHost, envVars.token + "=" + m.fakeToken},
 	})
 }
 
 func setupMocks(t *testing.T) *mocks {
 	iapToken := fakeIapToken
+	token := fakeToken
 	host := fakeArgocdHost
 
 	testConfig, err := config.NewTestConfig(t, map[string]interface{}{
@@ -313,17 +191,21 @@ func setupMocks(t *testing.T) *mocks {
 	require.NoError(t, err)
 
 	mockRunner := shell.DefaultMockRunner()
-	mockRunner.ExpectCmd(shell.Command{
-		Prog: prog,
-		Args: []string{"--header", "Proxy-Authorization: Bearer " + iapToken, "--grpc-web", "account", "get-user-info", "--output", "yaml"},
-		Env:  []string{envVars.server + "=" + host},
-	}).WithStdout("loggedIn: true")
 
-	_argocd, err := newArgocd(testConfig, mockRunner, iapToken, nil)
+	var cfg argocdConfig
+	err = testConfig.Unmarshal(configPrefix, &cfg)
 	require.NoError(t, err)
+
+	_argocd := &argocd{
+		runner:   mockRunner,
+		cfg:      cfg,
+		iapToken: iapToken,
+		token:    token,
+	}
 
 	return &mocks{
 		fakeIapToken: iapToken,
+		fakeToken:    token,
 		fakeHost:     host,
 		argocd:       _argocd,
 		runner:       mockRunner,

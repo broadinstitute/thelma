@@ -31,6 +31,12 @@ func (r *errorRecorder) hasErrors() bool {
 	return r.count > 0
 }
 
+func (r *errorRecorder) addSetFlagsFromEnvironmentError(key commandKey, errs ...error) {
+	for _, err := range errs {
+		r.recordError(key, setFlagsFromEnvironment, err)
+	}
+}
+
 func (r *errorRecorder) setRunError(key commandKey, err error) {
 	r.recordError(key, runHook, err)
 }
@@ -54,6 +60,8 @@ func (r *errorRecorder) recordError(key commandKey, hookType hookType, err error
 	log.Debug().Str("phase", hookType.String()).Str("command", key.description()).Err(err).Msgf("error executing hook: %s", err.Error())
 
 	switch hookType {
+	case setFlagsFromEnvironment:
+		r.err.SetFlagsFromEnvironmentErrors = append(r.err.SetFlagsFromEnvironmentErrors, hookErr)
 	case preRunHook:
 		r.err.PreRunError = hookErr
 	case runHook:

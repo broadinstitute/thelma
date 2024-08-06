@@ -28,17 +28,35 @@ const wrapperUserEnvVar = "LEGACY_WRAPPER_USER"
 // local username that processes run as in ArgoCD containers
 const argocdUser = "argocd"
 
+// name of an environment variable set in ArgoCD
+// https://argo-cd.readthedocs.io/en/stable/user-guide/build-environment/
+const argocdEnvVar = "ARGOCD_APP_NAME"
+
 // local username that Jenkins nodes run as
 const jenkinsUser = "jenkins"
 
-// name an environment variable set in GitHub actions
+// name of an environment variable set in GitHub actions
 // https://docs.github.com/en/actions/learn-github-actions/environment-variables
 const githubWorkflowEnvVar = "GITHUB_WORKFLOW"
 
 // Lookup best-effort attempt to guess platform based on the environment thelma is running in
 func Lookup() Platform {
+	// Usage on a Mac is always local
+	//goland:noinspection ALL
 	if runtime.GOOS == "darwin" {
 		return Local
+	}
+
+	// ArgoCD sidecar plugins can run as user 999, so calling user.Current() will fail
+	// (Presumably due to lack of username, though the stated error complains about
+	// `user: Current requires cgo or $USER set in environment`)
+	// https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#register-the-plugin-sidecar:~:text=Make%20sure%20that%20sidecar%20container%20is%20running%20as%20user%20999
+	//
+	// We can still identify ArgoCD by its build environment variables, and exit out
+	// before calling user.Current()
+	// https://argo-cd.readthedocs.io/en/stable/user-guide/build-environment/
+	if _, present := os.LookupEnv(argocdEnvVar); present {
+		return ArgoCD
 	}
 
 	u, err := user.Current()
@@ -47,7 +65,7 @@ func Lookup() Platform {
 		return Unknown
 	}
 
-	// ArgoCD containers run as the ArgoCD user
+	// ArgoCD configmap plugins run as the ArgoCD user
 	// https://github.com/argoproj/argo-cd/blob/master/Dockerfile#L76
 	if u.Username == argocdUser {
 		return ArgoCD

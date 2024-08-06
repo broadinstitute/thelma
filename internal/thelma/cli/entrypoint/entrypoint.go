@@ -12,7 +12,6 @@ import (
 	argocd_sync "github.com/broadinstitute/thelma/internal/thelma/cli/commands/argocd/sync"
 
 	"github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth"
-	auth_argocd "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/argocd"
 	auth_iap "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/iap"
 	auth_vault "github.com/broadinstitute/thelma/internal/thelma/cli/commands/auth/vault"
 
@@ -73,7 +72,6 @@ func withCommands(opts *cli.Options) {
 	opts.AddCommand("argocd sync", argocd_sync.NewArgoCDSyncCommand())
 
 	opts.AddCommand("auth", auth.NewAuthCommand())
-	opts.AddCommand("auth argocd", auth_argocd.NewAuthArgoCDCommand())
 	opts.AddCommand("auth iap", auth_iap.NewAuthIAPCommand())
 	opts.AddCommand("auth vault", auth_vault.NewAuthVaultCommand())
 

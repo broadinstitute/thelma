@@ -2,8 +2,9 @@ package helmfile
 
 import (
 	"fmt"
-	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 	"strings"
+
+	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
 )
 
 // ProgName is the name of the `helmfile` binary
@@ -21,6 +22,7 @@ type Cmd struct {
 	outputDir       string
 	stdout          bool
 	debugMode       bool
+	kubeVersion     string
 }
 
 // newCmd returns a new Cmd object with all fields initialized
@@ -64,6 +66,14 @@ func (cmd *Cmd) toShellCommand() shell.Command {
 		cliArgs = append(cliArgs, outputDirFlag)
 	}
 
+	// Append kubeVersion flag if set
+	// If not set, this will default to an old version that is hardcoded into the
+	// helm binary. This can cause any 3rd party charts that have kubeVersion constraints
+	// to fail to render.
+	if cmd.kubeVersion != "" {
+		cliArgs = append(cliArgs, fmt.Sprintf("--kube-version=%s", cmd.kubeVersion))
+	}
+
 	shellCmd := shell.Command{
 		Prog: ProgName,
 		Args: cliArgs,
@@ -104,6 +114,10 @@ func (cmd *Cmd) setStdout(stdout bool) {
 
 func (cmd *Cmd) setDebugMode(debugMode bool) {
 	cmd.debugMode = debugMode
+}
+
+func (cmd *Cmd) setKubeVersion(kubeVersion string) {
+	cmd.kubeVersion = kubeVersion
 }
 
 func (cmd *Cmd) addValuesFiles(valuesFiles ...string) {

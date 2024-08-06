@@ -147,35 +147,35 @@ func setStateExpectations(mock *mocks.Client) {
 		sherlock.Clusters{
 			sherlock.Cluster{
 				&models.SherlockClusterV3{
-					Name:                "terra-dev",
-					GoogleProject:       "dev-proj",
-					Address:             "10.10.10.10",
-					RequiresSuitability: utils.Nullable(false),
-					Provider:            utils.Nullable("google"),
-					Location:            utils.Nullable("us-central1-a"),
-					HelmfileRef:         utils.Nullable("HEAD"),
+					Name:          "terra-dev",
+					GoogleProject: "dev-proj",
+					Address:       "10.10.10.10",
+					RequiredRole:  "all-users",
+					Provider:      utils.Nullable("google"),
+					Location:      utils.Nullable("us-central1-a"),
+					HelmfileRef:   utils.Nullable("HEAD"),
 				},
 			},
 			sherlock.Cluster{
 				&models.SherlockClusterV3{
-					Name:                "terra-prod",
-					GoogleProject:       "prod-proj",
-					Address:             "10.10.10.11",
-					RequiresSuitability: utils.Nullable(true),
-					Provider:            utils.Nullable("google"),
-					Location:            utils.Nullable("us-central-1"),
-					HelmfileRef:         utils.Nullable("HEAD"),
+					Name:          "terra-prod",
+					GoogleProject: "prod-proj",
+					Address:       "10.10.10.11",
+					RequiredRole:  "all-users-suspend-nonsuitable",
+					Provider:      utils.Nullable("google"),
+					Location:      utils.Nullable("us-central-1"),
+					HelmfileRef:   utils.Nullable("HEAD"),
 				},
 			},
 			sherlock.Cluster{
 				&models.SherlockClusterV3{
-					Name:                "terra-qa-bees",
-					GoogleProject:       "broad-dsde-qa",
-					Address:             "10.10.10.12",
-					RequiresSuitability: utils.Nullable(false),
-					Provider:            utils.Nullable("google"),
-					Location:            utils.Nullable("us-central-1"),
-					HelmfileRef:         utils.Nullable("HEAD"),
+					Name:          "terra-qa-bees",
+					GoogleProject: "broad-dsde-qa",
+					Address:       "10.10.10.12",
+					RequiredRole:  "all-users",
+					Provider:      utils.Nullable("google"),
+					Location:      utils.Nullable("us-central-1"),
+					HelmfileRef:   utils.Nullable("HEAD"),
 				},
 			},
 		}, nil,
@@ -184,60 +184,60 @@ func setStateExpectations(mock *mocks.Client) {
 	mock.On("Environments").Return(
 		sherlock.Environments{
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
-					Name:                "dev",
-					Base:                "live",
-					BaseDomain:          utils.Nullable("dsde-dev.broadinstitute.org"),
-					DefaultCluster:      "terra-dev",
-					DefaultNamespace:    "terra-dev",
-					Lifecycle:           utils.Nullable("static"),
-					RequiresSuitability: utils.Nullable(false),
-					NamePrefixesDomain:  utils.Nullable(true),
-					HelmfileRef:         utils.Nullable("HEAD"),
-					PreventDeletion:     utils.Nullable(false),
+				&models.SherlockEnvironmentV3{
+					Name:               "dev",
+					Base:               "live",
+					BaseDomain:         utils.Nullable("dsde-dev.broadinstitute.org"),
+					DefaultCluster:     "terra-dev",
+					DefaultNamespace:   "terra-dev",
+					Lifecycle:          utils.Nullable("static"),
+					RequiredRole:       "all-users",
+					NamePrefixesDomain: utils.Nullable(true),
+					HelmfileRef:        utils.Nullable("HEAD"),
+					PreventDeletion:    utils.Nullable(false),
 				},
 			},
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
-					Name:                "prod",
-					Base:                "live",
-					BaseDomain:          utils.Nullable("dsde-prod.broadinstitute.org"),
-					DefaultCluster:      "terra-prod",
-					DefaultNamespace:    "terra-prod",
-					Lifecycle:           utils.Nullable("static"),
-					RequiresSuitability: utils.Nullable(true),
-					NamePrefixesDomain:  utils.Nullable(false),
-					HelmfileRef:         utils.Nullable("HEAD"),
-					PreventDeletion:     utils.Nullable(false),
+				&models.SherlockEnvironmentV3{
+					Name:               "prod",
+					Base:               "live",
+					BaseDomain:         utils.Nullable("dsde-prod.broadinstitute.org"),
+					DefaultCluster:     "terra-prod",
+					DefaultNamespace:   "terra-prod",
+					Lifecycle:          utils.Nullable("static"),
+					RequiredRole:       "all-users-suspend-nonsuitable",
+					NamePrefixesDomain: utils.Nullable(false),
+					HelmfileRef:        utils.Nullable("HEAD"),
+					PreventDeletion:    utils.Nullable(false),
 				},
 			},
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
-					Name:                "bee-online",
-					Base:                "bee",
-					BaseDomain:          utils.Nullable("bee.envs-terra.bio"),
-					DefaultCluster:      "terra-qa-bees",
-					DefaultNamespace:    "terra-bee-online",
-					Lifecycle:           utils.Nullable("dynamic"),
-					RequiresSuitability: utils.Nullable(false),
-					NamePrefixesDomain:  utils.Nullable(true),
-					HelmfileRef:         utils.Nullable("HEAD"),
-					PreventDeletion:     utils.Nullable(false),
+				&models.SherlockEnvironmentV3{
+					Name:               "bee-online",
+					Base:               "bee",
+					BaseDomain:         utils.Nullable("bee.envs-terra.bio"),
+					DefaultCluster:     "terra-qa-bees",
+					DefaultNamespace:   "terra-bee-online",
+					Lifecycle:          utils.Nullable("dynamic"),
+					RequiredRole:       "all-users",
+					NamePrefixesDomain: utils.Nullable(true),
+					HelmfileRef:        utils.Nullable("HEAD"),
+					PreventDeletion:    utils.Nullable(false),
 				},
 			},
 			sherlock.Environment{
-				&models.V2controllersEnvironment{
-					Name:                "bee-offline",
-					Base:                "bee",
-					BaseDomain:          utils.Nullable("bee.envs-terra.bio"),
-					DefaultCluster:      "terra-qa-bees",
-					DefaultNamespace:    "terra-bee-offline",
-					Lifecycle:           utils.Nullable("dynamic"),
-					RequiresSuitability: utils.Nullable(false),
-					NamePrefixesDomain:  utils.Nullable(true),
-					HelmfileRef:         utils.Nullable("HEAD"),
-					PreventDeletion:     utils.Nullable(false),
-					Offline:             utils.Nullable(true),
+				&models.SherlockEnvironmentV3{
+					Name:               "bee-offline",
+					Base:               "bee",
+					BaseDomain:         utils.Nullable("bee.envs-terra.bio"),
+					DefaultCluster:     "terra-qa-bees",
+					DefaultNamespace:   "terra-bee-offline",
+					Lifecycle:          utils.Nullable("dynamic"),
+					RequiredRole:       "all-users",
+					NamePrefixesDomain: utils.Nullable(true),
+					HelmfileRef:        utils.Nullable("HEAD"),
+					PreventDeletion:    utils.Nullable(false),
+					Offline:            utils.Nullable(true),
 				},
 			},
 		}, nil,
@@ -246,13 +246,13 @@ func setStateExpectations(mock *mocks.Client) {
 	mock.On("Releases").Return(
 		sherlock.Releases{
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "cluster",
 					AppVersionExact:   "1.0.1",
 					Chart:             "sam",
 					ChartVersionExact: "0.43.0",
 					Cluster:           "terra-dev",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "dev",
@@ -265,13 +265,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "cluster",
 					AppVersionExact:   "12.13.14",
 					Chart:             "sam",
 					ChartVersionExact: "0.42.0",
 					Cluster:           "terra-prod",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "prod",
@@ -284,13 +284,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "0.160.0",
 					Chart:             "datarepo",
 					ChartVersionExact: "0.33.0",
 					Cluster:           "terra-dev",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "dev",
@@ -303,13 +303,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "0.156.0",
 					Chart:             "datarepo",
 					ChartVersionExact: "0.32.0",
 					Cluster:           "terra-prod",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "prod",
@@ -322,13 +322,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "1.0.1",
 					Chart:             "sam",
 					ChartVersionExact: "0.43.0",
 					Cluster:           "terra-qa-bees",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "bee-online",
@@ -341,13 +341,13 @@ func setStateExpectations(mock *mocks.Client) {
 				},
 			},
 			sherlock.Release{
-				&models.V2controllersChartRelease{
+				&models.SherlockChartReleaseV3{
 					DestinationType:   "environment",
 					AppVersionExact:   "1.0.1",
 					Chart:             "sam",
 					ChartVersionExact: "0.43.0",
 					Cluster:           "terra-qa-bees",
-					ChartInfo: &models.V2controllersChart{
+					ChartInfo: &models.SherlockChartV3{
 						ChartRepo: utils.Nullable(""),
 					},
 					Environment: "bee-offline",

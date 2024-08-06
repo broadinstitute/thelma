@@ -231,6 +231,47 @@ func (_c *Environment_DefaultCluster_Call) RunAndReturn(run func() terra.Cluster
 	return _c
 }
 
+// EnableJanitor provides a mock function with given fields:
+func (_m *Environment) EnableJanitor() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// Environment_EnableJanitor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EnableJanitor'
+type Environment_EnableJanitor_Call struct {
+	*mock.Call
+}
+
+// EnableJanitor is a helper method to define mock.On call
+func (_e *Environment_Expecter) EnableJanitor() *Environment_EnableJanitor_Call {
+	return &Environment_EnableJanitor_Call{Call: _e.mock.On("EnableJanitor")}
+}
+
+func (_c *Environment_EnableJanitor_Call) Run(run func()) *Environment_EnableJanitor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Environment_EnableJanitor_Call) Return(_a0 bool) *Environment_EnableJanitor_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Environment_EnableJanitor_Call) RunAndReturn(run func() bool) *Environment_EnableJanitor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IsCluster provides a mock function with given fields:
 func (_m *Environment) IsCluster() bool {
 	ret := _m.Called()
@@ -889,43 +930,43 @@ func (_c *Environment_Releases_Call) RunAndReturn(run func() []terra.Release) *E
 	return _c
 }
 
-// RequireSuitable provides a mock function with given fields:
-func (_m *Environment) RequireSuitable() bool {
+// RequiredRole provides a mock function with given fields:
+func (_m *Environment) RequiredRole() string {
 	ret := _m.Called()
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
 		r0 = rf()
 	} else {
-		r0 = ret.Get(0).(bool)
+		r0 = ret.Get(0).(string)
 	}
 
 	return r0
 }
 
-// Environment_RequireSuitable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequireSuitable'
-type Environment_RequireSuitable_Call struct {
+// Environment_RequiredRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RequiredRole'
+type Environment_RequiredRole_Call struct {
 	*mock.Call
 }
 
-// RequireSuitable is a helper method to define mock.On call
-func (_e *Environment_Expecter) RequireSuitable() *Environment_RequireSuitable_Call {
-	return &Environment_RequireSuitable_Call{Call: _e.mock.On("RequireSuitable")}
+// RequiredRole is a helper method to define mock.On call
+func (_e *Environment_Expecter) RequiredRole() *Environment_RequiredRole_Call {
+	return &Environment_RequiredRole_Call{Call: _e.mock.On("RequiredRole")}
 }
 
-func (_c *Environment_RequireSuitable_Call) Run(run func()) *Environment_RequireSuitable_Call {
+func (_c *Environment_RequiredRole_Call) Run(run func()) *Environment_RequiredRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *Environment_RequireSuitable_Call) Return(_a0 bool) *Environment_RequireSuitable_Call {
+func (_c *Environment_RequiredRole_Call) Return(_a0 string) *Environment_RequiredRole_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *Environment_RequireSuitable_Call) RunAndReturn(run func() bool) *Environment_RequireSuitable_Call {
+func (_c *Environment_RequiredRole_Call) RunAndReturn(run func() string) *Environment_RequiredRole_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1,10 +1,12 @@
 package render
 
 import (
-	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
-	"github.com/pkg/errors"
+	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/broadinstitute/thelma/internal/thelma/charts/source"
+	"github.com/pkg/errors"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app"
 	"github.com/broadinstitute/thelma/internal/thelma/cli"
@@ -64,6 +66,11 @@ const defaultOutputDir = "output"
 // defaultChartSourceDir name of default chart source directory
 const defaultChartSourceDir = "charts"
 
+// modeArgocdAutoRefEnvVar is the environment variable that --mode=argocd-auto uses to determine the ref
+// of terra-helmfile. If it's a versioned or otherwise unique ref, it'll use --mode=development, otherwise
+// it'll use --mode=deploy.
+const modeArgocdAutoRefEnvVar = "ARGOCD_APP_SOURCE_TARGET_REVISION"
+
 // renderCommand contains state and configuration for executing a render from the command-line
 type renderCommand struct {
 	helmfileArgs  *helmfile.Args
@@ -89,6 +96,7 @@ var flagNames = struct {
 	scope                      string
 	validate                   string
 	exitZeroNoMatchingReleases string
+	kubeVersion                string
 }{
 	argocd:                     "argocd",
 	chartDir:                   "chart-dir",
@@ -104,6 +112,7 @@ var flagNames = struct {
 	scope:                      "scope",
 	validate:                   "validate",
 	exitZeroNoMatchingReleases: "exit-zero-no-matching-releases",
+	kubeVersion:                "kube-version",
 }
 
 // flagValues is a struct for capturing flag values that are parsed by Cobra.
@@ -122,6 +131,7 @@ type flagValues struct {
 	scope                      string
 	validate                   string
 	exitZeroNoMatchingReleases bool
+	kubeVersion                string
 }
 
 // NewRenderCommand constructs a new renderCommand
@@ -160,10 +170,11 @@ func (cmd *renderCommand) ConfigureCobra(cobraCommand *cobra.Command) {
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.stdout, flagNames.stdout, false, "Render manifests to stdout instead of output directory")
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.debug, flagNames.debug, false, "Pass --debug to helmfile to render out invalid YAML for debugging")
 	cobraCommand.Flags().IntVar(&cmd.flagVals.parallelWorkers, flagNames.parallelWorkers, 1, "Number of parallel workers to launch when rendering")
-	cobraCommand.Flags().StringVar(&cmd.flagVals.mode, flagNames.mode, "development", `Either "development" (render from chart source directory) or "deploy" (render using released chart versions). Defaults to "development"`)
+	cobraCommand.Flags().StringVar(&cmd.flagVals.mode, flagNames.mode, "development", `Either "development" (render from chart source directory), "deploy" (render using released chart versions), or "argocd-auto" (use "development" when running on ArgoCD with a unique git ref, "deploy" otherwise). Defaults to "development"`)
 	cobraCommand.Flags().StringVar(&cmd.flagVals.scope, flagNames.scope, "all", `One of "release" (release-scoped resources only), "destination" (environment-/cluster-wide resources, such as Argo project, only), or "all" (include both types)`)
 	cobraCommand.Flags().StringVar(&cmd.flagVals.validate, flagNames.validate, "skip", `One of "skip" (no validation on render output), "warn" (print validation of render output but don't fail), or "fail" (exit with error if render output validation fails)`)
 	cobraCommand.Flags().BoolVar(&cmd.flagVals.exitZeroNoMatchingReleases, flagNames.exitZeroNoMatchingReleases, false, `Use to make Thelma exit with status code 0 if no chart releases match command-line arguments. Useful for CI/CD pipelines.`)
+	cobraCommand.Flags().StringVar(&cmd.flagVals.kubeVersion, flagNames.kubeVersion, "1.25.0", "Kubernetes version to pass to helmfile template --kube-version flag")
 
 	// Single-chart flags -- these can only be used for renders of a single chart
 	cobraCommand.Flags().StringVar(&cmd.flagVals.chartVersion, flagNames.chartVersion, "", "Override chart version")
@@ -279,6 +290,9 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.RenderSelection,
 	// debug mode
 	renderOptions.DebugMode = flagVals.debug
 
+	// kubeVersion
+	renderOptions.KubeVersion = flagVals.kubeVersion
+
 	// parallelWorkers
 	if flags.Changed(flagNames.parallelWorkers) && flags.Changed(flagNames.stdout) {
 		// --parallel-workers renders manifests in parallel. For now we only support it for directory renders
@@ -304,8 +318,20 @@ func (cmd *renderCommand) fillRenderOptions(selection *selector.RenderSelection,
 		renderOptions.ResolverMode = resolver.Development
 	case "deploy":
 		renderOptions.ResolverMode = resolver.Deploy
+	case "argocd-auto":
+		// Logic inherited from https://github.com/broadinstitute/terra-helmfile/blob/fd939dc4a127020f595b4e50a4d58694b757232e/charts/dsp-argocd/plugin-scripts/terra-helmfile-app.sh#L42
+		renderOptions.ResolverMode = resolver.Development
+		argocdRef, argocdRefPresent := os.LookupEnv(modeArgocdAutoRefEnvVar)
+		if argocdRefPresent {
+			for _, unversionedRef := range []string{"", "master", "main", "HEAD"} {
+				if argocdRef == unversionedRef {
+					renderOptions.ResolverMode = resolver.Deploy
+					break
+				}
+			}
+		}
 	default:
-		return errors.Errorf(`invalid value for --%s (must be "development" or "deploy"): %v`, flagNames.mode, flagVals.mode)
+		return errors.Errorf(`invalid value for --%s (must be "development", "deploy", or "argocd-auto"): %v`, flagNames.mode, flagVals.mode)
 	}
 
 	// validate mode

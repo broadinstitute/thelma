@@ -2,34 +2,37 @@ package iap
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base32"
 	"encoding/json"
 	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"github.com/broadinstitute/thelma/internal/thelma/utils/serve_redirect"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"net"
-	"net/http"
 	"net/url"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 )
 
 const (
-	// how long to wait before timing out compute engine metadata request
-	computeEngineMetadataRequestTimeout = 15 * time.Second
+	// startingPort is the first port that will be tried when looking for an available port for the redirect URI.
+	// It will count up from there.
+	startingPort = 4444
+	// portIterations is the number of ports that will be tried when looking for an available port for the redirect URI.
+	// The redirect URI will be tried on ports starting from startingPort and counting up to startingPort + portIterations.
+	portIterations = 10
 )
 
-func browserProvider(creds credentials.Credentials, cfg iapConfig, vaultClient *vaultapi.Client, runner shell.Runner) (credentials.TokenProvider, error) {
-	oauthConfig, redirectPort, err := createOAuthConfig(cfg, vaultClient)
+func browserProvider(creds credentials.Credentials, cfg iapConfig, runner shell.Runner, project Project) (credentials.TokenProvider, error) {
+	oauthConfig, redirectPort, err := createOAuthConfig(cfg, project)
+	if err != nil {
+		return nil, err
+	}
+	tokenKey, err := project.tokenKey()
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +42,9 @@ func browserProvider(creds credentials.Credentials, cfg iapConfig, vaultClient *
 		IdToken string        `json:"idToken"`
 	}
 
+	idTokenValidator := makeIdTokenValidator(oauthConfig.ClientID)
+
 	return credentials.GetTypedTokenProvider(creds, tokenKey, func(options *credentials.TypedTokenOptions[*oauth2.Token]) {
-		options.EnvVars = []string{defaultTokenEnvVar, backwardsCompatibilityTokenEnvVar}
 		options.UnmarshalFromStoreFn = func(bytes []byte) (*oauth2.Token, error) {
 			var stored storedFormat
 			if err := json.Unmarshal(bytes, &stored); err != nil {
@@ -70,7 +74,7 @@ func browserProvider(creds credentials.Credentials, cfg iapConfig, vaultClient *
 			if idtoken, ok := token.Extra("id_token").(string); !ok {
 				return errors.Errorf("id token was unexpected type %T", token.Extra("id_token"))
 			} else {
-				return idtokenValidator([]byte(idtoken))
+				return idTokenValidator([]byte(idtoken))
 			}
 		}
 		options.IssueFn = func() (*oauth2.Token, error) {
@@ -85,37 +89,19 @@ func browserProvider(creds credentials.Credentials, cfg iapConfig, vaultClient *
 	})
 }
 
-func createOAuthConfig(cfg iapConfig, vaultClient *vaultapi.Client) (*oauth2.Config, int, error) {
-	var oauthCredentialsFields struct {
-		AuthProviderX509CertUrl string   `json:"auth_provider_x509_cert_url" mapstructure:"auth_provider_x509_cert_url"`
-		AuthUri                 string   `json:"auth_uri" mapstructure:"auth_uri"`
-		ClientId                string   `json:"client_id" mapstructure:"client_id"`
-		ClientSecret            string   `json:"client_secret" mapstructure:"client_secret"`
-		ProjectId               string   `json:"project_id" mapstructure:"project_id"`
-		RedirectUris            []string `json:"redirect_uris" mapstructure:"redirect_uris"`
-		TokenUri                string   `json:"token_uri" mapstructure:"token_uri"`
+func createOAuthConfig(cfg iapConfig, project Project) (*oauth2.Config, int, error) {
+	clientID, clientSecret, err := project.oauthCredentials(cfg)
+	if err != nil {
+		return nil, 0, err
 	}
-
-	if secret, err := vaultClient.Logical().Read(cfg.OAuthCredentials.VaultPath); err != nil {
-		return nil, 0, errors.Errorf("error retrieving OAuth client credentials from Vault: %v", err)
-	} else if secret == nil {
-		return nil, 0, errors.Errorf("error retrieving OAuth client credentials from Vault: no secret at %s", cfg.OAuthCredentials.VaultPath)
-	} else if encodedCreds, exists := secret.Data[cfg.OAuthCredentials.VaultKey]; !exists {
-		return nil, 0, errors.Errorf("OAuth client credential secret at %s has unexpected format (missing key %s)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
-	} else if _, isMap := encodedCreds.(map[string]interface{}); !isMap {
-		return nil, 0, errors.Errorf("OAuth client credential secret at %s (key %s) has unexpected format (expected value to be map type)", cfg.OAuthCredentials.VaultPath, cfg.OAuthCredentials.VaultKey)
-	} else if err = mapstructure.Decode(encodedCreds, &oauthCredentialsFields); err != nil {
-		return nil, 0, errors.Errorf("error decoding OAuth client credentials: %v", err)
-	}
-
 	oauthConfig := &oauth2.Config{
-		ClientID:     oauthCredentialsFields.ClientId,
-		ClientSecret: oauthCredentialsFields.ClientSecret,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
 		Scopes:       []string{"openid", "email", "profile"},
 		Endpoint:     google.Endpoint,
 	}
 
-	if redirectURI, err := selectAvailableLocalRedirectURI(oauthCredentialsFields.RedirectUris); err != nil {
+	if redirectURI, err := selectAvailableLocalRedirectURI(); err != nil {
 		return nil, 0, err
 	} else {
 		oauthConfig.RedirectURL = redirectURI
@@ -129,37 +115,23 @@ func createOAuthConfig(cfg iapConfig, vaultClient *vaultapi.Client) (*oauth2.Con
 	return oauthConfig, parsedPortOfRedirectURI, nil
 }
 
-func selectAvailableLocalRedirectURI(redirectURIs []string) (string, error) {
-	if len(redirectURIs) == 0 {
-		return "", errors.Errorf("no redirect URIs provided")
-	}
-
-	var redirectURI string
-	// Source of truth for redirect URI can't be in code/config, it must be in the OAuth Credentials
-	// While we're at it might as well check that the URI port is open
-	for _, uri := range redirectURIs {
+func selectAvailableLocalRedirectURI() (string, error) {
+	for i := 0; i < portIterations; i++ {
+		port := startingPort + i
+		uri := fmt.Sprintf("http://localhost:%d", port)
 		log.Trace().Msgf("checking redirect URI: %s", uri)
-		parts := strings.Split(uri, ":")
-		if len(parts) != 3 || parts[1] != "//localhost" {
-			continue
-		}
-		ln, err := net.Listen("tcp", fmt.Sprintf(":%s", parts[2]))
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if ln != nil {
 			_ = ln.Close()
 		}
 		if err == nil {
-			redirectURI = uri
-			break
+			log.Trace().Msgf("using redirect URI: %s", uri)
+			return uri, nil
 		} else {
-			log.Debug().Err(err).Msgf("couldn't use %s", uri)
+			log.Debug().Err(err).Msgf("couldn't use URI: %s", uri)
 		}
 	}
-
-	if redirectURI == "" {
-		return "", errors.Errorf("unable to serve on any of the %d redirect URIs (ports busy?)", len(redirectURIs))
-	}
-	log.Trace().Msgf("Using redirect URI of %s", redirectURI)
-	return redirectURI, nil
+	return "", errors.New("unable to find an available local port for redirect URI")
 }
 
 func parsePortOfRedirectURI(redirectURI string) (int, error) {
@@ -179,48 +151,15 @@ func parsePortOfRedirectURI(redirectURI string) (int, error) {
 }
 
 func useBrowserForAuthorizationCode(config *oauth2.Config, runner shell.Runner, port int) (string, error) {
-	log.Debug().Msgf("Obtaining OAuth authorization code...")
-	stateBytes := make([]byte, 32)
-	_, err := rand.Read(stateBytes)
-	if err != nil {
-		return "", err
-	}
-	// And that's when I realized I was CSRF-protecting a CLI
-	state := base32.StdEncoding.EncodeToString(stateBytes)[:24]
-
 	var authorizationCode string
-
-	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Query().Get("code") == "" {
-			// Browsers insist on looking for a /favicon.ico, so ignore it silently
-			writer.WriteHeader(http.StatusBadRequest)
-			_, _ = fmt.Fprintf(writer, "%d - no code in request", http.StatusBadRequest)
-		} else {
-			log.Debug().Msgf("Received redirect with authorization code")
-			if request.URL.Query().Get("state") != state {
-				log.Debug().Msgf("Redirect state incorrect, rejecting (%s)", request.URL.String())
-				writer.WriteHeader(http.StatusConflict)
-				_, _ = fmt.Fprintf(writer, "%d - bad state", http.StatusConflict)
-			} else {
-				log.Debug().Msgf("Redirect state correct, storing")
-				authorizationCode = request.URL.Query().Get("code")
-				writer.WriteHeader(http.StatusOK)
-				// Believe it or not, it is literally impossible for a page to close itself
-				_, _ = fmt.Fprintf(writer, "Success! You can close this window.")
-			}
-		}
+	state, closeFunc, err := serve_redirect.ServeRedirect(port, "/", func(code string) {
+		authorizationCode = code
 	})
+	if err != nil {
+		return "", errors.Errorf("failed to serve redirect: %v", err)
+	}
+	defer closeFunc()
 
-	redirectServer := &http.Server{Addr: fmt.Sprintf(":%d", port)}
-	go func() {
-		// We actually do want to precisely compare errors here, we're outputting at the trace level anyway
-		//goland:noinspection GoDirectComparisonOfErrors
-		if err := redirectServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Trace().Err(err).Msg("redirect server closed with unexpected error")
-		}
-	}()
-
-	log.Trace().Msgf("redirect server available on port %d", port)
 	browserUrl := config.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	var openBrowserCmd shell.Command
 	switch runtime.GOOS {
@@ -247,10 +186,5 @@ func useBrowserForAuthorizationCode(config *oauth2.Config, runner shell.Runner, 
 		time.Sleep(50 * time.Millisecond)
 	}
 	log.Info().Msg("Received authorization code, thanks!")
-	if err = redirectServer.Close(); err != nil {
-		log.Trace().Msgf("error closing redirect server: %v", err)
-	} else {
-		log.Trace().Msgf("redirect server stopped")
-	}
 	return authorizationCode, nil
 }

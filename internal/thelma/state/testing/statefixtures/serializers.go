@@ -18,7 +18,7 @@ type Cluster struct {
 	Address          string
 	Project          string
 	Location         string
-	RequireSuitable  bool
+	RequiredRole     string
 	TerraHelmfileRef string
 }
 
@@ -29,9 +29,10 @@ type Environment struct {
 	Lifecycle            terra.Lifecycle
 	UniqueResourcePrefix string
 	DefaultCluster       string
-	RequireSuitable      bool
+	RequiredRole         string
 	TerraHelmfileRef     string
 	Owner                string
+	EnableJanitor        bool
 }
 
 type Chart struct {

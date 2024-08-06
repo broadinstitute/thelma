@@ -3,6 +3,7 @@ package clients
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/clients/github/gha"
+	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"sync"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
@@ -10,7 +11,6 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/root"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/github"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
-	"github.com/broadinstitute/thelma/internal/thelma/clients/iap"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/kubernetes"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/sherlock"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/slack"
@@ -22,11 +22,11 @@ import (
 
 // Clients convenience builders for client objects used in Thelma commands
 type Clients interface {
-	// IAP returns a credentials.TokenProvider for dsp-tools-k8s IAP tokens.
-	IAP() (credentials.TokenProvider, error)
-	// IAPToken returns a valid dsp-tools-k8s IAP token (as a string), or an error.
+	// IAP returns a credentials.TokenProvider for a particular iap.Project's IAP tokens.
+	IAP(project iap.Project) (credentials.TokenProvider, error)
+	// IAPToken returns a valid iap.Project's IAP token (as a string), or an error.
 	// This is a convenience method on top of IAP().
-	IAPToken() (string, error)
+	IAPToken(project iap.Project) (string, error)
 	// Vault returns a Vault client for the DSP Vault instance
 	Vault() (*vaultapi.Client, error)
 	// ArgoCD returns a client for the DSP ArgoCD instance
@@ -71,12 +71,12 @@ func (c *clients) Google(options ...google.Option) google.Clients {
 	return google.New(opts...)
 }
 
-func (c *clients) IAP() (credentials.TokenProvider, error) {
-	return iap.TokenProvider(c.thelmaConfig, c.creds, c.Vault, c.Google, c.runner)
+func (c *clients) IAP(project iap.Project) (credentials.TokenProvider, error) {
+	return iap.TokenProvider(c.thelmaConfig, c.creds, c.Google, c.runner, project)
 }
 
-func (c *clients) IAPToken() (string, error) {
-	if tokenProvider, err := c.IAP(); err != nil {
+func (c *clients) IAPToken(project iap.Project) (string, error) {
+	if tokenProvider, err := c.IAP(project); err != nil {
 		return "", err
 	} else if token, err := tokenProvider.Get(); err != nil {
 		return "", err
@@ -90,16 +90,23 @@ func (c *clients) Vault() (*vaultapi.Client, error) {
 }
 
 func (c *clients) ArgoCD() (argocd.ArgoCD, error) {
-	iapToken, err := c.IAPToken()
+	iapTokenProvider, err := c.IAP(iap.DspDevopsSuperProd)
 	if err != nil {
 		return nil, err
 	}
 
-	return argocd.New(c.thelmaConfig, c.runner, iapToken, c.Vault)
+	// We make a new Sherlock here... it'll reuse token providers so we're not incurring that much overhead
+	sherlockClient, err := c.Sherlock()
+	if err != nil {
+		return nil, err
+	}
+
+	sherlockHttpClient := sherlockClient.HttpClient()
+	return argocd.New(c.thelmaConfig, c.runner, c.creds, iapTokenProvider, sherlockHttpClient)
 }
 
 func (c *clients) Sherlock(options ...sherlock.Option) (sherlock.Client, error) {
-	iapProvider, err := c.IAP()
+	iapProvider, err := c.IAP(iap.DspDevopsSuperProd)
 	if err != nil {
 		return nil, err
 	}

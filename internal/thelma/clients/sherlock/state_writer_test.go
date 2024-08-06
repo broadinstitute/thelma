@@ -2,6 +2,7 @@ package sherlock_test
 
 import (
 	"encoding/json"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
 	"github.com/broadinstitute/thelma/internal/thelma/state/testing/statefixtures"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+const testIapToken = "test identity aware proxy token"
 
 type sherlockStateWriterClientSuite struct {
 	suite.Suite
@@ -51,6 +54,8 @@ func (suite *sherlockStateWriterClientSuite) TearDownSuite() {
 func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.conflictServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 
@@ -68,6 +73,8 @@ func (suite *sherlockStateWriterClientSuite) TestIgnore409Conflict() {
 func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.errServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 
@@ -85,6 +92,8 @@ func (suite *sherlockStateWriterClientSuite) TestPropagatesServerError() {
 func (suite *sherlockStateWriterClientSuite) TestSuccessfulStateExport() {
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.successfulCreateServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 	suite.Assert().NoError(err)
 
@@ -105,6 +114,8 @@ func (suite *sherlockStateWriterClientSuite) TestSuccessfulDelete() {
 	mockEnv.On("Releases").Return(nil)
 	client, err := sherlock.NewClient(func(options *sherlock.Options) {
 		options.Addr = suite.successfulDeleteServer.URL
+		options.IapTokenProvider = &credentials.MockTokenProvider{ReturnString: testIapToken}
+		options.GhaOidcTokenProvider = &credentials.MockTokenProvider{ReturnNil: true}
 	})
 
 	suite.Assert().NoError(err)
@@ -141,39 +152,39 @@ func constructFakeState(t *testing.T) terra.State {
 func newMockConflictServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/charts/v3", mock409ConflictHandler())
-	mux.HandleFunc("/api/v2/environments", mock409ConflictHandler())
+	mux.HandleFunc("/api/environments/v3", mock409ConflictHandler())
 	mux.HandleFunc("/api/clusters/v3", mock409ConflictHandler())
-	mux.HandleFunc("/api/v2/chart-releases", mock409ConflictHandler())
+	mux.HandleFunc("/api/chart-releases/v3", mock409ConflictHandler())
 	return httptest.NewServer(mux)
 }
 
 func newMockErroringSherlockServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v2/environments", mockErroringHandler())
+	mux.HandleFunc("/api/environments/v3", mockErroringHandler())
 	mux.HandleFunc("/api/clusters/v3", mockErroringHandler())
-	mux.HandleFunc("/api/v2/chart-releases", mockErroringHandler())
+	mux.HandleFunc("/api/chart-releases/v3", mockErroringHandler())
 	mux.HandleFunc("/api/charts/v3", mockErroringHandler())
 	return httptest.NewServer(mux)
 }
 
 func newMockSuccessfulCreateServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v2/environments", mockSuccessfulCreateHandler())
+	mux.HandleFunc("/api/environments/v3", mockSuccessfulCreateHandler())
 	mux.HandleFunc("/api/clusters/v3", mockSuccessfulCreateHandler())
-	mux.HandleFunc("/api/v2/chart-releases", mockSuccessfulCreateHandler())
+	mux.HandleFunc("/api/chart-releases/v3", mockSuccessfulCreateHandler())
 	mux.HandleFunc("/api/charts/v3", mockSuccessfulCreateHandler())
 	return httptest.NewServer(mux)
 }
 
 func newMockSuccessfulDeleteServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v2/environments/deleted-env", mockDeleteEnvironmentsHandler())
+	mux.HandleFunc("/api/environments/v3/deleted-env", mockDeleteEnvironmentsHandler())
 	return httptest.NewServer(mux)
 }
 
 func newMockErroringDeleteServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v2/environments/deleted-env", mockErroringHandler())
+	mux.HandleFunc("/api/environments/v3/deleted-env", mockErroringHandler())
 	return httptest.NewServer(mux)
 }
 
@@ -190,8 +201,8 @@ func mockErroringHandler() http.HandlerFunc {
 }
 
 func mockSuccessfulCreateHandler() http.HandlerFunc {
-	response := environments.NewPostAPIV2EnvironmentsCreated()
-	payload := &models.V2controllersEnvironment{
+	response := environments.NewPostAPIEnvironmentsV3Created()
+	payload := &models.SherlockEnvironmentV3{
 		Name: "test-env",
 	}
 	response.Payload = payload
@@ -204,8 +215,8 @@ func mockSuccessfulCreateHandler() http.HandlerFunc {
 }
 
 func mockDeleteEnvironmentsHandler() http.HandlerFunc {
-	response := environments.NewDeleteAPIV2EnvironmentsSelectorOK()
-	payload := &models.V2controllersEnvironment{
+	response := environments.NewDeleteAPIEnvironmentsV3SelectorOK()
+	payload := &models.SherlockEnvironmentV3{
 		Name: "deleted-env",
 	}
 	response.Payload = payload

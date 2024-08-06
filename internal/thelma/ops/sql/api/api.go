@@ -89,8 +89,12 @@ func (k KubernetesInstance) Name() string {
 	return k.Release.FullName()
 }
 
+// IsProd doesn't gate permissions -- it hints to Thelma to help with account
+// switching. If we need this to be smarter in the future we could either
+// add fields to Sherlock clusters or have logic here to evaluate required
+// role names
 func (k KubernetesInstance) IsProd() bool {
-	return k.Release.Cluster().RequireSuitable()
+	return strings.Contains(k.Release.Cluster().Name(), "prod")
 }
 
 func (k KubernetesInstance) IsShared() bool {

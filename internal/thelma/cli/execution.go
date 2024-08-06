@@ -5,6 +5,7 @@ import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/builder"
 	"github.com/broadinstitute/thelma/internal/thelma/app/metrics"
 	"github.com/broadinstitute/thelma/internal/thelma/app/version"
+	"github.com/broadinstitute/thelma/internal/thelma/cli/environmentflags"
 	"github.com/rs/zerolog/log"
 	"strings"
 	"time"
@@ -44,6 +45,7 @@ func newExecution(options *executionOptions, leafNode *node, builder builder.The
 // all errors are aggregated into a RunError
 func (e *execution) execute() error {
 	e.startTime = time.Now()
+	e.setFlagsFromEnvironment()
 	e.preRun()
 	e.run()
 	e.postRun()
@@ -57,8 +59,37 @@ func (e *execution) execute() error {
 	return e.errorRecorder.error()
 }
 
+// setFlagsFromEnvironment calls out to the environmentflags.SetFlagsFromEnvironment. This function does two things:
+//
+//	1, it uses e.errorRecorder to handle any errors so we clean up properly
+//	2, it encapsulates punching a hole in the normal node order
+//
+// That second point is the most subtle and most important. See ThelmaCommand.PreRun, ThelmaCommand.Run, and
+// ThelmaCommand.PostRun for context on the order that each node's hooks are executed. That order is perfect for
+// most things, but not loading flags from the environment.
+//
+// To set flags from the environment, we need access to the full set of flags for the command. That means we actually
+// want to use the flags that cobra.Command makes visible on the execution.leafNode (in other words, what's shown in
+// `thelma <command> --help`). If we were to access the flags from any other node, we'd be getting the set of flags
+// visible if that node's command was the "leaf" being executed.
+//
+// Our first instinct might be to add environment parsing to the leafNode's ThelmaCommand.PreRun hook. The problem is
+// that parent nodes' ThelmaCommand.PreRun would've executed first! If a parent node set a persistent flag, the parent
+// node could've already read it in its own ThelmaCommand.PreRun before we get a chance to parse from the environment.
+// We need to grab the leaf node and handle environment parsing before *any* hooks. That way, every hook will see the
+// same values for the flags visible to each node.
+func (e *execution) setFlagsFromEnvironment() {
+	if errs := environmentflags.SetFlagsFromEnvironment(e.leafNode.cobraCommand.Flags()); len(errs) > 0 {
+		e.errorRecorder.addSetFlagsFromEnvironmentError(e.leafNode.key, errs...)
+	}
+}
+
 // preRun executes pre-run phase of a Thelma command execution
 func (e *execution) preRun() {
+	if e.errorRecorder.hasErrors() {
+		log.Debug().Msgf("skipping pre-run phase, an error has already occured")
+		return
+	}
 	// Run ancestor and leafNode PreRun hooks in descending order (root first)
 	for _, n := range pathFromRoot(e.leafNode) {
 		e.runContext.setCurrentExecutingNode(n)
@@ -77,7 +108,7 @@ func (e *execution) run() {
 		return
 	}
 	if e.errorRecorder.hasErrors() {
-		log.Debug().Msgf("skipping run phase, pre-run returned an error")
+		log.Debug().Msgf("skipping run phase, an error has already occured")
 		return
 	}
 	e.runContext.setCurrentExecutingNode(e.leafNode)

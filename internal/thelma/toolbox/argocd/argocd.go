@@ -3,6 +3,9 @@ package argocd
 import (
 	"bytes"
 	"fmt"
+	"github.com/avast/retry-go"
+	"github.com/broadinstitute/thelma/internal/thelma/app/credentials"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -11,13 +14,10 @@ import (
 	"time"
 
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	naming "github.com/broadinstitute/thelma/internal/thelma/state/api/terra/argocd"
-	"github.com/broadinstitute/thelma/internal/thelma/utils"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/pool"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
-	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -27,7 +27,7 @@ import (
 const prog = `argocd`
 const configPrefix = `argocd`
 const yamlFormat = "yaml"
-const applicationNamespace = "ap-argocd"
+const applicationNamespace = "argocd"
 
 // envVars holds names of environment variables we pass to the `argocd` cli
 var envVars = struct {
@@ -51,25 +51,28 @@ var flags = struct {
 	outputFormat: "--output",
 }
 
-// retryInterval how long to wait between retries of failed ArgoCD cli commands
-const retryInterval = 10 * time.Second
+// retryBaseInterval base interval for how long to wait between retries of failed ArgoCD cli commands
+// (passed to backoff algo)
+const retryBaseInterval = 10 * time.Second
 
-// retryCount max number of retries
-const retryCount = 3
+// retryMaxDelay upper limit for retry interval for failed ArgoCD cli commands
+const retryMaxDelay = time.Minute
 
-// flags holds list of errors that indicate an argocd cli command should be re-run
-var retryableErrors = []*regexp.Regexp{
-	// occasional weird socket errors that only show up on OSX
-	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: address already in use"),
-	regexp.MustCompile("Failed to establish connection to .*: listen unix .* bind: file exists"),
-	// occasional weird socket errors that only show up in Jenkins. example full message:
-	// rpc error: code = Unknown desc = Post \\\"https://ap-argocd.dsp-devops.broadinstitute.org:443/application.ApplicationService/Get\\\":
-	// dial tcp: lookup ap-argocd.dsp-devops.broadinstitute.org on 169.254.169.254:53: read udp 172.17.0.1:59204->169.254.169.254:53: i/o timeout\"
-	regexp.MustCompile("rpc error: code = Unknown.*dial tcp: lookup .*: read udp .*: i/o timeout"),
-	// occasional errors where ArgoCD can't connect to GitHub to fetch the repo
-	regexp.MustCompile("[tT]imeout exceeded while awaiting headers"),
-	// occasional network errors in communication between GHA and ArgoCD
-	regexp.MustCompile("EOF"),
+// retryAttempts max number of attempts to run a failed ArgoCD cli command
+const retryAttempts = 4
+
+// unretryableErrors holds list of errors that indicate a failed ArgoCD cli command should NOT be re-run
+var unretryableErrors = []*regexp.Regexp{
+	// don't retry commands that fail with a timeout error, whatever we were waiting for (sync to finish, app to
+	// become healthy) did not finish successfully within the desired timeout.
+	regexp.MustCompile(regexp.QuoteMeta("rpc error: code = Canceled")),
+	// don't retry commands that fail with a 401, because we actually use 401s from ArgoCD to indicate that we
+	// need to re-run ArgoCD auth process -- if we retry, it seems to the user like Thelma is hanging.
+	regexp.MustCompile(regexp.QuoteMeta("failed with status code 401")),
+	// don't retry commands that fail with a 403, because it means that ArgoCD does know who the caller is but
+	// that they explicitly aren't authorized. Failing fast makes the UX better -- otherwise it can take up to
+	// a minute for retries to run out.
+	regexp.MustCompile(regexp.QuoteMeta("rpc error: code = PermissionDenied")),
 }
 
 // SyncOptions options for an ArgoCD sync operation
@@ -112,14 +115,13 @@ type WaitExistOption func(options *WaitExistOptions)
 
 type argocdConfig struct {
 	// Host hostname of the ArgoCD server
-	Host string `valid:"hostname" default:"ap-argocd.dsp-devops.broadinstitute.org"`
+	Host string `valid:"hostname" default:"argocd.dsp-devops-prod.broadinstitute.org"`
 
-	// Vault (optional) pull ArgoCD token from Vault and use that to authenticate to ArgoCD. (should only be used in CI pipelines)
-	Vault struct {
-		Enabled bool   `default:"false"`
-		Path    string `default:"secret/devops/thelma/argocd"`
-		Key     string `default:"token"`
-	}
+	SherlockOidcProvider string `valid:"url" default:"https://sherlock-oidc.dsp-devops-prod.broadinstitute.org/oidc"`
+	// SherlockOidcCliClient is the public CLI client ID for running PKCE native OAuth2 flows from Thelma against
+	// Sherlock's OIDC provider. This value is intentionally public in a manner not dissimilar from the IAP
+	// client info stored within Thelma's codebase.
+	SherlockOidcCliClientID string `default:"PjVR6GrFsnKMN7k9Ldo9vWrvg5zPtEMOxSgbSaewoAo"`
 
 	// GRPCWeb set to true to pass --grpc-web flag to all ArgoCD commands
 	GRPCWeb bool `default:"true"`
@@ -137,7 +139,7 @@ type argocdConfig struct {
 	WaitInProgressOperationTimeoutSeconds int `default:"300"`
 
 	// SyncTimeoutSeconds timeout for sync operations
-	SyncTimeoutSeconds int `default:"600"`
+	SyncTimeoutSeconds int `default:"900"`
 
 	// SyncRetries how many times to retry failed sync operations before giving up
 	SyncRetries int `default:"4"`
@@ -174,78 +176,37 @@ type ArgoCD interface {
 	DefaultSyncOptions() SyncOptions
 }
 
-// BrowserLogin is a thin wrapper around the `argocd login --sso` command, which:
-// * presents users with a web UI to log in with their GitHub SSO credentials (same flow as logging in to the ArgoCD webapp)
-// * uses those SSO credentials to generate a new ArgoCD authentication token for the user's identity
-// * stores the generated token in ~/.argocd/config
-func BrowserLogin(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) error {
-	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
-	if err != nil {
-		return err
-	}
-	if err = a.browserLogin(); err != nil {
-		return err
-	}
-	if err = a.ensureLoggedIn(); err != nil {
-		return errors.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
-	}
-	return nil
-}
-
-// New return a new ArgoCD client
-func New(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (ArgoCD, error) {
-	return newArgocd(thelmaConfig, shellRunner, iapToken, vaultClientFactory)
-}
-
-// private constructor used in tests
-func newArgocd(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string, vaultClientFactory func() (*vaultapi.Client, error)) (*argocd, error) {
-	a, err := newUnauthenticated(thelmaConfig, shellRunner, iapToken)
-	if err != nil {
+func New(thelmaConfig config.Config, shellRunner shell.Runner, creds credentials.Credentials, iapTokenProvider credentials.TokenProvider, sherlockHttpClient *http.Client) (ArgoCD, error) {
+	var err error
+	var cfg argocdConfig
+	if err = thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
 		return nil, err
 	}
+	var tokenProvider credentials.TokenProvider
 
 	if os.Getenv(envVars.token) != "" {
+		// Backwards compatibility, use env token if provided
 		log.Debug().Msgf("Env var %s is set; will be used to to authenticate ArgoCD CLI commands", envVars.token)
-	} else if a.cfg.Vault.Enabled {
-		vaultClient, err := vaultClientFactory()
-		if err != nil {
-			return nil, errors.Errorf("argocd: failed to instantiate Vault client: %v", err)
-		}
-		token, err := readTokenFromVault(a.cfg, vaultClient)
+	} else {
+		tokenProvider, err = implicitTokenProvider(creds, cfg, sherlockHttpClient)
 		if err != nil {
 			return nil, err
-		}
-		a.token = token
-		if err = a.ensureLoggedIn(); err != nil {
-			return nil, errors.Errorf("error authenticating to ArgoCD with token pulled from Vault (path %s, key %s): %v", a.cfg.Vault.Path, a.cfg.Vault.Key, err)
-		}
-	} else if err := a.ensureLoggedIn(); err != nil {
-		log.Debug().Err(err).Msgf("argocd cli is not authenticated; will attempt browser login")
-
-		if !utils.Interactive() {
-			return nil, errors.Errorf("ArgoCD client is not authenticated and shell is not interactive; please supply an ArgoCD token via THELMA_ARGOCD_TOKEN or run `thelma auth argocd` in an interactive shell")
-		}
-		if err := BrowserLogin(thelmaConfig, shellRunner, iapToken); err != nil {
-			return nil, err
-		}
-		if err = a.ensureLoggedIn(); err != nil {
-			return nil, errors.Errorf("error performing browser login for ArgoCD: login command succeeded but client is not logged in")
 		}
 	}
-	return a, nil
-}
 
-func newUnauthenticated(thelmaConfig config.Config, shellRunner shell.Runner, iapToken string) (*argocd, error) {
-	var cfg argocdConfig
-	if err := thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
+	a := &argocd{
+		runner: shellRunner,
+		cfg:    cfg,
+
+		iapTokenProvider: iapTokenProvider,
+		tokenProvider:    tokenProvider,
+	}
+
+	if err = a.ensureLoggedIn(); err != nil {
 		return nil, err
 	}
 
-	return &argocd{
-		runner:   shellRunner,
-		cfg:      cfg,
-		iapToken: iapToken,
-	}, nil
+	return a, nil
 }
 
 // implements ArgoCD interface
@@ -254,6 +215,9 @@ type argocd struct {
 	cfg      argocdConfig
 	iapToken string
 	token    string
+
+	iapTokenProvider credentials.TokenProvider
+	tokenProvider    credentials.TokenProvider
 }
 
 func (a *argocd) SyncApp(appName string, options ...SyncOption) (SyncResult, error) {
@@ -389,7 +353,7 @@ func (a *argocd) AppStatus(appName string) (ApplicationStatus, error) {
 func (a *argocd) waitHealthy(appName string, timeoutSeconds int) error {
 	log.Debug().Msgf("Waiting up to %d seconds for %s to become healthy", timeoutSeconds, appName)
 
-	return a.runCommand([]string{
+	return a.runCommandWithRetries([]string{
 		"app",
 		"wait",
 		appName,
@@ -424,7 +388,7 @@ func (a *argocd) WaitExist(appName string, options ...WaitExistOption) error {
 				logger.Debug().Msgf("Timeout reached, exiting polling")
 				return
 			default:
-				if err := a.runCommand([]string{
+				if err := a.runCommandOnce([]string{
 					"app",
 					"get",
 					appName,
@@ -505,7 +469,7 @@ func (a *argocd) asSyncOptions(options ...SyncOption) SyncOptions {
 }
 
 func (a *argocd) restartDeployments(appName string) error {
-	if err := a.runCommand([]string{
+	if err := a.runCommandWithRetries([]string{
 		"app",
 		"actions",
 		"list",
@@ -525,7 +489,7 @@ func (a *argocd) restartDeployments(appName string) error {
 	}
 
 	log.Debug().Msgf("Restarting all deployments in %s", appName)
-	return a.runCommand([]string{"app", "actions", "run", "--kind=Deployment", appName, "restart", "--all"})
+	return a.runCommandWithRetries([]string{"app", "actions", "run", "--kind=Deployment", appName, "restart", "--all"})
 }
 
 func (a *argocd) hasLegacyConfigsApp(release terra.Release) (bool, error) {
@@ -553,7 +517,7 @@ func (a *argocd) hasLegacyConfigsApp(release terra.Release) (bool, error) {
 func (a *argocd) waitForInProgressSyncToComplete(appName string) error {
 	log.Debug().Msgf("Waiting up to %d seconds for in-progress sync operations on %s to complete", a.cfg.WaitInProgressOperationTimeoutSeconds, appName)
 
-	return a.runCommand([]string{
+	return a.runCommandWithRetries([]string{
 		"app",
 		"wait",
 		appName,
@@ -581,7 +545,7 @@ func (a *argocd) sync(appName string, opts SyncOptions) error {
 		args = append(args, "--label", joinSelector(opts.OnlyLabels))
 	}
 
-	err := a.runCommand(args)
+	err := a.runCommandWithRetries(args)
 	if err == nil {
 		return nil
 	}
@@ -622,7 +586,9 @@ func (a *argocd) diff(appName string, opts SyncOptions) (bool, error) {
 	if opts.HardRefresh {
 		args = append(args, "--hard-refresh")
 	}
-	err := a.runCommand(args)
+	// don't use default retries here because this command is already wrapped in retries
+	// with specific, custom options that have been adjusted over time.
+	err := a.runCommandOnce(args)
 	if err == nil {
 		// no error means no differences were found
 		return false, nil
@@ -652,21 +618,15 @@ func (a *argocd) ensureLoggedIn() error {
 		return err
 	}
 	if err != nil || !output.LoggedIn {
-		return errors.Errorf("ArgoCD client is not authenticated; please run `thelma auth argocd` or supply an ArgoCD token via THELMA_ARGOCD_TOKEN")
+		return errors.Errorf("ArgoCD client is not authenticated; please retry or supply an ArgoCD token via %s", envVars.token)
 	}
 	return nil
-}
-
-// run `argocd login` to put up an SSO prompt in the browser
-func (a *argocd) browserLogin() error {
-	log.Info().Msgf("Launching browser to authenticate Thelma to ArgoCD")
-	return a.runCommand([]string{"login", "--sso", a.cfg.Host})
 }
 
 // run `argocd app set <app-name> --revision=<ref>` to set an Argo app's git ref
 func (a *argocd) setRef(appName string, ref string) error {
 	log.Info().Msgf("Setting app %s to ref %s", appName, ref)
-	err := a.runCommand([]string{"app", "set", appName, "--revision", ref, "--validate=false"})
+	err := a.runCommandWithRetries([]string{"app", "set", appName, "--revision", ref, "--validate=false"})
 	if err != nil {
 		return errors.Errorf("error setting %s to revision %q: %v", appName, ref, err)
 	}
@@ -678,7 +638,7 @@ func (a *argocd) getApplication(appName string) (application, error) {
 	var app application
 
 	buf := bytes.Buffer{}
-	err := a.runCommand([]string{"app", "get", appName, "-o", "yaml"}, func(options *shell.RunOptions) {
+	err := a.runCommandWithRetries([]string{"app", "get", appName, "-o", "yaml"}, func(options *shell.RunOptions) {
 		options.Stdout = &buf
 	})
 	if err != nil {
@@ -697,7 +657,7 @@ func (a *argocd) runCommandAndParseYamlOutput(args []string, out interface{}) er
 
 	args = append(args, flags.outputFormat, yamlFormat)
 
-	err := a.runCommand(args, func(options *shell.RunOptions) {
+	err := a.runCommandWithRetries(args, func(options *shell.RunOptions) {
 		options.Stdout = buf
 	})
 	if err != nil {
@@ -715,7 +675,7 @@ func (a *argocd) runCommandAndParseYamlOutput(args []string, out interface{}) er
 func (a *argocd) runCommandAndParseLineSeparatedOutput(args []string) ([]string, error) {
 	buf := new(bytes.Buffer)
 
-	err := a.runCommand(args, func(options *shell.RunOptions) {
+	err := a.runCommandWithRetries(args, func(options *shell.RunOptions) {
 		options.Stdout = buf
 	})
 	if err != nil {
@@ -732,31 +692,28 @@ func isRetryableError(err error) bool {
 		return false
 	}
 
-	for _, regex := range retryableErrors {
+	for _, regex := range unretryableErrors {
 		if regex.MatchString(exitErr.Stderr) {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
-func (a *argocd) runCommand(args []string, options ...shell.RunOption) error {
-	err := a.runCommandOnce(args, options...)
-
-	for i := 0; i < retryCount; i++ {
-		if err == nil {
-			return nil
-		}
-		if !isRetryableError(err) {
-			return err
-		}
-		log.Debug().Err(err).Msgf("argocd cli command failed, retrying in %s", retryInterval)
-
-		time.Sleep(retryInterval)
-		err = a.runCommandOnce(args, options...)
-	}
-
-	return err
+func (a *argocd) runCommandWithRetries(args []string, options ...shell.RunOption) error {
+	return retry.Do(
+		func() error {
+			return a.runCommandOnce(args, options...)
+		},
+		retry.RetryIf(isRetryableError),
+		retry.Delay(retryBaseInterval),
+		retry.DelayType(retry.BackOffDelay),
+		retry.MaxDelay(retryMaxDelay),
+		retry.Attempts(retryAttempts),
+		retry.OnRetry(func(n uint, err error) {
+			log.Debug().Err(err).Msgf("argocd cli command failed, will retry up to %d times", retryAttempts)
+		}),
+	)
 }
 
 func (a *argocd) runCommandOnce(args []string, options ...shell.RunOption) error {
@@ -765,15 +722,21 @@ func (a *argocd) runCommandOnce(args []string, options ...shell.RunOption) error
 	if a.cfg.Host != "" {
 		env = append(env, fmt.Sprintf("%s=%s", envVars.server, a.cfg.Host))
 	}
-	if a.token != "" {
-		env = append(env, fmt.Sprintf("%s=%s", envVars.token, a.token))
+	if token, tokenOk, err := a.authToken(); err != nil {
+		return err
+	} else if tokenOk {
+		env = append(env, fmt.Sprintf("%s=%s", envVars.token, token))
 	}
 
 	// build arg list
 	var _args []string
 
 	// add IAP token header
-	_args = append(_args, flags.header, a.proxyAuthorizationHeader())
+	proxyAuthorizationHeader, err := a.proxyAuthorizationHeader()
+	if err != nil {
+		return err
+	}
+	_args = append(_args, flags.header, proxyAuthorizationHeader)
 
 	if a.cfg.GRPCWeb {
 		_args = append(_args, flags.grpcWeb)
@@ -799,26 +762,32 @@ func (a *argocd) runCommandOnce(args []string, options ...shell.RunOption) error
 	)
 }
 
-func (a *argocd) proxyAuthorizationHeader() string {
-	return fmt.Sprintf("Proxy-Authorization: Bearer %s", a.iapToken)
+func (a *argocd) authToken() (string, bool, error) {
+	if a.token != "" {
+		return a.token, true, nil
+	} else if a.tokenProvider != nil {
+		token, err := a.tokenProvider.Get()
+		if err != nil {
+			return "", false, err
+		}
+		return string(token), true, nil
+	} else {
+		return "", false, nil
+	}
 }
 
-func readTokenFromVault(cfg argocdConfig, vaultClient *vaultapi.Client) (string, error) {
-	log.Debug().Msgf("Attempting to read ArgoCD token from Vault (%s)", cfg.Vault.Path)
-	secret, err := vaultClient.Logical().Read(cfg.Vault.Path)
-	if err != nil {
-		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: %v", cfg.Vault.Path, err)
+func (a *argocd) proxyAuthorizationHeader() (string, error) {
+	if a.iapToken != "" {
+		return fmt.Sprintf("Proxy-Authorization: Bearer %s", a.iapToken), nil
+	} else if a.iapTokenProvider != nil {
+		token, err := a.iapTokenProvider.Get()
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Proxy-Authorization: Bearer %s", string(token)), nil
+	} else {
+		return "", errors.New("argocd: no IAP token or token provider available")
 	}
-	v, exists := secret.Data[cfg.Vault.Key]
-	if !exists {
-		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
-	}
-	asStr, ok := v.(string)
-	if !ok {
-		return "", errors.Errorf("error loading ArgoCD token from Vault path %s: expected string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
-	}
-	logging.MaskSecret(asStr)
-	return asStr, nil
 }
 
 // releaseSelector returns set of selectors for all argo apps associated with a release

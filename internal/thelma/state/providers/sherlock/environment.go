@@ -24,6 +24,7 @@ type environment struct {
 	offlineScheduleEndEnabled   bool
 	offlineScheduleEndTime      time.Time
 	offlineScheduleEndWeekends  bool
+	enableJanitor               bool
 	destination
 }
 
@@ -119,4 +120,8 @@ func (e *environment) OfflineScheduleEndTime() time.Time {
 
 func (e *environment) OfflineScheduleEndWeekends() bool {
 	return e.offlineScheduleEndWeekends
+}
+
+func (e *environment) EnableJanitor() bool {
+	return e.enableJanitor
 }
