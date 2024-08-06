@@ -15,26 +15,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up GCP auth
+    - name: Auth to GCP
+      id: auth
+      uses: google-github-actions/auth@v2
       if: ${{ github.actor != 'dependabot[bot]' }}
-      id: setup-gcp-auth
-      run: |
-        GCP_CREDS_PATH=$(pwd)/service_account.json
-        echo '${{ secrets.THELMA_CI_KEY }}' > service_account.json
-        echo gcp-creds-path=${GCP_CREDS_PATH} >> $GITHUB_OUTPUT
+      with:
+        workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+        service_account: 'thelma-ci@dsp-tools-k8s.iam.gserviceaccount.com'
 
     - name: Run tests
-      if: ${{ github.actor != 'dependabot[bot]' }}
       uses: ./.github/actions/make
+      if: ${{ github.actor != 'dependabot[bot]' }}
       with:
         target: "smoke"
-      env:
-        # Some smoke tests use GCP credentials
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.setup-gcp-auth.outputs.gcp-creds-path }}
 
     - name: Run tests (dependabot)
       if: ${{ github.actor == 'dependabot[bot]' }}
@@ -48,3 +48,4 @@ jobs:
       with:
         files: ./output/coverage
         flags: unittests
+

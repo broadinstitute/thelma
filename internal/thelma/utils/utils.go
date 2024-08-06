@@ -176,6 +176,23 @@ func JoinSelector(labels map[string]string) string {
 	return strings.Join(list, ",")
 }
 
+func UnsetEnvVarForTest(t *testing.T, variable string, test func()) {
+	original, originalPresent := os.LookupEnv(variable)
+	err := os.Unsetenv(variable)
+	if err != nil {
+		t.Fatalf("error unsetting %s: %v", variable, err)
+	}
+	test()
+	if originalPresent {
+		err = os.Setenv(variable, original)
+	} else {
+		err = os.Unsetenv(variable)
+	}
+	if err != nil {
+		t.Fatalf("error resetting %s: %v", variable, err)
+	}
+}
+
 func OverrideEnvVarForTest(t *testing.T, variable string, value string, test func()) {
 	original, originalPresent := os.LookupEnv(variable)
 	err := os.Setenv(variable, value)
