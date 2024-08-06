@@ -12,19 +12,27 @@ import (
 
 func Test_getOidcRequestValues(t *testing.T) {
 	t.Run("both missing", func(t *testing.T) {
-		_, _, err := getOidcRequestValues()
-		require.Error(t, err)
+		utils.UnsetEnvVarForTest(t, ghaOidcRequestUrlEnvVar, func() {
+			utils.UnsetEnvVarForTest(t, ghaOidcRequestTokenEnvVar, func() {
+				_, _, err := getOidcRequestValues()
+				require.Error(t, err)
+			})
+		})
 	})
 	t.Run("url missing", func(t *testing.T) {
-		utils.OverrideEnvVarForTest(t, ghaOidcRequestTokenEnvVar, "test token", func() {
-			_, _, err := getOidcRequestValues()
-			require.ErrorContains(t, err, ghaOidcRequestUrlEnvVar)
+		utils.UnsetEnvVarForTest(t, ghaOidcRequestUrlEnvVar, func() {
+			utils.OverrideEnvVarForTest(t, ghaOidcRequestTokenEnvVar, "test token", func() {
+				_, _, err := getOidcRequestValues()
+				require.ErrorContains(t, err, ghaOidcRequestUrlEnvVar)
+			})
 		})
 	})
 	t.Run("token missing", func(t *testing.T) {
 		utils.OverrideEnvVarForTest(t, ghaOidcRequestUrlEnvVar, "test url", func() {
-			_, _, err := getOidcRequestValues()
-			require.ErrorContains(t, err, ghaOidcRequestTokenEnvVar)
+			utils.UnsetEnvVarForTest(t, ghaOidcRequestTokenEnvVar, func() {
+				_, _, err := getOidcRequestValues()
+				require.ErrorContains(t, err, ghaOidcRequestTokenEnvVar)
+			})
 		})
 	})
 	t.Run("both present", func(t *testing.T) {
