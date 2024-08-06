@@ -120,6 +120,7 @@ retry:
 			}
 		}
 
+		_releases := make(map[string]*release)
 		for _, stateRelease := range stateReleases {
 			if _, knownCluster := _clusters[stateRelease.Cluster]; stateRelease.Cluster != "" && !knownCluster {
 				log.Warn().Msgf("chart release '%s' has cluster '%s' that we do not have: race condition detected, retrying...",
@@ -131,52 +132,50 @@ retry:
 					stateRelease.Name, stateRelease.Environment)
 				continue retry
 			}
+
+			_release := &release{
+				name:         stateRelease.Name,
+				enabled:      true,
+				chartVersion: stateRelease.ChartVersionExact,
+				chartName:    stateRelease.Chart,
+				repo:         *stateRelease.ChartInfo.ChartRepo,
+				namespace:    stateRelease.Namespace,
+				cluster:      _clusters[stateRelease.Cluster],
+				helmfileRef:  *stateRelease.HelmfileRef,
+				appVersion:   stateRelease.AppVersionExact,
+				subdomain:    stateRelease.Subdomain,
+				protocol:     stateRelease.Protocol,
+				port:         int(stateRelease.Port),
+			}
+
 			switch stateRelease.DestinationType {
 			case "cluster":
-				_clusters[stateRelease.Cluster].releases[stateRelease.Name] = &release{
-					name:         stateRelease.Name,
-					enabled:      true,
-					releaseType:  terra.ClusterReleaseType,
-					chartVersion: stateRelease.ChartVersionExact,
-					chartName:    stateRelease.Chart,
-					repo:         *stateRelease.ChartInfo.ChartRepo,
-					namespace:    stateRelease.Namespace,
-					cluster:      _clusters[stateRelease.Cluster],
-					destination:  _clusters[stateRelease.Cluster],
-					helmfileRef:  *stateRelease.HelmfileRef,
-					appVersion:   stateRelease.AppVersionExact,
-				}
+				_release.releaseType = terra.ClusterReleaseType
+				_release.destination = _clusters[stateRelease.Cluster]
+				_clusters[stateRelease.Cluster].releases[stateRelease.Name] = _release
+
 			case "environment":
 				var helmfileOverlays []string
 				if e, present := _environments[stateRelease.Environment]; present && e.offline {
 					helmfileOverlays = []string{"offline"}
 				}
-				_environments[stateRelease.Environment].releases[stateRelease.Name] = &release{
-					name:             stateRelease.Name,
-					enabled:          true,
-					releaseType:      terra.AppReleaseType,
-					chartVersion:     stateRelease.ChartVersionExact,
-					chartName:        stateRelease.Chart,
-					repo:             *stateRelease.ChartInfo.ChartRepo,
-					namespace:        stateRelease.Namespace,
-					cluster:          _clusters[stateRelease.Cluster],
-					destination:      _environments[stateRelease.Environment],
-					helmfileRef:      *stateRelease.HelmfileRef,
-					helmfileOverlays: helmfileOverlays,
-					appVersion:       stateRelease.AppVersionExact,
-					subdomain:        stateRelease.Subdomain,
-					protocol:         stateRelease.Protocol,
-					port:             int(stateRelease.Port),
-				}
+				_release.releaseType = terra.AppReleaseType
+				_release.destination = _environments[stateRelease.Environment]
+				_release.helmfileOverlays = helmfileOverlays
+				_environments[stateRelease.Environment].releases[stateRelease.Name] = _release
+
 			default:
 				return nil, errors.Errorf("unexpected destination type '%s' for release '%s'", stateRelease.DestinationType, stateRelease.Name)
 			}
+
+			_releases[stateRelease.Name] = _release
 		}
 
 		_state := &state{
 			sherlock:     s.sherlock,
 			environments: _environments,
 			clusters:     _clusters,
+			releases:     _releases,
 		}
 		s.cached = _state
 		return _state, nil
