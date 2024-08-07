@@ -318,13 +318,13 @@ func (_c *Chart_Path_Call) RunAndReturn(run func() string) *Chart_Path_Call {
 	return _c
 }
 
-// SetDependencyVersion provides a mock function with given fields: dependencyName, newVersion
-func (_m *Chart) SetDependencyVersion(dependencyName string, newVersion string) error {
-	ret := _m.Called(dependencyName, newVersion)
+// SetDependencyVersion provides a mock function with given fields: dependencyName, newVersionConstraint
+func (_m *Chart) SetDependencyVersion(dependencyName string, newVersionConstraint string) error {
+	ret := _m.Called(dependencyName, newVersionConstraint)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(dependencyName, newVersion)
+		r0 = rf(dependencyName, newVersionConstraint)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -339,12 +339,12 @@ type Chart_SetDependencyVersion_Call struct {
 
 // SetDependencyVersion is a helper method to define mock.On call
 //   - dependencyName string
-//   - newVersion string
-func (_e *Chart_Expecter) SetDependencyVersion(dependencyName interface{}, newVersion interface{}) *Chart_SetDependencyVersion_Call {
-	return &Chart_SetDependencyVersion_Call{Call: _e.mock.On("SetDependencyVersion", dependencyName, newVersion)}
+//   - newVersionConstraint string
+func (_e *Chart_Expecter) SetDependencyVersion(dependencyName interface{}, newVersionConstraint interface{}) *Chart_SetDependencyVersion_Call {
+	return &Chart_SetDependencyVersion_Call{Call: _e.mock.On("SetDependencyVersion", dependencyName, newVersionConstraint)}
 }
 
-func (_c *Chart_SetDependencyVersion_Call) Run(run func(dependencyName string, newVersion string)) *Chart_SetDependencyVersion_Call {
+func (_c *Chart_SetDependencyVersion_Call) Run(run func(dependencyName string, newVersionConstraint string)) *Chart_SetDependencyVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(string))
 	})

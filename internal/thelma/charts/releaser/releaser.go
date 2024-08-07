@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+// dependencyVersionConstraint is the value that we always use as the dependency version, regardless of
+// the actual version of the dependency. We do this because Helm is becoming more strict about
+// dependency versions for file:// dependencies, and it'll actually fail if there's a mismatch. We have
+// the file:// as the source of truth, so having the Chart.yaml files list "*" as the version constraint
+// alleviates a potential source of error. See also DDO-3832.
+//
+// See https://github.com/Masterminds/semver#checking-version-constraints for more info on how the
+// constraints are parsed.
+const dependencyVersionConstraint = "*"
+
 // ChartReleaser is the main orchestrator for releasing new charts.
 type ChartReleaser interface {
 	// Release calculates out downstream dependents of the given charts, increments versions,
@@ -167,9 +177,6 @@ func (r *chartReleaser) bumpChartVersion(chartName string) (*VersionPair, error)
 
 	// get last version of chart
 	lastVersion := r.publisher.Index().MostRecentVersion(chartName)
-	if err != nil {
-		return nil, err
-	}
 
 	// bump chart version in Chart.yaml
 	newVersion, err := _chart.BumpChartVersion(lastVersion)
@@ -177,9 +184,9 @@ func (r *chartReleaser) bumpChartVersion(chartName string) (*VersionPair, error)
 		return nil, err
 	}
 
-	// for all charts that depend on this chart, update their Chart.yaml files to use
-	// the new version of this chart
-	if err = r.chartsDir.UpdateDependentVersionConstraints(_chart, newVersion); err != nil {
+	// For all charts that depend on their chart, make sure their dependency version
+	// constraint is correctly set. See dependencyVersionConstraint for more info.
+	if err = r.chartsDir.UpdateDependentVersionConstraints(_chart, dependencyVersionConstraint); err != nil {
 		return nil, err
 	}
 

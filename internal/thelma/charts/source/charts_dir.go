@@ -20,8 +20,8 @@ type ChartsDir interface {
 	GetChart(name string) (Chart, error)
 	// GetCharts returns the Chart objects for a set of charts with the given name(s), or an error if no chart(s) by that name exists in source dir
 	GetCharts(name ...string) ([]Chart, error)
-	// UpdateDependentVersionConstraints go through all dependents and update version constraints to match new version
-	UpdateDependentVersionConstraints(chart Chart, newVersion string) error
+	// UpdateDependentVersionConstraints go through all dependents and update version constraints to match the new one
+	UpdateDependentVersionConstraints(chart Chart, newVersionConstraint string) error
 	// WithTransitiveDependents returns the given charts plus all of their transitive dependents
 	WithTransitiveDependents(chart []Chart) ([]Chart, error)
 	// RecursivelyUpdateDependencies given a list of charts:
@@ -99,11 +99,11 @@ func (d *chartsDir) GetCharts(chartNames ...string) ([]Chart, error) {
 	return charts, nil
 }
 
-// UpdateDependentVersionConstraints go through all dependents and update version constraints to match new version
-func (d *chartsDir) UpdateDependentVersionConstraints(chart Chart, newVersion string) error {
+// UpdateDependentVersionConstraints go through all dependents and update version constraints to match the new one
+func (d *chartsDir) UpdateDependentVersionConstraints(chart Chart, newVersionConstraint string) error {
 	for _, dependent := range d.dependencyGraph.GetDependents(chart.Name()) {
 		dependentChart := d.charts[dependent]
-		if err := dependentChart.SetDependencyVersion(chart.Name(), newVersion); err != nil {
+		if err := dependentChart.SetDependencyVersion(chart.Name(), newVersionConstraint); err != nil {
 			return err
 		}
 	}
