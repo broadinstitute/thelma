@@ -167,9 +167,6 @@ func (r *chartReleaser) bumpChartVersion(chartName string) (*VersionPair, error)
 
 	// get last version of chart
 	lastVersion := r.publisher.Index().MostRecentVersion(chartName)
-	if err != nil {
-		return nil, err
-	}
 
 	// bump chart version in Chart.yaml
 	newVersion, err := _chart.BumpChartVersion(lastVersion)
@@ -177,9 +174,16 @@ func (r *chartReleaser) bumpChartVersion(chartName string) (*VersionPair, error)
 		return nil, err
 	}
 
-	// for all charts that depend on this chart, update their Chart.yaml files to use
-	// the new version of this chart
-	if err = r.chartsDir.UpdateDependentVersionConstraints(_chart, newVersion); err != nil {
+	// For all charts that depend on this chart, update their Chart.yaml files to use
+	// the new version of this chart. As of 08/07/2024, we set this version constraint
+	// to "*", which the semver library equates to ">= 0.0.0". We do this because newer
+	// versions of Helm actually pay attention to the version constraint, and will fail
+	// if the version constraint doesn't match version of the dependency found at the
+	// file:// path. Setting this to "*" won't be a change most of the time, but that's
+	// okay. The chart's version itself will still get updated because bumpChartVersion
+	// is called for each chart involved in the dependency chain. Plus, the Chart.lock
+	// files will record the exact version in use. See also DDO-3832.
+	if err = r.chartsDir.UpdateDependentVersionConstraints(_chart, "*"); err != nil {
 		return nil, err
 	}
 
