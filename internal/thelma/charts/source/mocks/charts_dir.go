@@ -279,13 +279,13 @@ func (_c *ChartsDir_RecursivelyUpdateDependencies_Call) RunAndReturn(run func(..
 	return _c
 }
 
-// UpdateDependentVersionConstraints provides a mock function with given fields: chart, newVersion
-func (_m *ChartsDir) UpdateDependentVersionConstraints(chart source.Chart, newVersion string) error {
-	ret := _m.Called(chart, newVersion)
+// UpdateDependentVersionConstraints provides a mock function with given fields: chart, newVersionConstraint
+func (_m *ChartsDir) UpdateDependentVersionConstraints(chart source.Chart, newVersionConstraint string) error {
+	ret := _m.Called(chart, newVersionConstraint)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(source.Chart, string) error); ok {
-		r0 = rf(chart, newVersion)
+		r0 = rf(chart, newVersionConstraint)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -300,12 +300,12 @@ type ChartsDir_UpdateDependentVersionConstraints_Call struct {
 
 // UpdateDependentVersionConstraints is a helper method to define mock.On call
 //   - chart source.Chart
-//   - newVersion string
-func (_e *ChartsDir_Expecter) UpdateDependentVersionConstraints(chart interface{}, newVersion interface{}) *ChartsDir_UpdateDependentVersionConstraints_Call {
-	return &ChartsDir_UpdateDependentVersionConstraints_Call{Call: _e.mock.On("UpdateDependentVersionConstraints", chart, newVersion)}
+//   - newVersionConstraint string
+func (_e *ChartsDir_Expecter) UpdateDependentVersionConstraints(chart interface{}, newVersionConstraint interface{}) *ChartsDir_UpdateDependentVersionConstraints_Call {
+	return &ChartsDir_UpdateDependentVersionConstraints_Call{Call: _e.mock.On("UpdateDependentVersionConstraints", chart, newVersionConstraint)}
 }
 
-func (_c *ChartsDir_UpdateDependentVersionConstraints_Call) Run(run func(chart source.Chart, newVersion string)) *ChartsDir_UpdateDependentVersionConstraints_Call {
+func (_c *ChartsDir_UpdateDependentVersionConstraints_Call) Run(run func(chart source.Chart, newVersionConstraint string)) *ChartsDir_UpdateDependentVersionConstraints_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(source.Chart), args[1].(string))
 	})

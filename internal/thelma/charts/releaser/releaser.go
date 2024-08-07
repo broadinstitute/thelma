@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+// dependencyVersionConstraint is the value that we always use as the dependency version, regardless of
+// the actual version of the dependency. We do this because Helm is becoming more strict about
+// dependency versions for file:// dependencies, and it'll actually fail if there's a mismatch. We have
+// the file:// as the source of truth, so having the Chart.yaml files list "*" as the version constraint
+// alleviates a potential source of error. See also DDO-3832.
+//
+// See https://github.com/Masterminds/semver#checking-version-constraints for more info on how the
+// constraints are parsed.
+const dependencyVersionConstraint = "*"
+
 // ChartReleaser is the main orchestrator for releasing new charts.
 type ChartReleaser interface {
 	// Release calculates out downstream dependents of the given charts, increments versions,
@@ -174,16 +184,9 @@ func (r *chartReleaser) bumpChartVersion(chartName string) (*VersionPair, error)
 		return nil, err
 	}
 
-	// For all charts that depend on this chart, update their Chart.yaml files to use
-	// the new version of this chart. As of 08/07/2024, we set this version constraint
-	// to "*", which the semver library equates to ">= 0.0.0". We do this because newer
-	// versions of Helm actually pay attention to the version constraint, and will fail
-	// if the version constraint doesn't match version of the dependency found at the
-	// file:// path. Setting this to "*" won't be a change most of the time, but that's
-	// okay. The chart's version itself will still get updated because bumpChartVersion
-	// is called for each chart involved in the dependency chain. Plus, the Chart.lock
-	// files will record the exact version in use. See also DDO-3832.
-	if err = r.chartsDir.UpdateDependentVersionConstraints(_chart, "*"); err != nil {
+	// For all charts that depend on their chart, make sure their dependency version
+	// constraint is correctly set. See dependencyVersionConstraint for more info.
+	if err = r.chartsDir.UpdateDependentVersionConstraints(_chart, dependencyVersionConstraint); err != nil {
 		return nil, err
 	}
 

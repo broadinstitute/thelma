@@ -54,8 +54,8 @@ type Chart interface {
 	GenerateDocs() error
 	// LocalDependencies returns the names of local dependencies / subcharts (using Helm's "file://" repo support)
 	LocalDependencies() []string
-	// SetDependencyVersion sets the version of a dependency in this chart's Chart.yaml
-	SetDependencyVersion(dependencyName string, newVersion string) error
+	// SetDependencyVersion sets the version constraint of a dependency in this chart's Chart.yaml
+	SetDependencyVersion(dependencyName string, newVersionConstraint string) error
 	// ManifestVersion returns the version of this chart in Chart.yaml
 	ManifestVersion() string
 }
@@ -168,8 +168,8 @@ func (c *chart) LocalDependencies() []string {
 	return dependencies
 }
 
-func (c *chart) SetDependencyVersion(dependencyName string, newVersion string) error {
-	expression := fmt.Sprintf(`(.dependencies.[] | select(.name == %q) | .version) |= %q`, dependencyName, newVersion)
+func (c *chart) SetDependencyVersion(dependencyName string, newVersionConstraint string) error {
+	expression := fmt.Sprintf(`(.dependencies.[] | select(.name == %q) | .version) |= %q`, dependencyName, newVersionConstraint)
 	manifestFile := path.Join(c.path, chartManifestFile)
 	if err := yq.New(c.shellRunner).Write(expression, manifestFile); err != nil {
 		return err
@@ -179,16 +179,16 @@ func (c *chart) SetDependencyVersion(dependencyName string, newVersion string) e
 	}
 	for _, dependency := range c.manifest.Dependencies {
 		if dependency.Name == dependencyName {
-			if dependency.Version == newVersion {
-				log.Debug().Msgf("updated version for dependency %s to %s in %s", dependencyName, newVersion, manifestFile)
+			if dependency.Version == newVersionConstraint {
+				log.Debug().Msgf("updated version constraint for dependency %s to %s in %s", dependencyName, newVersionConstraint, manifestFile)
 				return nil
 			} else {
-				return errors.Errorf("error setting dependency %s to version %s in %s: dependency not found", dependencyName, newVersion, manifestFile)
+				return errors.Errorf("error setting dependency %s to version constraint %s in %s: dependency not found", dependencyName, newVersionConstraint, manifestFile)
 			}
 		}
 	}
 
-	return errors.Errorf("error setting dependency %s to version %s in %s: dependency not found", dependencyName, newVersion, manifestFile)
+	return errors.Errorf("error setting dependency %s to version constraint %s in %s: dependency not found", dependencyName, newVersionConstraint, manifestFile)
 }
 
 func (c *chart) ManifestVersion() string {
