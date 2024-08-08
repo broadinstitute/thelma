@@ -102,32 +102,13 @@ install_yq() {
 }
 
 install_helm_docs() {
-  if [[ "${OS}" == "linux" ]]; then
-    # linux artifacts are only made available as rpm or deb packages and not as tarballs :'(
-    URL="https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${ARCH}.deb"
-    echo "Downloading helm-docs from ${URL}"
-    wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O helm-docs.deb && \
-      ar x helm-docs.deb && \
-      tar -xzvf data.tar.gz && \
-      testexec ./usr/local/bin/helm-docs --version && \
-      mv ./usr/local/bin/helm-docs "${INSTALL_DIR}/helm-docs"
-    return $?
-  fi
-
-  if [[ "${OS}" == "darwin" ]]; then
-    os="Darwin"
-    arch="x86_64"
-    URL="https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${os}_${arch}.tar.gz"
-    echo "Downloading helm-docs from ${URL}"
-    wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
-      tar -xz && \
-      testexec ./helm-docs --version && \
-      mv ./helm-docs "${INSTALL_DIR}/helm-docs"
-    return $?
-  fi
-
-  echo "Unsupported OS / ARCH combo ${OS} ${ARCH}, don't know how to install helm-docs" >&2
-  return 1
+  arch=$([ "${ARCH}" == "amd64" ] && echo "x86_64" || echo "${ARCH}")
+  URL="https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${arch}.tar.gz"
+  echo "Downloading helm-docs from ${URL}"
+  wget --timeout="${WGET_TIMEOUT_SECONDS}" -q "${URL}" -O - |\
+    tar -xz && \
+    testexec ./helm-docs --version && \
+    mv ./helm-docs "${INSTALL_DIR}/helm-docs"
 }
 
 install_argocd() {
