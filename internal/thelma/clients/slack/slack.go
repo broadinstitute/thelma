@@ -22,7 +22,7 @@ type slackConfig struct {
 	// Vault is the only (current) mechanism to obtain Slack credentials, since we want to always authenticate as
 	// a bot user instead of relying on user-credentials when running locally.
 	Vault struct {
-		Enabled bool   `default:"true"`
+		Enabled bool   `default:"false"`
 		Path    string `default:"secret/suitable/beehive/prod/slack"`
 		Key     string `default:"bot-user-oauth-token"`
 	}
