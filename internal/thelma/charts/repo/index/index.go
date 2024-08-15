@@ -60,7 +60,7 @@ func (index *index) HasVersion(chartName string, version string) bool {
 func (index *index) Versions(chartName string) []string {
 	var versions []string
 
-	if index.Entries == nil || len(index.Entries) == 0 {
+	if len(index.Entries) == 0 {
 		log.Warn().Msgf("index is empty, can't look up chart version for %s", chartName)
 		return versions
 	}

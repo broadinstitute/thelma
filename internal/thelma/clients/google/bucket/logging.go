@@ -56,7 +56,7 @@ func (i *operationLogger) operationFinished(err error) error {
 		event.Str("status", "error")
 		event.Err(err)
 		returnErr := errors.Errorf("%s %q failed: %v", i.operationKind, i.objectUrl(), err)
-		event.Msgf(returnErr.Error())
+		event.Msgf("%s", returnErr.Error())
 		return returnErr
 	}
 
