@@ -64,7 +64,7 @@ type seedConfig struct {
 		}
 		Datarepo struct {
 			KubernetesSecretName string `default:"jade-sa"`
-			KubernetesSecretKey  string `default:"datareposerviceaccount`
+			KubernetesSecretKey  string `default:"datareposerviceaccount"`
 		}
 	}
 	TestUsers struct {
