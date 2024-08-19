@@ -62,6 +62,10 @@ type seedConfig struct {
 			KubernetesSecretName string `default:"tsps-sa-secret"`
 			KubernetesSecretKey  string `default:"service-account.json"`
 		}
+		Datarepo struct {
+			KubernetesSecretName string `default:"jade-sa"`
+			KubernetesSecretKey  string `default:"datareposerviceaccount`
+		}
 	}
 	TestUsers struct {
 		Dev []TestUser
@@ -116,6 +120,9 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease, options ...google.Opt
 		secretName = config.Auth.WorkspaceManager.KubernetesSecretName
 		secretKey = config.Auth.WorkspaceManager.KubernetesSecretKey
 	case "tsps":
+		secretName = config.Auth.TSPS.KubernetesSecretName
+		secretKey = config.Auth.TSPS.KubernetesSecretKey
+	case "datarepo":
 		secretName = config.Auth.TSPS.KubernetesSecretName
 		secretKey = config.Auth.TSPS.KubernetesSecretKey
 	default:
