@@ -1,7 +1,6 @@
 package mirror
 
 import (
-	"fmt"
 	"github.com/broadinstitute/thelma/internal/thelma/charts/publish"
 	"github.com/broadinstitute/thelma/internal/thelma/toolbox/helm"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/shell"
@@ -157,7 +156,7 @@ func (m *mirror) fetchChart(chart ChartDefinition) error {
 		Prog: helm.ProgName,
 		Args: []string{
 			"fetch",
-			fmt.Sprintf(chart.Name),
+			chart.Name,
 			"--version",
 			chart.Version,
 			"--destination",
