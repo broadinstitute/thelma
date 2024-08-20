@@ -131,7 +131,7 @@ func (suite *sherlockStateLoaderSuite) TestStateLoading() {
 func (suite *sherlockStateLoaderSuite) TestStateLoadingError() {
 	stateSource := mocks.NewClient(suite.T())
 	errMsg := "this is an error from sherlock"
-	stateSource.On("Clusters").Return(nil, errors.Errorf(errMsg))
+	stateSource.On("Clusters").Return(nil, errors.New(errMsg))
 
 	thelmaHome := suite.T().TempDir()
 	s := NewStateLoader(thelmaHome, stateSource)
