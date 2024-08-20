@@ -1,9 +1,9 @@
-ARG ALPINE_IMAGE_VERSION='3.14'
-
+# If this base image has issues, try using a raw alpine image.
 #
-# Copy dist into runtime image
-#
-FROM alpine:${ALPINE_IMAGE_VERSION}
+# We use this image as the base Thelma image even though we don't need Python because it's a blessed
+# Alpine image. Using a blessed image lowers the burden on our infosec folks (who can manage
+# vulnerabilities easier this way) and using an existing one lowers the burden on our appsec folks.
+FROM us.gcr.io/broad-dsp-gcr-public/base/python:alpine
 
 ARG THELMA_LINUX_RELEASE
 
@@ -24,10 +24,6 @@ RUN echo 'argocd-thelma:!::0:::::' >> /etc/shadow
 RUN echo 'argocd-thelma:x:999:' >> /etc/group
 RUN echo 'argocd-thelma:x:999:999:argocd-thelma:/home/argocd-thelma:/bin/nologin' >> /etc/passwd
 RUN chown 999:999 /home/argocd-thelma
-
-# OS updates for security
-RUN apk update
-RUN apk upgrade
 
 # Unpack Thelma into runtime image
 RUN mkdir /thelma && tar -xvf ${THELMA_LINUX_RELEASE} -C /thelma
