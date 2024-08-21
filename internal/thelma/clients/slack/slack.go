@@ -2,9 +2,7 @@ package slack
 
 import (
 	"github.com/broadinstitute/thelma/internal/thelma/app/config"
-	"github.com/broadinstitute/thelma/internal/thelma/app/logging"
 	"github.com/broadinstitute/thelma/internal/thelma/app/platform"
-	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	slackapi "github.com/slack-go/slack"
@@ -19,13 +17,12 @@ const colorRed = "#b20000"
 const colorGreen = "#33cc33"
 
 type slackConfig struct {
-	// Vault is the only (current) mechanism to obtain Slack credentials, since we want to always authenticate as
-	// a bot user instead of relying on user-credentials when running locally.
-	Vault struct {
-		Enabled bool   `default:"false"`
-		Path    string `default:"secret/suitable/beehive/prod/slack"`
-		Key     string `default:"bot-user-oauth-token"`
-	}
+	// Enabled is a flag for whether to enable sending slack messages from thelma
+	Enabled bool `default:"true"`
+	// Slack Token is a slack bot token credential expected to be provided to thelma in the envionment
+	// NOTE: this replaces previous functionality where Thelma would dynamically reach out to vault
+	// to fetch a token at runtime.
+	Token      string
 	ChannelIDs struct {
 		DevopsAlerts string `default:"C011NQS8Q2Z"` // Devops alerts channel: #ap-k8s-monitor
 	}
@@ -39,23 +36,21 @@ type Slack interface {
 }
 
 type slack struct {
-	client             *slackapi.Client
-	cfg                slackConfig
-	vaultClientFactory func() (*vaultapi.Client, error)
+	client *slackapi.Client
+	cfg    slackConfig
 }
 
-// New is lazy, meaning that it does not try to set up its Vault client immediately.
+// New is lazy, meaning that it does not try to set up its Slack client immediately.
 // This makes it much less likely to error, so that a Slack client can be safely passed
 // around Thelma and only try-caught at the actual call-site of attempting to send a
 // message
-func New(thelmaConfig config.Config, vaultClientFactory func() (*vaultapi.Client, error)) (Slack, error) {
+func New(thelmaConfig config.Config) (Slack, error) {
 	var cfg slackConfig
 	if err := thelmaConfig.Unmarshal(configPrefix, &cfg); err != nil {
 		return nil, err
 	}
 	return &slack{
-		cfg:                cfg,
-		vaultClientFactory: vaultClientFactory,
+		cfg: cfg,
 	}, nil
 }
 
@@ -123,14 +118,10 @@ func (s *slack) SendDirectMessage(email string, markdown string) error {
 
 func (s *slack) requireClient() error {
 	if s.client == nil {
-		if s.cfg.Vault.Enabled {
-			vaultClient, err := s.vaultClientFactory()
-			if err != nil {
-				return err
-			}
-			token, err := readTokenFromVault(s.cfg, vaultClient)
-			if err != nil {
-				return err
+		if s.cfg.Enabled {
+			var token string
+			if s.cfg.Enabled && s.cfg.Token != "" {
+				token = s.cfg.Token
 			}
 			s.client = slackapi.New(token)
 		}
@@ -140,22 +131,4 @@ func (s *slack) requireClient() error {
 	} else {
 		return nil
 	}
-}
-
-func readTokenFromVault(cfg slackConfig, vaultClient *vaultapi.Client) (string, error) {
-	log.Debug().Msgf("Attempting to read Slack token from Vault (%s)", cfg.Vault.Path)
-	secret, err := vaultClient.Logical().Read(cfg.Vault.Path)
-	if err != nil {
-		return "", errors.Errorf("error loading Slack token from Vault path %s: %v", cfg.Vault.Path, err)
-	}
-	v, exists := secret.Data[cfg.Vault.Key]
-	if !exists {
-		return "", errors.Errorf("error loading Slack token from Vault path %s: missing key %s", cfg.Vault.Path, cfg.Vault.Key)
-	}
-	asStr, ok := v.(string)
-	if !ok {
-		return "", errors.Errorf("error loading Slack token from Vault path %s: expecting string key value for %s", cfg.Vault.Path, cfg.Vault.Key)
-	}
-	logging.MaskSecret(asStr)
-	return asStr, nil
 }
