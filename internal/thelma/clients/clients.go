@@ -140,7 +140,7 @@ func (c *clients) Kubernetes() kubernetes.Clients {
 }
 
 func (c *clients) Slack() (slack.Slack, error) {
-	return slack.New(c.thelmaConfig, c.Vault)
+	return slack.New(c.thelmaConfig)
 }
 
 func (c *clients) Github() (*github.Client, error) {
