@@ -62,6 +62,10 @@ type seedConfig struct {
 			KubernetesSecretName string `default:"tsps-sa-secret"`
 			KubernetesSecretKey  string `default:"service-account.json"`
 		}
+		Datarepo struct {
+			KubernetesSecretName string `default:"jade-sa"`
+			KubernetesSecretKey  string `default:"datareposerviceaccount"`
+		}
 	}
 	TestUsers struct {
 		Dev []TestUser
@@ -118,6 +122,9 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease, options ...google.Opt
 	case "tsps":
 		secretName = config.Auth.TSPS.KubernetesSecretName
 		secretKey = config.Auth.TSPS.KubernetesSecretKey
+	case "datarepo":
+		secretName = config.Auth.Datarepo.KubernetesSecretName
+		secretKey = config.Auth.Datarepo.KubernetesSecretKey
 	default:
 		return nil, errors.Errorf("thelma doesn't know how to authenticate as %s", appRelease.Name())
 	}
