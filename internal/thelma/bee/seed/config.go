@@ -123,6 +123,9 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease, options ...google.Opt
 	case "workspacemanager":
 		secretName = config.Auth.WorkspaceManager.KubernetesSecretName
 		secretKey = config.Auth.WorkspaceManager.KubernetesSecretKey
+        case "teaspoons":
+		secretName = config.Auth.Teaspoons.KubernetesSecretName
+		secretKey = config.Auth.Teaspoons.KubernetesSecretKey		
 	case "tsps":
 		secretName = config.Auth.TSPS.KubernetesSecretName
 		secretKey = config.Auth.TSPS.KubernetesSecretKey
