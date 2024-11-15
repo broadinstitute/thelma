@@ -62,6 +62,10 @@ type seedConfig struct {
 			KubernetesSecretName string `default:"tsps-sa-secret"`
 			KubernetesSecretKey  string `default:"service-account.json"`
 		}
+		Teaspoons struct {
+			KubernetesSecretName string `default:"teaspoons-sa-secret"`
+			KubernetesSecretKey  string `default:"service-account.json"`
+		}
 		Datarepo struct {
 			KubernetesSecretName string `default:"jade-sa"`
 			KubernetesSecretKey  string `default:"datareposerviceaccount"`
