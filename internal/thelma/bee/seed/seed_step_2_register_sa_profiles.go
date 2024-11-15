@@ -106,6 +106,22 @@ func (s *seeder) seedStep2RegisterSaProfiles(appReleases map[string]terra.AppRel
 			log.Info().Msg("TSPS not present in environment, skipping")
 		}
 
+		if teaspoons, teaspoonsPresent := appReleases["teaspoons"]; teaspoonsPresent {
+			jobs = append(jobs, pool.Job{
+				Name: "teaspoons SA",
+				Run: func(reporter pool.StatusReporter) error {
+					reporter.Update(pool.Status{Message: "Registering"})
+					if err := opts.handleErrorWithForce(s._registerSaProfile(teaspoons, orch)); err != nil {
+						return err
+					}
+					reporter.Update(pool.Status{Message: "Registered"})
+					return nil
+				},
+			})
+		} else {
+			log.Info().Msg("Teaspoons not present in environment, skipping")
+		}
+
 		if datarepo, datarepoPresent := appReleases["datarepo"]; datarepoPresent {
 			jobs = append(jobs, pool.Job{
 				Name: "datarepo SA",
