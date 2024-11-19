@@ -62,6 +62,10 @@ type seedConfig struct {
 			KubernetesSecretName string `default:"tsps-sa-secret"`
 			KubernetesSecretKey  string `default:"service-account.json"`
 		}
+		Teaspoons struct {
+			KubernetesSecretName string `default:"teaspoons-sa-secret"`
+			KubernetesSecretKey  string `default:"service-account.json"`
+		}
 		Datarepo struct {
 			KubernetesSecretName string `default:"jade-sa"`
 			KubernetesSecretKey  string `default:"datareposerviceaccount"`
@@ -119,6 +123,9 @@ func (s *seeder) googleAuthAs(appRelease terra.AppRelease, options ...google.Opt
 	case "workspacemanager":
 		secretName = config.Auth.WorkspaceManager.KubernetesSecretName
 		secretKey = config.Auth.WorkspaceManager.KubernetesSecretKey
+        case "teaspoons":
+		secretName = config.Auth.Teaspoons.KubernetesSecretName
+		secretKey = config.Auth.Teaspoons.KubernetesSecretKey		
 	case "tsps":
 		secretName = config.Auth.TSPS.KubernetesSecretName
 		secretKey = config.Auth.TSPS.KubernetesSecretKey
