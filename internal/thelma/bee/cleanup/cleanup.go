@@ -19,6 +19,7 @@ import (
 // topic ids by regular expression. If we wanted to just match by environment name, we'd be iterating
 // through thousands of topic names client-side. :skull:
 var topicIdFormats = []string{
+	"cwds-import-job-status-updates-%s",
 	"leonardo-pubsub-%s",
 	"rawls-async-import-topic-%s",
 	"sam-group-sync-%s",
