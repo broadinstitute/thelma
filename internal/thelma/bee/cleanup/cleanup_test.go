@@ -86,6 +86,7 @@ func Test_pubsubTopicIds(t *testing.T) {
 	bee.EXPECT().Name().Return("fiab-funky-chipmunk")
 	assert.ElementsMatch(t, []string{
 		"leonardo-pubsub-fiab-funky-chipmunk",
+		"cwds-import-job-status-updates-fiab-funky-chipmunk",
 		"rawls-async-import-topic-fiab-funky-chipmunk",
 		"sam-group-sync-fiab-funky-chipmunk",
 		"terra-fiab-funky-chipmunk-stairwaycluster-workqueue",
