@@ -45,6 +45,9 @@ func Test_Cleanup(t *testing.T) {
 	// pretend rawls async import topic does not exist
 	psMocks.ExpectGetTopic("rawls-async-import-topic-fake-bee", nil, googletesting.NotFoundError())
 
+	// pretend cwds-import-job-status-updates-fake-bee does not exist
+	psMocks.ExpectGetTopic("cwds-import-job-status-updates-fake-bee", nil, googletesting.NotFoundError())
+
 	// 1 topic, 1 subscription
 	psMocks.ExpectGetTopic("terra-fake-bee-stairwaycluster-workqueue", &pubsubpb.Topic{
 		Name: "terra-fake-bee-stairwaycluster-workqueue",
