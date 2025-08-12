@@ -2,9 +2,10 @@
 package cleanup
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"fmt"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/broadinstitute/thelma/internal/thelma/clients/google"
 	"github.com/broadinstitute/thelma/internal/thelma/state/api/terra"
 	"github.com/broadinstitute/thelma/internal/thelma/utils/set"
@@ -19,8 +20,8 @@ import (
 // topic ids by regular expression. If we wanted to just match by environment name, we'd be iterating
 // through thousands of topic names client-side. :skull:
 var topicIdFormats = []string{
-	"cwds-import-job-status-updates-%s",
 	"leonardo-pubsub-%s",
+	"cwds-import-job-status-updates-%s",
 	"rawls-async-import-topic-%s",
 	"sam-group-sync-%s",
 	"terra-%s-stairwaycluster-workqueue",

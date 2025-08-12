@@ -45,6 +45,9 @@ func Test_Cleanup(t *testing.T) {
 	// pretend rawls async import topic does not exist
 	psMocks.ExpectGetTopic("rawls-async-import-topic-fake-bee", nil, googletesting.NotFoundError())
 
+	// pretend cwds-import-job-status-updates-fake-bee does not exist
+	psMocks.ExpectGetTopic("cwds-import-job-status-updates-fake-bee", nil, googletesting.NotFoundError())
+
 	// 1 topic, 1 subscription
 	psMocks.ExpectGetTopic("terra-fake-bee-stairwaycluster-workqueue", &pubsubpb.Topic{
 		Name: "terra-fake-bee-stairwaycluster-workqueue",
@@ -86,6 +89,7 @@ func Test_pubsubTopicIds(t *testing.T) {
 	bee.EXPECT().Name().Return("fiab-funky-chipmunk")
 	assert.ElementsMatch(t, []string{
 		"leonardo-pubsub-fiab-funky-chipmunk",
+		"cwds-import-job-status-updates-fiab-funky-chipmunk",
 		"rawls-async-import-topic-fiab-funky-chipmunk",
 		"sam-group-sync-fiab-funky-chipmunk",
 		"terra-fiab-funky-chipmunk-stairwaycluster-workqueue",
