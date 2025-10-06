@@ -297,7 +297,6 @@ func (b *bees) provisionBeeAppsAndSeed(bee *Bee, options ProvisionOptions) error
 			return errors.Errorf("error seeding environment %q: %v", env.Name(), err)
 		}
 	}
-
 	return nil
 }
 
