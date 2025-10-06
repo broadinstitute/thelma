@@ -293,11 +293,25 @@ func (b *bees) provisionBeeAppsAndSeed(bee *Bee, options ProvisionOptions) error
 
 	if options.Seed {
 		log.Info().Msgf("Seeding BEE with test data")
-		if err := b.seeder.Seed(env, options.SeedOptions); err != nil {
-			return errors.Errorf("error seeding environment %q: %v", env.Name(), err)
+
+		retryOptions := []retry.Option{
+			retry.Attempts(10),
+			retry.Delay(1 * time.Second),
+			retry.DelayType(retry.BackOffDelay),
+			retry.MaxDelay(2 * time.Minute),
+			retry.OnRetry(func(n uint, err error) {
+				log.Warn().Msgf("Seeding attempt %d failed: %v", int(n)+1, err)
+			}),
+		}
+
+		err := retry.Do(func() error {
+			return b.seeder.Seed(env, options.SeedOptions)
+		}, retryOptions...)
+
+		if err != nil {
+			return errors.Errorf("error seeding environment %q after retries: %v", env.Name(), err)
 		}
 	}
-
 	return nil
 }
 
