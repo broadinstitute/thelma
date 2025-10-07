@@ -245,27 +245,28 @@ func (suite *BeesTestSuite) TestProvisionWith() {
 	}
 }
 
-//func (s *BeesTestSuite) TestSeedingRetriesSucceedEventually() {
-//	b := &Bee{Environment: s.env}
-//	opts := provisionOptions(func(o *ProvisionOptions) {
-//		o.ProvisionExistingOptions.SyncGeneratorOnly = true
-//	})
-//	myBeeGenerator := argocd_names.GeneratorName(s.env)
-//	s.mocks.argocd.EXPECT().SyncApp(myBeeGenerator).
-//		Return(argocd.SyncResult{Synced: true}, nil).Once()
-//
-//	s.mocks.seeder.EXPECT().Seed(s.env, opts.SeedOptions).
-//		Return(errors.New("transient seeding error")).Once()
-//
-//	s.mocks.seeder.EXPECT().Seed(s.env, opts.SeedOptions).
-//		Return(errors.New("still failing")).Once()
-//
-//	s.mocks.seeder.EXPECT().Seed(s.env, opts.SeedOptions).
-//		Return(nil).Once()
-//
-//	err := s.bees.(*bees).provisionBeeAppsAndSeed(b, opts)
-//	require.NoError(s.T(), err)
-//}
+func (s *BeesTestSuite) TestSeedingRetriesSucceedEventually() {
+	b := &Bee{Environment: s.env}
+	opts := provisionOptions()
+	myBeeGenerator := argocd_names.GeneratorName(s.env)
+
+	s.expectSyncArgoAppsForReleases(opts.WaitHealthy, opts.WaitHealthTimeoutSeconds)
+
+	s.mocks.argocd.EXPECT().SyncApp(myBeeGenerator).
+		Return(argocd.SyncResult{Synced: true}, nil).Once()
+
+	s.mocks.seeder.EXPECT().Seed(s.env, opts.SeedOptions).
+		Return(errors.New("transient seeding error")).Once()
+
+	s.mocks.seeder.EXPECT().Seed(s.env, opts.SeedOptions).
+		Return(errors.New("still failing")).Once()
+
+	s.mocks.seeder.EXPECT().Seed(s.env, opts.SeedOptions).
+		Return(nil).Once()
+
+	err := s.bees.(*bees).provisionBeeAppsAndSeed(b, opts)
+	require.NoError(s.T(), err)
+}
 
 func (suite *BeesTestSuite) expectPinEnvHelmfileRef(helmfileRef string) {
 	suite.statefixture.Mocks().Environments.EXPECT().PinEnvironmentToTerraHelmfileRef(beeName, helmfileRef).Return(nil)
