@@ -31,11 +31,11 @@ require (
 	github.com/prometheus/common v0.44.0
 	github.com/rs/zerolog v1.31.0
 	github.com/slack-go/slack v0.12.3
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
-	github.com/thediveo/enumflag/v2 v2.0.4
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	github.com/thediveo/enumflag/v2 v2.0.7
+	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329
 	golang.org/x/mod v0.28.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/term v0.36.0
