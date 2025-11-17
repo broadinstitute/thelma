@@ -57,7 +57,7 @@ jobs:
       version: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.BROADBOT_TOKEN }}
 
@@ -77,7 +77,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache Go deps
         id: go-cache
@@ -98,7 +98,7 @@ jobs:
     needs: [bump, cache-go-deps]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Pull Go deps cache
         id: go-cache
@@ -138,7 +138,7 @@ jobs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Pull Go deps cache
         id: go-cache
@@ -185,7 +185,7 @@ jobs:
       rel-dir: ${{ steps.rel-dir-name.outputs.rel-dir }}
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Pull Go deps cache
         id: go-cache
@@ -231,7 +231,7 @@ jobs:
     needs: [bump, build-linux-amd64, build-darwin-amd64, build-darwin-arm64]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Pull binaries compiled in previous steps
       - name: Pull Linux amd64 build directories
@@ -306,7 +306,7 @@ jobs:
     needs: [bump, build-linux-amd64]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -417,7 +417,7 @@ jobs:
     needs: [bump, dockerize-and-push, sign-and-notarize]
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       #
       # Update tags.json
