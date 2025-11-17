@@ -24,7 +24,7 @@ jobs:
 
     - name: Auth to GCP
       id: auth
-      uses: google-github-actions/auth@v2
+      uses: google-github-actions/auth@v3
       if: ${{ github.actor != 'dependabot[bot]' }}
       with:
         workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
