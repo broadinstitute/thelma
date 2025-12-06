@@ -151,15 +151,23 @@ func newDestinationBasesFlag() *enumFlag {
 		usageMessage:  `Run for a specific environment or cluster base (eg. \"live\", \"bee\")`,
 
 		validValues: func(state terra.State) (set.StringSet, error) {
-			destinations, err := state.Destinations().All()
+			envs, err := state.Environments().All()
+			if err != nil {
+				return nil, err
+			}
+			clusters, err := state.Clusters().All()
 			if err != nil {
 				return nil, err
 			}
 
 			s := set.NewStringSet()
-			for _, d := range destinations {
+			for _, d := range envs {
 				s.Add(d.Base())
 			}
+			for _, d := range clusters {
+				s.Add(d.Base())
+			}
+
 			return s, nil
 		},
 
