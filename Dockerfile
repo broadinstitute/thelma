@@ -3,7 +3,6 @@
 # We use this image as the base Thelma image even though we don't need Python because it's a blessed
 # Alpine image. Using a blessed image lowers the burden on our infosec folks (who can manage
 # vulnerabilities easier this way) and using an existing one lowers the burden on our appsec folks.
-# 2026-11-02: this comment forces a full rebuild on the latest blessed base image (CTM-739).
 FROM us.gcr.io/broad-dsp-gcr-public/base/python:alpine
 
 ARG THELMA_LINUX_RELEASE
