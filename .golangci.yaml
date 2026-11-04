@@ -1,2 +1,18 @@
-skip-dirs:
-  - ".*/mocks"
+# golangci-lint v2 configuration.
+# Keeps the behaviour of the previous v1 defaults: the exclusion presets that
+# `golangci-lint migrate` generates, and staticcheck without the QF* quick-fix
+# suggestions that v2 enables by default.
+version: "2"
+linters:
+  settings:
+    staticcheck:
+      checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022", "-QF*"]
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - ".*/mocks"

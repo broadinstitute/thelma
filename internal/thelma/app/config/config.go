@@ -120,7 +120,7 @@ func Load(opts ...Option) (Config, error) {
 func (c *config) Unmarshal(configPrefix string, into interface{}) error {
 	// Make sure we were passed a struct pointer
 	value := reflect.ValueOf(into)
-	if value.Kind() != reflect.Ptr {
+	if value.Kind() != reflect.Pointer {
 		panic(errors.Errorf("expected struct pointer, got %v: %v", value.Kind(), into))
 	}
 	if value.Elem().Kind() != reflect.Struct {
